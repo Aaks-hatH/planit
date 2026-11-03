@@ -117,9 +117,9 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
         </div>
 
         {/* Tab switcher */}
-        <div className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
+        <div role="tablist" aria-label="Login type" className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
           <button
-            onClick={() => setTab('staff')}
+            role="tab" aria-selected={tab === 'staff'} onClick={() => setTab('staff')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               tab === 'staff'
                 ? 'bg-white text-neutral-900'
@@ -129,7 +129,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
             <Users className="w-3.5 h-3.5" />Staff
           </button>
           <button
-            onClick={() => setTab('organizer')}
+            role="tab" aria-selected={tab === 'organizer'} onClick={() => setTab('organizer')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               tab === 'organizer'
                 ? 'bg-white text-neutral-900'
@@ -145,8 +145,8 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
             <form onSubmit={handleStaffSubmit} className="space-y-4">
               <div>
-                <label className={labelCls}>Username</label>
-                <input type="text" autoFocus autoComplete="username"
+                <label htmlFor="lg-f1" className={labelCls}>Username</label>
+                <input id="lg-f1" type="text" autoFocus autoComplete="username"
                   placeholder="Your staff username"
                   value={staffUser}
                   onChange={e => { setStaffUser(e.target.value); setStaffErr(''); }}
@@ -154,16 +154,16 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
                 />
               </div>
               <div>
-                <label className={labelCls}><Hash className="w-3 h-3 inline mr-1" />PIN</label>
+                <label htmlFor="lg-f2" className={labelCls}><Hash className="w-3 h-3 inline mr-1" />PIN</label>
                 <div className="relative">
-                  <input type={showPin ? 'text' : 'password'} inputMode="numeric" autoComplete="current-password"
+                  <input id="lg-f2" type={showPin ? 'text' : 'password'} inputMode="numeric" autoComplete="current-password"
                     placeholder="4–8 digit PIN"
                     value={staffPin}
                     onChange={e => { setStaffPin(e.target.value); setStaffErr(''); }}
                     className={inputCls + ' pr-10'}
                   />
-                  <button type="button" tabIndex={-1} onClick={() => setShowPin(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                  <button type="button" onClick={() => setShowPin(v => !v)} aria-label={showPin ? 'Hide PIN' : 'Show PIN'}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-md text-neutral-500 hover:text-neutral-300">
                     {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -184,8 +184,8 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
             <form onSubmit={handleOrgSubmit} className="space-y-4">
               <div>
-                <label className={labelCls}>Organizer Name</label>
-                <input type="text" autoFocus autoComplete="username"
+                <label htmlFor="lg-f3" className={labelCls}>Organizer Name</label>
+                <input id="lg-f3" type="text" autoFocus autoComplete="username"
                   placeholder="Your organizer name"
                   value={orgName}
                   onChange={e => { setOrgName(e.target.value); setOrgFieldErrs(p => ({ ...p, name: '' })); }}
@@ -196,16 +196,16 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
 
               {isPasswordProtected && (
                 <div>
-                  <label className={labelCls}>Event Password</label>
+                  <label htmlFor="lg-f4" className={labelCls}>Event Password</label>
                   <div className="relative">
-                    <input type={showEvtPass ? 'text' : 'password'}
+                    <input id="lg-f4" type={showEvtPass ? 'text' : 'password'}
                       placeholder="The shared event password"
                       value={orgEvtPass}
                       onChange={e => { setOrgEvtPass(e.target.value); setOrgFieldErrs(p => ({ ...p, evtPass: '' })); }}
                       className={inputCls + ' pr-10'}
                     />
-                    <button type="button" tabIndex={-1} onClick={() => setShowEvtPass(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                    <button type="button" onClick={() => setShowEvtPass(v => !v)} aria-label={showEvtPass ? 'Hide password' : 'Show password'}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-md text-neutral-500 hover:text-neutral-300">
                       {showEvtPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -214,18 +214,18 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
               )}
 
               <div>
-                <label className={labelCls}>
+                <label htmlFor="lg-f5" className={labelCls}>
                   Account Password{needsAccPass ? ' *' : ' (optional)'}
                 </label>
                 <div className="relative">
-                  <input type={showAccPass ? 'text' : 'password'}
+                  <input id="lg-f5" type={showAccPass ? 'text' : 'password'}
                     placeholder={needsAccPass ? 'Your personal account password' : 'Leave blank if not set'}
                     value={orgAccPass}
                     onChange={e => { setOrgAccPass(e.target.value); setOrgFieldErrs(p => ({ ...p, accPass: '' })); }}
                     className={inputCls + ' pr-10'}
                   />
-                  <button type="button" tabIndex={-1} onClick={() => setShowAccPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                  <button type="button" onClick={() => setShowAccPass(v => !v)} aria-label={showAccPass ? 'Hide password' : 'Show password'}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-md text-neutral-500 hover:text-neutral-300">
                     {showAccPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

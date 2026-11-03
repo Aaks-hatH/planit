@@ -210,7 +210,7 @@ export default function ForgotPassword() {
   /* ════════════════════════════════════════════════════════════════ */
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       background: '#05050f',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',

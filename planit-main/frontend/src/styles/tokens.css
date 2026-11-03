@@ -1,0 +1,250 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PlanIt design tokens  ·  src/styles/tokens.css
+ *
+ * Single source of truth for the PlanIt visual identity. Everything else
+ * (tailwind.config.js, index.css component primitives, shared UI components)
+ * reads from these variables, so a change here moves the whole product.
+ *
+ * Identity:  ink + paper (the original black-and-white PlanIt) with one
+ *            electric-blue accent, and a small set of status signals.
+ * Type:      Space Grotesk (display) · DM Sans (body) · DM Mono (labels, numbers)
+ *
+ * White-label:  client branding injects --wl-primary / --wl-accent on :root
+ *               (see WhiteLabelTheme in App.jsx). The [data-wl] block at the
+ *               bottom of this file re-points --pi-action and --pi-accent at
+ *               those values, so every primitive that reads the tokens is
+ *               re-branded without touching the rest of the system.
+ *
+ * Breakpoints (mirrored in tailwind.config.js, CSS variables cannot be used
+ * inside media queries):  xs 480 · sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Ink (neutrals) ────────────────────────────────────────────────────
+     Light end is warm paper, dark end is a blue-tinted charcoal that sits
+     comfortably next to the existing #05050f dark page backgrounds. */
+  --pi-ink-950: #07070b;
+  --pi-ink-900: #0f0f14;
+  --pi-ink-800: #18181f;
+  --pi-ink-700: #24242d;
+  --pi-ink-600: #3b3b47;
+  --pi-ink-500: #6a6a76;
+  --pi-ink-400: #9a9aa6;
+  --pi-ink-300: #c8c6c0;
+  --pi-ink-200: #e3e0d9;
+  --pi-ink-100: #efede7;
+  --pi-ink-50:  #f7f6f2;
+  --pi-white:   #ffffff;
+
+  /* ─── Electric blue (the single brand accent) ───────────────────────── */
+  --pi-blue-50:  #eff3ff;
+  --pi-blue-100: #dfe7ff;
+  --pi-blue-200: #bccdff;
+  --pi-blue-300: #90abff;
+  --pi-blue-400: #5f84ff;
+  --pi-blue-500: #2f5bff;
+  --pi-blue-600: #1f43e6;
+  --pi-blue-700: #1a35b8;
+  --pi-blue-800: #182e8f;
+  --pi-blue-900: #16286e;
+
+  /* ─── Status signals (restrained, always paired with a label or icon) ── */
+  --pi-live:        #16a34a;   /* open, available, checked in, healthy      */
+  --pi-live-soft:   #e7f6ec;
+  --pi-live-ink:    #166534;
+  --pi-wait:        #d97706;   /* waiting, pending, needs attention soon    */
+  --pi-wait-soft:   #fdf1dc;
+  --pi-wait-ink:    #92400e;
+  --pi-alert:       #dc2626;   /* late, blocked, destructive, error         */
+  --pi-alert-soft:  #fdeaea;
+  --pi-alert-ink:   #991b1b;
+  --pi-seated:      #2f5bff;   /* occupied, in progress                     */
+  --pi-seated-soft: #eaefff;
+  --pi-seated-ink:  #1a35b8;
+  --pi-venue:       #ff6a1f;   /* hospitality / PlanIt Venue secondary      */
+  --pi-venue-soft:  #fff0e6;
+  --pi-venue-ink:   #9a3a07;
+
+  /* ─── Semantic surface roles (light) ────────────────────────────────── */
+  --pi-bg:            var(--pi-ink-50);
+  --pi-surface:       var(--pi-white);
+  --pi-surface-sunk:  var(--pi-ink-100);
+  --pi-surface-raised: var(--pi-white);
+  --pi-border:        var(--pi-ink-200);
+  --pi-border-strong: var(--pi-ink-300);
+  --pi-text:          var(--pi-ink-900);
+  --pi-text-muted:    var(--pi-ink-500);
+  --pi-text-faint:    var(--pi-ink-400);
+  --pi-action:        var(--pi-ink-900);        /* primary buttons          */
+  --pi-action-hover:  var(--pi-ink-700);
+  --pi-action-ink:    var(--pi-white);
+  --pi-accent:        var(--pi-blue-500);       /* links, focus, active     */
+  --pi-accent-hover:  var(--pi-blue-600);
+  --pi-accent-soft:   var(--pi-blue-50);
+  --pi-accent-ink:    var(--pi-blue-700);
+  --pi-focus:         var(--pi-blue-500);
+
+  /* ─── Typography ────────────────────────────────────────────────────── */
+  --font-display: 'Space Grotesk', 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-body:    'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'DM Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Fluid type scale. Display sizes clamp between a phone and a wide desktop. */
+  --fs-label:    0.6875rem;                          /* 11  mono caps       */
+  --fs-meta:     0.75rem;                            /* 12  metadata        */
+  --fs-small:    0.8125rem;                          /* 13                  */
+  --fs-body:     0.9375rem;                          /* 15                  */
+  --fs-lead:     1.125rem;                           /* 18                  */
+  --fs-h4:       1.125rem;
+  --fs-h3:       clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  --fs-h2:       clamp(1.625rem, 1.2rem + 1.6vw, 2.5rem);
+  --fs-h1:       clamp(2rem, 1.3rem + 3vw, 3.75rem);
+  --fs-display:  clamp(2.5rem, 1rem + 6.4vw, 6.25rem);
+  --fs-stat:     clamp(1.75rem, 1.3rem + 1.8vw, 2.75rem);
+
+  --lh-tight:  1.04;
+  --lh-snug:   1.18;
+  --lh-normal: 1.5;
+  --lh-body:   1.6;
+
+  --ls-display: -0.04em;
+  --ls-heading: -0.025em;
+  --ls-body:    -0.005em;
+  --ls-label:    0.12em;
+
+  /* ─── Spacing (4px base) ────────────────────────────────────────────── */
+  --sp-0: 0;
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+  --sp-20: 5rem;
+  --sp-24: 6rem;
+  --sp-32: 8rem;
+  --gutter: clamp(1rem, 0.5rem + 2.4vw, 2.5rem);   /* page side padding      */
+  --section-y: clamp(4rem, 2.5rem + 6vw, 8rem);    /* marketing section rhythm */
+
+  /* ─── Radii (deliberately tighter than the old all-pill look) ───────── */
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 6px;      /* tags, small chips            */
+  --r-lg: 8px;      /* buttons, inputs, menu items  */
+  --r-xl: 12px;     /* cards, panels                */
+  --r-2xl: 16px;    /* modals, sheets               */
+  --r-pill: 999px;
+
+  /* ─── Elevation ─────────────────────────────────────────────────────── */
+  --elev-0: none;
+  --elev-1: 0 1px 0 rgb(15 15 20 / 0.04), 0 1px 2px rgb(15 15 20 / 0.05);
+  --elev-2: 0 1px 0 rgb(15 15 20 / 0.03), 0 4px 12px -2px rgb(15 15 20 / 0.08);
+  --elev-3: 0 2px 4px rgb(15 15 20 / 0.04), 0 12px 28px -6px rgb(15 15 20 / 0.14);
+  --elev-4: 0 4px 8px rgb(15 15 20 / 0.06), 0 28px 56px -12px rgb(15 15 20 / 0.28);
+  --ring-focus: 0 0 0 3px rgb(47 91 255 / 0.28);
+
+  /* Legacy aliases still read by older components */
+  --color-border: var(--pi-border);
+  --shadow-sm: var(--elev-1);
+  --shadow-md: var(--elev-2);
+
+  /* ─── Motion ────────────────────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-instant: 90ms;
+  --dur-fast:    150ms;
+  --dur-base:    220ms;
+  --dur-slow:    420ms;
+
+  /* ─── Component dimensions ──────────────────────────────────────────── */
+  --control-sm: 2.0rem;       /* 32  compact controls (dense admin tables)  */
+  --control-md: 2.5rem;       /* 40  default                                */
+  --control-lg: 2.75rem;      /* 44  touch-safe minimum                     */
+  --control-xl: 3.25rem;      /* 52  operational / tablet primary actions   */
+  --touch-min:  44px;
+  --nav-h:      3.5rem;
+  --sidebar-w:  15rem;
+  --sidebar-w-collapsed: 4.25rem;
+  --content-max: 80rem;
+  --prose-max:   42rem;
+
+  /* ─── Layering ──────────────────────────────────────────────────────── */
+  --z-base: 0;
+  --z-sticky: 30;
+  --z-nav: 50;
+  --z-dropdown: 60;
+  --z-overlay: 70;
+  --z-modal: 80;
+  --z-toast: 100;
+
+  /* ─── Dark backgrounds (existing, kept as the one source of truth) ──── */
+  --bg-base:    #05050f;
+  --bg-surface: #08080f;
+  --bg-venue:   #0a0704;
+
+  /* ─── Safe-area insets ──────────────────────────────────────────────── */
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+}
+
+/* ─── Dark surface scope ─────────────────────────────────────────────────
+   Put `data-surface="dark"` (or the .pi-dark class) on any container whose
+   background is dark and every primitive inside re-themes itself. */
+[data-surface='dark'],
+.pi-dark {
+  --pi-bg:            var(--pi-ink-950);
+  --pi-surface:       var(--pi-ink-900);
+  --pi-surface-sunk:  #0b0b11;
+  --pi-surface-raised: var(--pi-ink-800);
+  --pi-border:        rgb(255 255 255 / 0.1);
+  --pi-border-strong: rgb(255 255 255 / 0.18);
+  --pi-text:          #f4f3ef;
+  --pi-text-muted:    #a3a3b0;
+  --pi-text-faint:    #6f6f7c;
+  --pi-action:        #ffffff;
+  --pi-action-hover:  #e9e8e3;
+  --pi-action-ink:    var(--pi-ink-950);
+  --pi-accent:        var(--pi-blue-400);
+  --pi-accent-hover:  var(--pi-blue-300);
+  --pi-accent-soft:   rgb(95 132 255 / 0.14);
+  --pi-accent-ink:    var(--pi-blue-200);
+  --pi-focus:         var(--pi-blue-300);
+  --pi-live-soft:     rgb(22 163 74 / 0.16);
+  --pi-live-ink:      #6ee7a0;
+  --pi-wait-soft:     rgb(217 119 6 / 0.18);
+  --pi-wait-ink:      #fbbf5b;
+  --pi-alert-soft:    rgb(220 38 38 / 0.18);
+  --pi-alert-ink:     #fca5a5;
+  --pi-seated-soft:   rgb(95 132 255 / 0.18);
+  --pi-seated-ink:    #aebfff;
+  --pi-venue-soft:    rgb(255 106 31 / 0.16);
+  --pi-venue-ink:     #ffb184;
+  --elev-1: 0 1px 0 rgb(0 0 0 / 0.4);
+  --elev-2: 0 6px 18px -4px rgb(0 0 0 / 0.5);
+  --elev-3: 0 16px 36px -8px rgb(0 0 0 / 0.6);
+  --elev-4: 0 32px 64px -16px rgb(0 0 0 / 0.7);
+  --ring-focus: 0 0 0 3px rgb(144 171 255 / 0.35);
+}
+
+/* ─── White-label re-branding ────────────────────────────────────────────
+   Client branding wins over the PlanIt accent and primary action, nothing
+   else changes. The fallbacks mean a WL client with only a primary colour
+   still gets a coherent accent. */
+[data-wl] {
+  --pi-action:       var(--wl-primary, var(--pi-ink-900));
+  --pi-action-hover: color-mix(in srgb, var(--wl-primary, #0f0f14) 86%, black);
+  --pi-action-ink:   #ffffff;
+  --pi-accent:       var(--wl-accent, var(--wl-primary, var(--pi-blue-500)));
+  --pi-accent-hover: color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 86%, black);
+  --pi-accent-soft:  color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 10%, transparent);
+  --pi-accent-ink:   color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 80%, black);
+  --pi-focus:        var(--wl-accent, var(--wl-primary, var(--pi-blue-500)));
+  --ring-focus:      0 0 0 3px color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 30%, transparent);
+}

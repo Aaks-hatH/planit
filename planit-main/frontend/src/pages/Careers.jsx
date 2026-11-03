@@ -49,7 +49,7 @@ const SOURCE_OPTIONS = [
   { key: 'google',       label: 'Google search', color: '#fbbc05' },
   { key: 'school',       label: 'School / club', color: '#34d399' },
   { key: 'friend',       label: 'A friend',      color: '#f472b6' },
-  { key: 'planit',       label: 'PlanIt itself', color: '#a78bfa' },
+  { key: 'planit',       label: 'PlanIt itself', color: '#90abff' },
   { key: 'other',        label: 'Somewhere else', color: '#94a3b8' },
 ];
 const SOURCE_KEYS = SOURCE_OPTIONS.map((s) => s.key);
@@ -158,7 +158,7 @@ function ping(event, extra = {}) {
 
 const wrap = (min, max, v) => { const r = max - min; return ((((v - min) % r) + r) % r) + min; };
 const hueFor = (s = '') => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
-const BRAND = ['#818cf8', '#f472b6', '#fb923c'];
+const BRAND = ['#5f84ff', '#f472b6', '#fb923c'];
 const teamColor = (t) => BRAND[hueFor(t) % 3];
 
 function usePointerFine() {
@@ -308,7 +308,7 @@ function Magnetic({ children, strength = 0.32, className = '' }) {
 }
 
 /** Card with a cursor-following spotlight. */
-function Spotlight({ children, className = '', color = 'rgba(99,102,241,0.20)' }) {
+function Spotlight({ children, className = '', color = 'rgba(47,91,255,0.20)' }) {
   const onMove = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
@@ -466,7 +466,7 @@ function ScrollChrome() {
     <>
       <motion.div
         style={{ scaleX: bar }}
-        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-violet-400 to-emerald-300"
+        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-blue-400 to-emerald-300"
       />
     </>
   );
@@ -512,11 +512,11 @@ const HERO_LINES = [
   [{ t: 'of' }, { t: 'events.' }],
 ];
 const CHIPS = [
-  { t: 'React', x: '5%', y: '23%', d: 30, c: '#818cf8', s: 5.2 },
-  { t: 'Figma', x: '11%', y: '67%', d: 46, c: '#a78bfa', s: 6.4 },
+  { t: 'React', x: '5%', y: '23%', d: 30, c: '#5f84ff', s: 5.2 },
+  { t: 'Figma', x: '11%', y: '67%', d: 46, c: '#90abff', s: 6.4 },
   { t: 'Node.js', x: '90%', y: '27%', d: 38, c: '#22d3ee', s: 5.8 },
   { t: 'SEO', x: '84%', y: '71%', d: 24, c: '#6ee7b7', s: 6.9 },
-  { t: 'Security', x: '2.5%', y: '45%', d: 20, c: '#818cf8', s: 7.3 },
+  { t: 'Security', x: '2.5%', y: '45%', d: 20, c: '#5f84ff', s: 7.3 },
   { t: 'Video', x: '94%', y: '49%', d: 52, c: '#22d3ee', s: 5.5 },
 ];
 
@@ -581,7 +581,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
         <span className="absolute bottom-[14%] right-[6%] h-1.5 w-1.5 rounded-full bg-indigo-300" />
       </motion.div>
       <motion.div style={{ rotate: useTransform(ringRot, (v) => -v * 1.6) }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-white/[0.06] md:block">
-        <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-300" />
+        <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-blue-300" />
       </motion.div>
       {CHIPS.map((c) => <FloatChip key={c.t} chip={c} mx={mx} my={my} go={go} />)}
       <div aria-hidden="true" className="pointer-events-none absolute left-6 top-1/2 hidden -translate-y-1/2 rotate-180 text-[10px] tracking-[0.4em] text-neutral-600 [writing-mode:vertical-rl] lg:block">VOLUNTEER CREW · REMOTE · ASYNC-FIRST · {new Date().getFullYear()}</div>
@@ -605,7 +605,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Magnetic>
-            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
+            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-100/45 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               <span className="relative">See open roles</span>
               <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -739,7 +739,7 @@ function WeekBars() {
 }
 
 const WHY = [
-  { icon: Rocket, title: 'Ship real software', body: 'PlanIt is live with real users. Work in a React + Node + MongoDB codebase that is actually deployed, not a tutorial project.', span: 'lg:col-span-2', color: 'rgba(99,102,241,0.22)', viz: 'terminal' },
+  { icon: Rocket, title: 'Ship real software', body: 'PlanIt is live with real users. Work in a React + Node + MongoDB codebase that is actually deployed, not a tutorial project.', span: 'lg:col-span-2', color: 'rgba(47,91,255,0.22)', viz: 'terminal' },
   { icon: Layers, title: 'Own something', body: 'Take a feature, campaign or area end to end. No busywork, no coffee runs.', span: '', color: 'rgba(34,211,238,0.18)' },
   { icon: Award, title: 'Portfolio + references', body: 'Real shipped work to point at, plus LinkedIn recommendations and reference letters for people who deliver.', span: '', color: 'rgba(52,211,153,0.18)' },
   { icon: Clock, title: 'Your schedule', body: 'A few hours a week, async-first, no mandatory meetings. Life comes first.', span: 'lg:col-span-2', color: 'rgba(244,114,182,0.18)', viz: 'week' },
@@ -925,7 +925,7 @@ function GeneralCard({ onOpen, accepting }) {
         onClick={() => onOpen('general')} disabled={!accepting} data-cursor="Pitch"
         className="group relative h-full w-full overflow-hidden rounded-3xl p-px text-left disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="absolute inset-[-100%] careers-spin bg-[conic-gradient(from_0deg,transparent_0_60%,#6366f1_75%,#22d3ee_88%,transparent_100%)] opacity-70" />
+        <span className="absolute inset-[-100%] careers-spin bg-[conic-gradient(from_0deg,transparent_0_60%,#2f5bff_75%,#22d3ee_88%,transparent_100%)] opacity-70" />
         <span className="relative flex h-full min-h-[18rem] flex-col rounded-[calc(1.5rem-1px)] bg-[#07070f] p-6">
           <Sparkles className="mb-4 h-6 w-6 text-indigo-300 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" />
           <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">Don&apos;t see <span className="careers-shine leading-none">your</span> role?</h3>
@@ -1221,7 +1221,7 @@ const EMPTY = {
 function Confetti() {
   const bits = useMemo(() => Array.from({ length: 34 }, (_, i) => ({
     id: i, x: (Math.random() - 0.5) * 520, y: -(120 + Math.random() * 300), r: Math.random() * 540 - 270,
-    c: ['#6366f1', '#22d3ee', '#34d399', '#f472b6', '#fbbf24', '#ffffff'][i % 6], s: 5 + Math.random() * 7,
+    c: ['#2f5bff', '#22d3ee', '#34d399', '#f472b6', '#fbbf24', '#ffffff'][i % 6], s: 5 + Math.random() * 7,
   })), []);
   return (
     <div className="pointer-events-none absolute left-1/2 top-24 h-0 w-0">
@@ -1702,7 +1702,7 @@ export default function Careers() {
     <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
       <style>{`
         .careers-root .font-display { font-family: var(--lq-display); font-style: normal; font-weight: 800; letter-spacing: -0.035em; }
-        .careers-shine { background: linear-gradient(90deg, #a5b4fc 0%, #818cf8 46%, #6ee7b7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+        .careers-shine { background: linear-gradient(90deg, #90abff 0%, #5f84ff 46%, #6ee7b7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
         @keyframes careers-spin { to { transform: rotate(360deg); } }
         @keyframes careers-drip { 0% { transform: translateY(-100%); } 100% { transform: translateY(260%); } }
         @keyframes careers-blink { 50% { opacity: 0; } }

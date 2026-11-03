@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Moon, Star, Zap, Shield, QrCode, Users, MessageSquare,
   BarChart3, FileText, ListChecks, Clock, CheckCircle2, TrendingUp,
@@ -13,6 +12,8 @@ import {
   MapPin, Volume2, Mic2, UtensilsCrossed, LayoutGrid
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 
 function Section({ id, children, className = '' }) {
   return (
@@ -91,7 +92,6 @@ function TechDetail({ label, value }) {
 }
 
 export default function About() {
-  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('why-dark');
 
   useEffect(() => {
@@ -192,43 +192,21 @@ export default function About() {
   const allNavItems = navGroups.flatMap(g => g.items);
 
   return (
-    <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
+    <div className="min-h-screen" style={{ background: 'var(--pi-bg)', overflowX: 'clip' }}>
       <style>{`
         html { scroll-behavior: smooth; }
-        body { background: #f8f8f6; }
       `}</style>
 
-      {/* Sticky nav */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
-            <span className="text-neutral-300">|</span>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-neutral-600" />
-              <span className="text-sm font-bold text-neutral-900">About PlanIt</span>
-            </div>
-          </div>
-          <a href="/" className="text-sm font-bold text-neutral-900 hover:text-neutral-600 transition-colors">
-            planitapp.onrender
-          </a>
-        </div>
-      </header>
+      <PublicNav />
 
-      <div className="max-w-6xl mx-auto px-6 py-12 flex gap-16">
+      <div className="max-w-6xl mx-auto px-[var(--gutter)] pt-[calc(var(--safe-top,0px)+7rem)] pb-20 flex gap-16">
 
         {/* Sidebar */}
         <aside className="hidden lg:block w-60 flex-shrink-0">
           <div className="sticky top-24">
             {navGroups.map(group => (
               <div key={group.label} className="mb-5">
-                <p className="text-xs font-bold text-neutral-300 uppercase tracking-widest mb-2">{group.label}</p>
+                <p className="t-label mb-2">{group.label}</p>
                 <nav className="space-y-0.5">
                   {group.items.map(item => (
                     <a
@@ -236,8 +214,8 @@ export default function About() {
                       href={item.href}
                       className={`block text-sm py-1.5 leading-snug transition-colors ${
                         activeSection === item.href.slice(1)
-                          ? 'text-neutral-900 font-semibold'
-                          : 'text-neutral-400 hover:text-neutral-700'
+                          ? 'text-[var(--pi-accent-ink)] font-semibold'
+                          : 'text-neutral-500 hover:text-neutral-900'
                       }`}
                     >
                       {item.label}
@@ -259,11 +237,8 @@ export default function About() {
             transition={{ duration: 0.5 }}
             className="mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 rounded-full text-xs font-semibold text-neutral-300 mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
-              Every feature, explained in full
-            </div>
-            <h1 className="font-display text-4xl font-black text-neutral-900 mb-4 leading-tight">
+            <p className="eyebrow mb-6">Every feature, explained in full</p>
+            <h1 className="t-h1 mb-5 text-neutral-900">
               About PlanIt
             </h1>
             <p className="text-lg text-neutral-500 leading-relaxed max-w-xl">
@@ -1639,7 +1614,7 @@ export default function About() {
                     backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px)'
                   }} />
                   {/* Glowing orbs */}
-                  <div className="absolute top-6 right-12 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)' }} />
+                  <div className="absolute top-6 right-12 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(47,91,255,0.25) 0%, transparent 70%)' }} />
                   <div className="absolute bottom-0 left-1/3 w-48 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)' }} />
                   {/* Floating tech labels */}
                   <div className="absolute top-5 right-6 flex flex-wrap gap-1.5 max-w-52">
@@ -1730,7 +1705,7 @@ export default function About() {
                     <div className="flex flex-wrap gap-2">
                       {[
                         { name: 'React',              color: '#61dafb22', border: '#61dafb40', text: '#61dafb' },
-                        { name: 'Vite',               color: '#a78bfa22', border: '#a78bfa40', text: '#a78bfa' },
+                        { name: 'Vite',               color: '#90abff22', border: '#90abff40', text: '#90abff' },
                         { name: 'Tailwind CSS',        color: '#06b6d422', border: '#06b6d440', text: '#06b6d4' },
                         { name: 'Node.js',             color: '#86efac22', border: '#86efac40', text: '#86efac' },
                         { name: 'Express',             color: '#d1d5db22', border: '#d1d5db40', text: '#d1d5db' },
@@ -1738,7 +1713,7 @@ export default function About() {
                         { name: 'MongoDB',             color: '#86efac22', border: '#86efac40', text: '#4ade80' },
                         { name: 'JWT',                 color: '#f9731622', border: '#f9731640', text: '#fb923c' },
                         { name: 'Redis',               color: '#f8717122', border: '#f8717140', text: '#f87171' },
-                        { name: 'Cloudinary',          color: '#818cf822', border: '#818cf840', text: '#818cf8' },
+                        { name: 'Cloudinary',          color: '#5f84ff22', border: '#5f84ff40', text: '#5f84ff' },
                         { name: 'Linux',               color: '#fde04722', border: '#fde04740', text: '#fde047' },
                         { name: 'Pentesting',          color: '#f4727222', border: '#f4727240', text: '#f87171' },
                         { name: 'Network Security',    color: '#e2e8f022', border: '#e2e8f040', text: '#cbd5e1' },
@@ -1807,17 +1782,9 @@ export default function About() {
             </div>
           </section>
 
-                    {/* Footer */}
-          <div className="pt-12 pb-8 flex items-center justify-between border-t border-neutral-200 mt-4">
-            <p className="text-sm text-neutral-400">© 2026 PlanIt. All rights reserved.</p>
-            <a href="/" className="text-sm font-bold text-neutral-900 hover:text-neutral-600 transition-colors flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back to PlanIt
-            </a>
-          </div>
-
         </main>
       </div>
+      <PublicFooter />
     </div>
   );
 }

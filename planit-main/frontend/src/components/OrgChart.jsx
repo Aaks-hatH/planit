@@ -705,7 +705,7 @@ export default function OrgChart({ isDemo = false }) {
       </p>
 
       <div className={`relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 ${full ? 'min-h-0 flex-1' : ''}`}
-        style={full ? undefined : { height: 'max(560px, calc(100vh - 250px))' }}>
+        style={full ? undefined : { height: 'max(560px, calc(100dvh - 250px))' }}>
         <div ref={scrollRef} onPointerDown={onPanDown} className="h-full w-full overflow-auto" style={{ cursor: drag ? 'grabbing' : undefined, backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
           <div style={{ width: layout.width * scale, height: layout.height * scale, margin: '0 auto' }}>
             <div ref={innerRef} style={{ width: layout.width, height: layout.height, transform: `scale(${scale})`, transformOrigin: '0 0', position: 'relative' }}>

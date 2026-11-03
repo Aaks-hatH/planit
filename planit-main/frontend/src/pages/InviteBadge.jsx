@@ -34,13 +34,13 @@ export default function InviteBadge() {
   const style = ROLE_STYLES[role] || ROLE_STYLES.GUEST;
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <p style={{ color: '#6b7280' }}>Loading…</p>
     </div>
   );
 
   if (error) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <p style={{ color: '#ef4444' }}>Error: {error}</p>
     </div>
   );
@@ -53,7 +53,7 @@ export default function InviteBadge() {
         body { background: #f9fafb; font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
 
         .screen-wrapper {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
           align-items: center;

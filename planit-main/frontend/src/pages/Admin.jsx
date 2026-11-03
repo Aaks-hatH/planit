@@ -10707,7 +10707,7 @@ export default function Admin() {
 
     return (
       <div className="font-sans" style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: '#09090b',
         position: 'relative', overflow: 'hidden', padding: '24px',
       }}>
@@ -10887,7 +10887,7 @@ export default function Admin() {
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
     <div className="font-sans" style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       display: 'flex',
       background: '#09090b',
       position: 'relative',
@@ -11245,7 +11245,7 @@ export default function Admin() {
       )}
 
       {/* Sidebar */}
-      <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100dvh', overflowY: 'auto' }}>
         {/* Logo */}
         <div className="h-14 flex items-center gap-3 px-3 border-b border-white/5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">

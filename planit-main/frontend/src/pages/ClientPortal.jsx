@@ -894,7 +894,7 @@ export default function ClientPortal() {
     <div className="min-h-screen flex" style={{ background: '#f5f5f5', fontFamily: `'${data.branding?.fontFamily || 'Inter'}', system-ui, sans-serif` }}>
 
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-52 flex-shrink-0" style={{ background: '#0a0a0a', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, height: '100vh' }}>
+      <aside className="hidden md:flex flex-col w-52 flex-shrink-0" style={{ background: '#0a0a0a', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, height: '100dvh' }}>
         {/* Logo */}
         <div className="h-14 flex items-center gap-3 px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {data.branding?.logoUrl

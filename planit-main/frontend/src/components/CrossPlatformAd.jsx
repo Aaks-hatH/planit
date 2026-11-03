@@ -313,7 +313,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
           <div style={{marginBottom:12}}>
             {ad.headline.map((line, i) => (
               <div key={i} style={{
-                fontFamily:"'Instrument Serif',Georgia,serif",
+                fontFamily:"var(--font-display)",
                 fontSize:24,fontWeight:400,lineHeight:1.18,
                 color: i === ad.headline.length - 1 ? '#10b981' : '#0a0a14',
                 fontStyle: i === ad.headline.length - 1 ? 'italic' : 'normal',

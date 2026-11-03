@@ -531,6 +531,22 @@ function PageTitle() {
   return null;
 }
 
+// Soft opacity fade on route changes. Applied to #root (opacity only, so it never
+// becomes a containing block for fixed children and never remounts any page).
+function RouteFade() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const el = document.getElementById('root');
+    if (!el || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    el.classList.remove('pi-route-fade');
+    void el.offsetWidth;                       // restart the animation
+    el.classList.add('pi-route-fade');
+    const t = setTimeout(() => el.classList.remove('pi-route-fade'), 260);
+    return () => clearTimeout(t);
+  }, [pathname]);
+  return null;
+}
+
 function App() {
   return (
     <WhiteLabelProvider>
@@ -538,6 +554,7 @@ function App() {
         <MaintenanceGate>
           <Router>
             <PageTitle />
+            <RouteFade />
             <PageTrackerMount />
             <ConsentBanner />
             <ReferralWelcome />

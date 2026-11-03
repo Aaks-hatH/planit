@@ -17,8 +17,8 @@ function pickAccent(seed) {
 async function ensureFontsLoaded() {
   try {
     await Promise.all([
-      document.fonts.load("800 90px 'Syne'"),
-      document.fonts.load("700 90px 'Syne'"),
+      document.fonts.load("700 90px 'Space Grotesk'"),
+      document.fonts.load("600 90px 'Space Grotesk'"),
       document.fonts.load("500 32px 'DM Sans'"),
       document.fonts.load("400 28px 'DM Sans'"),
       document.fonts.load("500 26px 'DM Mono'"),
@@ -80,9 +80,9 @@ export async function drawShareCard(canvas, info) {
 
   y += 90;
 
-  // Event title (Syne, wraps up to 3 lines)
+  // Event title (Space Grotesk, wraps up to 3 lines)
   ctx.fillStyle = '#ffffff';
-  ctx.font = "800 82px 'Syne', sans-serif";
+  ctx.font = "700 82px 'Space Grotesk', sans-serif";
   const titleLines = wrapLines(ctx, eventTitle || 'Untitled event', CARD_W - padX * 2).slice(0, 3);
   for (const line of titleLines) {
     y += 84;
@@ -139,7 +139,7 @@ export async function drawShareCard(canvas, info) {
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#ffffff';
-  ctx.font = "700 30px 'Syne', sans-serif";
+  ctx.font = "700 30px 'Space Grotesk', sans-serif";
   ctx.fillText('PlanIt', CARD_W - padX, CARD_H - 78);
   ctx.textAlign = 'left';
 

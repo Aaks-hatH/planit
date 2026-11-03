@@ -96,7 +96,7 @@ export default function WLHome() {
   const isEmpty = !loading && filtered.length === 0;
 
   return (
-    <div style={{ minHeight: '100vh', fontFamily: `'${font}', system-ui, sans-serif`, background: '#fafafa', color: '#111' }}>
+    <div style={{ minHeight: '100dvh', fontFamily: `'${font}', system-ui, sans-serif`, background: '#fafafa', color: '#111' }}>
 
       {/* Nav */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e5e5', position: 'sticky', top: 0, zIndex: 50 }}>

@@ -284,7 +284,7 @@ function LiveFeedView() {
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 130px)' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100dvh - 130px)' }}>
       <div style={TB}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <Dot color={ok ? '#22c55e' : '#f87171'} pulse={ok} />
@@ -575,7 +575,7 @@ function LogsView() {
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 130px)' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100dvh - 130px)' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 12px', background:'#0d0d14', border:'1px solid #1a1a2a', borderRadius:'8px 8px 0 0', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontFamily:'monospace', fontSize:11, color:'#6b7280' }}>{loading ? 'Loading…' : logs.length + ' entries'}</span>
@@ -622,13 +622,13 @@ export default function SecurityDashboard() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
   if (auth === null) return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div style={{ minHeight:'100dvh', background:'#0a0a0f', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ width:28, height:28, border:'2px solid #1e293b', borderTopColor:'#60a5fa', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
   if (!auth) return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+    <div style={{ minHeight:'100dvh', background:'#0a0a0f', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ color:'#f87171', fontFamily:'monospace', fontSize:14 }}>⚠ NOT AUTHENTICATED</div>
       <a href="/admin" style={{ color:'#60a5fa', fontFamily:'monospace', fontSize:12 }}>← Return to Admin</a>
@@ -636,7 +636,7 @@ export default function SecurityDashboard() {
   );
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#d1d5db', fontFamily:'ui-sans-serif, system-ui, sans-serif', display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100dvh', background:'#0a0a0f', color:'#d1d5db', fontFamily:'ui-sans-serif, system-ui, sans-serif', display:'flex', flexDirection:'column' }}>
       <style>{`
         * { box-sizing: border-box; margin:0; padding:0; }
         body { background:#0a0a0f; }

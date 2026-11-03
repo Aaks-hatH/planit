@@ -1,519 +1,544 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PlanIt global styles  ·  src/index.css
+ *
+ * Layers, in order:
+ *   1. base        element defaults, typography, focus, scrollbars, motion
+ *   2. components  the PlanIt primitives (buttons, inputs, cards, badges,
+ *                  status pills, tables, modals, tooltips, skeletons, ...)
+ *   3. utilities   small helpers (safe-area, balance, scrollbar-hide)
+ *   4. legacy      animation classes that the landing pages still rely on
+ *   5. white-label brand overrides
+ *
+ * All values come from src/styles/tokens.css (imported in main.jsx).
+ * Fonts (Space Grotesk, DM Sans, DM Mono) are loaded from index.html.
+ * ═══════════════════════════════════════════════════════════════════════════ */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────── 1. BASE ───────────────────────────────────────── */
 @layer base {
-  :root {
-    --color-border: #e5e5e5;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-
-    /* Unified dark backgrounds — one source of truth */
-    --bg-base:    #05050f;
-    --bg-surface: #08080f;
-    --bg-venue:   #0a0704;
-
-    /* Safe-area custom properties */
-    --safe-top:    env(safe-area-inset-top,    0px);
-    --safe-right:  env(safe-area-inset-right,  0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --safe-left:   env(safe-area-inset-left,   0px);
-
-    /* Typography */
-    --font-display: 'Instrument Serif', Georgia, serif;
-    --font-body:    'DM Sans', system-ui, -apple-system, sans-serif;
-    --font-mono:    'DM Mono', 'Fira Mono', monospace;
-  }
-
   * { box-sizing: border-box; }
 
-  /*
-    Prevent elastic overscroll from revealing an uncoloured gap above the header
-    on iOS when the user pulls down past the top of the page.
-  */
-  /*
-    Prevent horizontal pan/swipe from revealing white edges in PWA.
-    overscroll-behavior-x blocks the iOS rubber-band horizontal bounce.
-    We do NOT use overflow-x:hidden here as that breaks sticky positioning.
-  */
   html {
-    background-color: #06060c;
+    background-color: #06060c;               /* shows during iOS overscroll */
     overscroll-behavior-x: none;
     overscroll-behavior-y: none;
+    scroll-padding-top: 5.5rem;              /* anchors clear the floating nav */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: clip;                        /* clip, not hidden: keeps sticky working */
   }
 
   body {
-    background-color: #ffffff;
-    color: #0a0a0a;
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
+    background-color: var(--pi-bg);
+    color: var(--pi-text);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    letter-spacing: var(--ls-body);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   h1, h2, h3 {
-    font-family: 'Syne', 'DM Sans', system-ui, sans-serif;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
-  }
-  h4, h5, h6 {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: var(--font-display);
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: var(--ls-heading);
+    line-height: var(--lh-snug);
+  }
+  h1 { font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; }
+  h4, h5, h6 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: -0.015em;
     line-height: 1.25;
   }
 
-  input, textarea, select, button {
-    font-family: 'DM Sans', system-ui, sans-serif;
+  input, textarea, select, button { font-family: var(--font-body); }
+  button, [role='button'], a, summary, label[for] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  code, kbd, samp, pre { font-family: var(--font-mono); }
+  ::selection { background: rgb(47 91 255 / 0.22); color: inherit; }
+
+  /* Every sticky/fixed <header> paints behind the notch and keeps its content
+     clear of it. No visual change in a normal browser (--safe-top is 0). */
+  header { padding-top: var(--safe-top); }
+
+  /* One focus ring for the whole product (accent blue, re-brandable). */
+  *:focus-visible {
+    outline: 2px solid var(--pi-focus);
+    outline-offset: 2px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+  /* Reduced motion: keep layout and state changes, drop movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
+/* ───────────────────────── 2. COMPONENTS ─────────────────────────────────── */
 @layer components {
 
-  /* ─── Safe-area header rule ───────────────────────────────────────────────
-   *
-   * Every <header> in the app is sticky/fixed at the top.
-   * This single rule adds padding-top equal to the OS safe-area inset so the
-   * header background paints behind the Dynamic Island / notch, and the
-   * header's own content sits below it.
-   *
-   * - In browser mode:  --safe-top = 0px  →  no visual change whatsoever.
-   * - In PWA mode on iPhone with notch/Dynamic Island:
-   *     --safe-top ≈ 47px–59px depending on device.
-   *     The header grows by that amount, background fills the gap, content
-   *     remains at the correct height below the status bar.
-   *
-   * No JSX changes required. All pages are covered automatically.
-   * ───────────────────────────────────────────────────────────────────────── */
-  header {
-    padding-top: var(--safe-top);
+  /* ─── Typography roles ──────────────────────────────────────────────────── */
+  .t-display { font-family: var(--font-display); font-size: var(--fs-display); line-height: 0.98; letter-spacing: -0.045em; font-weight: 700; text-wrap: balance; }
+  .t-h1      { font-family: var(--font-display); font-size: var(--fs-h1); line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; text-wrap: balance; }
+  .t-h2      { font-family: var(--font-display); font-size: var(--fs-h2); line-height: 1.1;  letter-spacing: -0.03em;  font-weight: 600; text-wrap: balance; }
+  .t-h3      { font-family: var(--font-display); font-size: var(--fs-h3); line-height: 1.2;  letter-spacing: -0.02em;  font-weight: 600; }
+  .t-lead    { font-size: var(--fs-lead); line-height: 1.55; color: var(--pi-text-muted); max-width: var(--prose-max); }
+  .t-meta    { font-size: var(--fs-meta); line-height: 1.4; color: var(--pi-text-muted); }
+  .t-label   { font-family: var(--font-mono); font-size: var(--fs-label); line-height: 1.2; letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--pi-text-muted); font-weight: 500; }
+  .t-num     { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .t-stat    { font-family: var(--font-display); font-size: var(--fs-stat); line-height: 1; letter-spacing: -0.04em; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Eyebrow: mono caps label with a small accent square, used above headings */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    font-family: var(--font-mono); font-size: var(--fs-label); font-weight: 500;
+    letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--pi-text-muted);
   }
+  .eyebrow::before { content: ''; width: 6px; height: 6px; background: var(--pi-accent); border-radius: 1px; flex: none; }
 
-  /*
-   * Dark headers (Admin, GuestInvite) need their background-color to match
-   * so the safe-area zone is the same dark colour, not white.
-   * These are already set inline via Tailwind on the header element itself,
-   * so no extra rule is needed — padding-top simply extends that existing bg.
-   */
-
+  /* ─── Buttons ───────────────────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap;
-    letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em;
+    border: 1px solid transparent; border-radius: var(--r-lg);
+    white-space: nowrap; cursor: pointer; user-select: none;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out),
+      transform var(--dur-instant) var(--ease-out);
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+  .btn:disabled, .btn[aria-disabled='true'] { opacity: 0.4; cursor: not-allowed; }
+  .btn:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
+  .btn-primary   { background: var(--pi-action); color: var(--pi-action-ink); }
+  .btn-primary:hover:not(:disabled)   { background: var(--pi-action-hover); }
+  .btn-accent    { background: var(--pi-accent); color: #fff; }
+  .btn-accent:hover:not(:disabled)    { background: var(--pi-accent-hover); }
+  .btn-secondary { background: var(--pi-surface); color: var(--pi-text); border-color: var(--pi-border-strong); }
+  .btn-secondary:hover:not(:disabled) { background: var(--pi-surface-sunk); border-color: var(--pi-ink-400); }
+  .btn-danger    { background: var(--pi-surface); color: var(--pi-alert); border-color: color-mix(in srgb, var(--pi-alert) 35%, transparent); }
+  .btn-danger:hover:not(:disabled)    { background: var(--pi-alert-soft); border-color: var(--pi-alert); }
+  .btn-danger-solid { background: var(--pi-alert); color: #fff; }
+  .btn-danger-solid:hover:not(:disabled) { background: #b91c1c; }
+  .btn-ghost     { background: transparent; color: var(--pi-text-muted); }
+  .btn-ghost:hover:not(:disabled)     { background: var(--pi-surface-sunk); color: var(--pi-text); }
+
+  .btn-sm   { padding: 0.3rem 0.65rem; font-size: 0.8125rem; border-radius: var(--r-md); }
+  .btn-lg   { min-height: var(--control-lg); padding: 0.65rem 1.25rem; font-size: 0.9375rem; }
+  .btn-xl   { min-height: var(--control-xl); padding: 0.8rem 1.6rem; font-size: 1rem; border-radius: var(--r-xl); } /* operational / tablet */
+  .btn-icon { padding: 0; width: var(--control-md); height: var(--control-md); }
+  .btn-block { width: 100%; }
+
+  /* Touch devices: every standard button gets a 44px target. .btn-sm opts out
+     only on fine pointers. */
+  @media (pointer: coarse) {
+    .btn:not(.btn-sm):not(.btn-bare), .btn-icon { min-height: var(--touch-min); }
+    .btn-icon { min-width: var(--touch-min); }
   }
 
-  .btn-primary {
-    @apply bg-neutral-900 text-white hover:bg-neutral-800;
-  }
-
-  .btn-secondary {
-    @apply bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300;
-  }
-
-  .btn-danger {
-    @apply bg-white text-red-600 border border-red-200 hover:bg-red-50;
-  }
-
-  .btn-ghost {
-    @apply bg-transparent text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900;
-  }
+  /* ─── Form controls ─────────────────────────────────────────────────────── */
+  .label       { display: block; margin-bottom: 0.375rem; font-size: 0.8125rem; font-weight: 600; letter-spacing: -0.005em; color: var(--pi-text); }
+  .field-hint  { margin-top: 0.375rem; font-size: var(--fs-meta); color: var(--pi-text-muted); }
+  .field-error { margin-top: 0.375rem; font-size: var(--fs-meta); font-weight: 500; color: var(--pi-alert); display: flex; gap: 0.35rem; align-items: flex-start; }
 
   .input {
-    @apply w-full px-3 py-2.5 text-sm rounded-lg border border-neutral-200 bg-white placeholder-neutral-400 text-neutral-900 transition-all duration-150;
-    @apply focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900;
+    width: 100%; padding: 0.625rem 0.75rem;
+    font-size: 0.875rem; line-height: 1.4; color: var(--pi-text);
+    background: var(--pi-surface); border: 1px solid var(--pi-border-strong); border-radius: var(--r-lg);
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background-color var(--dur-fast);
   }
+  .input::placeholder { color: var(--pi-text-faint); }
+  .input:hover:not(:disabled):not(:focus) { border-color: var(--pi-ink-400); }
+  .input:focus { outline: none; border-color: var(--pi-accent); box-shadow: var(--ring-focus); }
+  .input:disabled { background: var(--pi-surface-sunk); cursor: not-allowed; opacity: 0.65; }
+  .input[aria-invalid='true'], .input-error { border-color: var(--pi-alert); }
+  .input[aria-invalid='true']:focus, .input-error:focus { box-shadow: 0 0 0 3px rgb(220 38 38 / 0.2); }
+  select.input { appearance: none; padding-right: 2.25rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236a6a76' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; }
+  textarea.input { resize: vertical; min-height: 5.5rem; }
+  @media (pointer: coarse) { .input { min-height: var(--touch-min); font-size: 16px; } } /* 16px stops iOS zoom-on-focus */
 
-  .input:disabled {
-    @apply bg-neutral-50 cursor-not-allowed opacity-60;
-  }
-
+  /* ─── Surfaces ──────────────────────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-xl border border-neutral-200;
-    box-shadow: var(--shadow-sm);
+    background: var(--pi-surface); border: 1px solid var(--pi-border);
+    border-radius: var(--r-xl); box-shadow: var(--elev-1);
   }
+  .card-flat { background: var(--pi-surface); border: 1px solid var(--pi-border); border-radius: var(--r-xl); }
+  .card-sunk { background: var(--pi-surface-sunk); border: 1px solid var(--pi-border); border-radius: var(--r-xl); }
+  .card-interactive, .planit-card {
+    background: var(--pi-surface); border: 1px solid var(--pi-border);
+    border-radius: var(--r-xl); box-shadow: var(--elev-1);
+    transition: box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  }
+  .card-interactive:hover, .planit-card:hover {
+    box-shadow: var(--elev-2); border-color: var(--pi-border-strong); transform: translateY(-1px);
+  }
+  .planit-hero { background: var(--pi-bg); }
 
+  /* ─── Badges and status ─────────────────────────────────────────────────── */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 600; line-height: 1.4;
+    border-radius: var(--r-md); border: 1px solid transparent; letter-spacing: -0.005em;
+  }
+  .badge-primary { background: var(--pi-action); color: var(--pi-action-ink); }
+  .badge-green   { background: var(--pi-live-soft);  color: var(--pi-live-ink);  border-color: color-mix(in srgb, var(--pi-live) 28%, transparent); }
+  .badge-gray    { background: var(--pi-surface-sunk); color: var(--pi-text-muted); border-color: var(--pi-border); }
+  .badge-red     { background: var(--pi-alert-soft); color: var(--pi-alert-ink); border-color: color-mix(in srgb, var(--pi-alert) 28%, transparent); }
+  .badge-amber   { background: var(--pi-wait-soft);  color: var(--pi-wait-ink);  border-color: color-mix(in srgb, var(--pi-wait) 30%, transparent); }
+  .badge-blue    { background: var(--pi-seated-soft); color: var(--pi-seated-ink); border-color: color-mix(in srgb, var(--pi-seated) 28%, transparent); }
+
+  /* Operational status pill: always a dot + a word, never colour alone. */
+  .status {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.2rem 0.6rem 0.2rem 0.5rem; border-radius: var(--r-pill);
+    font-size: 0.75rem; font-weight: 600; line-height: 1.3; letter-spacing: -0.005em; white-space: nowrap;
+    background: var(--pi-surface-sunk); color: var(--pi-text-muted);
+  }
+  .status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .status-live   { background: var(--pi-live-soft);   color: var(--pi-live-ink); }
+  .status-wait   { background: var(--pi-wait-soft);   color: var(--pi-wait-ink); }
+  .status-alert  { background: var(--pi-alert-soft);  color: var(--pi-alert-ink); }
+  .status-seated { background: var(--pi-seated-soft); color: var(--pi-seated-ink); }
+  .status-venue  { background: var(--pi-venue-soft);  color: var(--pi-venue-ink); }
+  .status-pulse::before { animation: pulse-dot 1.6s ease-in-out infinite; }
+  .status-lg { font-size: 0.875rem; padding: 0.3rem 0.8rem 0.3rem 0.65rem; }
+
+  .logo-text { font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; letter-spacing: -0.04em; color: var(--pi-text); }
+
+  /* ─── Tables ────────────────────────────────────────────────────────────── */
+  .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--pi-border); border-radius: var(--r-xl); background: var(--pi-surface); }
+  .table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
+  .table th {
+    position: sticky; top: 0; z-index: 1; text-align: left; white-space: nowrap;
+    padding: 0.65rem 1rem; background: var(--pi-surface-sunk); color: var(--pi-text-muted);
+    font-family: var(--font-mono); font-size: var(--fs-label); font-weight: 500; letter-spacing: var(--ls-label); text-transform: uppercase;
+    border-bottom: 1px solid var(--pi-border);
+  }
+  .table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--pi-border); vertical-align: middle; }
+  .table tbody tr:last-child td { border-bottom: 0; }
+  .table tbody tr { transition: background-color var(--dur-fast); }
+  .table tbody tr:hover { background: var(--pi-surface-sunk); }
+  .table-dense td { padding: 0.5rem 0.75rem; }
+
+  /* ─── Modals and sheets ─────────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: var(--z-modal);
+    display: flex; align-items: center; justify-content: center;
+    padding: max(1rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+    background: rgb(7 7 11 / 0.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    animation: pi-backdrop-in var(--dur-base) var(--ease-out);
+  }
+  .modal {
+    width: min(32rem, 100%); max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--pi-surface); color: var(--pi-text);
+    border: 1px solid var(--pi-border); border-radius: var(--r-2xl); box-shadow: var(--elev-4);
+    animation: pi-modal-in var(--dur-base) var(--ease-out);
+  }
+  .modal-lg { width: min(44rem, 100%); }
+  .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem 0; }
+  .modal-body { padding: 1rem 1.5rem; }
+  .modal-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; padding: 0.75rem 1.5rem 1.25rem; }
+  @media (max-width: 639px) {
+    .modal-backdrop.modal-sheet-mobile { align-items: flex-end; padding: 0; }
+    .modal-sheet-mobile .modal { width: 100%; border-radius: var(--r-2xl) var(--r-2xl) 0 0; max-height: 92dvh; padding-bottom: var(--safe-bottom); animation-name: pi-sheet-in; }
   }
 
-  .badge-primary { @apply bg-neutral-900 text-white; }
-  .badge-green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
-  .badge-gray { @apply bg-neutral-100 text-neutral-600 border border-neutral-200; }
-  .badge-red { @apply bg-red-50 text-red-700 border border-red-200; }
-  .badge-amber { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+  /* ─── Dropdown / menu ───────────────────────────────────────────────────── */
+  .menu {
+    min-width: 12rem; padding: 0.3rem; z-index: var(--z-dropdown);
+    background: var(--pi-surface); border: 1px solid var(--pi-border); border-radius: var(--r-xl); box-shadow: var(--elev-3);
+    animation: pi-pop-in var(--dur-fast) var(--ease-out); transform-origin: top;
+  }
+  .menu-item {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.5rem 0.65rem;
+    font-size: 0.875rem; font-weight: 500; color: var(--pi-text); text-align: left;
+    border-radius: var(--r-lg); cursor: pointer; transition: background-color var(--dur-instant);
+  }
+  .menu-item:hover, .menu-item:focus-visible { background: var(--pi-surface-sunk); outline: none; }
+  .menu-item[data-danger] { color: var(--pi-alert); }
+  .menu-sep { height: 1px; margin: 0.3rem 0.2rem; background: var(--pi-border); }
 
-  .logo-text {
-    @apply text-lg font-semibold text-neutral-900 tracking-tight;
+  /* ─── Tooltip: add data-tip="Label" to any element ──────────────────────── */
+  @media (hover: hover) {
+    [data-tip] { position: relative; }
+    [data-tip]::after {
+      content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: var(--z-dropdown);
+      transform: translateX(-50%) translateY(2px); padding: 0.3rem 0.55rem; white-space: nowrap; pointer-events: none;
+      font: 500 0.75rem/1.2 var(--font-body); letter-spacing: 0; text-transform: none;
+      color: #fff; background: var(--pi-ink-900); border-radius: var(--r-md); box-shadow: var(--elev-2);
+      opacity: 0; transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+    }
+    [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+    [data-tip-below]::after { bottom: auto; top: calc(100% + 8px); }
   }
 
-  .planit-card {
-    @apply bg-white rounded-xl border border-neutral-200 transition-all duration-200;
-    box-shadow: var(--shadow-sm);
+  /* ─── Skeletons ─────────────────────────────────────────────────────────── */
+  .skeleton {
+    display: block; border-radius: var(--r-md); min-height: 0.875rem;
+    background: linear-gradient(90deg, var(--pi-surface-sunk) 25%, var(--pi-border) 37%, var(--pi-surface-sunk) 63%);
+    background-size: 400% 100%; animation: pi-skeleton 1.5s ease-in-out infinite;
   }
+  .skeleton-text   { height: 0.8rem; margin: 0.45rem 0; }
+  .skeleton-title  { height: 1.5rem; width: 60%; margin-bottom: 0.75rem; }
+  .skeleton-circle { border-radius: 50%; aspect-ratio: 1; }
+  .skeleton-card   { height: 7rem; border-radius: var(--r-xl); }
 
-  .planit-card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: #d4d4d4;
+  /* ─── Empty state ───────────────────────────────────────────────────────── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 3rem 1.5rem; gap: 0.5rem; color: var(--pi-text-muted);
+    border: 1px dashed var(--pi-border-strong); border-radius: var(--r-xl); background: var(--pi-surface);
   }
+  .empty-state-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin-bottom: 0.5rem; border-radius: var(--r-xl); background: var(--pi-surface-sunk); color: var(--pi-text-muted); }
+  .empty-state-title { font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; letter-spacing: -0.02em; color: var(--pi-text); }
+  .empty-state-text  { max-width: 26rem; font-size: 0.875rem; }
 
-  .planit-hero {
-    background: #fafafa;
+  /* ─── Inline alert / notice ─────────────────────────────────────────────── */
+  .notice { display: flex; gap: 0.75rem; padding: 0.8rem 1rem; font-size: 0.875rem; border-radius: var(--r-xl); border: 1px solid var(--pi-border); background: var(--pi-surface-sunk); color: var(--pi-text); }
+  .notice-info  { background: var(--pi-seated-soft); border-color: color-mix(in srgb, var(--pi-seated) 25%, transparent); color: var(--pi-seated-ink); }
+  .notice-warn  { background: var(--pi-wait-soft);   border-color: color-mix(in srgb, var(--pi-wait) 30%, transparent);   color: var(--pi-wait-ink); }
+  .notice-error { background: var(--pi-alert-soft);  border-color: color-mix(in srgb, var(--pi-alert) 28%, transparent);  color: var(--pi-alert-ink); }
+  .notice-ok    { background: var(--pi-live-soft);   border-color: color-mix(in srgb, var(--pi-live) 28%, transparent);   color: var(--pi-live-ink); }
+
+  /* ─── Tabs (segmented) ──────────────────────────────────────────────────── */
+  .tabs { display: inline-flex; gap: 0.15rem; padding: 0.2rem; background: var(--pi-surface-sunk); border: 1px solid var(--pi-border); border-radius: var(--r-xl); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 0.4rem 0.85rem; font-size: 0.8125rem; font-weight: 600; white-space: nowrap; color: var(--pi-text-muted); border-radius: var(--r-lg); cursor: pointer; transition: background-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast); }
+  .tab:hover { color: var(--pi-text); }
+  .tab[aria-selected='true'], .tab.is-active { background: var(--pi-surface); color: var(--pi-text); box-shadow: var(--elev-1); }
+  @media (pointer: coarse) { .tab { min-height: var(--touch-min); display: inline-flex; align-items: center; } }
+
+  /* ─── Sidebar nav item (organizer / admin shells) ───────────────────────── */
+  .nav-item {
+    display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.55rem 0.75rem;
+    font-size: 0.875rem; font-weight: 500; color: var(--pi-text-muted); border-radius: var(--r-lg);
+    cursor: pointer; transition: background-color var(--dur-fast), color var(--dur-fast);
   }
+  .nav-item:hover { background: var(--pi-surface-sunk); color: var(--pi-text); }
+  .nav-item[aria-current='page'], .nav-item.is-active { background: var(--pi-accent-soft); color: var(--pi-accent-ink); font-weight: 600; }
+  .nav-item .nav-count { margin-left: auto; font-family: var(--font-mono); font-size: 0.6875rem; color: var(--pi-text-faint); }
 
-  /* ─── Dark form inputs (used in Home.jsx creation form) ─── */
+  /* ─── Public page chrome (floating nav, footer, page header) ────────────── */
+  .pi-nav-shell { position: fixed; inset-inline: 0; z-index: var(--z-nav); display: flex; justify-content: center; padding-inline: var(--gutter); pointer-events: none; }
+  .pi-nav {
+    pointer-events: auto; display: flex; align-items: center; gap: 0.25rem; width: min(100%, 72rem);
+    height: 3.25rem; padding: 0 0.5rem 0 1rem;
+    background: color-mix(in srgb, var(--pi-surface) 78%, transparent);
+    backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border: 1px solid var(--pi-border); border-radius: var(--r-xl);
+    transition: background-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base);
+  }
+  .pi-nav[data-scrolled='true'] { background: color-mix(in srgb, var(--pi-surface) 92%, transparent); box-shadow: var(--elev-2); }
+  .pi-nav-link {
+    position: relative; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.45rem 0.7rem;
+    font-size: 0.875rem; font-weight: 500; color: var(--pi-text-muted); border-radius: var(--r-lg);
+    transition: color var(--dur-fast), background-color var(--dur-fast); white-space: nowrap;
+  }
+  .pi-nav-link:hover { color: var(--pi-text); background: var(--pi-surface-sunk); }
+  .pi-nav-link[aria-current='page'] { color: var(--pi-text); }
+  .pi-nav-link[aria-current='page']::after { content: ''; position: absolute; left: 0.7rem; right: 0.7rem; bottom: 0.1rem; height: 2px; border-radius: 2px; background: var(--pi-accent); }
+  .pi-wordmark { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; letter-spacing: -0.05em; color: var(--pi-text); }
+  .pi-mark { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--r-lg); background: var(--pi-action); color: var(--pi-action-ink); font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: -0.05em; position: relative; }
+  .pi-mark::after { content: ''; position: absolute; right: -2px; bottom: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--pi-accent); border: 2px solid var(--pi-surface); }
+
+  .pi-page-head { position: relative; padding: calc(var(--safe-top) + 7.5rem) 0 3rem; }
+  .pi-page-head-inner { max-width: var(--content-max); margin-inline: auto; padding-inline: var(--gutter); }
+  .pi-footer { border-top: 1px solid var(--pi-border); background: var(--pi-surface); color: var(--pi-text-muted); }
+  .pi-footer a { color: inherit; transition: color var(--dur-fast); }
+  .pi-footer a:hover { color: var(--pi-text); }
+
+  /* Compact icon button used in app headers (organizer workspace, floor, kitchen). */
+  .hdr-btn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 2.25rem; height: 2.25rem; border-radius: var(--r-lg);
+    background: var(--pi-surface-sunk); color: var(--pi-text-muted); cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast), transform var(--dur-instant);
+  }
+  .hdr-btn:hover { background: var(--pi-border); color: var(--pi-text); }
+  .hdr-btn:active { transform: scale(0.94); }
+  @media (pointer: coarse) { .hdr-btn { width: var(--touch-min); height: var(--touch-min); } }
+
+  /* ─── Operational surfaces (floor, server, kitchen, wait boards) ────────── */
+  .op-target   { min-height: var(--control-xl); min-width: var(--control-xl); }
+  .op-tile     { border-radius: var(--r-xl); border: 1px solid var(--pi-border); background: var(--pi-surface); padding: 1rem; box-shadow: var(--elev-1); }
+  .op-tile[data-state='available'] { border-color: color-mix(in srgb, var(--pi-live) 45%, transparent);   background: var(--pi-live-soft); }
+  .op-tile[data-state='seated']    { border-color: color-mix(in srgb, var(--pi-seated) 45%, transparent); background: var(--pi-seated-soft); }
+  .op-tile[data-state='waiting']   { border-color: color-mix(in srgb, var(--pi-wait) 50%, transparent);   background: var(--pi-wait-soft); }
+  .op-tile[data-state='alert']     { border-color: color-mix(in srgb, var(--pi-alert) 50%, transparent);  background: var(--pi-alert-soft); }
+
+  /* ─── Loading spinner ───────────────────────────────────────────────────── */
+  .spinner { animation: spin 0.75s linear infinite; border-radius: 50%; }
+
+  /* ─── Dark form inputs (Home creation wizard) ───────────────────────────── */
   .dark-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: rgba(15,15,25,0.8);
-    border: 1px solid #334155;
-    border-radius: 0.75rem;
-    color: white;
-    font-size: 0.875rem;
-    outline: none;
-    transition: border-color 0.2s;
-    font-family: var(--font-body);
+    width: 100%; padding: 0.75rem 1rem; background: rgba(15,15,25,0.8); border: 1px solid #334155;
+    border-radius: var(--r-xl); color: white; font-size: 0.875rem; outline: none;
+    transition: border-color var(--dur-base), box-shadow var(--dur-base); font-family: var(--font-body);
   }
-  .dark-input:focus { border-color: #64748b; }
+  .dark-input:focus { border-color: var(--pi-blue-400); box-shadow: 0 0 0 3px rgb(95 132 255 / 0.25); }
   .dark-input::placeholder { color: #475569; }
   .dark-input option { background: #0f172a; color: white; }
-
-  /* ─── Marketing page animated elements ─── */
-  @keyframes shimmer-slide {
-    0%   { background-position: -200% center; }
-    100% { background-position:  200% center; }
-  }
-  .shimmer-white {
-    background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%);
-    background-size: 200% auto;
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer-slide 4s ease-in-out infinite;
-  }
-  .shimmer-slate {
-    background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%);
-    background-size: 200% auto;
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer-slide 5s ease-in-out infinite;
-  }
-
-  @keyframes scan-sweep {
-    0%   { transform: translateX(-120%); }
-    100% { transform: translateX(220%);  }
-  }
-  .stat-card { position: relative; overflow: hidden; }
-  .stat-card::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
-    transform: translateX(-120%);
-    animation: scan-sweep 5s ease-in-out infinite;
-    pointer-events: none;
-  }
-  .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
-  .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
-
-  @keyframes typing-dot {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-    30% { transform: translateY(-4px); opacity: 1; }
-  }
-  .typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes check-pop {
-    0%   { transform: scale(0.6); opacity: 0; }
-    70%  { transform: scale(1.2); }
-    100% { transform: scale(1);   opacity: 1; }
-  }
-  .check-pop { animation: check-pop 0.4s ease forwards; }
-
-  @keyframes table-available-pulse {
-    0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
-    50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
-  }
-  @keyframes table-ring-pulse {
-    0%, 100% { opacity: 0.7; r: 27; }
-    50%       { opacity: 1;   r: 29; }
-  }
-  .table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
-  .table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
-
-  @keyframes count-tick {
-    0%, 89%  { opacity: 1; transform: translateY(0); }
-    90%      { opacity: 0; transform: translateY(-8px); }
-    91%      { opacity: 0; transform: translateY(8px); }
-    100%     { opacity: 1; transform: translateY(0); }
-  }
-  .waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
-
-  .product-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
-  }
-  .product-divider-events {
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
-  }
-
-  @keyframes msg-float {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
-  .msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
-  .msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
-
-  @keyframes progress-bar-glow {
-    0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); }
-    50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); }
-  }
-
-  @keyframes scroll-indicator-bounce {
-    0%, 100% { transform: translateY(0); opacity: 1; }
-    50% { transform: translateY(6px); opacity: 0.5; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .stat-card::after, .shimmer-white, .shimmer-slate,
-    .typing-dot, .table-pulse-fill, .table-pulse-ring,
-    .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
-  }
 }
 
+/* ───────────────────────── 3. UTILITIES ──────────────────────────────────── */
 @layer utilities {
   .text-balance { text-wrap: balance; }
-
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+  .text-pretty  { text-wrap: pretty; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  /* Utility classes for safe area — use anywhere else in the app if needed */
   .pt-safe { padding-top:    var(--safe-top); }
   .pb-safe { padding-bottom: var(--safe-bottom); }
   .pl-safe { padding-left:   var(--safe-left); }
   .pr-safe { padding-right:  var(--safe-right); }
+
+  .min-h-screen { min-height: 100vh; min-height: 100dvh; }   /* mobile browser bars: dvh, vh as fallback */
+  .h-screen { height: 100vh; height: 100dvh; }
+  .font-display { font-family: var(--font-display); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .page-gutter { padding-inline: var(--gutter); }
+  .section-y { padding-block: var(--section-y); }
+  .hairline { border: 1px solid var(--pi-border); }
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Scrollbars */
+@supports (-moz-appearance: none) { html { scrollbar-width: thin; scrollbar-color: var(--pi-ink-300) transparent; } }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+::-webkit-scrollbar-thumb { background: var(--pi-ink-300); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--pi-ink-400); background-clip: content-box; }
 
+/* ───────────────────────── 4. KEYFRAMES + LEGACY ANIMATION CLASSES ───────── */
 @keyframes spin { to { transform: rotate(360deg); } }
-.spinner {
-  animation: spin 0.75s linear infinite;
-  border-radius: 50%;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
+@keyframes fadeIn  { from { opacity: 0; transform: translateY(8px); }  to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
   20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
+@keyframes pi-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pi-modal-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes pi-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pi-pop-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes pi-skeleton { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@keyframes pi-route-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pi-success { 0% { transform: scale(0.7); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes pi-ring-out { 0% { box-shadow: 0 0 0 0 rgb(22 163 74 / 0.45); } 100% { box-shadow: 0 0 0 14px rgb(22 163 74 / 0); } }
 
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.animate-slide-up { animation: slideUp 0.35s ease-out; }
-.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
-.animate-shake { animation: shake 0.5s ease-in-out; }
+.animate-fade-in    { animation: fadeIn 0.3s var(--ease-out); }
+.animate-slide-up   { animation: slideUp 0.35s var(--ease-out); }
+.animate-pulse-dot  { animation: pulse-dot 1.5s ease-in-out infinite; }
+.animate-shake      { animation: shake 0.5s ease-in-out; }
+.animate-success    { animation: pi-success 0.4s var(--ease-spring) both; }
+.animate-success-ring { animation: pi-ring-out 0.9s var(--ease-out) 1; }
+.pi-route-fade      { animation: pi-route-in 0.22s var(--ease-out); }   /* opacity only: never creates a containing block for fixed children */
 
-*:focus-visible {
-  outline: 2px solid #0a0a0a;
-  outline-offset: 2px;
+/* Landing-page effects (Home, About, Careers) */
+@keyframes shimmer-slide { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+.shimmer-white {
+  background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%); background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: shimmer-slide 4s ease-in-out infinite;
 }
-/* ─── White-label theme overrides ────────────────────────────────────────────
- * When a WL client's branding is active, --wl-primary and --wl-accent are
- * injected onto :root by WhiteLabelTheme in App.jsx.
- * These rules re-map the design tokens to the client's brand colors.
- * They are scoped to [data-wl] so they only fire when branding is active.
- * ─────────────────────────────────────────────────────────────────────────── */
+.shimmer-slate {
+  background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%); background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: shimmer-slide 5s ease-in-out infinite;
+}
 
+@keyframes scan-sweep { 0% { transform: translateX(-120%); } 100% { transform: translateX(220%); } }
+.stat-card { position: relative; overflow: hidden; }
+.stat-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  transform: translateX(-120%); animation: scan-sweep 5s ease-in-out infinite;
+}
+.stat-card:nth-child(2)::after { animation-delay: 1.6s; }
+.stat-card:nth-child(3)::after { animation-delay: 3.2s; }
+
+@keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+.typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes check-pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+.check-pop { animation: check-pop 0.4s ease forwards; }
+
+@keyframes table-available-pulse {
+  0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
+  50%      { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
+}
+@keyframes table-ring-pulse { 0%, 100% { opacity: 0.7; r: 27; } 50% { opacity: 1; r: 29; } }
+.table-pulse-fill { animation: table-available-pulse 2.2s ease-in-out infinite; }
+.table-pulse-ring { animation: table-ring-pulse 2.2s ease-in-out infinite; }
+
+@keyframes count-tick {
+  0%, 89% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 0; transform: translateY(-8px); }
+  91% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
+
+.product-divider { height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(255,106,31,0.4) 30%, rgba(255,106,31,0.6) 50%, rgba(255,106,31,0.4) 70%, transparent 100%); }
+.product-divider-events { height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%); }
+
+@keyframes msg-float { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
+.msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
+.msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
+
+@keyframes progress-bar-glow { 0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); } 50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); } }
+@keyframes scroll-indicator-bounce { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(6px); opacity: 0.5; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card::after, .shimmer-white, .shimmer-slate, .typing-dot, .table-pulse-fill, .table-pulse-ring,
+  .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
+  .skeleton { animation: none; }
+}
+
+.gateway:hover .gateway-events:not(:hover) { opacity: 0.35; }
+.gateway:hover .gateway-venue:not(:hover)  { opacity: 0.35; }
+.gateway-events { transition: opacity 0.4s ease, transform 0.4s ease; }
+.gateway-venue  { transition: opacity 0.4s ease, transform 0.4s ease; }
+
+/* ───────────────────────── 5. WHITE-LABEL OVERRIDES ──────────────────────── */
+/* Brand colours reach most of the UI through the --pi-action / --pi-accent
+ * tokens (see tokens.css). The rules below cover the hard-coded Tailwind
+ * colour classes that pages still use, so client branding keeps overriding
+ * them exactly as before. Scoped to [data-wl]: inert on PlanIt's own domain. */
 [data-wl] {
-  /* Primary action color — buttons, links, focus rings */
   --wl-btn-bg:    var(--wl-primary, #111827);
   --wl-btn-hover: color-mix(in srgb, var(--wl-primary, #111827) 85%, black);
   --wl-focus:     var(--wl-primary, #111827);
   font-family: var(--wl-font, inherit), system-ui, sans-serif;
 }
-
-[data-wl] .btn-primary {
-  background-color: var(--wl-primary, #111827) !important;
-  color: #fff !important;
-}
-
-[data-wl] .btn-primary:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--wl-primary, #111827) 85%, black) !important;
-}
-
-[data-wl] *:focus-visible {
-  outline-color: var(--wl-primary, #0a0a0a) !important;
-}
-
-[data-wl] a:not(.btn) {
-  color: var(--wl-primary, inherit);
-}
-
-/* Accent color — progress bars, highlights, active states */
+[data-wl] .btn-primary { background-color: var(--wl-primary, #111827) !important; color: #fff !important; }
+[data-wl] .btn-primary:hover:not(:disabled) { background-color: color-mix(in srgb, var(--wl-primary, #111827) 85%, black) !important; }
+[data-wl] .btn-accent  { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; }
+[data-wl] *:focus-visible { outline-color: var(--wl-primary, #0a0a0a) !important; }
+[data-wl] a:not(.btn) { color: var(--wl-primary, inherit); }
 [data-wl] [class*="bg-blue-500"],
-[data-wl] [class*="bg-indigo-500"] {
-  background-color: var(--wl-accent, var(--wl-primary, #111827)) !important;
-}
-
+[data-wl] [class*="bg-indigo-500"] { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; }
 [data-wl] [class*="text-blue-600"],
-[data-wl] [class*="text-indigo-600"] {
-  color: var(--wl-primary, inherit) !important;
-}
-
+[data-wl] [class*="text-indigo-600"] { color: var(--wl-primary, inherit) !important; }
 [data-wl] [class*="border-blue-"],
-[data-wl] [class*="border-indigo-"] {
-  border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important;
-}
-
-/* ─── Global dark-page CSS variables: defined in @layer base :root above ─── */
-
-/* ─── Display font for headings on dark pages ───────────────────────────── */
-.font-display {
-  font-family: 'Syne', system-ui, sans-serif;
-}
-
-/* ─── Dark input (used in Home form) ────────────────────────────────────── */
-.dark-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: rgba(15,15,25,0.8);
-  border: 1px solid #334155;
-  border-radius: 0.75rem;
-  color: white;
-  font-size: 0.875rem;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.dark-input:focus { border-color: #64748b; }
-.dark-input::placeholder { color: #475569; }
-.dark-input option { background: #0f172a; color: white; }
-
-/* ─── Landing page keyframes (extracted from Home.jsx inline styles) ──── */
-@keyframes shimmer-slide {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-}
-.shimmer-white {
-  background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%);
-  background-size: 200% auto;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-slide 4s ease-in-out infinite;
-}
-.shimmer-slate {
-  background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%);
-  background-size: 200% auto;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer-slide 5s ease-in-out infinite;
-}
-
-@keyframes scan-sweep {
-  0%   { transform: translateX(-120%); }
-  100% { transform: translateX(220%);  }
-}
-.stat-card { position: relative; overflow: hidden; }
-.stat-card::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
-  transform: translateX(-120%);
-  animation: scan-sweep 5s ease-in-out infinite;
-  pointer-events: none;
-}
-.stat-card:nth-child(2)::after { animation-delay: 1.6s; }
-.stat-card:nth-child(3)::after { animation-delay: 3.2s; }
-
-@keyframes typing-dot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
-.typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes check-pop {
-  0%   { transform: scale(0.6); opacity: 0; }
-  70%  { transform: scale(1.2); }
-  100% { transform: scale(1);   opacity: 1; }
-}
-.check-pop { animation: check-pop 0.4s ease forwards; }
-
-@keyframes table-available-pulse {
-  0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
-  50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
-}
-@keyframes table-ring-pulse {
-  0%, 100% { opacity: 0.7; r: 27; }
-  50%       { opacity: 1;   r: 29; }
-}
-.table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
-.table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
-
-@keyframes count-tick {
-  0%, 89%  { opacity: 1; transform: translateY(0); }
-  90%      { opacity: 0; transform: translateY(-8px); }
-  91%      { opacity: 0; transform: translateY(8px); }
-  100%     { opacity: 1; transform: translateY(0); }
-}
-.waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
-
-.product-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
-}
-.product-divider-events {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
-}
-
-@keyframes msg-float {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
-.msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
-.msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
-
-@keyframes progress-bar-glow {
-  0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); }
-  50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); }
-}
-
-@keyframes scroll-indicator-bounce {
-  0%, 100% { transform: translateY(0); opacity: 1; }
-  50% { transform: translateY(6px); opacity: 0.5; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stat-card::after, .shimmer-white, .shimmer-slate,
-  .typing-dot, .table-pulse-fill, .table-pulse-ring,
-  .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
-}
-
-/* ─── Gateway hover state ────────────────────────────────────────────────── */
-.gateway:hover .gateway-events:not(:hover) { opacity: 0.35; }
-.gateway:hover .gateway-venue:not(:hover)  { opacity: 0.35; }
-.gateway-events { transition: opacity 0.4s ease, transform 0.4s ease; }
-.gateway-venue  { transition: opacity 0.4s ease, transform 0.4s ease; }
+[data-wl] [class*="border-indigo-"] { border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important; }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Modal from '../components/ui/Modal';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText,
@@ -983,6 +984,7 @@ export default function EventSpace() {
   const [searchParams]    = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showLeave, setShowLeave] = useState(false);
 
   useEffect(() => {
     if (!event) return;
@@ -1586,7 +1588,7 @@ export default function EventSpace() {
       )}
 
       {/* ── Header ── */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-50">
+      <header className="bg-white/90 backdrop-blur-md border-b border-[var(--pi-border)] sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <a href="/"
@@ -1596,7 +1598,7 @@ export default function EventSpace() {
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-neutral-900 truncate leading-tight">{event?.title}</h1>
               {countdown ? (
-                <p className="text-[11px] font-semibold text-violet-600 truncate">
+                <p className="text-[11px] font-semibold text-[var(--pi-accent)] t-num truncate">
                   {countdown.d > 0 && `${countdown.d}d `}{String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')} to go
                 </p>
               ) : (
@@ -1607,8 +1609,8 @@ export default function EventSpace() {
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Mobile sidebar toggle */}
-            <button onClick={() => setShowMobileSidebar(true)} title="Event info"
-              className="lg:hidden w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <button onClick={() => setShowMobileSidebar(true)} aria-label="Event info" data-tip="Event info" data-tip-below
+              className="lg:hidden hdr-btn">
               <svg className="w-3.5 h-3.5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h7" /></svg>
             </button>
             {onlineUsers.length > 0 && (
@@ -1618,12 +1620,12 @@ export default function EventSpace() {
                 {onlineUsers.length} online
               </div>
             )}
-            <button onClick={() => setShowQR(true)} title="QR Code"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <button onClick={() => setShowQR(true)} aria-label="QR Code" data-tip="QR Code" data-tip-below
+              className="hdr-btn">
               <QrCode className="w-3.5 h-3.5 text-neutral-600" />
             </button>
-            <button onClick={handleCopyLink} title="Copy link"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <button onClick={handleCopyLink} aria-label="Copy link" data-tip="Copy link" data-tip-below
+              className="hdr-btn">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
             </button>
             {isOrganizer && event?.isEnterpriseMode && (
@@ -1633,8 +1635,8 @@ export default function EventSpace() {
               </button>
             )}
             {isOrganizer && wlShowWaitlist && (
-              <button onClick={() => navigate(`/event/${eventId}/waitlist`)} title="Waitlist"
-                className="relative w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              <button onClick={() => navigate(`/event/${eventId}/waitlist`)} aria-label="Waitlist" data-tip="Waitlist" data-tip-below
+                className="relative hdr-btn">
                 <ClipboardList className="w-3.5 h-3.5 text-neutral-600" />
                 {waitlistCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
@@ -1643,22 +1645,33 @@ export default function EventSpace() {
                 )}
               </button>
             )}
-            <button title="Leave event"
-              onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
+            <button aria-label="Leave event" data-tip="Leave event" data-tip-below
+              onClick={() => setShowLeave(true)}
+              className="hdr-btn hover:!bg-red-50 group">
               <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-500 transition-colors" />
             </button>
-            <button onClick={() => setShowOnboarding(true)} title="Take the tour"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <button onClick={() => setShowOnboarding(true)} aria-label="Take the tour" data-tip="Take the tour" data-tip-below
+              className="hdr-btn">
               <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
             </button>
-            <a href="/help" title="Help Center"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <a href="/help" aria-label="Help Center" data-tip="Help Center" data-tip-below
+              className="hdr-btn">
               <HelpCircle className="w-3.5 h-3.5 text-neutral-600" />
             </a>
           </div>
         </div>
       </header>
+
+      <Modal
+        open={showLeave}
+        onClose={() => setShowLeave(false)}
+        title="Leave this event?"
+        description="You will be signed out on this device. To come back, open the event link and sign in again."
+        footer={<>
+          <button className="btn btn-secondary" onClick={() => setShowLeave(false)}>Stay</button>
+          <button className="btn btn-danger-solid" onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}>Leave event</button>
+        </>}
+      />
 
       {/* Mobile sidebar overlay */}
       {showMobileSidebar && (
@@ -1774,7 +1787,7 @@ export default function EventSpace() {
 
           {/* Main content card */}
           <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex flex-col min-h-0"
-            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: 'calc(100vh - 7rem)' }}>
+            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: 'calc(100dvh - 7rem)' }}>
 
             {/* ── Tabs ── */}
             <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide flex-shrink-0" style={{ background: '#fafafa' }}>
@@ -1782,7 +1795,7 @@ export default function EventSpace() {
                 <button key={id} onClick={() => setActiveTab(id)}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex-shrink-0 ${
                     activeTab === id
-                      ? 'text-neutral-900 border-neutral-900 bg-white'
+                      ? 'text-neutral-900 border-[var(--pi-accent)] bg-white'
                       : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-white/60'
                   }`}>
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />

@@ -2,23 +2,23 @@
  * frontend/src/styles/liquid.css
  *
  * "Liquid" visual language shared by the PlanIt Home and Careers pages:
- * Syne display type, liquid-glass surfaces, the streamer scrollbar
+ * Space Grotesk display type, liquid-glass surfaces, the streamer scrollbar
  * (grows with scroll, sparks pop as you pass them, bursts into a firework at
  * the end) and the performance tiers that keep it all smooth.
  *
  * Everything is namespaced `lq-` and the type rules are scoped under `.lq-page`
- * so nothing leaks into the app screens. Fonts (Syne / DM Sans) load from index.html so a slow or blocked font CDN can never stall this lazy-loaded stylesheet.
+ * so nothing leaks into the app screens. Fonts (Space Grotesk / DM Sans) load from index.html so a slow or blocked font CDN can never stall this lazy-loaded stylesheet.
  */
 
 :root {
-  --lq-display: 'Syne', 'DM Sans', system-ui, sans-serif;
+  --lq-display: var(--font-display);
   --lq-ink: #ffffff;
-  --lq-indigo: #818cf8;
-  --lq-violet: #a78bfa;
-  --lq-pink: #f472b6;
+  --lq-indigo: #5f84ff;
+  --lq-violet: #90abff;
+  --lq-pink: #bccdff;
   --lq-amber: #fb923c;
   --lq-mint: #6ee7b7;
-  --lq-vein: #26214f;
+  --lq-vein: #16224f;
 }
 
 /* ─── Display type ─────────────────────────────────────────────────────────── */
@@ -54,7 +54,7 @@
 .lq-grad {
   /* Palindromic stops so the looping shimmer is seamless (the old gradient
      ended on orange and restarted on indigo, leaving a hard purple seam). */
-  background: linear-gradient(90deg, #818cf8 0%, #f472b6 25%, #fb923c 50%, #f472b6 75%, #818cf8 100%);
+  background: linear-gradient(90deg, #5f84ff 0%, #f472b6 25%, #fb923c 50%, #f472b6 75%, #5f84ff 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -198,12 +198,12 @@ html.lq-vine-dragging, html.lq-vine-dragging * { user-select: none; cursor: grab
 }
 .lq-spark.on { transform: scale(1); }
 
-.lq-thumb { cursor: grab; filter: drop-shadow(0 0 5px rgba(167, 139, 250, .65)); }
+.lq-thumb { cursor: grab; filter: drop-shadow(0 0 5px rgba(144, 171, 255, .65)); }
 .lq-thumb-inner { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1); }
 #lq-vine:hover .lq-thumb-inner, html.lq-vine-dragging .lq-thumb-inner { transform: scale(1.25); }
 .lq-thumb-body  { fill: #eef0ff; }
-.lq-thumb-edge  { fill: none; stroke: #4f46e5; stroke-width: .8; }
-.lq-thumb-dash  { fill: none; stroke: #4f46e5; stroke-width: .8; stroke-dasharray: 1.6 1.6; stroke-linecap: round; }
+.lq-thumb-edge  { fill: none; stroke: #1f43e6; stroke-width: .8; }
+.lq-thumb-dash  { fill: none; stroke: #1f43e6; stroke-width: .8; stroke-dasharray: 1.6 1.6; stroke-linecap: round; }
 
 /* The finale: a firework blooms at the bottom of the track */
 .lq-burst-inner {
@@ -274,7 +274,7 @@ html.lenis, html.lenis body { height: auto; }
 }
 
 /* ─── Hero "footage" scenes: lotus · island · orb ─────────────────────────── */
-.lq-lotus-glow { position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle at 50% 58%, rgba(255, 150, 110, .42) 0%, rgba(244, 114, 182, .2) 32%, rgba(129, 140, 248, .08) 55%, transparent 70%); animation: lq-glowp 7s ease-in-out infinite; }
+.lq-lotus-glow { position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle at 50% 58%, rgba(255, 150, 110, .42) 0%, rgba(244, 114, 182, .2) 32%, rgba(95, 132, 255, .08) 55%, transparent 70%); animation: lq-glowp 7s ease-in-out infinite; }
 @keyframes lq-glowp { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
 .lq-lotus-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 18px rgba(255, 140, 120, .45)) drop-shadow(0 0 60px rgba(244, 114, 182, .3)); }
 .lq-lotus .lq-lp { transform: scale(0); transform-origin: 0 0; transition: transform 1.3s cubic-bezier(.34, 1.4, .64, 1) var(--d, 0s); }

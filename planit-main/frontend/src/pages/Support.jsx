@@ -3,6 +3,7 @@ import { Heart, Coffee, Sparkles, DollarSign } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import PublicLayout from '../components/ui/PublicLayout';
 
 // Plain axios instance with no auth interceptors for public support routes
 const publicApi = axios.create({
@@ -115,334 +116,169 @@ export default function Support() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <Heart className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-neutral-900">PlanIt</span>
-          </a>
-          <a href="/support/wall" className="text-sm text-neutral-600 hover:text-neutral-900">
-            Wall of Supporters →
-          </a>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-16">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-4">
-            <Heart className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-neutral-900 mb-4">
-            Support PlanIt Development
-          </h1>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            PlanIt is <strong>100% free</strong> and always will be. If you find it useful, 
-            consider buying us a coffee or requesting a feature!
-          </p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex justify-center gap-4 mb-8">
+  const amountButtons = (list, form, setForm, compact) => (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5" role="group">
+      {list.map((preset) => {
+        const on = form.amount === preset.amount;
+        return (
           <button
-            onClick={() => setActiveTab('support')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === 'support'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
+            key={preset.amount}
+            type="button"
+            aria-pressed={on}
+            onClick={() => setForm({ ...form, amount: preset.amount })}
+            className={`rounded-lg border px-2 py-3 text-center transition-all duration-150 active:scale-[0.97] ${
+              on
+                ? 'border-[var(--pi-action)] bg-[var(--pi-action)] text-[var(--pi-action-ink)] shadow-md'
+                : 'border-[var(--pi-border-strong)] bg-[var(--pi-surface)] hover:border-[var(--pi-ink-400)]'
             }`}
+            style={{ minHeight: 64 }}
           >
-            <Coffee className="w-5 h-5 inline mr-2" />
-            Support Us
+            <span className={`block font-semibold leading-tight ${compact ? 'text-xs' : 'text-sm'}`}>{preset.label.trim()}</span>
+            <span className="t-num mt-1 block text-xs opacity-75">${preset.amount / 100}</span>
           </button>
-          <button
-            onClick={() => setActiveTab('feature')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === 'feature'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
-            }`}
-          >
-            <Sparkles className="w-5 h-5 inline mr-2" />
-            Request Feature
-          </button>
-        </div>
-
-        {/* Support Tab */}
-        {activeTab === 'support' && (
-          <div className="card p-8 max-w-2xl mx-auto animate-fade-in">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">
-               Buy Us a Coffee
-            </h2>
-            <p className="text-neutral-600 mb-6">
-              Your support helps us keep PlanIt free and add new features!
-            </p>
-
-            <form onSubmit={handleSupport} className="space-y-6">
-              {/* Amount Selection */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-3">
-                  Choose amount
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
-                  {presetAmounts.map((preset) => (
-                    <button
-                      key={preset.amount}
-                      type="button"
-                      onClick={() => setSupportForm({ ...supportForm, amount: preset.amount })}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        supportForm.amount === preset.amount
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
-                          : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
-                    >
-                      <div>{preset.label}</div>
-                      <div className="text-xs mt-1">${preset.amount / 100}</div>
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Custom amount */}
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 w-5 h-5 text-neutral-400" />
-                  <input
-                    type="number"
-                    min="3"
-                    step="1"
-                    value={supportForm.amount / 100}
-                    onChange={(e) => setSupportForm({ ...supportForm, amount: Math.round(e.target.value * 100) })}
-                    className="input pl-10"
-                    placeholder="Custom amount"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={supportForm.email}
-                  onChange={(e) => setSupportForm({ ...supportForm, email: e.target.value })}
-                  className="input"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              {/* Name (optional) */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Your name (optional)
-                </label>
-                <input
-                  type="text"
-                  value={supportForm.name}
-                  onChange={(e) => setSupportForm({ ...supportForm, name: e.target.value })}
-                  className="input"
-                  placeholder="Anonymous"
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  Will appear on the Wall of Supporters
-                </p>
-              </div>
-
-              {/* Message (optional) */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Message (optional)
-                </label>
-                <textarea
-                  value={supportForm.message}
-                  onChange={(e) => setSupportForm({ ...supportForm, message: e.target.value })}
-                  className="input"
-                  rows="3"
-                  maxLength="500"
-                  placeholder="Say something nice..."
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  {supportForm.message.length}/500 characters
-                </p>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-primary w-full py-3 text-lg"
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner w-5 h-5 border-2 border-white/30 border-t-white" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Heart className="w-5 h-5" />
-                    Support ${(supportForm.amount / 100).toFixed(2)}
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Feature Request Tab */}
-        {activeTab === 'feature' && (
-          <div className="card p-8 max-w-2xl mx-auto animate-fade-in">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-2">
-               Request a Feature or 2...
-            </h2>
-            <p className="text-neutral-600 mb-6">
-              Want a specific feature? Back your request with a contribution and 
-              we'll prioritize it! Higher contributions get built first.
-            </p>
-
-            <form onSubmit={handleFeatureRequest} className="space-y-6">
-              {/* Feature Description */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Feature Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  required
-                  value={featureForm.feature}
-                  onChange={(e) => setFeatureForm({ ...featureForm, feature: e.target.value })}
-                  className="input"
-                  rows="4"
-                  maxLength="500"
-                  placeholder="Describe the feature you want... (min 10 characters)"
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  {featureForm.feature.length}/500 characters
-                </p>
-              </div>
-
-              {/* Priority Level */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-3">
-                  Priority Level <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                  {featureAmounts.map((preset) => (
-                    <button
-                      key={preset.amount}
-                      type="button"
-                      onClick={() => setFeatureForm({ ...featureForm, amount: preset.amount })}
-                      className={`p-3 rounded-lg border-2 text-xs font-medium transition-all ${
-                        featureForm.amount === preset.amount
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
-                          : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
-                    >
-                      <div>{preset.label}</div>
-                      <div className="text-xs mt-1">${preset.amount / 100}</div>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-neutral-500 mt-2">
-                   Higher amounts = Higher priority in our roadmap
-                </p>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={featureForm.email}
-                  onChange={(e) => setFeatureForm({ ...featureForm, email: e.target.value })}
-                  className="input"
-                  placeholder="your@email.com"
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  We'll notify you when your feature is implemented
-                </p>
-              </div>
-
-              {/* Name (optional) */}
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Your name (optional)
-                </label>
-                <input
-                  type="text"
-                  value={featureForm.name}
-                  onChange={(e) => setFeatureForm({ ...featureForm, name: e.target.value })}
-                  className="input"
-                  placeholder="Anonymous"
-                />
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-primary w-full py-3 text-lg"
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner w-5 h-5 border-2 border-white/30 border-t-white" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Request Feature - ${(featureForm.amount / 100).toFixed(2)}
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
-          <div className="card p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
-              <Heart className="w-6 h-6 text-emerald-600" />
-            </div>
-            <h3 className="font-semibold text-neutral-900 mb-2">100% Free</h3>
-            <p className="text-sm text-neutral-600">
-              PlanIt will always be free. No paywalls, no limits.
-            </p>
-          </div>
-
-          <div className="card p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
-              <Sparkles className="w-6 h-6 text-blue-600" />
-            </div>
-            <h3 className="font-semibold text-neutral-900 mb-2">Open Source</h3>
-            <p className="text-sm text-neutral-600">
-              Built by the community, for the community.
-            </p>
-          </div>
-
-          <div className="card p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
-              <Coffee className="w-6 h-6 text-purple-600" />
-            </div>
-            <h3 className="font-semibold text-neutral-900 mb-2">Support Devs</h3>
-            <p className="text-sm text-neutral-600">
-              Help us keep building awesome features!
-            </p>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-neutral-300 mt-10">
-          Payments are made in Bitcoin and go directly to PlanIt. Prices are in USD and converted at the current rate when you check out.
-        </p>
-      </main>
+        );
+      })}
     </div>
+  );
+
+  const submitLabel = (icon, text) => loading ? (
+    <>
+      <span className="spinner h-4 w-4 border-2 border-white/30 border-t-white" />
+      Starting checkout...
+    </>
+  ) : (<>{icon}{text}</>);
+
+  return (
+    <PublicLayout
+      eyebrow="Support PlanIt"
+      title="Keep PlanIt free for everyone."
+      lead={<>PlanIt is <strong className="font-semibold text-[var(--pi-text)]">100% free</strong> and always will be. If it has been useful, chip in, or put weight behind the feature you want built next.</>}
+      meta={<><span>Payments in Bitcoin, priced in USD</span><a href="/support/wall" className="font-medium text-[var(--pi-accent)] hover:underline">See the Wall of Supporters</a></>}
+    >
+      <section className="grid gap-10 pb-24 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-14">
+        <div>
+          <div className="tabs mb-6" role="tablist" aria-label="Contribution type">
+            <button role="tab" id="tab-support" aria-selected={activeTab === 'support'} aria-controls="panel-support" className="tab" onClick={() => setActiveTab('support')}>
+              <Coffee className="mr-2 inline h-4 w-4" />Support us
+            </button>
+            <button role="tab" id="tab-feature" aria-selected={activeTab === 'feature'} aria-controls="panel-feature" className="tab" onClick={() => setActiveTab('feature')}>
+              <Sparkles className="mr-2 inline h-4 w-4" />Request a feature
+            </button>
+          </div>
+
+          {activeTab === 'support' && (
+            <div id="panel-support" role="tabpanel" aria-labelledby="tab-support" className="card animate-fade-in p-6 sm:p-8">
+              <h2 className="t-h3 mb-1">Buy us a coffee</h2>
+              <p className="mb-6 text-[var(--pi-text-muted)]">Your support keeps PlanIt free and pays for new features.</p>
+
+              <form onSubmit={handleSupport} className="space-y-6">
+                <div>
+                  <span className="label mb-3">Choose an amount</span>
+                  {amountButtons(presetAmounts, supportForm, setSupportForm)}
+                  <div className="relative mt-3">
+                    <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--pi-text-faint)]" />
+                    <input
+                      type="number" min="3" step="1" inputMode="decimal" aria-label="Custom amount in US dollars"
+                      value={supportForm.amount / 100}
+                      onChange={(e) => setSupportForm({ ...supportForm, amount: Math.round(e.target.value * 100) })}
+                      className="input t-num pl-9" placeholder="Custom amount"
+                    />
+                  </div>
+                  <p className="field-hint">Minimum $3.</p>
+                </div>
+
+                <div>
+                  <label htmlFor="s-email" className="label">Email <span className="text-[var(--pi-alert)]">*</span></label>
+                  <input id="s-email" type="email" required autoComplete="email" value={supportForm.email}
+                    onChange={(e) => setSupportForm({ ...supportForm, email: e.target.value })} className="input" placeholder="you@example.com" />
+                  <p className="field-hint">For your receipt. We never share it.</p>
+                </div>
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="s-name" className="label">Your name <span className="font-normal text-[var(--pi-text-faint)]">(optional)</span></label>
+                    <input id="s-name" type="text" value={supportForm.name}
+                      onChange={(e) => setSupportForm({ ...supportForm, name: e.target.value })} className="input" placeholder="Anonymous" />
+                    <p className="field-hint">Shown on the Wall of Supporters.</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="s-msg" className="label">Message <span className="font-normal text-[var(--pi-text-faint)]">(optional)</span></label>
+                    <textarea id="s-msg" value={supportForm.message}
+                      onChange={(e) => setSupportForm({ ...supportForm, message: e.target.value })}
+                      className="input" rows="3" maxLength="500" placeholder="Say something nice..." />
+                    <p className="field-hint t-num">{supportForm.message.length}/500</p>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full">
+                  {submitLabel(<Heart className="h-4 w-4" />, <>Support <span className="t-num">${(supportForm.amount / 100).toFixed(2)}</span></>)}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'feature' && (
+            <div id="panel-feature" role="tabpanel" aria-labelledby="tab-feature" className="card animate-fade-in p-6 sm:p-8">
+              <h2 className="t-h3 mb-1">Request a feature</h2>
+              <p className="mb-6 text-[var(--pi-text-muted)]">Back your request with a contribution and we will prioritize it. Higher contributions are built first.</p>
+
+              <form onSubmit={handleFeatureRequest} className="space-y-6">
+                <div>
+                  <label htmlFor="f-desc" className="label">What should we build? <span className="text-[var(--pi-alert)]">*</span></label>
+                  <textarea id="f-desc" required value={featureForm.feature}
+                    onChange={(e) => setFeatureForm({ ...featureForm, feature: e.target.value })}
+                    className="input" rows="4" maxLength="500" placeholder="Describe the feature you want (at least 10 characters)" />
+                  <p className="field-hint t-num">{featureForm.feature.length}/500</p>
+                </div>
+
+                <div>
+                  <span className="label mb-3">Priority <span className="text-[var(--pi-alert)]">*</span></span>
+                  {amountButtons(featureAmounts, featureForm, setFeatureForm, true)}
+                  <p className="field-hint">Higher amounts move a request up the roadmap. Minimum $5.</p>
+                </div>
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="f-email" className="label">Email <span className="text-[var(--pi-alert)]">*</span></label>
+                    <input id="f-email" type="email" required autoComplete="email" value={featureForm.email}
+                      onChange={(e) => setFeatureForm({ ...featureForm, email: e.target.value })} className="input" placeholder="you@example.com" />
+                    <p className="field-hint">We will tell you when it ships.</p>
+                  </div>
+                  <div>
+                    <label htmlFor="f-name" className="label">Your name <span className="font-normal text-[var(--pi-text-faint)]">(optional)</span></label>
+                    <input id="f-name" type="text" value={featureForm.name}
+                      onChange={(e) => setFeatureForm({ ...featureForm, name: e.target.value })} className="input" placeholder="Anonymous" />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full">
+                  {submitLabel(<Sparkles className="h-4 w-4" />, <>Request feature <span className="t-num">${(featureForm.amount / 100).toFixed(2)}</span></>)}
+                </button>
+              </form>
+            </div>
+          )}
+
+          <p className="t-meta mt-5">Payments are made in Bitcoin and go directly to PlanIt. Prices are in USD and converted at the current rate when you check out.</p>
+        </div>
+
+        <aside className="lg:pt-[3.25rem]" aria-label="Why support PlanIt">
+          <dl className="divide-y divide-[var(--pi-border)] border-y border-[var(--pi-border)]">
+            {[
+              { icon: Heart, k: '100% free', v: 'PlanIt will always be free. No paywalls, no limits.' },
+              { icon: Sparkles, k: 'Built in the open', v: 'Built by the community, for the community.' },
+              { icon: Coffee, k: 'Supports the developers', v: 'Contributions fund the time that goes into new features.' },
+            ].map(({ icon: Icon, k, v }) => (
+              <div key={k} className="flex gap-4 py-5">
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--pi-accent-soft)] text-[var(--pi-accent)]"><Icon className="h-4 w-4" strokeWidth={1.75} /></span>
+                <div>
+                  <dt className="font-display font-semibold tracking-tight">{k}</dt>
+                  <dd className="mt-1 text-sm text-[var(--pi-text-muted)]">{v}</dd>
+                </div>
+              </div>
+            ))}
+          </dl>
+        </aside>
+      </section>
+    </PublicLayout>
   );
 }

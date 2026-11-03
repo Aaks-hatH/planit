@@ -168,6 +168,12 @@ export default defineConfig({
               id.includes('node_modules/date-fns')) {
             return 'utils';
           }
+          // Shared public UI (nav, footer, modal...) is imported from several lazy
+          // chunks. Giving it its own chunk keeps it out of the venue/whitelabel/admin
+          // chunks, which would otherwise import each other in a cycle.
+          if (id.includes('/src/components/ui/')) {
+            return 'ui-shared';
+          }
           // Admin panel is large and only ever used by organizers — keep it isolated
           if (id.includes('/src/pages/Admin') ||
               id.includes('/src/pages/SecurityDashboard') ||

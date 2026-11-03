@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import { useNavigate } from 'react-router-dom';
 
 /* ── Scroll reveal ── */
@@ -113,7 +115,7 @@ const SECTIONS = [
       {name:'ntfy.sh',logo:si('ntfy'),url:'https://ntfy.sh',note:'Push notifications (watchdog alerts)'},
       {name:'Discord Webhooks',logo:si('discord'),url:'https://discord.com/developers/docs/resources/webhook',note:'Alert routing'},
       {name:'Render',logo:si('render'),url:'https://render.com',note:'Cloud hosting'},
-      {name:'Google Fonts',logo:si('googlefonts'),url:'https://fonts.google.com',note:'Syne & DM Sans typefaces'},
+      {name:'Google Fonts',logo:si('googlefonts'),url:'https://fonts.google.com',note:'Space Grotesk, DM Sans & DM Mono typefaces'},
       {name:'Google Analytics 4',logo:si('googleanalytics'),url:'https://analytics.google.com',note:'Web analytics (consent-gated)'},
     ],
   },
@@ -425,7 +427,7 @@ export default function Credits() {
   }, []);
 
   return (
-    <div style={{ minHeight:'100vh', background:'#05050f', color:'white', fontFamily:"'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ minHeight:'100dvh', background:'#05050f', color:'white', fontFamily:"'DM Sans', system-ui, sans-serif" }}>
 
       <svg style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} aria-hidden="true">
         <defs><pattern id="cg" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M 72 0 L 0 0 0 72" fill="none" stroke="rgba(255,255,255,0.018)" strokeWidth="1"/></pattern></defs>
@@ -433,25 +435,16 @@ export default function Credits() {
       </svg>
       <div style={{ position:'fixed', top:-200, left:'50%', transform:'translateX(-50%)', width:700, height:400, background:'radial-gradient(ellipse at center, rgba(124,58,237,0.07) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }}/>
 
-      {/* nav */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:scrolled?'rgba(5,5,15,0.92)':'transparent', borderBottom:scrolled?'1px solid rgba(255,255,255,0.06)':'1px solid transparent', backdropFilter:scrolled?'blur(16px)':'none', transition:'all 0.3s ease', padding:'0 clamp(16px,5vw,48px)' }}>
-        <div style={{ maxWidth:1000, margin:'0 auto', height:56, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <button onClick={()=>navigate('/')} style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', padding:'6px 0', color:'rgba(255,255,255,0.5)', fontSize:13, fontWeight:500, transition:'color 0.2s', fontFamily:'inherit' }} onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.85)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.5)'}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            PlanIt
-          </button>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,0.2)', fontVariantNumeric:'tabular-nums' }}>{totalCount} dependencies · 4 components</span>
-        </div>
-      </div>
+      <PublicNav dark actions={<span className="t-num hidden md:inline" style={{ fontSize:12, color:'var(--pi-text-faint)', padding:'0 .5rem' }}>{totalCount} dependencies · 4 components</span>} />
 
       {/* content */}
-      <div style={{ position:'relative', zIndex:1, maxWidth:1000, margin:'0 auto', padding:'clamp(48px,8vw,96px) clamp(16px,5vw,48px) 96px' }}>
+      <div style={{ position:'relative', zIndex:1, maxWidth:1000, margin:'0 auto', padding:'calc(clamp(48px,8vw,96px) + 3.5rem) clamp(16px,5vw,48px) 96px' }}>
 
         {/* hero */}
         <div style={{ marginBottom:56 }}>
           <Reveal>
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'5px 12px', borderRadius:999, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.04)', marginBottom:24 }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background:'#a78bfa', boxShadow:'0 0 8px #a78bfa' }}/>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:'#5f84ff', boxShadow:'0 0 8px #5f84ff' }}/>
               <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.5)' }}>Open Acknowledgements</span>
             </div>
           </Reveal>
@@ -494,6 +487,7 @@ export default function Credits() {
           </div>
         </Reveal>
       </div>
+      <PublicFooter compact />
     </div>
   );
 }

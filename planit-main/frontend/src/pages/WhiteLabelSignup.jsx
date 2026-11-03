@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { validateEmail, validateMessage } from '../utils/validators';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 
 const BUSINESS_TYPES = [
   { value: 'restaurant', label: 'Restaurant or Cafe' },
@@ -65,38 +67,30 @@ const lbl = {
 const tag = {
   display: 'inline-block', fontSize: '0.72rem', fontWeight: 600,
   letterSpacing: '0.06em', textTransform: 'uppercase',
-  color: '#2563eb', background: '#eff6ff',
+  color: '#2f5bff', background: '#eff3ff',
   padding: '0.25rem 0.625rem', borderRadius: '4px', marginBottom: '1rem',
 };
-const iFocus = e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)'; };
+const iFocus = e => { e.target.style.borderColor = '#2f5bff'; e.target.style.boxShadow = '0 0 0 3px rgba(47,91,255,0.18)'; };
 const iBlur  = e => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none'; };
 
 function Nav() {
-  return (
-    <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e7eb', padding: '0 2rem', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'inherit' }}>
-      <Link to="/" style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', textDecoration: 'none' }}>PlanIt</Link>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <a href="#pricing" style={{ fontSize: '0.85rem', color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}>Pricing</a>
-        <a href="#request" style={{ fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', background: '#2563eb', color: '#fff', padding: '0.5rem 1.1rem', borderRadius: '6px' }}>Get Started</a>
-      </div>
-    </nav>
-  );
+  return <PublicNav showCta={false} actions={<a href="#request" className="btn btn-primary btn-sm">Request access</a>} />;
 }
 
 function Hero() {
   return (
-    <section style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '5rem 2rem 4rem' }}>
+    <section style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: 'calc(var(--safe-top, 0px) + 8rem) 2rem 4rem' }}>
       <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '4rem', alignItems: 'center' }}>
         <div>
           <div style={tag}>White Label Platform</div>
-          <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.03em', color: '#111827', margin: '0 0 1.25rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.25rem, 4.6vw, 3.5rem)', fontWeight: 700, lineHeight: 1.05, letterSpacing: '-0.04em', color: '#111827', margin: '0 0 1.25rem' }}>
             Your reservation platform. Your brand.
           </h1>
           <p style={{ fontSize: '1rem', color: '#6b7280', lineHeight: 1.7, margin: '0 0 2rem', maxWidth: '460px' }}>
             A fully managed booking and event platform that runs entirely under your domain. Guests never know PlanIt is involved.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <a href="#request" style={{ fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', background: '#2563eb', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '6px' }}>Request Access</a>
+            <a href="#request" style={{ fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', background: '#2f5bff', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '6px' }}>Request Access</a>
             <a href="#pricing" style={{ fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', background: '#f3f4f6', color: '#374151', padding: '0.75rem 1.5rem', borderRadius: '6px' }}>View Pricing</a>
           </div>
         </div>
@@ -109,8 +103,8 @@ function Hero() {
           ].map(({ label, sub }) => (
             <div key={label} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: '2px' }}>
-                <circle cx="8" cy="8" r="8" fill="#eff6ff" />
-                <path d="M4.5 8L7 10.5L11.5 5.5" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="8" cy="8" r="8" fill="#eff3ff" />
+                <path d="M4.5 8L7 10.5L11.5 5.5" stroke="#2f5bff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#111827', marginBottom: '0.1rem' }}>{label}</div>
@@ -140,7 +134,7 @@ function HowItWorks() {
             { n: '3', title: 'Go live', body: 'Your guests book through your branded domain. Confirmations arrive from your brand. PlanIt is never visible.' },
           ].map((step, i) => (
             <div key={step.n} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '1.75rem', opacity: v ? 1 : 0, transform: v ? 'none' : 'translateY(14px)', transition: `opacity 0.45s ease ${i * 0.1}s, transform 0.45s ease ${i * 0.1}s` }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>{step.n}</div>
+              <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: '#eff3ff', color: '#2f5bff', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>{step.n}</div>
               <h3 style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827', margin: '0 0 0.5rem' }}>{step.title}</h3>
               <p style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{step.body}</p>
             </div>
@@ -178,13 +172,13 @@ function Pricing() {
                 {tier.features.map(f => (
                   <li key={f} style={{ fontSize: '0.82rem', color: tier.highlight ? 'rgba(255,255,255,0.85)' : '#374151', display: 'flex', gap: '0.6rem', alignItems: 'flex-start', lineHeight: 1.5 }}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: '1px' }}>
-                      <path d="M2.5 7L5.5 10L11.5 4" stroke={tier.highlight ? 'rgba(255,255,255,0.75)' : '#2563eb'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M2.5 7L5.5 10L11.5 4" stroke={tier.highlight ? 'rgba(255,255,255,0.75)' : '#2f5bff'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     {f}
                   </li>
                 ))}
               </ul>
-              <a href="#request" style={{ display: 'block', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none', padding: '0.7rem', borderRadius: '6px', background: tier.highlight ? '#fff' : '#2563eb', color: tier.highlight ? '#1d4ed8' : '#fff' }}>
+              <a href="#request" style={{ display: 'block', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none', padding: '0.7rem', borderRadius: '6px', background: tier.highlight ? '#fff' : '#2f5bff', color: tier.highlight ? '#1d4ed8' : '#fff' }}>
                 Get started with {tier.name}
               </a>
             </div>
@@ -301,7 +295,7 @@ function RequestForm() {
             </div>
           </div>
           {errorMsg && <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.75rem', marginBottom: 0 }}>{errorMsg}</p>}
-          <button onClick={handleSubmit} disabled={state === 'loading'} style={{ marginTop: '1.25rem', width: '100%', fontWeight: 600, fontSize: '0.875rem', background: state === 'loading' ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.8rem', cursor: state === 'loading' ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={handleSubmit} disabled={state === 'loading'} style={{ marginTop: '1.25rem', width: '100%', fontWeight: 600, fontSize: '0.875rem', background: state === 'loading' ? '#93c5fd' : '#2f5bff', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.8rem', cursor: state === 'loading' ? 'default' : 'pointer', fontFamily: 'inherit' }}>
             {state === 'loading' ? 'Sending...' : 'Submit Request'}
           </button>
           <p style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', marginTop: '0.75rem', marginBottom: 0 }}>
@@ -314,16 +308,7 @@ function RequestForm() {
 }
 
 function Footer() {
-  return (
-    <footer style={{ borderTop: '1px solid #e5e7eb', background: '#fff', padding: '1.75rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-      <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#9ca3af' }}>PlanIt</span>
-      <div style={{ display: 'flex', gap: '1.5rem' }}>
-        {[['Home', '/'], ['Terms', '/terms'], ['Privacy', '/privacy'], ['Support', '/support']].map(([label, href]) => (
-          <Link key={label} to={href} style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'none' }}>{label}</Link>
-        ))}
-      </div>
-    </footer>
-  );
+  return <PublicFooter compact />;
 }
 
 export default function WhiteLabelSignup() {
@@ -333,7 +318,7 @@ export default function WhiteLabelSignup() {
   }, []);
 
   return (
-    <div className="font-sans" style={{ background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
+    <div className="font-sans" style={{ background: '#f9fafb', minHeight: '100dvh', color: '#111827' }}>
       <Nav />
       <Hero />
       <HowItWorks />

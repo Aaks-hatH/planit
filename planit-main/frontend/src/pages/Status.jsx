@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import { uptimeAPI, watchdogAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 
@@ -723,7 +724,6 @@ export default function Status() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
         @keyframes barIn     { from { opacity:0; transform:scaleY(0.4); } to { opacity:1; transform:scaleY(1); } }
         @keyframes fadeIn    { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes expandIn  { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
@@ -735,23 +735,14 @@ export default function Status() {
         body { margin:0; }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '"DM Sans", sans-serif' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--pi-bg)', fontFamily: 'var(--font-body)' }}>
 
-        {/* Header */}
-        <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Link to="/" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none', fontWeight: '500' }}>← PlanIt</Link>
-            <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>System Status</span>
-            <button
-              onClick={() => setShowReport(true)}
-              style={{ padding: '7px 14px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#fff', color: '#374151', fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
-              onMouseEnter={e => e.target.style.background = '#f9fafb'}
-              onMouseLeave={e => e.target.style.background = '#fff'}
-            >
-              Report issue
-            </button>
-          </div>
-        </header>
+        <PublicNav actions={<button onClick={() => setShowReport(true)} className="pi-nav-link">Report issue</button>} />
+
+        <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--safe-top, 0px) + 7rem) 24px 0' }}>
+          <p className="eyebrow" style={{ marginBottom: 14 }}>Platform status</p>
+          <h1 className="t-h2" style={{ margin: 0 }}>System status</h1>
+        </div>
 
         <main style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px 80px' }}>
 
@@ -928,6 +919,7 @@ export default function Status() {
           </section>
 
         </main>
+        <PublicFooter compact />
       </div>
 
       {showReport && (

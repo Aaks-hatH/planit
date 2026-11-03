@@ -143,13 +143,13 @@ export function PerfGovernor() {
    Aurora backdrop
    ═══════════════════════════════════════════════════════════════════════════ */
 const PALETTES = {
-  indigo: ['#6366f1', '#8b5cf6', '#ec4899'],
-  sunset: ['#f472b6', '#fb923c', '#6366f1'],
-  violet: ['#8b5cf6', '#6366f1', '#22d3ee'],
-  mint:   ['#10b981', '#6366f1', '#22d3ee'],
-  amber:  ['#f97316', '#f59e0b', '#ec4899'],
+  indigo: ['#2f5bff', '#5f84ff', '#90abff'],
+  sunset: ['#ff8a4c', '#ff6a1f', '#2f5bff'],
+  violet: ['#5f84ff', '#2f5bff', '#22d3ee'],
+  mint:   ['#10b981', '#2f5bff', '#22d3ee'],
+  amber:  ['#ff6a1f', '#f59e0b', '#ff8a4c'],
 };
-const STAR_TINTS = ['255,255,255', '255,255,255', '199,210,254', '251,207,232', '253,230,200'];
+const STAR_TINTS = ['255,255,255', '255,255,255', '199,210,254', '199,210,254', '253,230,200'];
 
 export function Aurora({ palette = 'indigo', stars = true, density = 0.00016, orbs = true, className = '' }) {
   const canvasRef = useRef(null);
@@ -203,7 +203,7 @@ export function Aurora({ palette = 'indigo', stars = true, density = 0.00016, or
           s.x += s.vx; s.y += s.vy; s.life++;
           const f = 1 - s.life / 46;
           const g = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 9, s.y - s.vy * 9);
-          g.addColorStop(0, `rgba(255,255,255,${0.9 * f})`); g.addColorStop(1, 'rgba(129,140,248,0)');
+          g.addColorStop(0, `rgba(255,255,255,${0.9 * f})`); g.addColorStop(1, 'rgba(95,132,255,0)');
           ctx.strokeStyle = g; ctx.lineWidth = 1.4;
           ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 9, s.y - s.vy * 9); ctx.stroke();
         }
@@ -250,8 +250,8 @@ export function Horizon({ className = '', height = '46%' }) {
         className="absolute left-1/2 -translate-x-1/2 rounded-full"
         style={{
           width: '170%', aspectRatio: '1', top: '38%',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(129,140,248,.26) 0%, rgba(99,102,241,.07) 28%, transparent 60%), #05050f',
-          boxShadow: '0 -1px 0 0 rgba(199,210,254,.45), 0 -26px 90px 6px rgba(99,102,241,.32), 0 -80px 200px rgba(244,114,182,.12)',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(95,132,255,.26) 0%, rgba(47,91,255,.07) 28%, transparent 60%), #05050f',
+          boxShadow: '0 -1px 0 0 rgba(199,210,254,.45), 0 -26px 90px 6px rgba(47,91,255,.32), 0 -80px 200px rgba(244,114,182,.12)',
         }}
       />
     </div>
@@ -358,7 +358,7 @@ export function SpotlightStage({ children, radius = 260, id, className = '', min
         transform: 'scale(1.015)',
       }} />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{
-        background: `radial-gradient(circle ${radius}px at var(--spot-x) var(--spot-y), rgba(129,140,248,.15) 0%, rgba(99,102,241,.055) 38%, transparent 75%)`,
+        background: `radial-gradient(circle ${radius}px at var(--spot-x) var(--spot-y), rgba(95,132,255,.15) 0%, rgba(47,91,255,.055) 38%, transparent 75%)`,
       }} />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30" style={{
         backgroundImage: 'linear-gradient(rgba(199,210,254,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.045) 1px, transparent 1px)',

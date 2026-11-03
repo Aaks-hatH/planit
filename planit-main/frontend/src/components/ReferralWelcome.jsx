@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 
 /* ── CSS injection ─────────────────────────────────────────────────────────── */
 const RAW_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Syne:wght@400;500;600;700&display=swap');
 
   @keyframes _rw_pl_backdrop {
     from { opacity: 0; }
@@ -84,7 +83,7 @@ export default function ReferralWelcome() {
           borderRadius: 20,
           boxShadow: '0 70px 140px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,255,255,0.03)',
           overflow: 'hidden',
-          fontFamily: "'Syne', system-ui, sans-serif",
+          fontFamily: "var(--font-display)",
           animation: closing
             ? '_rw_pl_out .3s ease forwards'
             : '_rw_pl_in .5s cubic-bezier(.16,1,.3,1) forwards',
@@ -106,7 +105,7 @@ export default function ReferralWelcome() {
         <div style={{
           position: 'absolute', bottom: -40, left: -40,
           width: 160, height: 160, borderRadius: '50%',
-          background: 'rgba(99,102,241,0.07)',
+          background: 'rgba(47,91,255,0.07)',
           filter: 'blur(50px)', pointerEvents: 'none',
         }} />
 
@@ -135,7 +134,7 @@ export default function ReferralWelcome() {
           {/* Headline */}
           <div style={{ marginBottom: 26, animation: '_rw_pl_fade_up .55s .15s ease both' }}>
             <div style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontFamily: "var(--font-display)",
               fontSize: 'clamp(40px, 8vw, 54px)',
               fontWeight: 400, lineHeight: 1.08,
               letterSpacing: '-0.025em', color: '#eeeef8',
@@ -143,11 +142,11 @@ export default function ReferralWelcome() {
               Welcome
             </div>
             <div style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontFamily: "var(--font-display)",
               fontSize: 'clamp(40px, 8vw, 54px)',
               fontWeight: 400, lineHeight: 1.08,
               letterSpacing: '-0.025em',
-              color: '#6366f1', fontStyle: 'italic',
+              color: '#2f5bff', fontStyle: 'italic',
             }}>
               to PlanIT.
             </div>
@@ -178,13 +177,13 @@ export default function ReferralWelcome() {
           }}>
             <div style={{
               width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.22), rgba(99,102,241,0.07))',
-              border: '1px solid rgba(99,102,241,0.22)',
+              background: 'linear-gradient(135deg, rgba(47,91,255,0.22), rgba(47,91,255,0.07))',
+              border: '1px solid rgba(47,91,255,0.22)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <span style={{
-                fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontSize: 16, fontWeight: 500, color: '#818cf8',
+                fontFamily: "var(--font-display)",
+                fontSize: 16, fontWeight: 500, color: '#5f84ff',
               }}>A</span>
             </div>
             <div>
@@ -212,19 +211,19 @@ export default function ReferralWelcome() {
                 background: 'linear-gradient(135deg, #4f52cc 0%, #6828d4 100%)',
                 border: 'none', color: '#fff',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                fontFamily: "'Syne', system-ui, sans-serif",
+                fontFamily: "var(--font-display)",
                 letterSpacing: '.03em',
-                boxShadow: '0 4px 24px rgba(99,102,241,0.28)',
+                boxShadow: '0 4px 24px rgba(47,91,255,0.28)',
                 transition: 'all .16s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)';
-                e.currentTarget.style.boxShadow = '0 6px 32px rgba(99,102,241,0.45)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #2f5bff 0%, #1f43e6 100%)';
+                e.currentTarget.style.boxShadow = '0 6px 32px rgba(47,91,255,0.45)';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = 'linear-gradient(135deg, #4f52cc 0%, #6828d4 100%)';
-                e.currentTarget.style.boxShadow = '0 4px 24px rgba(99,102,241,0.28)';
+                e.currentTarget.style.boxShadow = '0 4px 24px rgba(47,91,255,0.28)';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
@@ -237,7 +236,7 @@ export default function ReferralWelcome() {
         {/* Bottom rule: PlanIT indigo */}
         <div style={{
           height: 1,
-          background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.5) 50%, transparent 100%)',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(47,91,255,0.5) 50%, transparent 100%)',
         }} />
       </div>
     </>

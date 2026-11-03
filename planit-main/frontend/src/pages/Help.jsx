@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { bugReportAPI } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import {
   ArrowLeft, Search, ChevronRight, ChevronDown, X,
   Calendar, Users, MessageSquare, BarChart3, FileText,
@@ -4756,7 +4757,6 @@ function BugReportModal({ open, onClose }) {
 /* ─── MAIN PAGE ─────────────────────────────────────────────────────────────── */
 
 export default function Help() {
-  const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -4816,38 +4816,16 @@ export default function Help() {
   return (
     <>
     <BugReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
-    <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
-      <style>{`html { scroll-behavior: smooth; } body { background: #f8f8f6; }`}</style>
+    <div className="min-h-screen" style={{ background: 'var(--pi-bg)', overflowX: 'clip' }}>
+      <style>{`html { scroll-behavior: smooth; }`}</style>
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { if (currentArticle) { setActiveArticle(null); } else { navigate('/'); } }}
-              className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {currentArticle ? 'Help Center' : 'Back'}
-            </button>
-            <span className="text-neutral-300">|</span>
-            <div className="flex items-center gap-2">
-              <LifeBuoy className="w-4 h-4 text-neutral-600" />
-              <span className="text-sm font-bold text-neutral-900">PlanIt Help Center</span>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <a href="/status" className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800 transition-colors">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Status
-            </a>
-            <span className="text-neutral-200">·</span>
-            <button onClick={() => setReportOpen(true)} className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Report an Issue</button>
-          </div>
-        </div>
-      </header>
+      <PublicNav
+        actions={
+          <button onClick={() => setReportOpen(true)} className="pi-nav-link hidden md:inline-flex">Report an issue</button>
+        }
+      />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-6xl mx-auto px-[var(--gutter)] pt-[calc(var(--safe-top,0px)+6.5rem)] pb-16">
 
         {/* ── Article view ── */}
         {currentArticle ? (
@@ -4862,7 +4840,7 @@ export default function Help() {
                   <ArrowLeft className="w-4 h-4" />
                   All articles
                 </button>
-                <p className="text-xs font-bold text-neutral-300 uppercase tracking-widest mb-2">In this category</p>
+                <p className="t-label mb-2">In this category</p>
                 <nav className="space-y-0.5">
                   {ARTICLES.filter(a => a.category === currentArticle.category).map(a => (
                     <button
@@ -4949,11 +4927,8 @@ export default function Help() {
           <>
             {/* Hero + search */}
             <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 rounded-full text-xs font-semibold text-neutral-300 mb-5">
-                <LifeBuoy className="w-3.5 h-3.5" />
-                Help Center
-              </div>
-              <h1 className="font-display text-4xl font-black text-neutral-900 mb-3">How can we help?</h1>
+              <p className="eyebrow mb-5">Help Center</p>
+              <h1 className="t-h1 mb-4 text-neutral-900">How can we help?</h1>
               <p className="text-base text-neutral-500 mb-8 max-w-lg mx-auto">
                 Search for a feature, an error message, or anything you need help with.
               </p>
@@ -4966,10 +4941,10 @@ export default function Help() {
                   value={query}
                   onChange={e => { setQuery(e.target.value); setActiveCategory('all'); }}
                   placeholder="Search — e.g. 'reset password', 'QR code', 'seating map'..."
-                  className="w-full pl-11 pr-10 py-3.5 bg-white border-2 border-neutral-200 focus:border-neutral-900 rounded-2xl text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-colors shadow-sm"
+                  className="input pl-11 pr-10 py-3.5 text-sm shadow-sm"
                 />
                 {query && (
-                  <button onClick={() => setQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700">
+                  <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-md text-neutral-400 hover:text-neutral-700">
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -4982,7 +4957,7 @@ export default function Help() {
                     <button
                       key={t}
                       onClick={() => setQuery(t)}
-                      className="px-3 py-1.5 bg-white border border-neutral-200 rounded-full text-xs font-medium text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 transition-all shadow-sm"
+                      className="px-3 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-medium text-neutral-600 hover:border-[var(--pi-accent)] hover:text-[var(--pi-accent-ink)] transition-colors"
                     >
                       {t}
                     </button>
@@ -5114,6 +5089,7 @@ export default function Help() {
           </>
         )}
       </div>
+      <PublicFooter />
     </div>
     </>
   );

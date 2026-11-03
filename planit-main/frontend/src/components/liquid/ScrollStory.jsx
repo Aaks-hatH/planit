@@ -34,7 +34,7 @@ export function MediaSlot({ src, alt = '', label = 'IMAGE', className = '', imgC
         <motion.img src={src} alt={alt} loading="lazy" decoding="async" draggable={false} className={cx('absolute inset-0 h-full w-full object-cover', imgClassName)} style={imgStyle} />
       ) : (
         <motion.div className="absolute inset-0" style={imgStyle} role="img" aria-label={alt || label}>
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 30% 20%, rgba(99,102,241,0.35), transparent 60%), radial-gradient(90% 80% at 85% 90%, rgba(236,72,153,0.28), transparent 60%), #0b0c22' }} />
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 30% 20%, rgba(47,91,255,0.35), transparent 60%), radial-gradient(90% 80% at 85% 90%, rgba(236,72,153,0.28), transparent 60%), #0b0c22' }} />
           <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
             <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/55">Add your photo</span>
@@ -157,7 +157,7 @@ export function ScrollStory({ items, label = 'media.js → story', kicker, id, h
           </div>
           <div
             className="relative order-1 aspect-[4/3] max-h-[40dvh] w-full min-w-0 overflow-hidden rounded-[22px] sm:aspect-[16/11] sm:max-h-[44dvh] sm:rounded-[28px] lg:order-2 lg:aspect-[16/10] lg:max-h-none"
-            style={{ boxShadow: '0 40px 120px -30px rgba(99,102,241,0.45)' }}
+            style={{ boxShadow: '0 40px 120px -30px rgba(47,91,255,0.45)' }}
           >
             {items.map((it, i) => <Frame key={i} i={i} n={n} p={p} item={it} label={label} />)}
           </div>

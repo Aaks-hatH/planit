@@ -92,10 +92,10 @@ function Pusher({ refs }) {
           <Shoe x={72} y={226} refEl={refs.shoeB} />
         </g>
         {/* torso: floral shirt */}
-        <path d="M66 70 Q94 58 124 72 L128 132 Q96 146 68 136 Z" fill="#8b5cf6" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M66 70 Q94 58 124 72 L128 132 Q96 146 68 136 Z" fill="#5f84ff" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
         {dots.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4.6" fill="#f5f6ff" />)}
         {/* shorts */}
-        <path d="M68 136 Q96 146 128 132 L132 170 L100 174 L96 156 L90 174 L66 170 Z" fill="#c7d2fe" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M68 136 Q96 146 128 132 L132 170 L100 174 L96 156 L90 174 L66 170 Z" fill="#bccdff" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
         {/* near leg */}
         <g ref={refs.legF}>
           <Limb d="M98 156 L108 192 L98 222" w={14} fill={skin} />
@@ -104,8 +104,8 @@ function Pusher({ refs }) {
         </g>
         {/* head */}
         <circle cx="94" cy="44" r="20" fill={skin} stroke={INK} strokeWidth="3.4" />
-        <path d="M72 40 Q72 14 96 14 Q118 16 114 38 Z" fill="#818cf8" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
-        <path d="M112 32 L140 40 L112 44 Z" fill="#818cf8" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M72 40 Q72 14 96 14 Q118 16 114 38 Z" fill="#5f84ff" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M112 32 L140 40 L112 44 Z" fill="#5f84ff" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
         <circle cx="104" cy="46" r="2.6" fill={INK} />
         <path d="M98 40 L110 38" stroke={INK} strokeWidth="3" strokeLinecap="round" />
         <path d="M100 58 q6 4 12 -1" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
@@ -286,7 +286,7 @@ export function HomePreloader({ ready, onReveal, onDone }) {
       onPointerDown={() => { speedRef.current = Math.max(speedRef.current, 3); }}
     >
       {/* the site's own atmosphere under the wordmark */}
-      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 28% 42%, rgba(99,102,241,.28), rgba(99,102,241,0) 70%), radial-gradient(50% 50% at 78% 70%, rgba(244,114,182,.15), rgba(244,114,182,0) 70%)' }} />
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 28% 42%, rgba(47,91,255,.28), rgba(47,91,255,0) 70%), radial-gradient(50% 50% at 78% 70%, rgba(244,114,182,.15), rgba(244,114,182,0) 70%)' }} />
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div
@@ -301,7 +301,7 @@ export function HomePreloader({ ready, onReveal, onDone }) {
               ref={(e) => { letterRefs.current[i] = e; }}
               style={{
                 display: 'inline-block', opacity: 0, willChange: 'transform, opacity',
-                ...(i >= 4 ? { background: 'linear-gradient(180deg,#a5b4fc 0%,#f472b6 70%,#fb923c 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' } : null),
+                ...(i >= 4 ? { background: 'linear-gradient(180deg,#90abff 0%,#f472b6 70%,#fb923c 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' } : null),
               }}
             >{ch}</span>
           ))}
@@ -313,7 +313,7 @@ export function HomePreloader({ ready, onReveal, onDone }) {
         ref={panelRef}
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-full"
-        style={{ willChange: 'transform', background: '#000', boxShadow: '-1px 0 0 rgba(165,180,252,.55), -36px 0 70px -18px rgba(129,140,248,.40)' }}
+        style={{ willChange: 'transform', background: '#000', boxShadow: '-1px 0 0 rgba(165,180,252,.55), -36px 0 70px -18px rgba(95,132,255,.40)' }}
       />
 
       {/* the character, hands on the panel's edge */}
@@ -348,7 +348,7 @@ export function HomePreloader({ ready, onReveal, onDone }) {
    The loop only runs while on screen. Reduced motion: static title, no egg.
    ───────────────────────────────────────────────────────────────────────── */
 const HEAD_LINES = ['Plan every', 'detail.', 'Execute', 'flawlessly.'];
-const GRAD = 'linear-gradient(90deg,#818cf8 0%,#f472b6 25%,#fb923c 50%,#f472b6 75%,#818cf8 100%)';
+const GRAD = 'linear-gradient(90deg,#5f84ff 0%,#bccdff 30%,#ffffff 50%,#bccdff 70%,#5f84ff 100%)';
 const GOOD = '#34d399';
 
 export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' }) {
@@ -435,7 +435,7 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
       cvs.width = w * dpr; cvs.height = hh * dpr;
       const c = cvs.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
       const ox = cx[eggK] + h1.offsetLeft; const oy = h1.offsetTop + cy[eggK] + F * 0.3;
-      const cols = ['#818cf8', '#a78bfa', '#f472b6', '#fb923c', '#34d399', '#ffffff'];
+      const cols = ['#5f84ff', '#90abff', '#f472b6', '#fb923c', '#34d399', '#ffffff'];
       parts = Array.from({ length: 140 }, () => {
         const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4; const sp = 7 + Math.random() * 15;
         return { x: ox, y: oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 6 + Math.random() * 7, h: 3 + Math.random() * 5, col: cols[(Math.random() * cols.length) | 0], life: 0 };
@@ -554,7 +554,7 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
         ref={h1Ref}
         aria-label={full}
         className={`lq-display relative mx-auto text-white ${className}`}
-        style={{ fontSize: 'min(12cqw, 15.5vh)', lineHeight: 0.94, letterSpacing: '-0.045em', textAlign: 'center' }}
+        style={{ fontSize: 'min(12cqw, 11vh)', lineHeight: 0.94, letterSpacing: '-0.045em', textAlign: 'center' }}
       >
         {lines.map((line, li) => (
           <span key={li} aria-hidden="true" className="block whitespace-nowrap">
@@ -661,8 +661,8 @@ export function HomeScrollChrome({ rail = true }) {
     <>
       <motion.div
         aria-hidden="true"
-        style={{ scaleX: bar, zIndex: 9998, boxShadow: '0 0 8px rgba(99,102,241,0.5)' }}
-        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-500 to-violet-500"
+        style={{ scaleX: bar, zIndex: 9998, boxShadow: '0 0 8px rgba(47,91,255,0.5)' }}
+        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-500 to-blue-500"
       />
       {rail && items.length > 1 && (
         <div className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
@@ -677,7 +677,7 @@ export function HomeScrollChrome({ rail = true }) {
               )}>{r.label}</span>
               <span className={cx(
                 'block rounded-full transition-all duration-300',
-                active === r.id ? 'h-2.5 w-2.5 bg-violet-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60',
+                active === r.id ? 'h-2.5 w-2.5 bg-blue-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60',
               )} />
             </button>
           ))}

@@ -78,7 +78,7 @@ export default function TooManyRequests() {
   const R = 54, C = 2 * Math.PI * R;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f8f8", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100dvh", background: "#f8f8f8", display: "flex", flexDirection: "column" }}>
       {/* Navbar */}
       <nav style={navStyle}>
         <Link to="/" style={logoStyle}>PlanIt</Link>
@@ -106,7 +106,7 @@ export default function TooManyRequests() {
               <span style={pillTextStyle}>{canRetry ? "Limit lifted" : "429 · Rate Limited"}</span>
             </div>
 
-            <div style={{ fontSize: "clamp(64px,16vw,120px)", fontWeight: 900, lineHeight: 1, color: "#0a0a0a", fontFamily: "Syne,sans-serif", letterSpacing: "-0.04em", marginBottom: 14 }}>
+            <div style={{ fontSize: "clamp(64px,16vw,120px)", fontWeight: 900, lineHeight: 1, color: "#0a0a0a", fontFamily: "var(--font-display)", letterSpacing: "-0.04em", marginBottom: 14 }}>
               429
             </div>
 
@@ -132,7 +132,7 @@ export default function TooManyRequests() {
                   />
                 </svg>
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-                  <span style={{ fontSize: canRetry ? 15 : 30, fontWeight: 900, color: "#0a0a0a", fontFamily: "Syne,sans-serif", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
+                  <span style={{ fontSize: canRetry ? 15 : 30, fontWeight: 900, color: "#0a0a0a", fontFamily: "var(--font-display)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>
                     {canRetry ? "✓" : secondsLeft}
                   </span>
                   {!canRetry && <span style={{ fontSize: 10, fontWeight: 700, color: "#aaa", letterSpacing: "0.08em", marginTop: 4 }}>SEC LEFT</span>}
@@ -181,7 +181,6 @@ export default function TooManyRequests() {
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&display=swap');
         * { box-sizing: border-box; }
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         @keyframes pulse429 { 0%,100%{opacity:1} 50%{opacity:0.25} }
@@ -212,11 +211,11 @@ function SupportCard({ title, desc, href }) {
 }
 
 const navStyle = { background: "#fff", borderBottom: "1px solid #e5e5e5", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 };
-const logoStyle = { fontFamily: "Syne,sans-serif", fontWeight: 800, fontSize: 20, color: "#0a0a0a", textDecoration: "none", letterSpacing: "-0.02em" };
+const logoStyle = { fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: "#0a0a0a", textDecoration: "none", letterSpacing: "-0.02em" };
 const navLinkStyle = { fontSize: 13, fontWeight: 600, color: "#444", textDecoration: "none", padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e5e5", background: "transparent" };
 const pillStyle = { display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 100, padding: "6px 16px", marginBottom: 28 };
 const pillTextStyle = { fontSize: 12, fontWeight: 700, color: "#6b6b6b", letterSpacing: "0.08em", textTransform: "uppercase" };
-const h1Style = { fontSize: "clamp(20px,4vw,28px)", fontWeight: 800, color: "#0a0a0a", marginBottom: 12, fontFamily: "Syne,sans-serif", letterSpacing: "-0.02em" };
+const h1Style = { fontSize: "clamp(20px,4vw,28px)", fontWeight: 800, color: "#0a0a0a", marginBottom: 12, fontFamily: "var(--font-display)", letterSpacing: "-0.02em" };
 const pStyle = { fontSize: 15, color: "#6b6b6b", lineHeight: 1.65, maxWidth: 420, margin: "0 auto 32px" };
 const blockCardStyle = { display: "flex", alignItems: "center", gap: 28, justifyContent: "center", background: "#fff", border: "1px solid #e5e5e5", borderRadius: 20, padding: "24px 28px", marginBottom: 40, flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" };
 const eyebrowStyle = { fontSize: 12, fontWeight: 700, color: "#aaa", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 20 };

@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import { useEffect, useRef, useState } from 'react';
 
 /* ── Scroll progress ── */
@@ -287,7 +289,7 @@ function SubHeading({ code, title }) {
 /* ── Part divider heading ── */
 function PartHead({ id, partLabel, title, subtitle }) {
   return (
-    <div id={id} style={{ scrollMarginTop: '72px', borderBottom: '1px solid #e5e7eb', paddingBottom: '1.25rem', marginBottom: '1.75rem' }}>
+    <div id={id} style={{ scrollMarginTop: '96px', borderBottom: '1px solid #e5e7eb', paddingBottom: '1.25rem', marginBottom: '1.75rem' }}>
       <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.4rem' }}>{partLabel}</p>
       <h2 style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: 'clamp(1.25rem, 2.5vw, 1.65rem)', fontWeight: 700, color: '#111827', margin: '0 0 0.5rem', lineHeight: 1.25 }}>{title}</h2>
       {subtitle && <p style={{ ...SM, color: '#6b7280', margin: 0 }}>{subtitle}</p>}
@@ -351,7 +353,7 @@ function PermSummary() {
 /* ── Full component license block ── */
 function CompLicense({ id, partLabel, title, accent, coverage, defs, grantLines, restrictItems, specialTitle, specialClauses, closingNote, extraNotes }) {
   return (
-    <section id={id} style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+    <section id={id} style={{ scrollMarginTop: '96px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
       <Reveal>
         <PartHead id={id} partLabel={partLabel} title={`${title} — License Agreement`} subtitle={coverage} />
 
@@ -415,28 +417,19 @@ export default function License() {
     <div className="min-h-screen bg-neutral-50">
       <style>{`@keyframes lexPulse{0%,100%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 0 rgba(30,41,59,0.25);}60%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 10px rgba(30,41,59,0);}}`}</style>
 
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="btn btn-secondary p-2">
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
-                <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <h1 className="text-lg font-semibold text-neutral-900">License Agreement</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicNav />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-[calc(var(--safe-top,0px)+7.5rem)] pb-2">
+        <p className="eyebrow mb-5">Legal</p>
+        <h1 className="t-h1 text-neutral-900">License Agreement</h1>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 md:p-14">
           <main>
 
           {/* ── Overview ── */}
-          <section id="overview" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="overview" style={{ scrollMarginTop: '96px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
             <Reveal>
               <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.75rem' }}>Master License Agreement</p>
               <h1 style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 700, color: '#111827', lineHeight: 1.2, margin: '0 0 0.75rem' }}>
@@ -472,7 +465,7 @@ export default function License() {
           </section>
 
           {/* ── Part One: Platform Overview ── */}
-          <section id="part-one" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="part-one" style={{ scrollMarginTop: '96px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
             <Reveal>
               <PartHead id="part-one" partLabel="Part One" title="The PlanIt Platform — An Overview"
                 subtitle="The PlanIt platform is not a single application. It is a multi-service distributed system comprising four distinct software components, each separately developed, separately deployed, and separately owned by the Author. This section explains each component before the formal legal terms begin." />
@@ -504,39 +497,39 @@ export default function License() {
           </section>
 
           {/* ── Part Two: Master Terms ── */}
-          <section id="part-two" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="part-two" style={{ scrollMarginTop: '96px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
             <Reveal>
               <PartHead id="part-two" partLabel="Part Two" title="Overarching Terms — Applicable to All Components"
                 subtitle="The following terms apply to the PlanIt platform as a unified whole, in addition to the individual component license terms set out in Parts Three through Six below." />
 
-              <div id="sec-ownership" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-ownership" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-1" title="Unified Ownership Declaration" />
                 <Clause code="M-1.1">The Author is the sole and exclusive owner of all intellectual property rights in and to the PlanIt platform as a whole and in each individual component thereof, including all copyrights, trade secrets, trade dress, and any other proprietary rights recognized under applicable law.</Clause>
                 <Clause code="M-1.2">The PlanIt platform, considered as a whole, constitutes a collective work under copyright law in addition to the individual copyrights subsisting in each component. The Author owns the copyright in the collective work in addition to the component copyrights.</Clause>
                 <Clause code="M-1.3">The architectural decisions that govern how the four components interact — the CORS scheme, the mesh authentication protocol, the white-label domain flow from frontend resolution through backend heartbeat to Router-level CORS registration, the maintenance exemption hierarchy — together constitute a proprietary system design that is itself a trade secret and copyrighted work of the Author, separate from and in addition to the individual component copyrights.</Clause>
               </div>
 
-              <div id="sec-scope" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-scope" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-2" title="Scope of the Master Agreement" />
                 <Clause code="M-2.1">This Master Agreement governs any and all access to and use of the PlanIt platform, regardless of which component or components You interact with.</Clause>
                 <Clause code="M-2.2">Where a more specific individual component license agreement addresses a particular topic, that specific provision takes precedence over any general provision in this Master Agreement with respect to that specific topic.</Clause>
                 <Clause code="M-2.3">Interaction with any single component of the PlanIt platform subjects You to the Master Agreement AND to the individual license agreement for that component.</Clause>
               </div>
 
-              <div id="sec-grant" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-grant" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-3" title="Unified Grant of Limited License" />
                 <Clause code="M-3.1">Subject to Your full and continuous compliance with this Master Agreement and all applicable individual component license agreements, the Author grants You a limited, personal, non-exclusive, non-transferable, non-sublicensable, revocable license to: (a) View the source code of any component solely for personal, non-commercial educational and reference purposes; and (b) Access and use the Hosted Service as an end-user for its intended purpose of event planning and management, subject to the Terms of Service at planitapp.onrender.com.</Clause>
                 <Clause code="M-3.2">White-label clients with executed white-label agreements hold additional rights as specified in those agreements only.</Clause>
                 <Clause code="M-3.3">All rights not expressly granted are reserved by the Author.</Clause>
               </div>
 
-              <div id="sec-restrict" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-restrict" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-4" title="Unified Restrictions" />
                 <p style={{ ...SM, color: '#6b7280' }}>Without explicit prior written permission from the Author, You must NOT:</p>
                 <RestrictList items={['Deploy any component of the platform on any infrastructure;', 'Copy, clone, or reproduce any component in any form;', 'Distribute any component to any third party;', 'Create any Derivative Work from any component;', 'Use any component for any Commercial Use;', 'Reverse engineer any security or enforcement mechanism;', 'Use any component\'s source code in any ML training dataset;', 'Remove any copyright notice or proprietary marking.']} />
               </div>
 
-              <div id="sec-nooss" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-nooss" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-5" title="No Open Source" />
                 <Callout type="note">
                   <strong>The PlanIt platform is NOT open source software.</strong> No component is released under any open-source license, including MIT, Apache 2.0, GNU GPL, GNU LGPL, BSD, Creative Commons, or any other license that would permit copying, modification, or redistribution.
@@ -545,7 +538,7 @@ export default function License() {
                 <Clause code="M-5.3">The Author has chosen to make this source code publicly visible solely to demonstrate technical capability and for reference purposes. This choice is made expressly without waiving any intellectual property right.</Clause>
               </div>
 
-              <div id="sec-disclaim" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-disclaim" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-6" title="Unified Disclaimers and Limitations" />
                 <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem 0.5rem' }}>
                   <Clause code="M-6.1">THE ENTIRE PLANIT PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR DISCLAIMS ALL WARRANTIES TO THE MAXIMUM EXTENT PERMITTED BY LAW.</Clause>
@@ -554,14 +547,14 @@ export default function License() {
                 </div>
               </div>
 
-              <div id="sec-law" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-law" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-7" title="Governing Law and Dispute Resolution" />
                 <Clause code="M-7.1">This Master Agreement and all individual component license agreements shall be governed by the laws of the jurisdiction in which the Author resides, without regard to conflict of law principles.</Clause>
                 <Clause code="M-7.2">Any dispute that cannot be resolved by direct negotiation shall be submitted to binding arbitration under rules mutually agreed by the parties, except that the Author shall always be entitled to seek emergency injunctive relief from any court of competent jurisdiction without first submitting to arbitration.</Clause>
                 <Clause code="M-7.3">Each party irrevocably waives any objection to the venue or personal jurisdiction of courts in the Author's jurisdiction for any proceeding that escapes arbitration.</Clause>
               </div>
 
-              <div id="sec-contact" style={{ scrollMarginTop: '72px' }}>
+              <div id="sec-contact" style={{ scrollMarginTop: '96px' }}>
                 <SubHeading code="M-8" title="Contact and Permissions" />
                 <Clause code="M-8.1">All requests for permissions beyond those granted — including commercial license inquiries, white-label partnership inquiries, academic use requests, and security vulnerability reports — must be directed to:</Clause>
                 <div style={{ display: 'flex', gap: '2rem', padding: '0.85rem 1rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', margin: '0.6rem 0', flexWrap: 'wrap' }}>
@@ -626,7 +619,7 @@ export default function License() {
           />
 
           {/* ── Part Seven: Closing ── */}
-          <section id="part-seven" style={{ scrollMarginTop: '72px', paddingBottom: '3rem' }}>
+          <section id="part-seven" style={{ scrollMarginTop: '96px', paddingBottom: '3rem' }}>
             <Reveal>
               <PartHead id="part-seven" partLabel="Part Seven" title="Consolidated Closing Provisions"
                 subtitle="This Master Agreement, together with the four individual component license agreements reproduced in Parts Three through Six above, constitutes the complete and exclusive statement of the intellectual property rights and licensing terms governing the PlanIt platform and all of its components." />
@@ -678,6 +671,7 @@ export default function License() {
         </div>
       </div>
 
+      <PublicFooter compact />
       <LexChat />
     </div>
   );

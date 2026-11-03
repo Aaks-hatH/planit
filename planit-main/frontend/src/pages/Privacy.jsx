@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import PublicLayout from '../components/ui/PublicLayout';
 
 const LAST_UPDATED = 'June 9, 2026';
 const EFFECTIVE_DATE = 'June 9, 2026';
@@ -7,7 +8,7 @@ const EFFECTIVE_DATE = 'June 9, 2026';
 function Section({ number, title, children }) {
   return (
     <section className="mb-10">
-      <h2 className="text-xl font-semibold text-neutral-900 mb-4 pb-2 border-b border-neutral-100">
+      <h2 className="font-display text-xl font-semibold text-neutral-900 mb-4 pb-2 border-b border-neutral-200 tracking-tight">
         {number}. {title}
       </h2>
       <div className="space-y-4 text-neutral-700 leading-relaxed text-sm">
@@ -30,29 +31,16 @@ export default function Privacy() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="btn btn-secondary p-2">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-lg font-semibold text-neutral-900">Privacy Policy</h1>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-12">
+    <PublicLayout
+      eyebrow="Legal"
+      title="Privacy Policy"
+      meta={<span className="t-num">Last updated: {LAST_UPDATED}</span>}
+      footerCompact
+    >
+      <div className="mx-auto max-w-4xl pb-24">
+        <div className="rounded-xl border border-[var(--pi-border)] bg-[var(--pi-surface)] p-6 shadow-sm sm:p-10 md:p-12">
 
           <div className="mb-10">
-            <h1 className="text-3xl font-bold text-neutral-900 mb-3">Privacy Policy</h1>
-            <p className="text-sm text-neutral-500">Last updated: {LAST_UPDATED}</p>
             <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-600 leading-relaxed">
               This Privacy Policy describes how PlanIt ("we", "us", or "our") collects, uses, stores, and protects
               information when you use the PlanIt event planning platform, accessible at our website and as a
@@ -544,6 +532,6 @@ export default function Privacy() {
           </button>
         </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

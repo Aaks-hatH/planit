@@ -346,7 +346,7 @@ const keyframes = `
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = {
   root: {
-    minHeight: '100vh',
+    minHeight: '100dvh',
     backgroundColor: '#f8f7f5',
     display: 'flex',
     flexDirection: 'column',

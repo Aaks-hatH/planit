@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import PublicLayout from '../components/ui/PublicLayout';
 
 const LAST_UPDATED = 'July 20, 2026';
 const EFFECTIVE_DATE = 'July 20, 2026';
@@ -7,7 +8,7 @@ const EFFECTIVE_DATE = 'July 20, 2026';
 function Section({ number, title, children }) {
   return (
     <section className="mb-12">
-      <h2 className="text-lg font-bold text-neutral-900 mb-4 pb-3 border-b-2 border-neutral-200 tracking-tight">
+      <h2 className="font-display text-xl font-semibold text-neutral-900 mb-4 pb-3 border-b border-neutral-200 tracking-tight">
         {number}. {title}
       </h2>
       <div className="space-y-4 text-neutral-700 leading-relaxed text-sm">
@@ -47,30 +48,16 @@ export default function Terms() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="btn btn-secondary p-2">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-lg font-semibold text-neutral-900">Terms of Service</h1>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
+    <PublicLayout
+      eyebrow="Legal"
+      title="Terms of Service"
+      meta={<><span className="t-num">Last updated: {LAST_UPDATED}</span><span className="t-num">Effective: {EFFECTIVE_DATE}</span></>}
+      footerCompact
+    >
+      <div className="mx-auto max-w-4xl pb-24">
+        <div className="rounded-xl border border-[var(--pi-border)] bg-[var(--pi-surface)] p-6 shadow-sm sm:p-10 md:p-14">
 
           <div className="mb-12">
-            <h1 className="text-4xl font-black text-neutral-900 mb-2 tracking-tight">Terms of Service</h1>
-            <p className="text-sm text-neutral-500 mb-1">Last updated: {LAST_UPDATED}</p>
-            <p className="text-sm text-neutral-500 mb-6">Effective date: {EFFECTIVE_DATE}</p>
             <LegalCallout>
               <strong className="text-white">PLEASE READ THESE TERMS OF SERVICE CAREFULLY AND IN THEIR ENTIRETY BEFORE ACCESSING OR USING THE SERVICE.</strong> These Terms of Service constitute a legally binding agreement between you and PlanIt. Your access to or use of the Service in any manner whatsoever — including browsing, creating an Event, joining an Event workspace, submitting Content, or otherwise interacting with the Service — constitutes your unconditional acceptance of and agreement to be bound by these Terms of Service and all policies incorporated herein by reference. IF YOU DO NOT AGREE TO THESE TERMS IN THEIR ENTIRETY, YOU MUST IMMEDIATELY CEASE ALL USE OF AND ACCESS TO THE SERVICE.
             </LegalCallout>
@@ -609,6 +596,6 @@ export default function Terms() {
           </button>
         </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

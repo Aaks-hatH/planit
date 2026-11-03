@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Search, X, Share2, Check } from 'lucide-react';
 import { blogAPI } from '../services/api';
+import PublicNav from '../components/ui/PublicNav';
 
 // ─── 4 fallback seeds (shown only when the API is unreachable) ────────────────
 const SEED_POSTS = [
@@ -180,33 +181,32 @@ const CATEGORIES = ['All', 'Event Planning', 'Restaurant Management', 'How-To Gu
 
 // Small colored dot per category (text stays neutral so the page stays calm)
 const CAT_COLORS = {
-  'Event Planning':        '#3b6fd4',
-  'Restaurant Management': '#e0762c',
+  'Event Planning':        '#2f5bff',
+  'Restaurant Management': '#ff6a1f',
   'How-To Guides':         '#3f9a5b',
   'Wedding Planning':      '#cf5f8d',
-  'Team Collaboration':    '#7a63c9',
+  'Team Collaboration':    '#0f0f14',
   'Resources':             '#2a9aa0',
 };
 
 const BLOG_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 .b-root, .b-root *, .b-root *::before, .b-root *::after { box-sizing: border-box; }
 .b-root {
-  --b-ink: #0f0f10; --b-body: #2c2c30; --b-muted: #6b6b72; --b-faint: #9a9aa1;
-  --b-line: #ececee; --b-soft: #f6f6f7; --b-bg: #fff;
-  --b-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --b-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  min-height: 100vh; background: var(--b-bg); color: var(--b-ink);
-  font-family: var(--b-sans); font-size: 16px; font-feature-settings: 'cv11', 'ss03'; line-height: 1.5;
+  --b-ink: #0f0f14; --b-body: #2c2c34; --b-muted: #6a6a76; --b-faint: #8a8a96;
+  --b-line: #e3e0d9; --b-soft: #efede7; --b-bg: #f7f6f2; --b-accent: #2f5bff;
+  --b-sans: var(--font-body);
+  --b-display: var(--font-display);
+  min-height: 100dvh; background: var(--b-bg); color: var(--b-ink);
+  font-family: var(--b-sans); font-size: 16px; line-height: 1.5;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 .b-root a { color: inherit; text-decoration: none; }
 .b-root button { font-family: inherit; }
-.b-root :focus-visible { outline: 2px solid var(--b-ink); outline-offset: 3px; border-radius: 4px; }
+.b-root :focus-visible { outline: 2px solid var(--b-accent); outline-offset: 3px; border-radius: 4px; }
 
 /* progress */
 .b-progress { position: fixed; inset: 0 0 auto; height: 3px; z-index: 9999; pointer-events: none; }
-.b-bar { height: 100%; background: var(--b-ink); transition: width .08s linear; }
+.b-bar { height: 100%; background: var(--b-accent); transition: width .08s linear; }
 @keyframes b-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .b-up { animation: b-up .5s cubic-bezier(.22,1,.36,1) both; }
 
@@ -226,8 +226,8 @@ const BLOG_CSS = `
 .b-shell { width: min(960px, 100%); margin: 0 auto; padding: 0 24px; }
 
 /* hero */
-.b-hero { padding: clamp(56px, 10vw, 104px) 0 clamp(32px, 5vw, 48px); }
-.b-hero h1 { font-family: var(--b-display); margin: 0; max-width: 11em; font-size: clamp(40px, 7vw, 76px); font-weight: 600; line-height: 1.03; letter-spacing: -.04em; }
+.b-hero { padding: calc(clamp(40px, 8vw, 88px) + 4.5rem + var(--safe-top, 0px)) 0 clamp(32px, 5vw, 48px); }
+.b-hero h1 { font-family: var(--b-display); margin: 0; max-width: 11em; font-size: clamp(40px, 7vw, 76px); font-weight: 700; line-height: 1; letter-spacing: -.045em; }
 .b-hero h1 span { color: var(--b-faint); }
 
 /* filters */
@@ -237,7 +237,7 @@ const BLOG_CSS = `
 .b-tab { position: relative; padding: 14px 0; border: 0; background: none; color: var(--b-muted); font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color .15s; }
 .b-tab:hover { color: var(--b-ink); }
 .b-tab.active { color: var(--b-ink); }
-.b-tab.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--b-ink); }
+.b-tab.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--b-accent); }
 .b-search-wrap { position: relative; flex: 0 0 auto; width: 150px; transition: width .2s; }
 .b-search-wrap:focus-within { width: 220px; }
 .b-search { width: 100%; padding: 9px 26px 9px 24px; border: 0; background: transparent; color: var(--b-ink); font-size: 15px; font-family: inherit; outline: none; }
@@ -300,7 +300,7 @@ const BLOG_CSS = `
 .b-copyright { color: var(--b-faint); }
 
 /* article */
-.b-article-head { --accent: #3b6fd4; width: min(720px, 100%); margin: 0 auto; padding: clamp(48px, 8vw, 88px) 24px 40px; }
+.b-article-head { --accent: #2f5bff; width: min(720px, 100%); margin: 0 auto; padding: calc(clamp(40px, 7vw, 72px) + 4.5rem + var(--safe-top, 0px)) 24px 40px; }
 .b-accent-bar { width: 36px; height: 4px; margin-bottom: 28px; border-radius: 4px; background: var(--accent); }
 .b-article-flag { margin-left: 14px; color: var(--accent); font-size: 13px; font-weight: 600; }
 .b-article-title { font-family: var(--b-display); margin: 20px 0 20px; font-size: clamp(34px, 5.6vw, 56px); font-weight: 600; line-height: 1.06; letter-spacing: -.038em; }
@@ -528,13 +528,9 @@ function ArticleView({ post, allPosts, onBack }) {
 
   return <div className="b-root">
     <ReadingBar />
-    <header className="b-nav"><div className="b-nav-inner">
-      <button className="b-nav-link back" onClick={() => onBack()}><ArrowLeft size={16} /> All stories</button>
-      <a href="/blog" className="b-logo b-logo-center">PlanIt<span> Journal</span></a>
-      <a href="/" className="b-nav-link">Explore PlanIt <ArrowRight size={16} /></a>
-    </div></header>
+    <PublicNav showCta={false} actions={<button className="pi-nav-link" onClick={() => onBack()}><ArrowLeft size={15} /> All stories</button>} />
 
-    <section className="b-article-head" style={{ '--accent': post.heroColor || '#3b6fd4' }}>
+    <section className="b-article-head" style={{ '--accent': post.heroColor || '#2f5bff' }}>
       <div className="b-accent-bar b-up" />
       <div className="b-up">
         <CatLabel cat={post.category} />
@@ -604,10 +600,7 @@ function BlogIndex({ posts, loading, onRead }) {
     : filtering ? `${filtered.length} ${filtered.length === 1 ? 'story' : 'stories'}${category !== 'All' ? ` in ${category}` : ''}` : '';
 
   return <div className="b-root">
-    <header className="b-nav"><div className="b-nav-inner">
-      <a href="/blog" className="b-logo">PlanIt<span> Journal</span></a>
-      <a href="/" className="b-nav-link">Plan with PlanIt <ArrowRight size={16} /></a>
-    </div></header>
+    <PublicNav showCta={false} actions={<a href="/?start=events" className="btn btn-primary btn-sm">Plan with PlanIt <ArrowRight size={14} /></a>} />
 
     <main className="b-shell">
       <section className="b-hero">
@@ -628,7 +621,7 @@ function BlogIndex({ posts, loading, onRead }) {
       <p className="b-count" aria-live="polite">{countText}</p>
 
       {showFeature && featuredPost && <a className="b-featured" aria-label={`Featured story: ${featuredPost.title}`}
-        style={{ '--accent': featuredPost.heroColor || '#3b6fd4' }} {...postLink(featuredPost, onRead)}>
+        style={{ '--accent': featuredPost.heroColor || '#2f5bff' }} {...postLink(featuredPost, onRead)}>
         <div className="b-feature-top"><CatLabel cat={featuredPost.category} /><span className="b-feature-flag">Editor’s pick</span></div>
         <div>
           <h2 className="b-feature-title">{featuredPost.title}</h2>

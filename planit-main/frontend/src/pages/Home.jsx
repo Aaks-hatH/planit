@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
 import { validateEmail } from '../utils/validators';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
@@ -364,13 +366,12 @@ Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 // GLOBAL STYLES, injected once
 // ─────────────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
 
   :root {
-    --accent-1: #6366f1;
-    --accent-2: #8b5cf6;
-    --glow-1: rgba(99,102,241,0.18);
-    --glow-2: rgba(139,92,246,0.12);
+    --accent-1: #2f5bff;
+    --accent-2: #5f84ff;
+    --glow-1: rgba(47,91,255,0.18);
+    --glow-2: rgba(95,132,255,0.12);
     --glow-3: rgba(251,146,60,0.16);
     --glow-4: rgba(236,72,153,0.14);
     --glow-5: rgba(45,212,191,0.14);
@@ -410,10 +411,10 @@ const GLOBAL_CSS = `
     100% { opacity:1; transform:scale(1); }
   }
 
-  .font-syne    { font-family: 'Syne', sans-serif; }
+  .font-syne    { font-family: var(--font-display); }
   .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
   .gradient-pop {
-    background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%);
+    background: linear-gradient(90deg, #5f84ff 0%, #f472b6 45%, #fb923c 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -427,7 +428,7 @@ const GLOBAL_CSS = `
   .cta-primary:hover {
     background-position: right center;
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15), 0 0 46px rgba(244,114,182,0.08);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(47,91,255,0.15), 0 0 46px rgba(95,132,255,0.10);
   }
   .cta-venue {
     transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
@@ -441,7 +442,7 @@ const GLOBAL_CSS = `
     transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
   }
   .branch-card:hover { transform: translateY(-4px); }
-  .branch-card-events:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.08); }
+  .branch-card-events:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(47,91,255,0.08); }
   .branch-card-venue:hover  { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(249,115,22,0.08); }
   .feature-card {
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -449,20 +450,20 @@ const GLOBAL_CSS = `
   }
   .feature-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(99,102,241,0.25);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(99,102,241,0.07);
+    border-color: rgba(47,91,255,0.25);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(47,91,255,0.07);
   }
   .hero-preview-shell {
     position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.12); border-radius:28px;
     background:linear-gradient(145deg, rgba(25,25,38,0.92), rgba(9,9,16,0.96));
-    box-shadow:0 40px 100px rgba(0,0,0,0.44), 0 0 80px rgba(99,102,241,0.10);
+    box-shadow:0 40px 100px rgba(0,0,0,0.44), 0 0 80px rgba(47,91,255,0.10);
     text-align:left; isolation:isolate;
   }
-  .hero-preview-shell::before { content:''; position:absolute; inset:-35% 20% auto; height:260px; z-index:-1; background:radial-gradient(ellipse, rgba(99,102,241,0.18), transparent 68%); pointer-events:none; }
+  .hero-preview-shell::before { content:''; position:absolute; inset:-35% 20% auto; height:260px; z-index:-1; background:radial-gradient(ellipse, rgba(47,91,255,0.18), transparent 68%); pointer-events:none; }
   .hero-preview-shell::after { content:''; position:absolute; inset:0; z-index:-1; opacity:0.35; background-image:radial-gradient(rgba(255,255,255,0.18) 0.8px, transparent 0.8px); background-size:18px 18px; mask-image:linear-gradient(to bottom, black, transparent 78%); pointer-events:none; }
   .hero-preview-chrome { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 18px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.025); }
   .hero-preview-brand { display:flex; align-items:center; gap:9px; color:rgba(255,255,255,0.88); font-size:12px; font-weight:800; letter-spacing:-0.02em; }
-  .hero-preview-brand-mark { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; color:white; background:linear-gradient(135deg,#756dff,#4f46e5); box-shadow:0 4px 14px rgba(99,102,241,0.35); }
+  .hero-preview-brand-mark { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; color:white; background:linear-gradient(135deg,#5f84ff,#1f43e6); box-shadow:0 4px 14px rgba(47,91,255,0.35); }
   .hero-preview-brand-mark svg { width:13px; height:13px; }
   .hero-preview-chrome-meta { display:flex; align-items:center; gap:7px; color:rgba(255,255,255,0.38); font-size:9px; }
   .hero-preview-live { display:inline-flex; align-items:center; gap:5px; color:#7ee4c1; font-weight:700; }
@@ -471,13 +472,13 @@ const GLOBAL_CSS = `
   .hero-preview-tab { position:relative; padding:9px 12px 12px; color:rgba(255,255,255,0.42); border:0; border-radius:9px 9px 0 0; background:transparent; cursor:pointer; font-size:11px; font-weight:700; transition:color .2s ease, background .2s ease; }
   .hero-preview-tab:hover { color:white; background:rgba(255,255,255,0.05); }
   .hero-preview-tab.active { color:white; }
-  .hero-preview-tab.active::after { content:''; position:absolute; right:10px; bottom:-1px; left:10px; height:2px; border-radius:4px 4px 0 0; background:#847dff; box-shadow:0 0 12px rgba(132,125,255,0.65); }
+  .hero-preview-tab.active::after { content:''; position:absolute; right:10px; bottom:-1px; left:10px; height:2px; border-radius:4px 4px 0 0; background:#5f84ff; box-shadow:0 0 12px rgba(95,132,255,0.65); }
   .hero-preview-body { display:grid; grid-template-columns:190px 1fr; min-height:318px; }
   .hero-preview-rail { padding:18px 12px; border-right:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.12); }
   .hero-preview-rail-label { margin:4px 7px 8px; color:rgba(255,255,255,0.28); font-size:8px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
   .hero-preview-rail-item { display:flex; align-items:center; gap:8px; padding:9px 9px; margin:3px 0; border-radius:9px; color:rgba(255,255,255,0.46); font-size:10px; font-weight:650; transition:background .2s ease, color .2s ease; }
   .hero-preview-rail-item svg { width:13px; height:13px; }
-  .hero-preview-rail-item.active { color:#d9d7ff; background:rgba(99,102,241,0.2); }
+  .hero-preview-rail-item.active { color:#d9d7ff; background:rgba(47,91,255,0.2); }
   .hero-preview-main { min-width:0; padding:24px; }
   .hero-preview-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
   .hero-preview-heading p { margin:0 0 5px; color:rgba(255,255,255,0.38); font-size:10px; font-weight:650; }
@@ -501,8 +502,8 @@ const GLOBAL_CSS = `
   .hero-preview-check i { width:14px; height:14px; display:grid; place-items:center; border:1px solid rgba(82,212,167,0.5); border-radius:4px; color:#79e2c2; background:rgba(82,212,167,0.1); font-style:normal; }
   .hero-preview-check i svg { width:9px; height:9px; }
   .hero-preview-bars { height:58px; display:flex; align-items:end; gap:6px; margin-top:10px; }
-  .hero-preview-bars span { flex:1; min-height:9px; border-radius:5px 5px 2px 2px; background:#413e83; }
-  .hero-preview-bars span:nth-child(1) { height:22px; }.hero-preview-bars span:nth-child(2) { height:34px; }.hero-preview-bars span:nth-child(3) { height:28px; }.hero-preview-bars span:nth-child(4) { height:49px; background:#746dff; }.hero-preview-bars span:nth-child(5) { height:41px; }.hero-preview-bars span:nth-child(6) { height:55px; background:#9a95ff; }
+  .hero-preview-bars span { flex:1; min-height:9px; border-radius:5px 5px 2px 2px; background:#22346f; }
+  .hero-preview-bars span:nth-child(1) { height:22px; }.hero-preview-bars span:nth-child(2) { height:34px; }.hero-preview-bars span:nth-child(3) { height:28px; }.hero-preview-bars span:nth-child(4) { height:49px; background:#3f6bff; }.hero-preview-bars span:nth-child(5) { height:41px; }.hero-preview-bars span:nth-child(6) { height:55px; background:#90abff; }
   .hero-preview-guest-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px; }
   .hero-preview-guest-card strong { display:block; margin-top:8px; color:white; font-size:23px; letter-spacing:-.07em; }
   .hero-preview-guest-card span { color:rgba(255,255,255,0.4); font-size:8px; font-weight:700; }
@@ -541,12 +542,12 @@ const GLOBAL_CSS = `
     transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
   }
   .stat-card:hover {
-    border-color: rgba(99,102,241,0.3);
-    box-shadow: 0 8px 32px rgba(99,102,241,0.1);
+    border-color: rgba(47,91,255,0.3);
+    box-shadow: 0 8px 32px rgba(47,91,255,0.1);
     transform: translateY(-2px);
   }
   .shimmer-white {
-    background: linear-gradient(90deg, #fff 0%, #a5b4fc 50%, #fff 100%);
+    background: linear-gradient(90deg, #fff 0%, #90abff 50%, #fff 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -617,7 +618,7 @@ const GLOBAL_CSS = `
     font-family:'DM Sans',sans-serif;
   }
   .wiz-input::placeholder { color:rgba(255,255,255,0.25); }
-  .wiz-input:focus { border-color:rgba(255,255,255,0.3); box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
+  .wiz-input:focus { border-color:rgba(255,255,255,0.3); box-shadow:0 0 0 3px rgba(47,91,255,0.12); }
   .wiz-input.error { border-color:rgba(239,68,68,0.6); box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
   .wiz-input-venue:focus { border-color:rgba(249,115,22,0.4); box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
   .wiz-btn-next {
@@ -1551,9 +1552,9 @@ function Reveal(props) {
 // reads as one continuous surface rather than a stack of hard-edged blocks.
 function SectionSeam({ tint = 'indigo' }) {
   const colors = {
-    indigo: 'rgba(99,102,241,0.5)',
+    indigo: 'rgba(47,91,255,0.5)',
     orange: 'rgba(249,115,22,0.4)',
-    violet: 'rgba(139,92,246,0.4)',
+    violet: 'rgba(95,132,255,0.4)',
     neutral: 'rgba(255,255,255,0.15)',
   };
   return (
@@ -1644,7 +1645,7 @@ function SlugFinder({ compact = false }) {
   }
 
   return (
-    <div className={`lq-glass mt-4 flex items-center gap-1 max-w-sm mx-auto rounded-full p-1 ${shaking ? 'animate-shake' : ''}`}>
+    <div className={`mx-auto flex max-w-sm items-center gap-1 rounded-xl border border-white/15 bg-white/[0.05] p-1 backdrop-blur-sm transition-colors focus-within:border-[var(--pi-blue-400)] ${shaking ? 'animate-shake' : ''}`}>
       <div className="relative flex-1">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
         <input
@@ -1653,12 +1654,12 @@ function SlugFinder({ compact = false }) {
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKey}
           placeholder="Have a link? Paste it here…"
-          className="w-full h-10 pl-10 pr-4 rounded-full text-sm text-white placeholder-white/40 bg-transparent focus:outline-none"
+          aria-label="Event link or URL name" className="w-full h-11 pl-10 pr-4 rounded-lg text-sm text-white placeholder-white/40 bg-transparent focus:outline-none"
         />
       </div>
       <button
         onClick={handleGo}
-        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-medium bg-white text-neutral-900 hover:bg-white/90 transition-all"
+        className="flex-shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-lg text-sm font-semibold bg-white text-neutral-900 hover:bg-white/90 transition-all"
       >
         Go <CornerDownRight className="w-3.5 h-3.5" />
       </button>
@@ -1671,7 +1672,7 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
     <Reveal delay={delay}>
       <div className="group relative p-6 sm:p-10 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
-          <div className="feature-icon w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:shadow-[0_0_24px_rgba(99,102,241,0.35)]">
+          <div className="feature-icon w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:shadow-[0_0_24px_rgba(47,91,255,0.35)]">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
           </div>
         </div>
@@ -1734,7 +1735,7 @@ function ScrollProgressBar() {
   }, []);
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }}>
-      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', transition: 'width .1s linear', boxShadow: '0 0 8px rgba(99,102,241,0.5)' }} />
+      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#2f5bff,#5f84ff)', transition: 'width .1s linear', boxShadow: '0 0 8px rgba(47,91,255,0.5)' }} />
     </div>
   );
 }
@@ -1851,7 +1852,7 @@ function EnterpriseDemo() {
   const roleColors = {
     VIP: 'text-amber-400 bg-amber-400/10',
     Speaker: 'text-blue-400 bg-blue-400/10',
-    Sponsor: 'text-purple-400 bg-purple-400/10',
+    Sponsor: 'text-blue-400 bg-blue-400/10',
     Attendee: 'text-neutral-400 bg-neutral-800',
   };
   const logColors = {
@@ -2280,7 +2281,7 @@ function RSVPMockup() {
     <div className="h-full flex flex-col text-white" style={{ background: '#0d0714' }}>
       <div className="relative flex-shrink-0 flex items-end p-4" style={{
         height: 168,
-        background: 'radial-gradient(circle at 20% 20%, rgba(99,102,241,0.55) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,209,102,0.5) 0%, transparent 40%), radial-gradient(circle at 80% 90%, rgba(255,93,143,0.55) 0%, transparent 45%), linear-gradient(135deg,#150a24,#0e1626)',
+        background: 'radial-gradient(circle at 20% 20%, rgba(47,91,255,0.55) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,209,102,0.5) 0%, transparent 40%), radial-gradient(circle at 80% 90%, rgba(255,93,143,0.55) 0%, transparent 45%), linear-gradient(135deg,#150a24,#0e1626)',
       }}>
         <div>
           <span className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-white/15 backdrop-blur mb-1.5">You&apos;re invited</span>
@@ -2423,8 +2424,8 @@ const LEGAL_CHECKS = [
     error: 'You need to agree to the Terms of Service and Privacy Policy.',
     label: (
       <>
-        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Terms of Service</a> and the{' '}
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Privacy Policy</a>.
+        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color:'#90abff', textDecoration:'underline' }}>Terms of Service</a> and the{' '}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#90abff', textDecoration:'underline' }}>Privacy Policy</a>.
       </>
     ),
   },
@@ -2448,8 +2449,8 @@ const LEGAL_CHECKS = [
 function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
   const isRsvp  = mode === 'rsvp';
-  const accent  = isVenue ? '#f97316' : '#6366f1';
-  const accentHover = isVenue ? '#fb923c' : '#818cf8';
+  const accent  = isVenue ? '#f97316' : '#2f5bff';
+  const accentHover = isVenue ? '#fb923c' : '#5f84ff';
 
   const [step, setStep]           = useState(0);
   const [dir, setDir]             = useState('forward');
@@ -2589,6 +2590,25 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
     if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
   };
 
+  // Deep links from the shared nav: /?start=events|venue|rsvp opens that branch,
+  // /#features (or any section id) scrolls to it once the loader has finished.
+  useEffect(() => {
+    if (preloading) return undefined;
+    const start = new URLSearchParams(location.search).get('start');
+    if (!isWL && ['events', 'venue', 'rsvp'].includes(start)) {
+      selectBranch(start);
+      navigate('/', { replace: true });
+      return undefined;
+    }
+    if (location.hash) {
+      const id = location.hash.slice(1);
+      const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, location.hash, preloading, isWL]);
+
   const handleTitleChange = (e) => {
     onUserInput?.();
     const title = e.target.value;
@@ -2603,7 +2623,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   const err = { ...localErr, ...fieldErrors };
 
   const renderStatusCard = () => abuseStatus ? (
-    <div style={{ background:'rgba(99,102,241,0.10)', border:'1px solid rgba(129,140,248,0.35)', borderRadius:14, padding:'12px 14px', marginBottom:18, color:'#e0e7ff', fontSize:13, lineHeight:1.5 }}>
+    <div style={{ background:'rgba(47,91,255,0.10)', border:'1px solid rgba(95,132,255,0.35)', borderRadius:14, padding:'12px 14px', marginBottom:18, color:'#dfe7ff', fontSize:13, lineHeight:1.5 }}>
       <strong style={{ display:'block', marginBottom:4 }}>{abuseStatus.title}</strong>
       <span>{abuseStatus.message}</span>
     </div>
@@ -2620,7 +2640,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
         : (id) => { setEventType(id); };
       return (
         <div>
-          <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
             {isVenue ? 'What kind of venue?' : 'What are you planning?'}
           </p>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:28 }}>
@@ -2633,7 +2653,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
                 <button key={t.id} type="button"
                   className={`wiz-type-card${active ? ' active' : ''}`}
                   style={{
-                    background: active ? (isVenue ? 'rgba(249,115,22,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.03)',
+                    background: active ? (isVenue ? 'rgba(249,115,22,0.12)' : 'rgba(47,91,255,0.12)') : 'rgba(255,255,255,0.03)',
                     border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.07)'}`,
                     borderRadius:12, padding:'14px 10px', textAlign:'center',
                     boxShadow: active ? `0 0 20px ${accent}28` : 'none',
@@ -2648,7 +2668,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             })}
           </div>
           {selected && (
-            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
+            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#5f84ff', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
               <CheckCircle2 style={{ width:13, height:13 }} />
               Selection confirmed. Continue when ready.
             </p>
@@ -2662,7 +2682,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
           <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
               {isVenue ? 'What\'s your venue called?' : 'What\'s your event called?'}
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
@@ -2723,7 +2743,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
           <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
               When and where?
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
@@ -2772,7 +2792,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       const isEnt = formData.isEnterpriseMode;
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-          <p className="wiz-question" style={{ fontSize:'clamp(1.3rem,3.5vw,2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.3rem,3.5vw,2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
             Choose your event mode.
           </p>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
@@ -2811,23 +2831,23 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             <button type="button"
               onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: true }))}
               style={{
-                background: isEnt ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.03)',
-                border: `1.5px solid ${isEnt ? 'rgba(99,102,241,0.55)' : 'rgba(99,102,241,0.15)'}`,
+                background: isEnt ? 'rgba(47,91,255,0.12)' : 'rgba(47,91,255,0.03)',
+                border: `1.5px solid ${isEnt ? 'rgba(47,91,255,0.55)' : 'rgba(47,91,255,0.15)'}`,
                 borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
                 transition:'all 0.2s ease',
-                boxShadow: isEnt ? '0 0 28px rgba(99,102,241,0.15)' : 'none',
+                boxShadow: isEnt ? '0 0 28px rgba(47,91,255,0.15)' : 'none',
               }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Zap style={{ width:14, height:14, color:'#818cf8' }} />
+                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(47,91,255,0.15)', border:'1px solid rgba(47,91,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Zap style={{ width:14, height:14, color:'#5f84ff' }} />
                 </div>
-                <span style={{ fontSize:13, fontWeight:700, color: isEnt ? '#a5b4fc' : 'rgba(99,102,241,0.5)' }}>Enterprise</span>
-                {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(99,102,241,0.2)', borderRadius:6, padding:'2px 6px', color:'#a5b4fc', fontWeight:600 }}>Selected</span>}
+                <span style={{ fontSize:13, fontWeight:700, color: isEnt ? '#90abff' : 'rgba(47,91,255,0.5)' }}>Enterprise</span>
+                {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(47,91,255,0.2)', borderRadius:6, padding:'2px 6px', color:'#90abff', fontWeight:600 }}>Selected</span>}
               </div>
-              <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(99,102,241,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
+              <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(47,91,255,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
                 {['Personalized QR invites', 'Check-in dashboard', 'Everything in Standard', 'Table assignments + groups'].map(f => (
                   <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                    <span style={{ color: isEnt ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.25)', fontSize:10 }}>✦</span>{f}
+                    <span style={{ color: isEnt ? 'rgba(47,91,255,0.6)' : 'rgba(47,91,255,0.25)', fontSize:10 }}>✦</span>{f}
                   </li>
                 ))}
               </ul>
@@ -2836,10 +2856,10 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
 
           {/* When to use Enterprise, description block */}
           <div style={{
-            background:'rgba(99,102,241,0.05)', border:'1px solid rgba(99,102,241,0.12)',
+            background:'rgba(47,91,255,0.05)', border:'1px solid rgba(47,91,255,0.12)',
             borderRadius:14, padding:'14px 16px',
           }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'rgba(99,102,241,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
+            <p style={{ fontSize:12, fontWeight:700, color:'rgba(47,91,255,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
             <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.65, margin:0 }}>
               Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite: galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
             </p>
@@ -2862,7 +2882,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
           <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
               {isVenue ? 'Who manages this venue?' : 'Who\'s organizing this?'}
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
@@ -2912,7 +2932,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
           <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'var(--font-display)', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
               {isVenue ? 'Secure your venue.' : 'Secure your event.'}
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
@@ -3016,8 +3036,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       {/* Draft recovery banner */}
       {draftBannerVisible && pendingDraft && (
         <div style={{
-          background: 'rgba(99,102,241,0.08)',
-          border: '1px solid rgba(99,102,241,0.2)',
+          background: 'rgba(47,91,255,0.08)',
+          border: '1px solid rgba(47,91,255,0.2)',
           borderRadius: 12,
           padding: '14px 16px',
           marginBottom: 24,
@@ -3027,7 +3047,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
           flexWrap: 'wrap',
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#a5b4fc', margin: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#90abff', margin: 0 }}>
               You were in the middle of creating an event.
             </p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
@@ -3044,7 +3064,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               setDraftBannerVisible(false);
             }}
             style={{
-              background: '#6366f1', color: '#fff', border: 'none',
+              background: '#2f5bff', color: '#fff', border: 'none',
               borderRadius: 8, padding: '8px 16px',
               fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
             }}
@@ -3146,7 +3166,7 @@ function HeroProductPreview() {
   const insights = (
     <motion.div key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
       <div className="hero-preview-heading"><div><p>Spring Product Forum</p><h3>Live insights</h3></div><button>Last 30 days</button></div>
-      <div className="hero-preview-insights"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Response momentum</strong><span>Aug 18 to Sep 17</span></div><div className="hero-preview-chart"><svg viewBox="0 0 500 140" preserveAspectRatio="none" aria-hidden="true"><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24" fill="none" stroke="#817aff" strokeWidth="4" strokeLinecap="round" /><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24 L500 140 L0 140Z" fill="url(#heroChartFade)" opacity=".25" /><defs><linearGradient id="heroChartFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#817aff" /><stop offset="1" stopColor="#817aff" stopOpacity="0" /></linearGradient></defs></svg></div></div><div className="hero-preview-card hero-preview-forecast"><div className="hero-preview-card-label"><strong>Attendance forecast</strong><TrendingUp /></div><strong>91%</strong><p>Based on responses, reminders, and guest history.</p></div></div>
+      <div className="hero-preview-insights"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Response momentum</strong><span>Aug 18 to Sep 17</span></div><div className="hero-preview-chart"><svg viewBox="0 0 500 140" preserveAspectRatio="none" aria-hidden="true"><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24" fill="none" stroke="#5f84ff" strokeWidth="4" strokeLinecap="round" /><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24 L500 140 L0 140Z" fill="url(#heroChartFade)" opacity=".25" /><defs><linearGradient id="heroChartFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#5f84ff" /><stop offset="1" stopColor="#5f84ff" stopOpacity="0" /></linearGradient></defs></svg></div></div><div className="hero-preview-card hero-preview-forecast"><div className="hero-preview-card-label"><strong>Attendance forecast</strong><TrendingUp /></div><strong>91%</strong><p>Based on responses, reminders, and guest history.</p></div></div>
       <div className="hero-preview-note"><TrendingUp /> Response rate is up 14% since your last reminder.</div>
     </motion.div>
   );
@@ -3182,6 +3202,7 @@ export default function Home() {
   const heroCta         = wlPages?.home?.ctaText     || '';
   const heroImage       = wlPages?.home?.heroImageUrl|| '';
   const navigate = useNavigate();
+  const location = useLocation();
   // Opening cinematic, plays once per browser session, skipped entirely on
   // white-label domains (they get their own branded hero, not PlanIt's).
   // The opening cinematic is retired: the PlanIt loading screen below is the only
@@ -3487,121 +3508,8 @@ export default function Home() {
       {!isWL && <HomeScrollChrome rail={false} key={String(selectedBranch)} />}
 
 
-      {/* Nav: a floating liquid-glass pill */}
-      <header
-        className="fixed inset-x-0 z-50 flex items-center justify-between px-4 sm:px-8 lg:px-14"
-        style={{ top: 'calc(1rem + var(--safe-top, 0px))', paddingTop: 0 }}
-      >
-        <a
-          href="#hero-top"
-          aria-label={isWL ? (wlName || 'Home') : 'PlanIt home'}
-          className="group flex items-center gap-3 text-white"
-        >
-          <span className="lq-glass relative flex shrink-0 items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
-            {isWL && wlLogo
-              ? <img src={wlLogo} alt={wlName} className="h-6 w-6 object-contain" />
-              : selectedBranch === 'venue'
-                ? <UtensilsCrossed className="h-5 w-5 text-orange-300" />
-                : <span className="lq-display text-[26px] leading-none">{(isWL ? wlName : 'P').charAt(0) || 'P'}</span>}
-            {!isWL && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
-          </span>
-          <span className="lq-display hidden text-2xl leading-none sm:block">{isWL ? wlName : 'PlanIt'}</span>
-        </a>
-
-        <nav
-          aria-label="Primary"
-          className="lq-glass hidden items-center rounded-full px-1.5 py-1.5 md:flex"
-          style={navScrolled ? { background: 'rgba(8,8,16,0.55)' } : undefined}
-        >
-          {selectedBranch && (
-            <button
-              onClick={() => setSelectedBranch(null)}
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
-            >
-              <ChevronRight className="h-3 w-3 rotate-180" /> Change
-            </button>
-          )}
-          {!isWL && (
-            <a href="#planit-venue"
-              onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-              style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-orange-300/90 transition-colors hover:text-orange-200">
-              <UtensilsCrossed className="h-3.5 w-3.5" />
-              PlanIt Venue
-            </a>
-          )}
-          <a href="#planit-events"
-            onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-            style={{ display: selectedBranch === 'venue' ? 'inline-flex' : 'none' }}
-            className="items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
-            <Calendar className="h-3.5 w-3.5" />
-            PlanIt Events
-          </a>
-          <a href="/discover" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Discover</a>
-          <a href="/blog" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Blog</a>
-          <a href="/status" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Status
-          </a>
-          <a href="/help" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Help</a>
-          <a href="/about" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">About</a>
-          <a href="#planit-events"
-            onClick={(e) => { e.preventDefault(); selectBranch(selectedBranch || 'events'); }}
-            className="ml-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90">
-            Start free
-            <ArrowUpRight className="h-4 w-4" />
-          </a>
-        </nav>
-
-        {/* Hamburger (mobile) / spacer that keeps the pill centred (desktop) */}
-        <button
-          className="lq-glass flex items-center justify-center rounded-full text-white md:hidden"
-          style={{ width: 48, height: 48 }}
-          onClick={() => setMobileMenuOpen(o => !o)}
-          aria-label="Toggle menu"
-          aria-expanded={mobileMenuOpen}
-        >
-          {mobileMenuOpen ? (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-          )}
-        </button>
-        <div aria-hidden="true" className="hidden shrink-0 md:block" style={{ width: 48, height: 48 }} />
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="lq-glass-strong absolute left-4 right-4 top-full mt-3 space-y-1 rounded-3xl p-3 md:hidden" style={{ background: 'rgba(8,8,16,0.78)' }}>
-            {!isWL && (
-              <a href="#planit-venue" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch('venue'); }} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-orange-300 transition-all hover:bg-white/5">
-                <UtensilsCrossed className="h-4 w-4" />PlanIt Venue
-              </a>
-            )}
-            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <Zap className="h-4 w-4 text-white/50" />Discover
-            </a>
-            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <span className="ml-0.5 mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />Status
-            </a>
-            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
-            </a>
-            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog
-            </a>
-            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/70 transition-all hover:bg-white/5">
-              About
-            </a>
-            <a href="#planit-events" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch(selectedBranch || 'events'); }} className="mt-1 flex items-center justify-center gap-1.5 rounded-full bg-white px-4 py-3 text-sm font-medium text-black">
-              Start free <ArrowUpRight className="h-4 w-4" />
-            </a>
-            <div className="mt-1 flex gap-2 border-t border-white/10 pt-1">
-              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Terms</a>
-              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Privacy</a>
-            </div>
-          </div>
-        )}
-      </header>
+      {/* Shared floating nav (same component as every public page) */}
+      <PublicNav dark showCta={!selectedBranch} />
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'clip', maxWidth: '100vw' }}>
         {/* HERO: cinematic skyline, clear message, and a responsive product preview */}
@@ -3628,9 +3536,9 @@ export default function Home() {
 
               {/* Badge */}
               <motion.div {...enter(0.4)} className="mb-8 sm:mb-10">
-                <a href="/help#claude" className="lq-glass inline-flex max-w-full items-center gap-2 rounded-full p-1 text-left">
-                  <span className="shrink-0 rounded-full border border-indigo-200/20 bg-indigo-300/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-100">{isWL ? 'WELCOME' : 'ONE WORKSPACE'}</span>
-                  <span className="min-w-0 break-words pr-3 text-sm font-light text-white/90">{isWL ? (wlName || 'Your event platform') : 'Plan it together. Run it seamlessly.'}</span>
+                <a href="/help#claude" className="inline-flex max-w-full items-center gap-3 rounded-lg border border-white/15 bg-white/[0.04] py-1.5 pl-1.5 pr-4 text-left backdrop-blur-sm transition-colors hover:border-white/30">
+                  <span className="shrink-0 rounded-md bg-[var(--pi-blue-500)] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-white">{isWL ? 'Welcome' : 'One workspace'}</span>
+                  <span className="min-w-0 break-words text-sm text-white/85">{isWL ? (wlName || 'Your event platform') : 'Plan it together. Run it seamlessly.'}</span>
                 </a>
               </motion.div>
 
@@ -3659,73 +3567,68 @@ export default function Home() {
                 }
               </motion.p>
 
-              {/* CTA buttons */}
-              <motion.div {...enter(1.1)}
-                className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-12">
-                <MagneticLink href="#planit-events"
-                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  strength={10}
-                  className="cta-primary group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 bg-white text-neutral-900 text-sm font-semibold rounded-full shadow-2xl">
-                  <Calendar className="w-4 h-4" />
-                  {(isWL && heroCta) ? heroCta : 'Start with Events'}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#create"
-                  onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <Zap className="w-4 h-4 text-indigo-300" />
-                  Enterprise
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#planit-venue"
-                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <UtensilsCrossed className="w-4 h-4 text-orange-300" />
-                  Explore Venue
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#planit-rsvp"
-                  onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <CheckSquare className="w-4 h-4 text-emerald-300" />
-                  Just Need RSVPs?
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
+              {/* CTAs: one primary, one secondary, two quiet paths */}
+              <motion.div {...enter(1.1)} className="mb-10 sm:mb-12">
+                <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+                  <MagneticLink href="#planit-events"
+                    onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+                    strength={8}
+                    className="cta-primary group inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2.5 rounded-xl bg-white px-7 text-[15px] font-semibold text-neutral-950 shadow-[0_12px_40px_-8px_rgba(47,91,255,0.55)] transition-colors hover:bg-white/90 sm:w-auto">
+                    <Calendar className="h-4 w-4" />
+                    {(isWL && heroCta) ? heroCta : 'Start with Events'}
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </MagneticLink>
+                  <MagneticLink href="#planit-venue"
+                    onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+                    strength={8}
+                    className="group inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.04] px-7 text-[15px] font-medium text-white backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-white/10 sm:w-auto">
+                    <UtensilsCrossed className="h-4 w-4 text-[var(--pi-venue)]" />
+                    Explore Venue
+                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </MagneticLink>
+                </div>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-white/70">
+                  <a href="#create"
+                    onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
+                    className="inline-flex min-h-[2.75rem] items-center gap-1.5 underline-offset-4 transition-colors hover:text-white hover:underline">
+                    <Zap className="h-3.5 w-3.5 text-[var(--pi-blue-300)]" />Enterprise check-in
+                  </a>
+                  <a href="#planit-rsvp"
+                    onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
+                    className="inline-flex min-h-[2.75rem] items-center gap-1.5 underline-offset-4 transition-colors hover:text-white hover:underline">
+                    <CheckSquare className="h-3.5 w-3.5 text-emerald-300" />Just need RSVPs?
+                  </a>
+                </div>
               </motion.div>
 
               {/* Slug finder, jump to a private event */}
               <motion.div {...enter(1.2)} className="mb-10 sm:mb-12">
-                <p className="text-xs text-white/50 uppercase tracking-widest mb-2">Already have an event link?</p>
+                <p className="t-label mb-3" style={{ color: 'rgba(255,255,255,0.55)' }}>Already have an event link?</p>
                 <SlugFinder />
               </motion.div>
 
-              {/* Trust stats */}
-              <motion.div {...enter(1.3)} className="mx-auto mb-12 grid w-full max-w-sm grid-cols-1 gap-3 sm:mb-14 sm:max-w-[48rem] sm:grid-cols-3 sm:gap-4">
+              {/* Trust facts: a ruled strip, not three identical tiles */}
+              <motion.dl {...enter(1.3)} className="mx-auto mb-12 grid w-full max-w-3xl grid-cols-1 divide-y divide-white/10 border-y border-white/10 text-left sm:mb-14 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
                 {[
-                  { tag: 'Free forever',   desc: 'No credit card required',          Icon: Sparkles },
-                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',     Icon: Zap },
-                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included', Icon: Users },
-                ].map(({ tag, desc, Icon }) => (
-                  <div key={tag} className="lq-glass lq-stat flex min-w-0 cursor-default items-center gap-4 rounded-[1.25rem] p-4 text-left text-white sm:min-h-[11rem] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-                    <Icon className="h-6 w-6 shrink-0 text-indigo-200 sm:h-7 sm:w-7" strokeWidth={1.5} />
-                    <div className="min-w-0">
-                      <div className="lq-display lq-stat-title">{tag}</div>
-                      <div className="mt-1.5 text-xs font-light leading-snug text-white/75 sm:mt-2 sm:text-[13px]">{desc}</div>
-                    </div>
+                  { tag: 'Free forever',   desc: 'No credit card required' },
+                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly' },
+                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included' },
+                ].map(({ tag, desc }, i) => (
+                  <div key={tag} className="px-1 py-4 sm:px-6 sm:py-5">
+                    <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/45">0{i + 1}</dt>
+                    <dd className="mt-2 font-display text-lg font-semibold tracking-tight text-white">{tag}</dd>
+                    <dd className="mt-1 text-[13px] leading-snug text-white/65">{desc}</dd>
                   </div>
                 ))}
-              </motion.div>
+              </motion.dl>
 
-              {/* What's inside, in the spirit of a logo strip */}
+              {/* What's inside */}
               {!isWL && (
-                <motion.div {...enter(1.4)} className="flex flex-col items-center gap-4 mb-14 sm:mb-16">
-                  <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
-                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-3xl sm:gap-3" aria-label="What's included">
+                <motion.div {...enter(1.4)} className="mb-14 flex flex-col items-center gap-4 sm:mb-16">
+                  <p className="t-label" style={{ color: 'rgba(255,255,255,0.55)' }}>One workspace for the whole event</p>
+                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-3xl" aria-label="What's included">
                     {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
-                      <li key={w} className="lq-glass lq-display whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm text-white sm:px-5 sm:py-2.5 sm:text-base">{w}</li>
+                      <li key={w} className="whitespace-nowrap rounded-md border border-white/12 bg-white/[0.04] px-3 py-1.5 text-sm text-white/90">{w}</li>
                     ))}
                   </ul>
                 </motion.div>
@@ -3806,7 +3709,7 @@ export default function Home() {
                   }}
                 >
                   <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{ background: 'radial-gradient(260px circle at var(--mx, 30%) var(--my, 0%), rgba(129,140,248,0.18), transparent 65%)' }} />
+                    style={{ background: 'radial-gradient(260px circle at var(--mx, 30%) var(--my, 0%), rgba(95,132,255,0.18), transparent 65%)' }} />
                   <div className="lq-glass relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.75rem]">
                     <f.icon className="h-5 w-5 text-white" />
                   </div>
@@ -3843,7 +3746,7 @@ export default function Home() {
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
                   className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.16) 0%, transparent 60%)' }} />
+                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(47,91,255,0.16) 0%, transparent 60%)' }} />
                   <div className="relative">
                     <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
                       <Calendar className="w-3.5 h-3.5 text-indigo-300" />
@@ -4017,11 +3920,11 @@ export default function Home() {
                       </div>
                       <div className="flex-1 p-3 space-y-2.5 overflow-hidden">
                         <div className="msg-1 flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-violet-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
-                            <span className="text-[7px] font-bold text-violet-300">A</span>
+                          <div className="w-5 h-5 rounded-full bg-blue-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-blue-300">A</span>
                           </div>
                           <div>
-                            <div className="text-[9px] font-bold text-violet-400 mb-0.5">Alex</div>
+                            <div className="text-[9px] font-bold text-blue-400 mb-0.5">Alex</div>
                             <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed</div>
                           </div>
                         </div>
@@ -4394,7 +4297,7 @@ export default function Home() {
                       <span className="text-[9px] text-orange-400/40 font-bold uppercase tracking-wider">PlanIt Venue</span>
                     </div>
                     <div className="flex gap-2">
-                      {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln']].map(([c,l]) => (
+                      {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#5f84ff','1 Cln']].map(([c,l]) => (
                         <span key={l} className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md bg-neutral-900 text-neutral-500">
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
                         </span>
@@ -4422,7 +4325,7 @@ export default function Home() {
                         {x:370, y:135, r:30, status:'available', label:'T5', cap:'6'},
                         {x:455, y:155, r:26, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
                       ].map(t => {
-                        const c = t.status==='available'?'#22c55e':t.status==='occupied'?'#ef4444':t.status==='cleaning'?'#8b5cf6':'#f59e0b';
+                        const c = t.status==='available'?'#22c55e':t.status==='occupied'?'#ef4444':t.status==='cleaning'?'#5f84ff':'#f59e0b';
                         const pulse = t.status === 'available';
                         return (
                           <g key={t.label}>
@@ -4514,9 +4417,9 @@ export default function Home() {
               <div className="flex-1">
                 <Reveal direction="left">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
-                    style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)' }}>
-                    <Bot size={13} className="text-violet-400" />
-                    <span className="text-violet-400 text-xs font-semibold">Now available · Claude Integration</span>
+                    style={{ border: '1px solid rgba(95,132,255,0.3)', background: 'rgba(95,132,255,0.08)' }}>
+                    <Bot size={13} className="text-blue-400" />
+                    <span className="text-blue-400 text-xs font-semibold">Now available · Claude Integration</span>
                   </div>
                   <h2 className="font-syne font-black text-white mb-4 leading-tight" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
                     Manage your event<br />by talking to Claude.
@@ -4533,7 +4436,7 @@ export default function Home() {
                       '"Create 15 round tables of 10"',
                     ].map((q, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <Bot size={14} className="text-violet-500 flex-shrink-0" />
+                        <Bot size={14} className="text-blue-500 flex-shrink-0" />
                         <span className="text-sm text-neutral-400 font-mono">{q}</span>
                       </div>
                     ))}
@@ -4544,9 +4447,9 @@ export default function Home() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
-                      style={{ background: '#7c3aed' }}
+                      style={{ background: '#1f43e6' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
-                      onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#1f43e6'}
                     >
                       <Bot size={16} /> Add to Claude <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </a>
@@ -4573,8 +4476,8 @@ export default function Home() {
                       <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
                     </div>
                     <div className="flex items-center gap-2 mx-auto">
-                      <div className="w-4 h-4 rounded-md bg-violet-600/30 flex items-center justify-center">
-                        <Bot size={9} className="text-violet-300" />
+                      <div className="w-4 h-4 rounded-md bg-blue-600/30 flex items-center justify-center">
+                        <Bot size={9} className="text-blue-300" />
                       </div>
                       <span className="text-[11px] text-neutral-500 font-medium">Claude + PlanIt</span>
                     </div>
@@ -4589,7 +4492,7 @@ export default function Home() {
                     </div>
                     <div className="flex gap-2 items-start">
                       <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
+                        <Bot size={11} className="text-blue-300" />
                       </div>
                       <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -4604,7 +4507,7 @@ export default function Home() {
                     </div>
                     <div className="flex gap-2 items-start">
                       <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
+                        <Bot size={11} className="text-blue-300" />
                       </div>
                       <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -4619,7 +4522,7 @@ export default function Home() {
                     </div>
                     <div className="flex gap-2 items-start">
                       <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
+                        <Bot size={11} className="text-blue-300" />
                       </div>
                       <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -4757,7 +4660,7 @@ export default function Home() {
                           <div className="px-5 py-3 border-r border-indigo-500/10">
                             <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Standard</span>
                           </div>
-                          <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(99,102,241,0.06)' }}>
+                          <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(47,91,255,0.06)' }}>
                             <Zap className="w-3 h-3 text-indigo-400" />
                             <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Enterprise</span>
                           </div>
@@ -4775,7 +4678,7 @@ export default function Home() {
                               <span className="mt-0.5 text-neutral-600 text-xs flex-shrink-0">✕</span>
                               <span className="text-xs text-neutral-600 leading-relaxed">{std}</span>
                             </div>
-                            <div className="px-5 py-3 flex items-start gap-2.5" style={{ background: 'rgba(99,102,241,0.03)' }}>
+                            <div className="px-5 py-3 flex items-start gap-2.5" style={{ background: 'rgba(47,91,255,0.03)' }}>
                               <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
                               <span className="text-xs text-indigo-300/70 leading-relaxed">{ent}</span>
                             </div>
@@ -4925,10 +4828,10 @@ export default function Home() {
                             data-mode={val}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(47,91,255,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
                               color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.3)' : 'none',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(47,91,255,0.3)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.3)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
@@ -4954,28 +4857,28 @@ export default function Home() {
                         background: mode === 'table-service'
                           ? 'radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.07) 0%, transparent 70%)'
                           : mode === 'enterprise'
-                            ? 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)'
-                            : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
+                            ? 'radial-gradient(ellipse at 50% 0%, rgba(47,91,255,0.12) 0%, transparent 70%)'
+                            : 'radial-gradient(ellipse at 50% 0%, rgba(47,91,255,0.08) 0%, transparent 70%)',
                       }} />
 
                       {/* Icon */}
                       <div style={{
                         width:56, height:56, borderRadius:16, margin:'0 auto 24px',
-                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'enterprise' ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
-                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : mode === 'enterprise' ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(99,102,241,0.2)',
+                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'enterprise' ? 'rgba(47,91,255,0.15)' : 'rgba(47,91,255,0.1)',
+                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : mode === 'enterprise' ? '1px solid rgba(47,91,255,0.35)' : '1px solid rgba(47,91,255,0.2)',
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : mode === 'enterprise' ? '0 0 40px rgba(99,102,241,0.25)' : '0 0 32px rgba(99,102,241,0.12)',
+                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : mode === 'enterprise' ? '0 0 40px rgba(47,91,255,0.25)' : '0 0 32px rgba(47,91,255,0.12)',
                       }}>
                         {mode === 'table-service'
                           ? <UtensilsCrossed style={{ width:26, height:26, color:'#f97316' }} />
                           : mode === 'enterprise'
-                            ? <Zap style={{ width:26, height:26, color:'#a5b4fc' }} />
-                            : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
+                            ? <Zap style={{ width:26, height:26, color:'#90abff' }} />
+                            : <Calendar style={{ width:26, height:26, color:'#5f84ff' }} />
                         }
                       </div>
 
                       <p style={{
-                        fontFamily:'Syne,sans-serif', fontSize:'clamp(1.4rem,3vw,1.75rem)',
+                        fontFamily:'var(--font-display)', fontSize:'clamp(1.4rem,3vw,1.75rem)',
                         fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:10,
                       }}>
                         {mode === 'table-service' ? 'Launch your venue' : mode === 'enterprise' ? 'Launch enterprise event' : 'Create your event'}
@@ -4995,8 +4898,8 @@ export default function Home() {
                           background: mode === 'table-service'
                             ? 'linear-gradient(135deg, #f97316, #fb923c)'
                             : mode === 'enterprise'
-                              ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
-                              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              ? 'linear-gradient(135deg, #1f43e6, #1f43e6)'
+                              : 'linear-gradient(135deg, #2f5bff, #5f84ff)',
                           color:'#fff', fontSize:15, fontWeight:700,
                           display:'flex', alignItems:'center', justifyContent:'center', gap:10,
                           transition:'transform 0.2s ease, box-shadow 0.2s ease',
@@ -5004,11 +4907,11 @@ export default function Home() {
                             ? '0 8px 28px rgba(249,115,22,0.35)'
                             : mode === 'enterprise'
                               ? '0 8px 32px rgba(79,70,229,0.5)'
-                              : '0 8px 28px rgba(99,102,241,0.35)',
+                              : '0 8px 28px rgba(47,91,255,0.35)',
                           fontFamily:'DM Sans,sans-serif',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : mode === 'enterprise' ? '0 16px 40px rgba(79,70,229,0.6)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : mode === 'enterprise' ? '0 8px 32px rgba(79,70,229,0.5)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : mode === 'enterprise' ? '0 16px 40px rgba(79,70,229,0.6)' : '0 14px 36px rgba(47,91,255,0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : mode === 'enterprise' ? '0 8px 32px rgba(79,70,229,0.5)' : '0 8px 28px rgba(47,91,255,0.35)'; }}
                       >
                         {mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Set up enterprise event' : 'Start building'}
                         <ArrowRight style={{ width:18, height:18 }} />
@@ -5052,7 +4955,7 @@ export default function Home() {
                       ? 'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)'
                       : mode === 'rsvp'
                       ? 'radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 65%)'
-                      : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 65%)',
+                      : 'radial-gradient(circle, rgba(47,91,255,0.08) 0%, transparent 65%)',
                     filter:'blur(40px)',
                   }} />
 
@@ -5081,18 +4984,18 @@ export default function Home() {
                   <div style={{ position:'absolute', top:26, left:28, display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{
                       width:32, height:32, borderRadius:9,
-                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'rsvp' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)',
-                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : mode === 'rsvp' ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(99,102,241,0.25)',
+                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'rsvp' ? 'rgba(16,185,129,0.1)' : 'rgba(47,91,255,0.1)',
+                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : mode === 'rsvp' ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(47,91,255,0.25)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                     }}>
                       {mode === 'table-service'
                         ? <UtensilsCrossed style={{ width:15, height:15, color:'#f97316' }} />
                         : mode === 'rsvp'
                         ? <CheckSquare style={{ width:15, height:15, color:'#34d399' }} />
-                        : <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
+                        : <Calendar style={{ width:15, height:15, color:'#5f84ff' }} />
                       }
                     </div>
-                    <span style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:17, color:'rgba(255,255,255,0.7)', letterSpacing:'-0.02em' }}>PlanIt</span>
+                    <span style={{ fontFamily:'var(--font-display)', fontWeight:800, fontSize:17, color:'rgba(255,255,255,0.7)', letterSpacing:'-0.02em' }}>PlanIt</span>
                   </div>
 
                   {/* Wizard card */}
@@ -5116,11 +5019,11 @@ export default function Home() {
                           <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); if (val === 'rsvp' && selectedBranch !== 'rsvp') setSelectedBranch('rsvp'); if (val !== 'rsvp' && selectedBranch === 'rsvp') setSelectedBranch('events'); }}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(47,91,255,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
                               color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
                               fontFamily:'DM Sans,sans-serif',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.35)' : 'none',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(47,91,255,0.35)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.35)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
@@ -5204,52 +5107,7 @@ export default function Home() {
         )}
 
         {/* FOOTER */}
-        <footer className="border-t border-white/10 relative overflow-hidden" style={{ background: 'rgba(5,5,15,0.86)' }}>
-          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.35), transparent)' }} />
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-16 sm:py-24">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12 mb-14">
-              <div>
-                <div className="flex items-center gap-3 mb-5">
-                  {isWL && wlLogo
-                    ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
-                    : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                       <span className="lq-display text-3xl leading-none text-white">{isWL ? wlName : 'PlanIt'}</span></>
-                  }
-                </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
-                <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['RSVP Pages', '#planit-rsvp'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} onClick={l === 'RSVP Pages' ? (e) => { e.preventDefault(); selectBranch('rsvp'); } : undefined} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-600">
-              <span>© 2026 PlanIt. All rights reserved.</span>
-              <span className="font-medium">By Aakshat Hariharan</span>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter compact={!!selectedBranch} />
 
       </main>
     </div>

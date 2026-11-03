@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Users, Search, ArrowRight, Compass,
@@ -96,12 +98,12 @@ function capPct(count, max) { return max ? Math.min(100, Math.round((count / max
 function isSoon(d) { const diff = new Date(d) - Date.now(); return diff > 0 && diff < 172800000; }
 
 const ACCENTS = [
-  { from: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.35)', chip: 'bg-indigo-950/60 border-indigo-700/40 text-indigo-300', bar: '#6366f1' },
+  { from: 'rgba(47,91,255,0.18)', border: 'rgba(47,91,255,0.35)', chip: 'bg-indigo-950/60 border-indigo-700/40 text-indigo-300', bar: '#2f5bff' },
   { from: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)',  chip: 'bg-emerald-950/60 border-emerald-700/40 text-emerald-300', bar: '#10b981' },
   { from: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.28)', chip: 'bg-amber-950/60 border-amber-700/40 text-amber-300', bar: '#f59e0b' },
   { from: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.28)', chip: 'bg-pink-950/60 border-pink-700/40 text-pink-300', bar: '#ec4899' },
   { from: 'rgba(14,165,233,0.15)', border: 'rgba(14,165,233,0.28)', chip: 'bg-sky-950/60 border-sky-700/40 text-sky-300', bar: '#0ea5e9' },
-  { from: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.28)', chip: 'bg-purple-950/60 border-purple-700/40 text-purple-300', bar: '#a855f7' },
+  { from: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.28)', chip: 'bg-blue-950/60 border-blue-700/40 text-blue-300', bar: '#a855f7' },
 ];
 
 function accentFor(ev, i) {
@@ -290,7 +292,7 @@ export default function Discover() {
   const navigate = useNavigate();
   const LIMIT = 12;
 
-  const primary  = (isWL && wl?.branding?.primaryColor) || '#6366f1';
+  const primary  = (isWL && wl?.branding?.primaryColor) || '#2f5bff';
   const company  = (isWL && (wl?.branding?.companyName || wl?.clientName)) || 'PlanIt';
   const logo     = isWL && wl?.branding?.logoUrl;
   const headline = (isWL && wl?.pages?.events?.headline) || 'Discover Events';
@@ -341,61 +343,36 @@ export default function Discover() {
         .animate-shake { animation: shake 0.45s ease-in-out; }
       `}</style>
 
-      <header className="sticky top-0 z-50 border-b border-neutral-800/60" style={{ background: 'rgba(6,6,12,0.96)', backdropFilter: 'blur(12px)' }}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-4">
-          <div className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" onClick={() => navigate('/')}>
-            {logo
-              ? <img src={logo} alt={company} style={{ height: 30, objectFit: 'contain', maxWidth: 130 }} />
-              : (
-                <>
-                  <div className="relative">
-                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-neutral-300" />
-                    </div>
-                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
-                  </div>
-                  <span className="text-lg font-bold text-white">{company}</span>
-                </>
-              )
-            }
-          </div>
+      <PublicNav dark />
 
-          <div className="relative flex-1 max-w-md mx-auto">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+      <main className="relative max-w-6xl mx-auto px-[var(--gutter)] pb-20" style={{ zIndex: 2, paddingTop: 'calc(var(--safe-top, 0px) + 7.5rem)' }}>
+        <div className="mb-10">
+          <p className="eyebrow mb-5">{isWL ? company : 'Open to everyone'}</p>
+          <h1 className="t-h1 max-w-[18ch] text-white">{headline}</h1>
+          <p className="t-lead mt-4" style={{ color: 'var(--pi-text-muted)' }}>{subline}</p>
+
+          <div className="relative mt-8 max-w-xl">
+            <label htmlFor="discover-search" className="sr-only">Search events and locations</label>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
             <input
-              className="w-full h-10 pl-10 pr-10 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
-              style={{ background: 'rgba(255,255,255,0.04)' }}
+              id="discover-search"
+              className="input pl-10 pr-10 py-3"
+              style={{ background: 'rgba(255,255,255,0.04)', color: '#fff', borderColor: 'rgba(255,255,255,0.14)' }}
               placeholder="Search events, locations…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
-                <X className="w-4 h-4" />
+              <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-neutral-500 hover:text-neutral-300">
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
-
-          {!isWL && (
-            <button onClick={() => navigate('/')} className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all">
-              <Zap className="w-4 h-4" /><span className="hidden sm:inline">Create event</span>
-            </button>
-          )}
-        </div>
-      </header>
-
-      <main className="relative max-w-6xl mx-auto px-6 py-12" style={{ zIndex: 2 }}>
-        <div className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 text-xs font-medium text-neutral-500 mb-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-            <Sparkles className="w-3.5 h-3.5" />{isWL ? company : "Open to everyone"}
-          </div>
-          <h1 className="font-display text-5xl md:text-6xl font-black text-white tracking-tight mb-4">{headline}</h1>
-          <p className="text-lg text-neutral-500 max-w-md mx-auto">{subline}</p>
           {!loading && total > 0 && (
-            <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border border-neutral-800 text-sm text-neutral-500" style={{ background: 'rgba(255,255,255,0.02)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {total} event{total !== 1 ? 's' : ''} available
-            </div>
+            <p className="mt-4 inline-flex items-center gap-2 text-sm text-neutral-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              <span className="t-num">{total}</span> event{total !== 1 ? 's' : ''} available
+            </p>
           )}
         </div>
 
@@ -408,7 +385,7 @@ export default function Discover() {
                 <button
                   key={tag}
                   onClick={() => setActiveTag(tag === 'All' ? null : (activeTag === tag ? null : tag))}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active ? 'bg-white text-neutral-900 border-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${active ? 'bg-white text-neutral-900 border-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300'}`}
                 >{tag}</button>
               );
             })}
@@ -492,6 +469,7 @@ export default function Discover() {
         {/* Private event finder — exact slug redirect, no enumeration */}
         <SlugFinder />
       </main>
+      <PublicFooter />
     </div>
   );
 }
