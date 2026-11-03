@@ -5204,50 +5204,51 @@ export default function Home() {
         )}
 
         {/* FOOTER */}
-        <footer className="border-t border-white/10 relative overflow-hidden" style={{ background: 'rgba(5,5,15,0.86)' }}>
-          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.35), transparent)' }} />
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-16 sm:py-24">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12 mb-14">
-              <div>
-                <div className="flex items-center gap-3 mb-5">
-                  {isWL && wlLogo
-                    ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
-                    : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                       <span className="lq-display text-3xl leading-none text-white">{isWL ? wlName : 'PlanIt'}</span></>
-                  }
-                </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
-                <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
+        <footer className="pi-footer relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(5,5,15,0.86) 0%, rgba(14,10,38,0.94) 100%)' }}>
+          <div aria-hidden="true" className="pi-footer-glow" />
+          <div className="max-w-screen-xl mx-auto px-5 sm:px-10 pt-16 sm:pt-20">
+            <div className="pi-footer-rule" aria-hidden="true" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12 pt-10 sm:pt-12">
+              <div className="col-span-2 md:col-span-1">
+                <h3 className="pi-footer-label">{isWL ? wlName : 'PlanIt'}</h3>
+                {isWL && wlLogo && <img src={wlLogo} alt={wlName} className="h-8 object-contain mb-4" />}
+                <p className="pi-footer-copy max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
+                <p className="pi-footer-status mt-5"><span className="pi-footer-dot" aria-hidden="true" />Built by Aakshat Hariharan</p>
               </div>
               <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['RSVP Pages', '#planit-rsvp'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} onClick={l === 'RSVP Pages' ? (e) => { e.preventDefault(); selectBranch('rsvp'); } : undefined} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                <h3 className="pi-footer-label">Product</h3>
+                <ul className="pi-footer-list">
+                  {[['Features', '#features'], ['RSVP Pages', '#planit-rsvp'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create']].map(([l, h]) => (
+                    <li key={l}><a href={h} onClick={l === 'RSVP Pages' ? (e) => { e.preventDefault(); selectBranch('rsvp'); } : undefined} className="pi-footer-link">{l}</a></li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
+                <h3 className="pi-footer-label">Company</h3>
+                <ul className="pi-footer-list">
                   {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                    <li key={l}><a href={h} className="pi-footer-link">{l}</a></li>
                   ))}
                 </ul>
               </div>
               <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
-                <ul className="space-y-3.5 text-sm text-neutral-500">
+                <h3 className="pi-footer-label">Connect</h3>
+                <ul className="pi-footer-list">
                   {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                    <li key={l}><a href={h} className="pi-footer-link">{l}</a></li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-600">
-              <span>© 2026 PlanIt. All rights reserved.</span>
-              <span className="font-medium">By Aakshat Hariharan</span>
-            </div>
+          </div>
+
+          <div className="pi-footer-mark-wrap" aria-hidden="true">
+            <div className="pi-footer-mark">{isWL ? wlName : 'PlanIt'}</div>
+          </div>
+
+          <div className="pi-footer-bottom max-w-screen-xl mx-auto px-5 sm:px-10">
+            <span>© 2026 {isWL ? wlName : 'PlanIt'}. All rights reserved.</span>
+            <span>{isWL ? '' : 'Planning an office offsite or big event? Start free in a minute.'}</span>
           </div>
         </footer>
 
