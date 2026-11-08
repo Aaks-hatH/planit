@@ -1,5258 +1,2151 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
-import { validateEmail } from '../utils/validators';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
-  ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
-  CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
-  Share2, Ticket, CheckSquare, X, Sparkles
+  Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock, ArrowRight, ArrowUpRight,
+  Eye, EyeOff, Zap, ListChecks, AlertCircle, UtensilsCrossed, QrCode, Bot, CheckSquare,
+  CornerDownRight, Menu, X, Layers, MapPin, Clock, CheckCircle2, Share2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
+import { validateEmail } from '../utils/validators';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
 import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
-import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import { HomePreloader, HomeScrollChrome, HeroHeadline, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
+import TurnstileWidget from '../components/TurnstileWidget';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
-import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
-import { MEDIA } from '../content/media';
 
 /*
-PLANIT SOFTWARE LICENSE AGREEMENT
-Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
-
-PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
-OR USING THIS SOFTWARE. BY ACCESSING THE REPOSITORY, VIEWING THE SOURCE
-CODE, OR USING THE HOSTED SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ
-THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS. IF
-YOU DO NOT AGREE TO THESE TERMS, YOU MUST IMMEDIATELY CEASE ALL ACCESS
-TO AND USE OF THIS SOFTWARE.
-
 ================================================================================
-SECTION 1 -- DEFINITIONS
+================================================================================
 ================================================================================
 
-1.1  "Software" means the PlanIt application in its entirety, including but
-     not limited to all source code, object code, compiled binaries, scripts,
-     configuration files, database schemas, API definitions, frontend
-     components, backend services, routing infrastructure, watchdog services,
-     documentation, design assets, visual layouts, user interface elements,
-     architectural decisions, and all related materials made available in this
-     repository or through the hosted service.
-
-1.2  "Author" means Aakshat Hariharan, the sole creator and owner of the
-     Software and all intellectual property rights therein.
-
-1.3  "You" or "Licensee" means any individual, organization, company,
-     partnership, or other legal entity that accesses, views, downloads,
-     copies, or otherwise interacts with the Software or any portion thereof.
-
-1.4  "Hosted Service" means the publicly accessible deployment of the
-     Software operated by the Author at planitapp.onrender.com and any
-     associated domains or subdomains.
-
-1.5  "Derivative Work" means any work, software, product, service, or
-     creation that is based on, derived from, substantially similar to,
-     inspired by, or incorporates any portion of the Software, including
-     works that replicate the design, architecture, functionality, or
-     user experience of the Software in any form.
-
-1.6  "Commercial Use" means any use of the Software or any portion thereof
-     in connection with any activity intended to generate revenue, profit,
-     or other financial or commercial benefit, whether directly or indirectly.
-
-1.7  "Distribute" means to make available, publish, transmit, share,
-     sublicense, sell, rent, lease, lend, or otherwise transfer the Software
-     or any portion thereof to any third party by any means.
-
-1.8  "Deploy" means to install, run, host, execute, or operate the Software
-     or any portion thereof on any server, device, infrastructure, cloud
-     platform, virtual machine, container, or computing environment.
+                     PLANIT PLATFORM — MASTER LICENSE AGREEMENT
+                    CONSOLIDATED INTELLECTUAL PROPERTY DECLARATION
 
 ================================================================================
-SECTION 2 -- GRANT OF LIMITED LICENSE
+================================================================================
 ================================================================================
 
-2.1  Subject to the terms and conditions of this Agreement, the Author
-     hereby grants You a limited, non-exclusive, non-transferable,
-     non-sublicensable, revocable license to:
+                           PlanIt Platform License — Version 2.0
+                                     March 2026
 
-     (a) View the source code of the Software solely for personal,
-         non-commercial educational and reference purposes; and
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
 
-     (b) Access and use the Hosted Service for its intended purpose of
-         event planning, subject to the Terms of Service of the Hosted
-         Service.
-
-2.2  This license does not grant You any rights to the Software except
-     as expressly set forth in Section 2.1. All rights not expressly
-     granted herein are reserved by the Author.
-
-2.3  The Author reserves the right to revoke this limited license at any
-     time, for any reason or no reason, upon notice or without notice.
-
-2.4  Making the repository publicly accessible does not, under any
-     circumstances, constitute a grant of any rights beyond those expressly
-     set forth in Section 2.1, nor does it constitute a dedication of the
-     Software to the public domain.
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
 
 ================================================================================
-SECTION 3 -- RESTRICTIONS
 ================================================================================
 
-3.1  You expressly agree that You will NOT, without prior explicit written
-     permission from the Author:
-
-     (a) Copy, clone, fork, mirror, scrape, or otherwise reproduce the
-         Software or any portion thereof, in whole or in part, in any
-         medium or format, whether digital or physical;
-
-     (b) Deploy, host, run, or execute the Software or any portion thereof
-         on any server, device, or infrastructure other than the Author's
-         official Hosted Service;
-
-     (c) Distribute, sublicense, sell, rent, lease, transfer, publish,
-         or otherwise make the Software or any portion thereof available
-         to any third party in any form;
-
-     (d) Modify, adapt, translate, reverse engineer, decompile, disassemble,
-         or attempt to derive the source code of any compiled portion of
-         the Software;
-
-     (e) Create any Derivative Work based on or substantially similar to
-         the Software, including recreating its functionality, architecture,
-         design, or user experience in any other codebase or product;
-
-     (f) Use the Software or any portion of its source code, design,
-         architecture, or functionality as the basis for any competing
-         product or service, whether commercial or non-commercial;
-
-     (g) Use the Software for any Commercial Use without a separately
-         negotiated commercial license agreement executed in writing by
-         the Author;
-
-     (h) Remove, alter, obscure, or replace any copyright notices, license
-         notices, proprietary markings, or attribution notices contained
-         in or accompanying the Software;
-
-     (i) Use the name "PlanIt", the PlanIt logo, or the name "Aakshat
-         Hariharan" in connection with any product, service, or
-         organization in a manner that suggests endorsement, affiliation,
-         or sponsorship without prior written permission from the Author;
-
-     (j) Use the Software in any manner that violates any applicable local,
-         state, national, or international law or regulation;
-
-     (k) Circumvent, disable, or interfere with any technical measures
-         implemented in the Software to enforce the terms of this license,
-         including but not limited to the cryptographic license integrity
-         verification system embedded in the Software's backend;
-
-     (l) Access the Software's backend services, APIs, or database
-         infrastructure through any means other than the official Hosted
-         Service's user interface, except as explicitly authorized by
-         the Author in writing;
-
-     (m) Use any automated tools, bots, scrapers, or scripts to access,
-         download, or index the Software's source code or the Hosted
-         Service's content at scale.
-
-3.2  The restrictions set forth in Section 3.1 apply regardless of whether
-     Your intended use is personal, educational, academic, commercial,
-     non-profit, or for any other purpose.
-
-3.3  The restrictions set forth in this Agreement apply to the Software
-     as a whole and to any portion, excerpt, component, module, or file
-     thereof, no matter how small.
+                       IMPORTANT — READ BEFORE PROCEEDING
 
 ================================================================================
-SECTION 4 -- INTELLECTUAL PROPERTY OWNERSHIP
 ================================================================================
 
-4.1  The Software and all copies, modifications, and Derivative Works
-     thereof, and all intellectual property rights therein, including
-     without limitation all copyrights, patents, trade secrets, trademarks,
-     and other proprietary rights, are and shall remain the exclusive
-     property of the Author.
+This Master License Agreement ("Master Agreement") is the single authoritative
+legal instrument governing all intellectual property rights in and to the PlanIt
+platform, a proprietary event management and white-label SaaS platform created,
+owned, and operated solely by Aakshat Hariharan ("Author").
 
-4.2  Nothing in this Agreement shall be construed to transfer, assign, or
-     convey to You any ownership interest in the Software or any intellectual
-     property rights therein.
+The PlanIt platform is not a single application. It is a multi-service
+distributed system comprising four distinct software components, each of which
+is separately developed, separately deployed, and separately owned by the Author.
+This Master Agreement consolidates the four individual component license
+agreements into a single document and establishes the overarching legal framework
+that governs all of them.
 
-4.3  The design, architecture, visual appearance, user experience, and
-     functionality of the Software are trade secrets and confidential
-     information of the Author, and You agree to treat them as such.
+This document serves three purposes:
 
-4.4  Any feedback, suggestions, bug reports, or contributions You provide
-     to the Author regarding the Software shall be the sole and exclusive
-     property of the Author, and You hereby assign to the Author all
-     rights in such feedback without any obligation of compensation or
-     attribution to You.
+   FIRST:   It explains in plain terms what each component of the PlanIt platform
+            is, what it does, and why it is protected.
 
-4.5  You acknowledge that the Software embodies substantial creative effort
-     and investment by the Author, and that unauthorized use or copying
-     would cause irreparable harm to the Author for which monetary damages
-     would be inadequate.
+   SECOND:  It sets out the overarching licensing terms that apply across all
+            components of the platform as a unified whole.
 
-================================================================================
-SECTION 5 -- TECHNICAL ENFORCEMENT
-================================================================================
+   THIRD:   It reproduces in full each individual component license agreement,
+            so that the complete legal terms for every part of the platform
+            are accessible in a single place.
 
-5.1  The Software includes a cryptographic license integrity verification
-     system that runs at server startup and periodically during operation.
-     This system uses HMAC proof chains derived from a deployment-specific
-     license key to verify that each running instance of the Software is
-     an authorized deployment.
+BY ACCESSING THE REPOSITORY CONTAINING ANY COMPONENT OF THE PLANIT PLATFORM,
+VIEWING ANY SOURCE CODE FILE, CLONING OR FORKING THE REPOSITORY, RUNNING ANY
+COMPONENT LOCALLY, OR USING THE HOSTED SERVICE AT PLANITAPP.ONRENDER.COM, YOU
+AGREE TO BE LEGALLY BOUND BY THIS MASTER AGREEMENT AND BY EACH INDIVIDUAL
+COMPONENT LICENSE THAT APPLIES TO THE PORTION OF THE SOFTWARE YOU ARE ACCESSING.
 
-5.2  Any attempt to tamper with, circumvent, disable, or bypass this
-     verification system constitutes a material breach of this Agreement
-     and may also constitute a violation of applicable computer fraud and
-     abuse laws.
-
-5.3  Unauthorized deployments will fail to start or will terminate
-     automatically. The Author reserves the right to implement additional
-     technical measures to prevent unauthorized use at any time.
+IF YOU DO NOT AGREE TO THESE TERMS, IMMEDIATELY CEASE ALL INTERACTION WITH THE
+PLANIT PLATFORM IN ANY FORM.
 
 ================================================================================
-SECTION 6 -- CONFIDENTIALITY
 ================================================================================
 
-6.1  You acknowledge that the Software contains confidential and proprietary
-     information belonging to the Author, including but not limited to
-     source code, algorithms, data structures, database schemas, security
-     implementations, and architectural design.
-
-6.2  You agree to maintain the confidentiality of the Software and not to
-     disclose, publish, or share any non-public portions of the Software
-     with any third party without the Author's prior written consent.
-
-6.3  You agree to take reasonable precautions to prevent unauthorized
-     access to or disclosure of the Software, using at least the same
-     degree of care You use to protect Your own confidential information,
-     but in no event less than reasonable care.
+                  PART ONE: THE PLANIT PLATFORM — AN OVERVIEW
+          (Understanding What You Are Licensing Before Reading the Terms)
 
 ================================================================================
-SECTION 7 -- DISCLAIMER OF WARRANTIES
 ================================================================================
 
-7.1  THE SOFTWARE AND THE HOSTED SERVICE ARE PROVIDED "AS IS" AND "AS
-     AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+The purpose of this section is to give You context. A software license is
+meaningless without understanding what is being licensed and why. The following
+describes each component of the PlanIt platform, what it does, and what makes
+it proprietary — before the formal legal terms begin.
 
-7.2  THE AUTHOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT
-     LIMITED TO: (A) ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-     FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT; (B) ANY
-     WARRANTIES THAT THE SOFTWARE WILL BE UNINTERRUPTED, ERROR-FREE, OR
-     FREE OF HARMFUL COMPONENTS; (C) ANY WARRANTIES REGARDING THE ACCURACY,
-     RELIABILITY, OR COMPLETENESS OF THE SOFTWARE OR ANY CONTENT THEREIN;
-     AND (D) ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF
-     PERFORMANCE, OR USAGE OF TRADE.
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT A: THE FRONTEND APPLICATION
+────────────────────────────────────────────────────────────────────────────────
 
-7.3  YOU ASSUME ALL RISK ARISING FROM YOUR ACCESS TO AND USE OF THE
-     SOFTWARE AND THE HOSTED SERVICE.
+The PlanIt Frontend Application is the client-side web application that users
+interact with directly. It is built with React and Vite and is served as a
+single-page application at planitapp.onrender.com. It encompasses:
+
+  THE PUBLIC-FACING EXPERIENCE: The PlanIt homepage (event creation form, venue
+  mode, branch selector), the event discovery page, and all publicly accessible
+  marketing and informational pages.
+
+  THE EVENT MANAGEMENT INTERFACE: The EventSpace — the rich, real-time event
+  dashboard through which organizers manage attendees, run chat, conduct polls,
+  share files, manage seating charts, track budgets, post announcements, and
+  view analytics.
+
+  THE ADMIN PANEL: A password-protected multi-section administrative interface
+  through which the Author manages all events, white-label clients, billing,
+  employees, incident reporting, system settings, and security monitoring across
+  the entire platform.
+
+  THE WHITE-LABEL CLIENT PORTAL: A self-service portal (/dashboard) accessible
+  on white-label custom domains, allowing paying white-label clients to customize
+  their platform's branding, page content, feature flags, and security settings.
+
+  THE WHITE-LABEL THEMING SYSTEM: A dynamic CSS variable injection architecture
+  that transforms the application's visual identity at runtime based on a white-
+  label client's branding configuration (colors, fonts, logo, company name),
+  allowing a single React application to serve hundreds of differently-branded
+  instances.
+
+  THE WHITE-LABEL HOME PAGE (WLHome): A branded landing page served at the root
+  URL of white-label custom domains, showing the client's own hero content, event
+  discovery feed scoped to their tenant, and contact information — without any
+  PlanIt branding where the client has configured hidePoweredBy.
+
+  THE RESERVATION SYSTEM: The ReservePage and associated flows through which
+  guests discover, reserve, and receive confirmation for event spots, with
+  white-label customizable messaging throughout.
+
+  ADDITIONAL FLOWS: Public ticket pages, waitlist signup, organizer login,
+  table service interfaces for venue mode, check-in kiosks, QR-code-based
+  guest invite flows, invitation badge and card generators, and support flows.
+
+  THE DESIGN SYSTEM: A complete, proprietary visual language — dark-mode first,
+  built on a near-black (#080810) base, with blue-to-indigo gradients, ambient
+  radial glow orbs as decorative backgrounds, glassmorphism card treatments, and
+  a distinctive micro-interaction vocabulary — that constitutes protectable trade
+  dress and a commercial differentiator for the Author.
+
+  THE WHITE-LABEL CONTEXT: A React context provider (WhiteLabelContext) that
+  wraps the entire application, performing domain detection, branding resolution
+  via the /api/whitelabel/resolve endpoint, cryptographic heartbeat verification
+  via /api/whitelabel/heartbeat, and periodic re-enforcement — all at application
+  startup and continuously while the app is running — to enforce white-label
+  licensing terms in the browser without requiring any user action.
+
+What makes the Frontend Application proprietary:
+
+  The Frontend Application is the product of an enormous amount of creative
+  design and engineering work. Its value lies not just in the code, but in
+  the decisions: which components to build, how they interact, what the user
+  experience flows feel like, how the white-label system works architecturally,
+  and what the visual design language communicates. Taken as a whole, the
+  Frontend Application constitutes both a copyrighted work and protectable
+  trade dress. Individual components, when extracted, still carry the Author's
+  copyright and may not be used without permission.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT B: THE BACKEND APPLICATION
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Backend Application is the server-side engine of the platform,
+built on Node.js and Express.js and deployed as a fleet of five identical
+instances (named Maverick, Goose, Iceman, Slider, and Viper). It encompasses:
+
+  THE EVENT MANAGEMENT ENGINE: All API endpoints for creating, reading,
+  updating, and deleting events; managing participants; handling RSVP flows;
+  processing file uploads to Cloudinary; managing real-time chat via Socket.IO;
+  conducting polls; and executing all other event-related business operations.
+
+  THE AUTHENTICATION AND AUTHORIZATION SYSTEM: JWT-based authentication with
+  per-role authorization (organizer, staff, guest, admin), bcrypt password
+  hashing, secure token generation, and the admin credential verification
+  system.
+
+  THE WHITE-LABEL MANAGEMENT API: All endpoints for creating, managing,
+  suspending, renewing, and configuring white-label client accounts, including
+  the /resolve endpoint (which identifies a custom domain and returns its
+  branding configuration) and the /heartbeat endpoint (which verifies that a
+  white-label license is currently valid and active).
+
+  THE CRYPTOGRAPHIC LICENSE KEY SYSTEM: A proprietary HMAC-SHA256-based license
+  key generation and verification system with the format
+  WL-{TIER}-{DOMAIN_HASH_8}-{EXPIRY_HEX}-{HMAC_12}. This system allows the
+  backend to issue tamper-evident license keys to white-label clients and to
+  verify their authenticity without a database lookup. The key format, hash
+  algorithm, domain hash derivation, expiry encoding, and HMAC construction are
+  all proprietary inventions of the Author.
+
+  THE WHITE-LABEL CLIENT PORTAL API: Authenticated endpoints (/api/wl-portal/*)
+  for white-label clients to log in to their self-service portal, update their
+  branding configuration, customize page content, toggle feature flags, change
+  their portal password, and review their login audit log.
+
+  THE SECURITY MIDDLEWARE LAYER (trafficGuard): A comprehensive request
+  inspection and traffic management middleware that provides: IP-based rate
+  limiting; suspicious request pattern detection; automated attack mitigation;
+  honeypot endpoint detection; bot signature identification; and integration
+  with the platform's security monitoring system.
+
+  THE EMAIL SERVICE: Integration with Brevo (primary) and Mailjet (fallback)
+  for transactional email delivery, including event confirmation emails,
+  participant join notifications, organizer alerts, and white-label billing
+  communications.
+
+  THE MAINTENANCE SYSTEM: A distributed maintenance mode implementation that
+  coordinates across the Router Service and all Backend instances to enforce
+  platform-wide maintenance windows, with carefully engineered exemptions that
+  keep white-label client sites, uptime monitoring, and UptimeRobot health
+  checks functioning even during PlanIt maintenance.
+
+  THE DATA MODELS: A comprehensive set of Mongoose schemas defining the Event,
+  WhiteLabel, WLLead, EventParticipant, Incident, and MaintenanceSchedule
+  entities, with carefully designed indexes, validation rules, and field-level
+  access controls.
+
+  THE REAL-TIME LAYER: Socket.IO integration providing room-based event
+  broadcasting, live participant state synchronization, real-time chat delivery,
+  table service order notifications, and organizer announcements.
+
+What makes the Backend Application proprietary:
+
+  The Backend Application's value lies in three things: (1) the completeness
+  and correctness of its data models, which encode all the Author's thinking
+  about what an event management platform needs to track and how; (2) the
+  security architecture, particularly the trafficGuard middleware and the
+  white-label license enforcement system; and (3) the Cryptographic License
+  Key System, which is a novel invention that enables offline-verifiable,
+  tamper-evident license enforcement at scale. None of these may be copied,
+  adapted, or used as a reference implementation without the Author's permission.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT C: THE ROUTER SERVICE
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Router Service is the intelligent HTTP traffic orchestration layer
+deployed at planit-router.onrender.com. It sits between the public internet
+and the Backend Fleet, and is responsible for:
+
+  INTELLIGENT LOAD DISTRIBUTION: Routing incoming HTTP requests to the most
+  appropriate backend instance using a proprietary scoring algorithm that
+  factors in: real-time health status; consecutive alive/dead transitions;
+  request history; and configured backend weights — not simple round-robin.
+
+  HEALTH-AWARE ORCHESTRATION: Continuously polling all backend instances,
+  maintaining their alive/dead state, and dynamically removing unhealthy
+  instances from the routing pool without dropping in-flight requests.
+
+  ADAPTIVE SCALING: A boost mode system that temporarily expands the active
+  backend count during high-traffic periods, with configurable thresholds,
+  duration, and reversion logic.
+
+  MAINTENANCE COORDINATION: A distributed maintenance enforcement system that
+  returns appropriate 503 responses during maintenance windows, with a carefully
+  engineered list of exemptions that keep critical paths (white-label resolution,
+  uptime monitoring, UptimeRobot health checks) accessible at all times.
+
+  CORS MANAGEMENT: Dynamic CORS header injection that allows the Router to
+  serve the PlanIt frontend, all white-label custom domains, and authorized
+  development origins, pulling the current list of white-label domains from
+  the Backend Fleet periodically.
+
+  MESH AUTHENTICATION: An HMAC-based mutual authentication protocol for all
+  inter-service communication (between the Router and the Backend Fleet),
+  preventing unauthorized services from calling internal mesh endpoints.
+
+  RESPONSE CACHING: A short-TTL response cache for frequently-requested
+  read-only API endpoints, reducing Backend Fleet load for common data fetches.
+
+  WEBSOCKET PROXYING: Pass-through of WebSocket upgrade requests and Socket.IO
+  long-polling connections to the appropriate backend instance with sticky
+  session behavior.
+
+What makes the Router Service proprietary:
+
+  The Router Service's value is entirely in its Routing Intelligence — the
+  specific algorithm by which it selects backend instances. This is not publicly
+  known and is not reproducible from first principles without the Author's
+  specific engineering decisions. It also contains the Mesh Protocol, which
+  is a custom security protocol designed specifically for the PlanIt platform.
+  Both constitute trade secrets in addition to copyrighted works.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT D: THE WATCHDOG SERVICE
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Watchdog Service is an autonomous infrastructure monitoring daemon
+that operates independently of all other platform components. It is responsible
+for:
+
+  REAL-TIME HEALTH MONITORING: Continuously polling the PlanIt Router Service,
+  Backend Fleet instances, and all other monitored infrastructure components
+  at configurable intervals, interpreting their health responses, and maintaining
+  a live operational status picture.
+
+  INCIDENT LIFECYCLE MANAGEMENT: Detecting incidents (service degradations or
+  outages) based on consecutive health check failures, creating incident records,
+  tracking their progression through open/investigating/resolved states, and
+  auto-resolving incidents when services recover.
+
+  ALERT ROUTING AND DELIVERY: Sending real-time push notifications via ntfy.sh
+  and Discord webhooks when incidents are detected, when severity changes, and
+  when incidents resolve — with alert deduplication and suppression logic to
+  prevent notification flooding.
+
+  UPTIME HISTORY AGGREGATION: Computing and storing rolling uptime percentages
+  for all monitored services, providing historical availability data to the
+  public PlanIt status page at planitapp.onrender.com/status.
+
+  STATUS PAGE DATA API: Providing the /watchdog/status endpoint (mesh-
+  authenticated) and the /api/uptime/status endpoint (public) through which
+  the frontend status page retrieves current platform health information.
+
+  AUTO-PROMOTION OF SCHEDULED MAINTENANCE: Polling for upcoming maintenance
+  windows defined in the database and automatically promoting them to active
+  maintenance mode at the correct time, coordinating across all Router and
+  Backend instances.
+
+What makes the Watchdog Service proprietary:
+
+  The Watchdog Service's value lies in its Monitoring Intelligence — the
+  specific configuration of polling intervals, failure thresholds, incident
+  severity rules, alert routing logic, and uptime aggregation methodology
+  that the Author has developed through operational experience running the
+  PlanIt platform. These are not publicly known, are not derivable from
+  generic monitoring best practices, and constitute trade secrets.
 
 ================================================================================
-SECTION 8 -- LIMITATION OF LIABILITY
 ================================================================================
 
-8.1  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
-     THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
-     CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS
-     OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, BUSINESS INTERRUPTION,
-     OR ANY OTHER COMMERCIAL DAMAGES OR LOSSES, ARISING OUT OF OR RELATED
-     TO THIS AGREEMENT OR YOUR USE OF OR INABILITY TO USE THE SOFTWARE,
-     EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-
-8.2  THE AUTHOR'S TOTAL CUMULATIVE LIABILITY TO YOU FOR ANY AND ALL CLAIMS
-     ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE
-     GREATER OF (A) THE AMOUNT YOU PAID TO THE AUTHOR IN THE TWELVE MONTHS
-     PRECEDING THE CLAIM, OR (B) ONE HUNDRED DOLLARS (USD $100.00).
+            PART TWO: OVERARCHING TERMS APPLICABLE TO ALL COMPONENTS
 
 ================================================================================
-SECTION 9 -- INDEMNIFICATION
 ================================================================================
 
-9.1  You agree to indemnify, defend, and hold harmless the Author from and
-     against any and all claims, damages, losses, liabilities, costs, and
-     expenses (including reasonable attorneys' fees) arising out of or
-     related to: (a) Your breach of this Agreement; (b) Your use of or
-     access to the Software in violation of this Agreement; (c) Your
-     violation of any applicable law or regulation; or (d) Your
-     infringement of any third-party rights.
+The following terms apply to the PlanIt platform as a unified whole, in
+addition to the individual component license terms set out in Parts Three
+through Six below.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 1 — UNIFIED OWNERSHIP DECLARATION
+────────────────────────────────────────────────────────────────────────────────
+
+M-1.1  The Author is the sole and exclusive owner of all intellectual property
+       rights in and to the PlanIt platform as a whole and in each individual
+       component thereof, including all copyrights, trade secrets, trade dress,
+       and any other proprietary rights recognized under applicable law.
+
+M-1.2  The PlanIt platform, considered as a whole, constitutes a collective
+       work under copyright law in addition to the individual copyrights
+       subsisting in each component. The Author owns the copyright in the
+       collective work in addition to the component copyrights.
+
+M-1.3  The architectural decisions that govern how the four components interact
+       — the CORS scheme, the mesh authentication protocol, the white-label
+       domain flow from frontend resolution through backend heartbeat to Router-
+       level CORS registration, the maintenance exemption hierarchy — together
+       constitute a proprietary system design that is itself a trade secret and
+       copyrighted work of the Author, separate from and in addition to the
+       individual component copyrights.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 2 — SCOPE OF THE MASTER AGREEMENT
+────────────────────────────────────────────────────────────────────────────────
+
+M-2.1  This Master Agreement governs any and all access to and use of the
+       PlanIt platform, regardless of which component or components You interact
+       with.
+
+M-2.2  Where a more specific individual component license agreement addresses
+       a particular topic (e.g., the Cryptographic License System in the Backend
+       License, or the Routing Intelligence in the Router License), that
+       specific provision takes precedence over any general provision in this
+       Master Agreement with respect to that specific topic.
+
+M-2.3  Interaction with any single component of the PlanIt platform (e.g.,
+       reading only the Router source code) subjects You to the Master Agreement
+       AND to the individual license agreement for that component.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 3 — UNIFIED GRANT OF LIMITED LICENSE
+────────────────────────────────────────────────────────────────────────────────
+
+M-3.1  Subject to Your full and continuous compliance with this Master
+       Agreement and all applicable individual component license agreements,
+       the Author grants You a limited, personal, non-exclusive, non-
+       transferable, non-sublicensable, revocable license to:
+
+       (a)  View the source code of any component of the PlanIt platform
+            solely for personal, non-commercial educational and reference
+            purposes; and
+
+       (b)  Access and use the Hosted Service as an end-user for its intended
+            purpose of event planning and event management, subject to the
+            Terms of Service at planitapp.onrender.com.
+
+M-3.2  White-label clients with executed white-label agreements hold additional
+       rights as specified in those agreements only.
+
+M-3.3  All rights not expressly granted are reserved by the Author.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 4 — UNIFIED RESTRICTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-4.1  Across the entire PlanIt platform, without explicit prior written
+       permission from the Author, You must NOT:
+
+       (a)  Deploy any component of the platform on any infrastructure;
+       (b)  Copy, clone, or reproduce any component in any form;
+       (c)  Distribute any component to any third party;
+       (d)  Create any Derivative Work from any component;
+       (e)  Use any component for any Commercial Use;
+       (f)  Reverse engineer any security or enforcement mechanism;
+       (g)  Use any component's source code in any ML training dataset;
+       (h)  Remove any copyright notice or proprietary marking.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 5 — NO OPEN SOURCE
+────────────────────────────────────────────────────────────────────────────────
+
+M-5.1  The PlanIt platform is NOT open source software. No component of the
+       platform is released under any open-source license, including but not
+       limited to the MIT License, Apache 2.0, GNU GPL, GNU LGPL, BSD licenses,
+       Creative Commons licenses, or any other license that would permit
+       copying, modification, or redistribution.
+
+M-5.2  The presence of this source code in a publicly accessible repository
+       does not, under any interpretation, constitute: (a) an open-source
+       release; (b) a public domain dedication; (c) an implied license of any
+       kind; (d) a waiver of any copyright or other proprietary right; or
+       (e) consent to any use beyond viewing for educational reference.
+
+M-5.3  The Author has chosen to make this source code publicly visible solely
+       to demonstrate technical capability and for reference purposes. This
+       choice is made expressly without waiving any intellectual property right.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 6 — UNIFIED DISCLAIMERS AND LIMITATIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-6.1  THE ENTIRE PLANIT PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+       ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR DISCLAIMS ALL WARRANTIES
+       TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+M-6.2  THE AUTHOR'S TOTAL LIABILITY UNDER THIS MASTER AGREEMENT AND ALL
+       INDIVIDUAL COMPONENT LICENSES COMBINED SHALL NOT EXCEED USD $100.00.
+
+M-6.3  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL,
+       INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES ARISING FROM ANY COMPONENT OF
+       THE PLATFORM.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 7 — GOVERNING LAW AND DISPUTE RESOLUTION
+────────────────────────────────────────────────────────────────────────────────
+
+M-7.1  This Master Agreement and all individual component license agreements
+       shall be governed by the laws of the jurisdiction in which the Author
+       resides, without regard to conflict of law principles.
+
+M-7.2  Any dispute arising under this Master Agreement that cannot be resolved
+       by direct negotiation between the parties shall be submitted to binding
+       arbitration under rules mutually agreed by the parties, except that the
+       Author shall always be entitled to seek emergency injunctive relief from
+       any court of competent jurisdiction without first submitting to
+       arbitration.
+
+M-7.3  Each party irrevocably waives any objection to the venue or personal
+       jurisdiction of courts in the Author's jurisdiction for any proceeding
+       that escapes arbitration.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 8 — CONTACT AND PERMISSIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-8.1  All requests for permissions beyond those granted in this Master
+       Agreement — including commercial license inquiries, white-label
+       partnership inquiries, academic use requests, and security vulnerability
+       reports — must be directed to:
+
+                    Email: planit.userhelp@gmail.com
+                    Web:   https://planitapp.onrender.com (Support page)
+
+M-8.2  Permission requests must be made in writing, must identify the
+       requestor and their intended use in detail, and will be evaluated
+       at the Author's sole discretion. Permission is never implied, deemed,
+       or constructively granted.
 
 ================================================================================
-SECTION 10 -- TERMINATION
 ================================================================================
 
-10.1 This Agreement and the license granted herein are effective until
-     terminated. The Author may terminate this Agreement and the license
-     immediately and without notice if You breach any term of this Agreement.
-
-10.2 Upon termination of this Agreement for any reason: (a) all rights
-     granted to You hereunder shall immediately terminate; (b) You must
-     immediately cease all use of and access to the Software; (c) You must
-     immediately destroy all copies of the Software in Your possession
-     or control; and (d) You must certify in writing to the Author that
-     You have complied with the foregoing obligations upon request.
-
-10.3 Termination of this Agreement shall not limit the Author's rights
-     or remedies at law or in equity. Sections 1, 3, 4, 6, 7, 8, 9,
-     10, 11, and 12 shall survive termination of this Agreement.
+             PART THREE: PLANIT FRONTEND APPLICATION LICENSE (FULL TEXT)
 
 ================================================================================
-SECTION 11 -- ENFORCEMENT AND REMEDIES
 ================================================================================
 
-11.1 You acknowledge that any breach of this Agreement would cause
-     irreparable harm to the Author for which monetary damages would be
-     an inadequate remedy, and that the Author shall be entitled to seek
-     equitable relief, including injunctive relief and specific performance,
-     in addition to all other remedies available at law or in equity,
-     without the requirement of posting a bond or other security.
+The following is the complete, unabridged text of the PlanIt Frontend
+Application License Agreement, which governs all access to and use of the
+PlanIt client-side React application. This component license is set out in
+full below and is also available as the file LICENSE-FRONTEND in the root
+of the frontend repository directory.
 
-11.2 The Author reserves the right to pursue all available legal and
-     equitable remedies for violations of this Agreement, including but
-     not limited to injunctive relief, damages, disgorgement of profits,
-     attorneys' fees, and court costs.
+This license covers every .jsx, .tsx, .css, .html, .json, and .js file in
+the /frontend/src/ directory and its subdirectories, the Vite configuration,
+the PWA configuration, all design assets, and the complete Visual Design System
+of the PlanIt platform.
 
-11.3 The failure of the Author to enforce any provision of this Agreement
-     shall not constitute a waiver of the Author's right to enforce that
-     provision or any other provision in the future.
+────────────────────────────────────────────────────────────────────────────────
 
 ================================================================================
-SECTION 12 -- GENERAL PROVISIONS
 ================================================================================
 
-12.1 Governing Law. This Agreement shall be governed by and construed in
-     accordance with the laws of the jurisdiction in which the Author
-     resides, without regard to its conflict of law provisions.
+              PLANIT FRONTEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                         EXCLUSIVE RIGHTS RESERVED
 
-12.2 Entire Agreement. This Agreement constitutes the entire agreement
-     between You and the Author with respect to the subject matter hereof
-     and supersedes all prior or contemporaneous agreements, representations,
-     warranties, and understandings with respect to the Software.
+================================================================================
+================================================================================
 
-12.3 Severability. If any provision of this Agreement is held to be
-     invalid, illegal, or unenforceable, the remaining provisions shall
-     continue in full force and effect, and the invalid, illegal, or
-     unenforceable provision shall be modified to the minimum extent
-     necessary to make it valid, legal, and enforceable.
+                     PlanIt Frontend Interface License Agreement
+                              Version 2.0 — January 2026
 
-12.4 No Waiver. No waiver by the Author of any breach of this Agreement
-     shall be deemed a waiver of any subsequent breach of the same or any
-     other provision.
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
 
-12.5 Assignment. You may not assign or transfer this Agreement or any
-     rights or obligations hereunder, in whole or in part, without the
-     Author's prior written consent. Any purported assignment without such
-     consent shall be null and void. The Author may assign this Agreement
-     freely without restriction.
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
 
-12.6 Contact. For licensing inquiries, permission requests, or to report
-     violations of this Agreement, contact the Author through the official
-     support page at planitapp.onrender.com or planit.userhelp@gmail.com
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+DOWNLOADING, CLONING, FORKING, INSPECTING, COMPILING, EXECUTING, OR OTHERWISE
+INTERACTING WITH THE PLANIT FRONTEND APPLICATION OR ANY PORTION THEREOF.
+
+This License Agreement ("Agreement") is a binding legal contract between You
+and Aakshat Hariharan ("Author") governing all access to and use of the PlanIt
+frontend application, its source code, compiled assets, design system, visual
+components, and all related materials. This Agreement takes effect at the
+earliest moment You interact with this software in any form — including the
+act of reading this source code.
+
+The public availability of this source code on a version control platform does
+NOT constitute an open-source release, a public domain dedication, an implied
+license, or consent to use, copy, fork, adapt, or build upon this work for any
+purpose beyond the narrow rights expressly granted in Section 2.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Frontend Application" or "Software" means the PlanIt client-side web
+      application in its entirety, encompassing all React component source files,
+      all context providers and consumer hooks, all service modules and API client
+      files, all UI components, design tokens, Tailwind CSS configuration, custom
+      CSS stylesheets, animation definitions, the Vite build configuration, PWA
+      manifest, public/ directory assets, the complete Visual Design System,
+      the white-label theming architecture, and all documentation and code
+      comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole designer, architect, developer,
+      and intellectual property owner of the Frontend Application.
+
+1.3   "You" or "Licensee" means any individual, developer, designer, engineer,
+      researcher, student, company, organization, or other legal or natural
+      person that accesses, views, reads, downloads, clones, compiles, executes,
+      deploys, or otherwise interacts with the Frontend Application.
+
+1.4   "Hosted Service" means the production deployment at planitapp.onrender.com
+      and all associated white-label custom domains.
+
+1.5   "Visual Design System" means the complete proprietary visual language
+      including dark color palette, gradient definitions, glassmorphism
+      treatments, ambient glow patterns, typography hierarchy, micro-interaction
+      patterns, icon usage conventions, and overall aesthetic system.
+
+1.6   "Derivative Work" means any work derived from, copying, adapting, or
+      substantially similar to the Frontend Application in code, design,
+      architecture, or user experience.
+
+1.7   "Commercial Use" means any use in connection with any revenue-generating
+      activity.
+
+1.8   "Deploy" means to serve, host, publish, or make operational the Frontend
+      Application on any infrastructure.
+
+1.9   "Distribute" means to share, transfer, publish, or make available the
+      Frontend Application to any third party.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to: (a) view the source code for
+      personal educational reference; and (b) access and use the Hosted Service
+      as an end-user.
+
+2.2   White-label clients with executed agreements hold additional rights per
+      those agreements only.
+
+2.3   All rights not expressly granted are reserved by the Author.
+
+2.4   The Author may revoke this license at any time without notice.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior explicit written permission from the Author, You will NOT:
+
+      (a)  Copy, clone, mirror, or reproduce the Frontend Application;
+      (b)  Deploy the Frontend Application on any infrastructure;
+      (c)  Distribute the Frontend Application to any third party;
+      (d)  Modify or create any Derivative Work;
+      (e)  Reverse engineer any compiled or minified portion;
+      (f)  Use the Visual Design System for any other product's design;
+      (g)  Use any portion for Commercial Use;
+      (h)  Remove any copyright notices, license notices, or attributions;
+      (i)  Use "PlanIt" or "Aakshat Hariharan" without written consent;
+      (j)  Use automated tools to extract source code or content at scale;
+      (k)  Use source code in ML training datasets or code generation models;
+      (l)  Frame or embed the Hosted Service to misrepresent its origin;
+      (m)  Circumvent any technical enforcement mechanism.
+
+3.2   Restrictions apply to the whole and to every individual component,
+      file, function, style, and design choice within the Frontend Application.
+
+================================================================================
+SECTION 4 — INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+4.1   The Frontend Application and all constituent elements are the sole and
+      exclusive property of the Author.
+
+4.2   The Visual Design System constitutes protectable trade dress and
+      confidential trade secret information.
+
+4.3   The white-label theming architecture, including the WhiteLabelContext,
+      heartbeat verification, and CSS variable injection, constitutes a
+      proprietary technical system and trade secret.
+
+4.4   Any feedback or input You provide is assigned to the Author in full
+      without compensation.
+
+4.5   Third-party open-source dependency copyrights remain with their respective
+      owners. The Author's rights extend to original creative expression in
+      how those dependencies are assembled and used.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+5.1   You agree to treat the source code, design decisions, component
+      architecture, and all non-public aspects as strictly confidential.
+
+5.2   You agree not to disclose any Confidential Information to any third party.
+
+6.1   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
+
+6.2   THE AUTHOR DISCLAIMS ALL WARRANTIES TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+7.1   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+      SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
+
+7.2   THE AUTHOR'S TOTAL LIABILITY SHALL NOT EXCEED USD $100.00.
+
+8.1   You agree to indemnify and hold harmless the Author from any claims
+      arising from Your breach of this Agreement.
+
+9.1   This Agreement is effective from first access and continues until
+      terminated. Breach results in immediate termination without notice.
+
+9.3   Upon termination, You must cease all use and permanently delete all copies.
+
+10.1  The Author is entitled to seek injunctive relief without bond for any
+      unauthorized use.
+
+11.1  Governing Law: jurisdiction of the Author's residence.
+11.2  Entire Agreement: supersedes all prior agreements.
+11.3  Severability: invalid provisions severed, remainder continues.
+11.5  No assignment without Author's written consent.
+11.7  Contact: planit.userhelp@gmail.com
 
 ================================================================================
 
-Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+               [END OF PLANIT FRONTEND APPLICATION LICENSE — PART THREE]
+
+================================================================================
+================================================================================
+
+              PART FOUR: PLANIT BACKEND APPLICATION LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Backend Application
+License Agreement, which governs all access to and use of the PlanIt server-side
+Node.js/Express application. This component license is set out in full below
+and is also available as the file LICENSE-BACKEND in the backend repository.
+
+This license covers every .js file in the /backend/ directory and its
+subdirectories, including all route handlers, data models, middleware, service
+modules, configuration files, and the proprietary Cryptographic License
+Key System.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+               PLANIT BACKEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                      PlanIt Backend Services License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT BEFORE ACCESSING, READING, CLONING,
+EXECUTING, DEPLOYING, OR INTERACTING WITH THE PLANIT BACKEND APPLICATION OR
+ANY PART OF ITS INFRASTRUCTURE.
+
+The PlanIt Backend Application is the server-side engine powering all data
+persistence, business logic, authentication, authorization, real-time
+communication, external integrations, and API services for the PlanIt platform.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Backend Application" or "Software" means the PlanIt server-side
+      application in its entirety, including the main Express.js server, all
+      route handlers (/routes/), all Mongoose data models (/models/), all
+      middleware (/middleware/), all service modules (/services/), the
+      Cryptographic License Key System, the white-label resolution and heartbeat
+      enforcement system, the Socket.IO real-time layer, all configuration
+      files, and all documentation and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect, developer, and
+      intellectual property owner of the Backend Application.
+
+1.3   "You" means any individual or entity interacting with the Backend
+      Application in any way.
+
+1.4   "Cryptographic License System" means the HMAC-SHA256-based license key
+      generation and verification system, including the key format, algorithm,
+      domain hash function, expiry encoding, and HMAC construction.
+
+1.5   "Data Models" means all Mongoose schema definitions and associated
+      business logic, constituting trade secrets of the Author.
+
+1.6   "Derivative Work" means any work derived from, reimplementing, or
+      substantially similar to the Backend Application.
+
+1.7   "Deploy" means to execute, run, or host the Backend Application on any
+      computing infrastructure.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to: (a) view the source code for
+      personal educational reference; and (b) access the API Surface through
+      the official frontend only, or as explicitly authorized in writing.
+
+2.2   No right to Deploy, modify, distribute, or commercially exploit the
+      Backend Application is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior explicit written permission, You must NOT:
+
+      (a)  Deploy, execute, or host the Backend Application;
+      (b)  Copy, clone, or reproduce the Backend Application;
+      (c)  Distribute the Backend Application to any third party;
+      (d)  Modify or create any Derivative Work, including reimplementing
+           the Data Models or Cryptographic License System;
+      (e)  Reverse engineer the Cryptographic License System;
+      (f)  Access the API Surface through any means other than the official
+           frontend, except as explicitly authorized;
+      (g)  Conduct Penetration Testing or vulnerability assessment;
+      (h)  Access, extract, or aggregate any user data;
+      (i)  Use source code in ML training datasets;
+      (j)  Circumvent any security mechanism;
+      (k)  Use Data Models as basis for competing platform;
+      (l)  Use for Commercial Use without written license.
+
+3.2   Unauthorized direct API access constitutes a breach of this Agreement.
+
+3.3   Security vulnerability reports must be submitted to
+      planit.userhelp@gmail.com without public disclosure.
+
+================================================================================
+SECTION 4 — CRYPTOGRAPHIC LICENSE SYSTEM
+================================================================================
+
+4.1   The Cryptographic License System is the Author's proprietary invention
+      and most sensitive trade secret.
+
+4.2   Any attempt to reverse engineer, bypass, spoof, or circumvent it
+      constitutes trade secret misappropriation and potential criminal liability.
+
+4.3   The WL_LICENSE_SECRET and all related secrets are inaccessible to You
+      under any circumstance.
+
+================================================================================
+SECTION 5 — DATA AND PRIVACY
+================================================================================
+
+5.1   Unauthorized access to the Backend Application or its databases constitutes
+      a serious privacy violation and may trigger breach notification obligations
+      under applicable data protection law.
+
+================================================================================
+SECTION 6 — INTELLECTUAL PROPERTY
+================================================================================
+
+6.1   The Backend Application and all components are the sole property of the
+      Author. All copyrights and trade secrets belong exclusively to the Author.
+
+================================================================================
+SECTIONS 7–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Backend Application is provided "AS IS" without warranty. The Author's
+liability is limited to USD $100.00. You agree to indemnify the Author for
+any breach. The Author may terminate this Agreement immediately upon breach.
+Injunctive relief is available to the Author without bond. Governing law is
+the jurisdiction of the Author's residence.
+
+11.8  Export Compliance: You agree to comply with all applicable export
+      control laws.
+
+11.9  Security Obligations: You agree not to use knowledge from this source
+      code to harm the Author, the platform, its users, or any third party.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+                [END OF PLANIT BACKEND APPLICATION LICENSE — PART FOUR]
+
+================================================================================
+================================================================================
+
+                PART FIVE: PLANIT ROUTER SERVICE LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Router Service
+License Agreement, which governs all access to and use of the PlanIt intelligent
+HTTP traffic orchestration layer. This component license is also available as
+LICENSE-ROUTER in the router repository directory.
+
+This license covers every source file in the /router/ directory, the entire
+Routing Intelligence, the Mesh Protocol implementation, and all configuration
+and operational tooling associated with the Router Service.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+                PLANIT ROUTER SERVICE — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                     PlanIt Router Infrastructure License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+The Router Service embodies proprietary algorithms for adaptive backend
+selection, health-aware load distribution, maintenance-safe traffic management,
+mesh-authenticated inter-service communication, and white-label-aware routing
+that represent significant engineering investment and constitute trade secrets.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Router Service" or "Software" means the PlanIt HTTP routing and
+      orchestration layer in its entirety, including all backend selection
+      algorithms, health-check polling logic, maintenance intercept middleware,
+      CORS management system, mesh authentication protocol, response caching
+      layer, rate limiting configuration, health check aggregation, deploy hook
+      configuration, backend fleet registry, WebSocket proxying configuration,
+      and all documentation and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect and owner.
+
+1.3   "You" means any individual or entity interacting with the Router Service.
+
+1.4   "Routing Intelligence" means the proprietary scoring algorithm, health
+      heuristics, boost mode logic, and all decision-making code — constituting
+      trade secrets of the Author.
+
+1.5   "Mesh Protocol" means the HMAC-based inter-service authentication system.
+
+1.6   "Derivative Work" means any work derived from or reimplementing any
+      portion of the Router Service.
+
+1.7   "Deploy" means to execute or host the Router Service on any infrastructure.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to view the source code for personal
+      educational reference only.
+
+2.2   No deployment, modification, distribution, or commercial exploitation right
+      is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior written permission, You must NOT:
+
+      (a)  Deploy or host the Router Service;
+      (b)  Copy or reproduce the Router Service;
+      (c)  Distribute the Router Service;
+      (d)  Modify or create any Derivative Work, including reimplementing
+           the Routing Intelligence;
+      (e)  Benchmark or reverse engineer the Routing Intelligence for building
+           a competing system;
+      (f)  Disclose Confidential Information to any third party;
+      (g)  Probe or stress-test the Hosted Infrastructure;
+      (h)  Forge or bypass Mesh Protocol authentication;
+      (i)  Use source code in ML training datasets;
+      (j)  Remove copyright notices;
+      (k)  Use for Commercial Use without a written license.
+
+3.2   The Routing Intelligence is classified as Confidential Information and
+      a trade secret. Any attempt to extract or commercialize it constitutes
+      trade secret misappropriation.
+
+================================================================================
+SECTION 4 — ROUTING INTELLIGENCE AS TRADE SECRET
+================================================================================
+
+4.1   The Routing Intelligence constitutes a proprietary system developed
+      through substantial engineering investment. The specific combination of
+      health-check scoring weights, backend alive-state hysteresis logic,
+      boost mode thresholds, and maintenance exemption categorization are not
+      publicly known and provide the Author with a competitive advantage.
+
+4.2   Your obligation to maintain the confidentiality of the Routing Intelligence
+      survives termination of this Agreement indefinitely.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Router Service is provided "AS IS" without warranty. The Author's liability
+is limited to USD $100.00. You agree to indemnify the Author for any breach.
+The Author may terminate this Agreement immediately upon breach. Injunctive
+relief is available to the Author without bond. Governing law is the
+jurisdiction of the Author's residence.
+
+11.8  Infrastructure Integrity: You agree not to take any action that could
+      degrade, disrupt, or damage the Hosted Infrastructure or Backend Fleet.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+                 [END OF PLANIT ROUTER SERVICE LICENSE — PART FIVE]
+
+================================================================================
+================================================================================
+
+               PART SIX: PLANIT WATCHDOG SERVICE LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Watchdog Service
+License Agreement, which governs all access to and use of the PlanIt autonomous
+infrastructure monitoring daemon. This component license is also available as
+LICENSE-WATCHDOG in the watchdog repository directory.
+
+This license covers every source file in the /watchdog/ directory (or pulse/
+directory if applicable), the Monitoring Intelligence, alert routing logic,
+uptime aggregation system, and all configuration and operational data generated
+by the Watchdog Service.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+               PLANIT WATCHDOG SERVICE — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                    PlanIt Watchdog Monitoring License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+The Watchdog Service contains proprietary incident detection heuristics, alert
+suppression logic, uptime aggregation algorithms, and integration-specific
+configurations that constitute trade secrets and copyrighted works of the Author.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Watchdog Service" or "Software" means the PlanIt autonomous monitoring
+      daemon in its entirety, including all health-check polling logic, incident
+      lifecycle management, alert routing and deduplication system, uptime
+      history aggregation, status page data API, mesh-authenticated endpoints,
+      auto-promotion of scheduled maintenance, and all configuration, operational
+      documentation, and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole designer and owner.
+
+1.3   "You" means any individual or entity interacting with the Watchdog Service.
+
+1.4   "Monitoring Intelligence" means the proprietary heuristics, thresholds,
+      timing parameters, and decision logic governing incident detection,
+      severity classification, alert routing, and uptime aggregation —
+      constituting trade secrets of the Author.
+
+1.5   "Operational Data" means uptime records, incident logs, and alert histories
+      generated during operation, owned exclusively by the Author.
+
+1.6   "Derivative Work" means any monitoring tool derived from the Watchdog.
+
+1.7   "Deploy" means to execute or host the Watchdog Service.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to view the source code for personal
+      educational reference only.
+
+2.2   No deployment, modification, distribution, or commercial exploitation right
+      is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior written permission, You must NOT:
+
+      (a)  Deploy or operate the Watchdog Service;
+      (b)  Copy or reproduce the Watchdog Service;
+      (c)  Distribute the Watchdog Service;
+      (d)  Modify or create any Derivative Work, including adapting the
+           Monitoring Intelligence for any other monitoring system;
+      (e)  Disclose Monitoring Intelligence to any third party;
+      (f)  Access status API endpoints except through the official status page;
+      (g)  Interfere with, disable, or circumvent the Watchdog Service;
+      (h)  Use source code in ML training datasets;
+      (i)  Remove copyright notices;
+      (j)  Access, export, or aggregate Operational Data;
+      (k)  Use for Commercial Use without a written license.
+
+================================================================================
+SECTION 4 — MONITORING INTELLIGENCE AS TRADE SECRET
+================================================================================
+
+4.1   The Monitoring Intelligence — polling intervals, failure thresholds,
+      incident severity rules, alert suppression cooldowns, uptime aggregation
+      methodology — constitutes trade secrets developed through operational
+      experience. Your confidentiality obligation survives termination
+      indefinitely.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Watchdog Service is provided "AS IS" without warranty. The Author's
+liability is limited to USD $100.00. You agree to indemnify the Author for
+any breach. The Author may terminate this Agreement immediately upon breach.
+Injunctive relief is available to the Author without bond. Governing law is
+the jurisdiction of the Author's residence.
+
+11.8  Monitoring Integrity: You agree not to generate false health signals,
+      suppress legitimate alerts, or corrupt monitoring data.
+
+11.9  Alert System: You agree not to flood or abuse the ntfy.sh or Discord
+      alert channels used by the Watchdog Service.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+               [END OF PLANIT WATCHDOG SERVICE LICENSE — PART SIX]
+
+================================================================================
+================================================================================
+
+                   PART SEVEN: CONSOLIDATED CLOSING PROVISIONS
+
+================================================================================
+================================================================================
+
+This Master Agreement, together with the four individual component license
+agreements reproduced in Parts Three through Six above, constitutes the complete
+and exclusive statement of the intellectual property rights and licensing terms
+governing the PlanIt platform and all of its components.
+
+────────────────────────────────────────────────────────────────────────────────
+CONSOLIDATED OWNERSHIP STATEMENT
+────────────────────────────────────────────────────────────────────────────────
+
+Every line of source code, every design decision, every data model, every
+algorithm, every configuration file, every comment, and every architectural
+choice across all four components of the PlanIt platform is the original creative
+work and exclusive property of Aakshat Hariharan. No co-author, contributor,
+employer, client, or third party holds any ownership interest in any portion
+of the PlanIt platform. The Author created this platform independently, owns
+it outright, and licenses it exclusively on the terms set out above.
+
+────────────────────────────────────────────────────────────────────────────────
+SUMMARY OF WHAT IS AND IS NOT PERMITTED
+────────────────────────────────────────────────────────────────────────────────
+
+For the avoidance of doubt and as a convenience summary only (this summary
+does not supersede or limit the full terms above):
+
+  PERMITTED WITHOUT PERMISSION:
+  ✓  Reading this source code for personal educational reference
+  ✓  Using the Hosted Service at planitapp.onrender.com as an end-user
+  ✓  Discussing the platform publicly in factual, non-misleading terms
+  ✓  Reporting security vulnerabilities responsibly to the Author
+
+  NOT PERMITTED WITHOUT WRITTEN PERMISSION:
+  ✗  Deploying any component of the platform on any infrastructure
+  ✗  Copying, cloning, or forking any component
+  ✗  Distributing any component to any third party
+  ✗  Creating any Derivative Work from any component
+  ✗  Using any component for Commercial Use
+  ✗  Removing copyright notices or "Powered by PlanIt" attributions
+  ✗  Using the PlanIt name or logo without consent
+  ✗  Reverse engineering any security or cryptographic mechanism
+  ✗  Using source code in ML or AI training datasets
+  ✗  Conducting penetration testing of the Hosted Service
+
+────────────────────────────────────────────────────────────────────────────────
+VIOLATION REPORTING
+────────────────────────────────────────────────────────────────────────────────
+
+If You become aware of any violation of this Master Agreement or any individual
+component license — including unauthorized forks, deployments, or distributions
+of any PlanIt component — please report it to:
+
+                    Email: planit.userhelp@gmail.com
+                    Subject: License Violation Report
+
+The Author takes intellectual property violations seriously and will pursue all
+available legal remedies against unauthorized uses of the PlanIt platform.
+
+────────────────────────────────────────────────────────────────────────────────
+ACKNOWLEDGMENT
+────────────────────────────────────────────────────────────────────────────────
+
+By accessing any component of the PlanIt platform, You acknowledge that:
+
+  (1)  You have read this Master Agreement in its entirety;
+  (2)  You understand its terms;
+  (3)  You agree to be legally bound by all of its provisions;
+  (4)  You have the legal capacity and authority to enter into this Agreement;
+  (5)  If You are accessing on behalf of an organization, You have authority
+       to bind that organization to these terms; and
+  (6)  You acknowledge that this Agreement is enforceable against You.
+
+================================================================================
+================================================================================
+
+                   Copyright (c) 2026 Aakshat Hariharan.
+                          All Rights Reserved.
+
+            The PlanIt platform is proprietary software. All four
+          components — Frontend, Backend, Router, and Watchdog — are
+          protected by copyright law and trade secret law. Unauthorized
+          use, copying, deployment, or distribution of any component
+              is strictly prohibited and will be vigorously enforced.
+
+                      https://planitapp.onrender.com
+                     planit.userhelp@gmail.com
+
+================================================================================
+================================================================================
 */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GLOBAL STYLES, injected once
-// ─────────────────────────────────────────────────────────────────────────────
-const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
+const CSS = `@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Hanken+Grotesk:wght@400;500;600&display=swap');
+.pi{--ac:#2236ff;--hl:#ffe14d;--ink:#0d0e1c;--lav:#eceeff;--bg:#fff;--sf:#fff;--mu:#5a5d70;--ln:#d9dbe8;--ok:#0c8a5b;--pk:#ff7ac6;--mn:#6ff0c0;--er:#d12f2f;--acs:#fff6c2;
+background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-ui,sans-serif;min-height:100vh;overflow-x:clip;-webkit-font-smoothing:antialiased}
+.pi *{box-sizing:border-box}.pi a{color:inherit;text-decoration:none}.pi button{font:inherit;color:inherit;cursor:pointer}
+.pi h1,.pi h2,.pi h3,.pi .ph{font-family:Unbounded,'Hanken Grotesk',sans-serif;font-weight:700;letter-spacing:-.035em;line-height:1.04;margin:0}
+.pi :focus-visible{outline:3px solid var(--hl);outline-offset:2px}.pi svg{flex-shrink:0}
+.wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+.nav{position:sticky;top:0;z-index:40;background:var(--ac);color:#fff}
+.nav .wrap{display:flex;align-items:center;height:68px;gap:32px}
+.brand{display:flex;align-items:center;gap:11px;font:700 21px Unbounded,sans-serif;letter-spacing:-.04em}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 15px Unbounded,sans-serif;overflow:hidden}.mark img{width:22px;height:22px;object-fit:contain}
+.links{display:flex;gap:28px;margin-left:auto;align-items:center;font-size:15px;font-weight:500}
+.links a:not(.btn){opacity:.8;transition:opacity .15s}.links a:not(.btn):hover{opacity:1}
+.burger{display:none;margin-left:auto;background:none;border:0;padding:8px;color:#fff}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--ink);background:#fff;color:var(--ink);border-radius:8px;padding:12px 20px;font-weight:600;font-size:15px;transition:transform .12s,box-shadow .12s}
+.pi .btn,.pi .sm-btn,.pi .lnk{font-weight:700}
+.pi .btn,.pi .sm-btn,.pi .lnk,.pi .path,.pi .oth,.pi .back{color:var(--ink)}.pi .btn.dk{color:#fff}
+.btn.pri{background:var(--hl);box-shadow:4px 4px 0 var(--ink)}.btn.dk{background:var(--ink);color:#fff;box-shadow:4px 4px 0 var(--ac)}
+.btn.pri:hover,.btn.dk:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}.btn.dk:hover{box-shadow:2px 2px 0 var(--ac)}
+.btn:not(.pri):not(.dk):hover{background:var(--ink);color:#fff}
+.btn.sm{padding:8px 14px;font-size:14px;box-shadow:3px 3px 0 var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.btn.wide{width:100%;padding:16px 20px;font-size:16px}
+.nav .btn.sm{border-color:#fff;box-shadow:3px 3px 0 var(--ink)}
+.lnk{background:none;border:0;padding:0 0 2px;font-weight:700;border-bottom:2px solid var(--ac);color:var(--ink)}.lnk:hover{background:var(--hl)}
+.hero{position:relative;background:var(--ac) radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px) 0 0/28px 28px;color:#fff;padding:72px 0 0;overflow:hidden}.hero-g{position:relative;z-index:1}
+.hero-g{display:grid;grid-template-columns:1.1fr .9fr;gap:72px;align-items:center}
+.hero h1{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:800;letter-spacing:-.045em;line-height:1}
+.hero h1 em{font-style:normal;color:var(--hl)}
+.lead{font-size:19px;color:rgba(255,255,255,.85);max-width:27em;margin:28px 0 36px}
+.find{display:flex;gap:12px;max-width:440px;border-bottom:2px solid #fff}
+.find input{flex:1;min-width:0;border:0;background:none;padding:11px 0;font:inherit;color:#fff;outline:none}.find input::placeholder{color:rgba(255,255,255,.7)}
+.find button{border:0;background:none;color:#fff;font-weight:700;display:flex;align-items:center;gap:6px}
+.find.shake{animation:shk .4s}@keyframes shk{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+.facts{list-style:none;margin:80px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(255,255,255,.35)}
+.facts li{padding:24px 24px 28px 0;color:rgba(255,255,255,.8);font-size:15px}.facts li+li{padding-left:28px;border-left:2px solid rgba(255,255,255,.35)}
+.facts b{display:block;color:#fff;font:700 18px Unbounded,sans-serif;letter-spacing:-.03em;margin-bottom:4px}
+.hero-img{width:100%;aspect-ratio:21/9;object-fit:cover;margin-top:56px;border-radius:10px;border:2px solid var(--ink)}
+.panel{position:relative;background:#fff;color:var(--ink);border-radius:12px;padding:34px 32px 30px;box-shadow:10px 10px 0 var(--ink);scroll-margin-top:96px}
+.stick{position:absolute;top:-30px;right:-18px;width:92px;height:92px;border-radius:50%;background:var(--hl);border:2px solid var(--ink);display:grid;place-items:center;text-align:center;font:800 12px/1.15 Unbounded,sans-serif;letter-spacing:-.02em;transform:rotate(10deg);z-index:2}
+.pi .ph{font-size:28px;margin-bottom:22px;font-weight:800}
+.panel label.l{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
+.perf{position:relative;margin:26px -32px;border-top:2px dashed #b9bcd0}
+.perf::before,.perf::after{content:'';position:absolute;top:-13px;width:26px;height:26px;border-radius:50%;background:var(--ac)}.perf::before{left:-13px}.perf::after{right:-13px}
+.choose{margin:0 0 20px;display:grid;gap:8px}
+.ch{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:2px solid var(--ln);border-radius:8px;padding:11px 14px;transition:border-color .12s}
+.ch:hover{border-color:var(--ink)}.ch .dot{width:18px;height:18px;border-radius:50%;border:2px solid #9a9db3;margin-top:3px;display:grid;place-items:center}
+.ch.on{background:var(--acs);border-color:var(--ink)}.ch.on .dot{border-color:var(--ink);background:var(--ink)}.ch.on .dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--hl)}
+.ch b{display:block;font-weight:700;line-height:1.3}.ch small{color:var(--mu);font-size:13.5px}
+.panel .sub2{color:var(--mu);font-size:13.5px;margin:14px 0 0;text-align:center}
+.belt{background:var(--hl);color:var(--ink);border-block:2px solid var(--ink);overflow:hidden;white-space:nowrap;margin-top:0}
+.belt div{display:inline-flex;animation:belt 38s linear infinite;padding:14px 0}.belt span{font:700 15px Unbounded,sans-serif;letter-spacing:-.02em;display:inline-flex;align-items:center}.belt span::after{content:'';width:10px;height:10px;background:var(--ink);transform:rotate(45deg);margin:0 28px}
+@keyframes belt{to{transform:translateX(-50%)}}
+.sec{padding:104px 0}.sec.lav{background:var(--lav);border-top:2px solid var(--ink)}.sec.yel{background:var(--hl);border-top:2px solid var(--ink)}
+.sh{display:grid;grid-template-columns:1.1fr .9fr;gap:72px;align-items:end;margin-bottom:60px}
+.sh h2,.cl h2{font-size:clamp(1.9rem,3.7vw,3.2rem);font-weight:800;letter-spacing:-.045em;line-height:1.02}.sh p{margin:0;color:var(--mu);font-size:18px;max-width:28em}
+.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.col{padding:26px 22px 24px;border:2px solid var(--ink);border-radius:12px;display:flex;flex-direction:column;gap:14px;background:#fff;box-shadow:6px 6px 0 var(--ink)}
+.col .ico{width:44px;height:44px;border-radius:10px;background:var(--ac);color:#fff;display:grid;place-items:center;border:2px solid var(--ink)}
+.col:nth-child(2) .ico{background:var(--hl);color:var(--ink)}.col:nth-child(3) .ico{background:var(--ink)}.col:nth-child(4) .ico{background:var(--ok)}
+.col h3{font-size:24px;font-weight:800}.col p{margin:0;color:var(--mu);font-size:15px}
+.incl{list-style:none;margin:4px 0 10px;padding:0;display:grid;gap:8px;font-size:14.5px}.incl li{display:flex;gap:9px}.incl svg{color:var(--ok);margin-top:4px}
+.col .lnk{align-self:flex-start;margin-top:auto}
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat{padding:24px;background:#fff;border:2px solid var(--ink);border-radius:12px}.feat svg{color:var(--ac);margin-bottom:18px}.feat h3{font-size:19px;font-weight:700;margin-bottom:8px}.feat p{margin:0;color:var(--mu);font-size:15px}
+.cl{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}.cl .sub{font-size:18px;margin:22px 0 32px;max-width:27em}
+.say{list-style:none;margin:0;padding:0;display:grid;gap:14px}.say li{padding:18px 22px;background:#fff;border:2px solid var(--ink);border-radius:12px;font:500 18px/1.3 Unbounded,sans-serif;letter-spacing:-.03em;box-shadow:5px 5px 0 var(--ink)}
+.say li:nth-child(even){margin-left:36px;background:var(--ac);color:#fff}
+.cta{display:flex;gap:14px;flex-wrap:wrap}
+.note{display:flex;gap:10px;align-items:flex-start;margin-top:20px;padding:12px 14px;border-radius:8px;background:#ffe9e7;color:#8f2722;font-size:13.5px;border:2px solid #f0b4b0}
+.done{display:grid;gap:14px}.done h3{font-size:28px;font-weight:800}
+.link{display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid var(--ln);border-radius:8px;background:#f7f8fd}
+.link small{width:52px;color:var(--mu);font-weight:600}.link code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.sm-btn{border:2px solid var(--ink);background:var(--hl);color:var(--ink);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+.foot{background:var(--ink);color:#fff;padding:72px 0 36px}
+.foot .wrap>div{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px}.foot h4{margin:0 0 14px;font-size:14px;font-weight:700;color:var(--hl)}
+.foot ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:14.5px;color:rgba(255,255,255,.65)}.foot li a:hover{color:#fff}
+.foot .fine{margin-top:56px;padding-top:20px;border-top:1px solid rgba(255,255,255,.18);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13.5px;color:rgba(255,255,255,.55)}
+.foot p{color:rgba(255,255,255,.65)!important}
+.inp{width:100%;padding:12px 14px;border:2px solid var(--ink);border-radius:8px;background:#fff;font:inherit;color:inherit;outline:none;transition:box-shadow .15s}
+.inp:focus{box-shadow:0 0 0 3px var(--ac)}.inp.bad{border-color:var(--er)}
+.err{display:flex;gap:6px;align-items:center;color:var(--er);font-size:13px;margin-top:6px;font-weight:500}
+.ov{position:fixed;inset:0;z-index:100;background:rgba(34,54,255,.94);display:flex;padding:20px;overflow:auto;animation:fi .25s}@keyframes fi{from{opacity:0}}
+.wz{width:100%;max-width:540px;margin:auto;background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:14px;padding:clamp(24px,5vw,42px);position:relative;box-shadow:10px 10px 0 var(--ink)}
+.x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:8px;border:2px solid var(--ink);background:var(--hl);font-size:20px;line-height:1;font-weight:700}
+.seg{display:flex;gap:22px;border-bottom:2px solid var(--ln);margin-bottom:28px;flex-wrap:wrap;padding-right:40px}
+.seg button{border:0;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;padding:8px 0;font-size:14.5px;font-weight:600;color:var(--mu)}.seg button.on{color:var(--ink);border-color:var(--ac)}
+.prog{display:flex;gap:4px;align-items:center;margin-bottom:30px}.prog i{height:6px;flex:1;background:var(--ln);border-radius:3px}.prog i.on{background:var(--ac)}.prog span{font-size:12.5px;color:var(--mu);margin-left:10px;white-space:nowrap;font-weight:500}
+.step{animation:sl .3s}@keyframes sl{from{opacity:0;transform:translateY(8px)}}
+.step h3{font-size:clamp(1.5rem,3.6vw,2rem);font-weight:800;margin-bottom:10px}.step>p{color:var(--mu);margin:0 0 24px}
+.fld{display:grid;gap:14px}.fld label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}.fld label small{color:var(--mu);font-weight:400}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.opt{padding:14px;border:2px solid var(--ln);border-radius:8px;background:#fff;text-align:left;transition:border-color .12s}.opt:hover{border-color:var(--ink)}.opt b{display:block;font-weight:700}.opt span{font-size:13px;color:var(--mu)}
+.opt.on{border-color:var(--ink);background:var(--acs);box-shadow:3px 3px 0 var(--ink)}.opt ul{margin:8px 0 0;padding-left:16px;font-size:13px;color:var(--mu)}
+.nv{display:flex;gap:12px;margin-top:30px}.nv .btn.pri{flex:1}
+.slug{display:flex;align-items:center;padding:9px 12px;border-radius:8px;background:#f4f5fb;border:2px solid var(--ln);font-size:13.5px;color:var(--mu)}.slug input{flex:1;border:0;background:none;font:inherit;color:var(--ink);outline:none}
+.chk{display:flex;gap:10px;font-size:13.5px;color:var(--mu);line-height:1.45;cursor:pointer}.chk input{margin-top:3px;accent-color:var(--ac);width:16px;height:16px}.chk a{color:var(--ac);text-decoration:underline}
+.banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:8px;background:var(--acs);border:2px solid var(--ink);margin-bottom:20px;font-size:14px}.banner span{flex:1}
+.pw{position:relative}.pw button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;padding:6px;color:var(--mu)}
+.spin{width:16px;height:16px;border:2px solid rgba(13,14,28,.25);border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.menu{display:none}
+.mdl{position:fixed;inset:0;z-index:110;background:rgba(13,14,28,.6);display:grid;place-items:center;padding:20px}.mdl .card{background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:14px;box-shadow:8px 8px 0 var(--ink)}
+@media(max-width:1020px){.cols{grid-template-columns:1fr 1fr}}
+@media(max-width:960px){.hero-g,.cl,.sh{grid-template-columns:minmax(0,1fr);gap:44px}.hero-g>*,.cl>*{min-width:0}.feats{grid-template-columns:1fr 1fr}.foot .wrap>div{grid-template-columns:1fr 1fr}.links{display:none}.burger{display:block}.menu{display:grid;gap:4px;padding:8px 28px 22px;background:var(--ac);color:#fff}.menu a{padding:10px 0}.sec{padding:72px 0}.sh{margin-bottom:40px}.panel{margin-top:16px}}
+@media(max-width:600px){.feats,.cols{grid-template-columns:1fr}.facts{grid-template-columns:1fr}.facts li+li{padding-left:0;border-left:0;border-top:2px solid rgba(255,255,255,.35)}.hero{padding-top:44px}.panel{padding:28px 22px}.perf{margin:22px -22px}.say li:nth-child(even){margin-left:0}.stick{right:-6px}}
+@media(prefers-reduced-motion:reduce){.pi *{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 
-  :root {
-    --accent-1: #6366f1;
-    --accent-2: #8b5cf6;
-    --glow-1: rgba(99,102,241,0.18);
-    --glow-2: rgba(139,92,246,0.12);
-    --glow-3: rgba(251,146,60,0.16);
-    --glow-4: rgba(236,72,153,0.14);
-    --glow-5: rgba(45,212,191,0.14);
-    --surface-glass: rgba(255,255,255,0.03);
-    --border-subtle: rgba(255,255,255,0.06);
-  }
+.eye{display:inline-block;border:2px solid var(--ink);background:var(--hl);color:var(--ink);padding:4px 10px;font:700 11.5px Unbounded,sans-serif;letter-spacing:.02em;text-transform:uppercase;transform:rotate(-2deg);margin-bottom:18px;box-shadow:3px 3px 0 var(--ink)}
+.hero h1 em{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M0 4 Q6 0 12 4 T24 4' fill='none' stroke='%23ff7ac6' stroke-width='3'/%3E%3C/svg%3E") repeat-x 0 100%;padding-bottom:.2em}
+.deco{position:absolute;pointer-events:none;z-index:0}.d1{left:calc(50% - 70px);top:44px}.d2{left:28px;top:26px}
+.float{animation:flt 5s ease-in-out infinite}@keyframes flt{50%{transform:translateY(-10px) rotate(4deg)}}
+.spin-slow{animation:spn 24s linear infinite}@keyframes spn{to{transform:rotate(360deg)}}
+.stick{animation:wob 5s ease-in-out infinite}@keyframes wob{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-4deg) scale(1.05)}}
+.ch .mini{display:grid;gap:5px;margin-top:10px;font-size:13px;color:var(--ink)}.ch .mini span{display:block}.ch .mini span::before{content:'';display:inline-block;width:6px;height:6px;background:var(--ac);margin-right:9px;transform:rotate(45deg);vertical-align:1px}
+.perf::before,.perf::after{background:var(--ac)}
+.uses{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.use{padding:22px 20px 24px;min-height:150px;border:2px solid var(--ink);border-radius:12px;box-shadow:5px 5px 0 var(--ink);display:flex;flex-direction:column;justify-content:space-between;gap:16px;transition:transform .15s,box-shadow .15s}
+.use:hover{transform:translate(-3px,-3px) rotate(-.8deg);box-shadow:9px 9px 0 var(--ink)}
+.use b{font:800 20px/1.1 Unbounded,sans-serif;letter-spacing:-.04em}.use span{font-size:14px;color:rgba(13,14,28,.75)}
+.u0{background:var(--hl)}.u1{background:var(--pk)}.u2{background:var(--mn)}.u3{background:var(--lav)}
+.sec.ink{background:var(--ink);color:#fff;border-top:2px solid var(--ink)}.sec.ink .sh p{color:rgba(255,255,255,.72)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.stp{border-top:2px solid rgba(255,255,255,.28);padding-top:22px}.stp i{display:block;font:800 clamp(3.2rem,6vw,5rem)/1 Unbounded,sans-serif;letter-spacing:-.06em;color:var(--hl);font-style:normal;margin-bottom:18px}
+.stp:nth-child(2) i{color:var(--pk)}.stp:nth-child(3) i{color:var(--mn)}.stp h3{font-size:22px;font-weight:800;margin-bottom:10px}.stp p{margin:0;color:rgba(255,255,255,.72);max-width:24em}
+.feat{box-shadow:5px 5px 0 var(--ink);transition:transform .15s,box-shadow .15s}.feat:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink)}
+.feat.w2{grid-column:span 2}
+.feat.c-ac{background:var(--ac);color:#fff}.feat.c-ac p{color:rgba(255,255,255,.85)}.feat.c-ac svg{color:var(--hl)}
+.feat.c-hl{background:var(--hl)}.feat.c-hl p{color:#3b3a30}.feat.c-hl svg{color:var(--ink)}
+.feat.c-pk{background:var(--pk)}.feat.c-pk p{color:#4a1f38}.feat.c-pk svg{color:var(--ink)}
+.feat.c-ink{background:var(--ink);color:#fff}.feat.c-ink p{color:rgba(255,255,255,.72)}.feat.c-ink svg{color:var(--mn)}
+.feat.w2 h3{font-size:24px}
+.col{transition:transform .15s,box-shadow .15s}.col:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink)}
+.sec.pk{background:var(--pk);border-top:2px solid var(--ink);padding:72px 0}.sec.ac{background:var(--ac) radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px) 0 0/28px 28px;color:#fff;border-top:2px solid var(--ink)}
+.wlb{display:flex;justify-content:space-between;align-items:center;gap:40px;flex-wrap:wrap}.wlb h2{font-size:clamp(1.7rem,3.2vw,2.6rem);font-weight:800;letter-spacing:-.045em;max-width:16em;margin-bottom:12px}.wlb p{margin:0;font-size:18px;max-width:30em}
+.sec.ac .sh p{color:rgba(255,255,255,.85)}.sec.ac .sh{margin-bottom:48px}
+.faq{display:grid;gap:16px;max-width:860px}
+.faq details{background:#fff;border:2px solid var(--ink);border-radius:12px;box-shadow:5px 5px 0 var(--ink)}
+.faq summary{list-style:none;cursor:pointer;padding:20px 24px;font:700 16px Unbounded,sans-serif;letter-spacing:-.03em;display:flex;justify-content:space-between;gap:20px}
+.faq summary::-webkit-details-marker{display:none}.faq summary::after{content:'+';font-size:24px;line-height:1;transition:transform .2s;color:var(--ac)}
+.faq details[open] summary::after{transform:rotate(45deg)}.faq details p{margin:0;padding:0 24px 22px;color:var(--mu);max-width:44em}
+.cr{display:grid;grid-template-columns:1.1fr .9fr;gap:72px;align-items:start}
+.mtabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:34px}
+.mt{display:inline-flex;gap:8px;align-items:center;border:2px solid #fff;color:#fff;background:transparent;padding:10px 16px;border-radius:8px;font-weight:700;transition:transform .12s}
+.mt:hover{background:rgba(255,255,255,.14)}.mt.on{background:var(--hl);color:var(--ink);border-color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.pi .crh{font-size:clamp(1.3rem,2.4vw,1.8rem);font-weight:800;letter-spacing:-.045em;margin-bottom:14px}.crp{color:rgba(255,255,255,.88);font-size:18px;margin:0 0 26px;max-width:30em}
+.sec.ac .incl{color:#fff}.sec.ac .incl svg{color:var(--hl)}.incl.two{grid-template-columns:1fr 1fr;gap:12px 24px}
+.sec.ac .panel{color:var(--ink)}
+.wmeta{margin:0 0 22px;padding:10px 14px;background:var(--acs);border:2px solid var(--ink);border-radius:8px;font-size:13.5px}
+@media(max-width:1020px){.uses{grid-template-columns:repeat(2,1fr)}.facts{grid-template-columns:1fr 1fr}.facts li:nth-child(3){padding-left:0;border-left:0}}
+@media(max-width:960px){.steps,.cr{grid-template-columns:minmax(0,1fr);gap:40px}.cr>*{min-width:0}.incl.two{grid-template-columns:1fr}.d1{display:none}}
+@media(max-width:600px){.uses,.feats{grid-template-columns:1fr}.feat.w2{grid-column:auto}.facts{grid-template-columns:1fr}.facts li:nth-child(n+2){padding-left:0;border-left:0;border-top:2px solid rgba(255,255,255,.35)}}
 
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    20%,60%  { transform: translateX(-6px); }
-    40%,80%  { transform: translateX(6px); }
-  }
-  .animate-shake { animation: shake 0.45s ease-in-out; }
-  @keyframes hero-word-in {
-    0%   { opacity:0; transform: translateY(28px) skewY(3deg); filter: blur(6px); }
-    100% { opacity:1; transform: translateY(0) skewY(0deg);   filter: blur(0);   }
-  }
-  @keyframes grid-pulse {
-    0%,100% { opacity:0.018; }
-    50%      { opacity:0.042; }
-  }
-  @keyframes cta-shimmer {
-    0%   { background-position: -200% center; }
-    100% { background-position:  200% center; }
-  }
-  @keyframes float-gentle {
-    0%,100% { transform: translateY(0px); }
-    50%     { transform: translateY(-8px); }
-  }
-  @keyframes scroll-indicator-bounce {
-    0%,100% { opacity:0.3; transform:translateY(0); }
-    50%     { opacity:0.7; transform:translateY(6px); }
-  }
-  @keyframes tick-in {
-    0%   { opacity:0; transform:scale(0.6); }
-    80%  { transform:scale(1.15); }
-    100% { opacity:1; transform:scale(1); }
-  }
+.sec.br{border-top:2px solid var(--ink)}.br-events{background:var(--lav)}.br-rsvp{background:var(--mn)}.br-venue{background:var(--hl)}
+.back{display:inline-flex;gap:8px;align-items:center;border:2px solid var(--ink);background:#fff;border-radius:8px;padding:7px 14px;font-weight:700;font-size:14px;margin-bottom:40px;box-shadow:3px 3px 0 var(--ink)}.back:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.br-h{display:grid;grid-template-columns:1.2fr .8fr;gap:64px;align-items:end;margin-bottom:76px}
+.br-h h2{font-size:clamp(2.2rem,4.8vw,4.1rem);font-weight:800;letter-spacing:-.045em;line-height:1.02}.br-h h2 .hl{background:linear-gradient(transparent 60%,var(--pk) 60%)}
+.br-p{font-size:19px;margin:0 0 26px;max-width:28em}.br-note{font-size:14px;font-weight:600}.br-h .cta{align-items:center}
+.sh2{margin-bottom:26px}.sh2 h3{font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:800;letter-spacing:-.04em}
+.callouts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.callout{padding:28px;border:2px solid var(--ink);border-radius:12px;background:var(--ac);color:#fff;box-shadow:5px 5px 0 var(--ink);display:flex;flex-direction:column;align-items:flex-start;gap:12px}.callout.alt{background:#fff;color:var(--ink)}
+.callout b{font:800 22px Unbounded,sans-serif;letter-spacing:-.04em}.callout p{margin:0 0 8px;max-width:32em;opacity:.9}.callout .btn.pri{border-color:var(--ink)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.vcard{position:relative;padding:28px;background:#fff;border:2px solid var(--ink);border-radius:12px;box-shadow:5px 5px 0 var(--ink)}.vcard.on{background:var(--hl)}
+.vcard b{display:flex;gap:8px;align-items:center;font:800 19px Unbounded,sans-serif;letter-spacing:-.04em}.vcard small{display:block;color:var(--mu);margin:4px 0 18px}.vcard.on small{color:#4d4a2a}
+.vcard dl{margin:0}.vcard dl div{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-top:2px solid rgba(13,14,28,.14)}.vcard dt{color:var(--mu);font-size:14px}.vcard.on dt{color:#4d4a2a}.vcard dd{margin:0;font-weight:600;text-align:right;font-size:14.5px}
+.tagl{position:absolute;top:-2px;right:-2px;background:var(--ink);color:var(--hl);font:700 11px Unbounded,sans-serif;text-transform:uppercase;padding:5px 10px;border-radius:0 10px 0 8px}
+@media(max-width:960px){.br-h{grid-template-columns:minmax(0,1fr);gap:28px;margin-bottom:48px}.callouts,.vs{grid-template-columns:1fr}}
 
-  .font-syne    { font-family: 'Syne', sans-serif; }
-  .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
-  .gradient-pop {
-    background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: cta-shimmer 5s linear infinite;
-  }
-  .cta-primary  {
-    background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
-    background-size: 200% auto;
-    transition: background-position 0.5s ease, transform 0.2s ease, box-shadow 0.3s ease;
-  }
-  .cta-primary:hover {
-    background-position: right center;
-    transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15), 0 0 46px rgba(244,114,182,0.08);
-  }
-  .cta-venue {
-    transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-  }
-  .cta-venue:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(249,115,22,0.12);
-    border-color: rgba(249,115,22,0.6);
-  }
-  .branch-card {
-    transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
-  }
-  .branch-card:hover { transform: translateY(-4px); }
-  .branch-card-events:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.08); }
-  .branch-card-venue:hover  { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(249,115,22,0.08); }
-  .feature-card {
-    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .feature-card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(99,102,241,0.25);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(99,102,241,0.07);
-  }
-  .hero-preview-shell {
-    position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.12); border-radius:28px;
-    background:linear-gradient(145deg, rgba(25,25,38,0.92), rgba(9,9,16,0.96));
-    box-shadow:0 40px 100px rgba(0,0,0,0.44), 0 0 80px rgba(99,102,241,0.10);
-    text-align:left; isolation:isolate;
-  }
-  .hero-preview-shell::before { content:''; position:absolute; inset:-35% 20% auto; height:260px; z-index:-1; background:radial-gradient(ellipse, rgba(99,102,241,0.18), transparent 68%); pointer-events:none; }
-  .hero-preview-shell::after { content:''; position:absolute; inset:0; z-index:-1; opacity:0.35; background-image:radial-gradient(rgba(255,255,255,0.18) 0.8px, transparent 0.8px); background-size:18px 18px; mask-image:linear-gradient(to bottom, black, transparent 78%); pointer-events:none; }
-  .hero-preview-chrome { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 18px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.025); }
-  .hero-preview-brand { display:flex; align-items:center; gap:9px; color:rgba(255,255,255,0.88); font-size:12px; font-weight:800; letter-spacing:-0.02em; }
-  .hero-preview-brand-mark { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; color:white; background:linear-gradient(135deg,#756dff,#4f46e5); box-shadow:0 4px 14px rgba(99,102,241,0.35); }
-  .hero-preview-brand-mark svg { width:13px; height:13px; }
-  .hero-preview-chrome-meta { display:flex; align-items:center; gap:7px; color:rgba(255,255,255,0.38); font-size:9px; }
-  .hero-preview-live { display:inline-flex; align-items:center; gap:5px; color:#7ee4c1; font-weight:700; }
-  .hero-preview-live i { width:5px; height:5px; display:block; border-radius:50%; background:#52d4a7; box-shadow:0 0 0 4px rgba(82,212,167,0.12); }
-  .hero-preview-tabs { display:flex; align-items:center; gap:6px; padding:12px 18px 0; border-bottom:1px solid rgba(255,255,255,0.08); }
-  .hero-preview-tab { position:relative; padding:9px 12px 12px; color:rgba(255,255,255,0.42); border:0; border-radius:9px 9px 0 0; background:transparent; cursor:pointer; font-size:11px; font-weight:700; transition:color .2s ease, background .2s ease; }
-  .hero-preview-tab:hover { color:white; background:rgba(255,255,255,0.05); }
-  .hero-preview-tab.active { color:white; }
-  .hero-preview-tab.active::after { content:''; position:absolute; right:10px; bottom:-1px; left:10px; height:2px; border-radius:4px 4px 0 0; background:#847dff; box-shadow:0 0 12px rgba(132,125,255,0.65); }
-  .hero-preview-body { display:grid; grid-template-columns:190px 1fr; min-height:318px; }
-  .hero-preview-rail { padding:18px 12px; border-right:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.12); }
-  .hero-preview-rail-label { margin:4px 7px 8px; color:rgba(255,255,255,0.28); font-size:8px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
-  .hero-preview-rail-item { display:flex; align-items:center; gap:8px; padding:9px 9px; margin:3px 0; border-radius:9px; color:rgba(255,255,255,0.46); font-size:10px; font-weight:650; transition:background .2s ease, color .2s ease; }
-  .hero-preview-rail-item svg { width:13px; height:13px; }
-  .hero-preview-rail-item.active { color:#d9d7ff; background:rgba(99,102,241,0.2); }
-  .hero-preview-main { min-width:0; padding:24px; }
-  .hero-preview-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
-  .hero-preview-heading p { margin:0 0 5px; color:rgba(255,255,255,0.38); font-size:10px; font-weight:650; }
-  .hero-preview-heading h3 { margin:0; color:white; font-size:20px; line-height:1.1; letter-spacing:-.05em; }
-  .hero-preview-heading button { padding:8px 10px; border:1px solid rgba(255,255,255,0.13); border-radius:8px; color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.05); cursor:pointer; font-size:9px; font-weight:700; }
-  .hero-preview-summary { display:grid; grid-template-columns:1.1fr .9fr; gap:10px; margin-top:20px; }
-  .hero-preview-card { padding:15px; border:1px solid rgba(255,255,255,0.09); border-radius:13px; background:rgba(255,255,255,0.045); }
-  .hero-preview-card-label { display:flex; align-items:center; justify-content:space-between; color:rgba(255,255,255,0.46); font-size:9px; font-weight:700; }
-  .hero-preview-card-label strong { color:rgba(255,255,255,0.8); font-size:10px; }
-  .hero-preview-schedule { display:grid; grid-template-columns:38px 1fr; gap:9px; margin-top:13px; }
-  .hero-preview-time { color:rgba(255,255,255,0.36); font-size:8px; font-weight:700; }
-  .hero-preview-event { padding:0 0 12px 10px; border-left:2px solid #7770ff; }
-  .hero-preview-event.teal { border-color:#39bf99; }
-  .hero-preview-event strong { display:block; color:rgba(255,255,255,0.82); font-size:10px; }
-  .hero-preview-event span { display:block; margin-top:3px; color:rgba(255,255,255,0.36); font-size:8px; }
-  .hero-preview-number { margin:15px 0 5px; color:white; font-size:30px; line-height:1; font-weight:800; letter-spacing:-.07em; }
-  .hero-preview-positive { display:flex; align-items:center; gap:4px; color:#77e0bf; font-size:8px; font-weight:700; }
-  .hero-preview-positive svg { width:10px; height:10px; }
-  .hero-preview-bottom { display:grid; grid-template-columns:1fr .9fr; gap:10px; margin-top:10px; }
-  .hero-preview-check { display:flex; align-items:center; gap:7px; margin-top:10px; color:rgba(255,255,255,0.54); font-size:9px; }
-  .hero-preview-check i { width:14px; height:14px; display:grid; place-items:center; border:1px solid rgba(82,212,167,0.5); border-radius:4px; color:#79e2c2; background:rgba(82,212,167,0.1); font-style:normal; }
-  .hero-preview-check i svg { width:9px; height:9px; }
-  .hero-preview-bars { height:58px; display:flex; align-items:end; gap:6px; margin-top:10px; }
-  .hero-preview-bars span { flex:1; min-height:9px; border-radius:5px 5px 2px 2px; background:#413e83; }
-  .hero-preview-bars span:nth-child(1) { height:22px; }.hero-preview-bars span:nth-child(2) { height:34px; }.hero-preview-bars span:nth-child(3) { height:28px; }.hero-preview-bars span:nth-child(4) { height:49px; background:#746dff; }.hero-preview-bars span:nth-child(5) { height:41px; }.hero-preview-bars span:nth-child(6) { height:55px; background:#9a95ff; }
-  .hero-preview-guest-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px; }
-  .hero-preview-guest-card strong { display:block; margin-top:8px; color:white; font-size:23px; letter-spacing:-.07em; }
-  .hero-preview-guest-card span { color:rgba(255,255,255,0.4); font-size:8px; font-weight:700; }
-  .hero-preview-guest-card em { display:block; margin-top:6px; color:#75dfbe; font-size:8px; font-style:normal; font-weight:700; }
-  .hero-preview-guest-list { margin-top:10px; border:1px solid rgba(255,255,255,0.09); border-radius:12px; overflow:hidden; }
-  .hero-preview-guest-row { display:grid; grid-template-columns:1.4fr .8fr .7fr; gap:8px; align-items:center; padding:10px 13px; border-bottom:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.52); font-size:9px; }
-  .hero-preview-guest-row:last-child { border-bottom:0; }
-  .hero-preview-person { display:flex; align-items:center; gap:7px; color:rgba(255,255,255,0.8); font-weight:700; }
-  .hero-preview-person i { width:20px; height:20px; display:grid; place-items:center; border-radius:50%; color:white; background:#635bff; font-size:7px; font-style:normal; }
-  .hero-preview-person i.green { background:#3bb591; }.hero-preview-person i.orange { background:#e98c70; }
-  .hero-preview-status { width:max-content; padding:4px 6px; border-radius:5px; color:#7ce2c0; background:rgba(82,212,167,0.11); font-size:8px; font-weight:750; }
-  .hero-preview-status.pending { color:#f2c276; background:rgba(240,177,84,0.12); }
-  .hero-preview-insights { display:grid; grid-template-columns:1.1fr .9fr; gap:10px; margin-top:22px; }
-  .hero-preview-chart { height:135px; margin-top:12px; border-bottom:1px solid rgba(255,255,255,0.14); background:repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(255,255,255,0.06) 32px); }
-  .hero-preview-chart svg { width:100%; height:100%; overflow:visible; }
-  .hero-preview-forecast { display:flex; flex-direction:column; justify-content:space-between; min-height:172px; background:linear-gradient(145deg,rgba(98,91,255,0.27),rgba(98,91,255,0.08)); }
-  .hero-preview-forecast strong { margin-top:18px; color:white; font-size:34px; letter-spacing:-.08em; }
-  .hero-preview-forecast p { margin:6px 0 0; color:rgba(222,219,255,0.68); font-size:9px; line-height:1.5; }
-  .hero-preview-note { display:flex; align-items:center; gap:7px; margin-top:10px; padding:11px 13px; border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:rgba(255,255,255,0.54); background:rgba(255,255,255,0.035); font-size:9px; font-weight:650; }
-  .hero-preview-note svg { width:13px; height:13px; color:#857fff; }
-  @media (max-width: 640px) {
-    .hero-preview-body { grid-template-columns:82px 1fr; }
-    .hero-preview-main { padding:15px 12px; }
-    .hero-preview-rail { padding:14px 6px; }
-    .hero-preview-rail-item { padding:8px 5px; font-size:8px; gap:5px; }
-    .hero-preview-rail-label { margin-left:4px; font-size:7px; }
-    .hero-preview-summary, .hero-preview-bottom, .hero-preview-insights { grid-template-columns:1fr; }
-    .hero-preview-heading h3 { font-size:16px; }
-    .hero-preview-guest-grid { gap:6px; }
-    .hero-preview-guest-card { padding:10px; }
-    .hero-preview-guest-row { grid-template-columns:1.4fr .7fr .7fr; padding:8px 9px; font-size:8px; }
-    .hero-preview-person { gap:4px; }
-  }
-  .stat-card {
-    border: 1px solid rgba(255,255,255,0.06);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-  }
-  .stat-card:hover {
-    border-color: rgba(99,102,241,0.3);
-    box-shadow: 0 8px 32px rgba(99,102,241,0.1);
-    transform: translateY(-2px);
-  }
-  .shimmer-white {
-    background: linear-gradient(90deg, #fff 0%, #a5b4fc 50%, #fff 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: cta-shimmer 4s linear infinite;
-  }
-  .shimmer-slate {
-    background: linear-gradient(90deg, #94a3b8 0%, #cbd5e1 50%, #94a3b8 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: cta-shimmer 4s linear infinite;
-  }
-  .typing-dot { animation: float-gentle 1.2s ease-in-out infinite; }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  .nav-link { position:relative; }
-  .nav-link::after {
-    content:''; position:absolute; bottom:-2px; left:50%; right:50%;
-    height:1px; background:var(--accent-1);
-    transition: left 0.3s ease, right 0.3s ease;
-  }
-  .nav-link:hover::after { left:10%; right:10%; }
-
-  @keyframes wiz-overlay-in {
-    from { opacity:0; }
-    to   { opacity:1; }
-  }
-  /* ── Onboarding Wizard ─────────────────────────────────────────── */
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  @keyframes wiz-in-right {
-    from { opacity:0; transform:translateX(36px); }
-    to   { opacity:1; transform:translateX(0); }
-  }
-  @keyframes wiz-in-left {
-    from { opacity:0; transform:translateX(-36px); }
-    to   { opacity:1; transform:translateX(0); }
-  }
-  @keyframes wiz-q-in {
-    from { opacity:0; transform:translateY(14px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-  @keyframes wiz-pop {
-    0%   { opacity:0; transform:scale(0.88); }
-    70%  { transform:scale(1.04); }
-    100% { opacity:1; transform:scale(1); }
-  }
-  @keyframes wiz-check {
-    0%   { opacity:0; transform:scale(0.5) rotate(-15deg); }
-    60%  { transform:scale(1.2) rotate(6deg); }
-    100% { opacity:1; transform:scale(1) rotate(0deg); }
-  }
-  .wiz-forward  { animation: wiz-in-right 0.34s cubic-bezier(0.22,1,0.36,1) both; }
-  .wiz-back     { animation: wiz-in-left  0.34s cubic-bezier(0.22,1,0.36,1) both; }
-  .wiz-question { animation: wiz-q-in 0.4s cubic-bezier(0.22,1,0.36,1) both; }
-  .wiz-card-pop { animation: wiz-pop 0.28s cubic-bezier(0.22,1,0.36,1) both; }
-  .wiz-type-card {
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    cursor: pointer;
-  }
-  .wiz-type-card:hover  { transform: translateY(-3px) scale(1.02); }
-  .wiz-type-card.active { transform: translateY(-2px) scale(1.04); }
-  .wiz-input {
-    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
-    border-radius:14px; color:#fff; font-size:16px; padding:14px 18px;
-    outline:none; transition:border-color 0.2s ease, box-shadow 0.2s ease;
-    font-family:'DM Sans',sans-serif;
-  }
-  .wiz-input::placeholder { color:rgba(255,255,255,0.25); }
-  .wiz-input:focus { border-color:rgba(255,255,255,0.3); box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
-  .wiz-input.error { border-color:rgba(239,68,68,0.6); box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
-  .wiz-input-venue:focus { border-color:rgba(249,115,22,0.4); box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
-  .wiz-btn-next {
-    background:#fff; color:#111; border:none; border-radius:14px;
-    font-size:15px; font-weight:700; padding:14px 28px; cursor:pointer;
-    transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    display:flex; align-items:center; gap:8px; white-space:nowrap;
-  }
-  .wiz-btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
-  .wiz-btn-next:disabled { opacity:0.45; cursor:not-allowed; }
-  .wiz-btn-next.venue { background:#f97316; color:#fff; }
-  .wiz-btn-next.venue:hover:not(:disabled) { background:#fb923c; box-shadow:0 12px 32px rgba(249,115,22,0.3); }
-  .wiz-btn-back {
-    background:transparent; color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1);
-    border-radius:14px; font-size:14px; font-weight:600; padding:14px 20px; cursor:pointer;
-    transition:color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-    display:flex; align-items:center; gap:6px;
-  }
-  .wiz-btn-back:hover { color:rgba(255,255,255,0.8); border-color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.04); }
-  .wiz-pill {
-    width:28px; height:6px; border-radius:99px;
-    transition:background 0.3s ease, width 0.3s ease;
-  }
-  .wiz-select {
-    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
-    border-radius:14px; color:#fff; font-size:15px; padding:13px 18px;
-    outline:none; appearance:none; cursor:pointer;
-    font-family:'DM Sans',sans-serif;
-    transition:border-color 0.2s ease;
-  }
-  .wiz-select:focus { border-color:rgba(255,255,255,0.3); }
-  .dark-input {
-    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
-    border-radius:10px; color:#fff; font-size:14px; padding:11px 14px;
-    outline:none; transition:border-color 0.2s ease;
-    font-family:'DM Sans',sans-serif;
-  }
-  .dark-input::placeholder { color:rgba(255,255,255,0.25); }
-  .dark-input:focus { border-color:rgba(255,255,255,0.28); }
-
-  /* ── Icon micro-interactions ─────────────────────────────────────── */
-  .feature-icon { transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), background 0.5s ease; }
-  .group:hover .feature-icon { transform: rotate(-8deg) scale(1.12); }
-  .feature-icon svg { transition: transform 0.4s ease; }
-  .group:hover .feature-icon svg { transform: scale(1.08); }
-
-  /* ── Respect reduced-motion preference ───────────────────────────── */
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
+/* ── Four-type clarity: path cards, compare table, demos ── */
+.pi .t-lav{background:var(--lav)}.pi .t-pk{background:var(--pk)}.pi .t-mn{background:var(--mn)}.pi .t-hl{background:var(--hl)}
+.ch .chi{width:34px;height:34px;border-radius:8px;border:2px solid var(--ink);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+.ch .dot{margin-left:auto;flex-shrink:0}
+.paths{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.path{position:relative;display:flex;flex-direction:column;gap:14px;padding:26px 22px 22px;border:2px solid var(--ink);border-radius:12px;box-shadow:6px 6px 0 var(--ink);color:var(--ink);transition:transform .15s,box-shadow .15s}
+.path:hover{transform:translate(-3px,-3px);box-shadow:10px 10px 0 var(--ink)}
+.path .pn{position:absolute;top:18px;right:20px;font:800 12px Unbounded,sans-serif;opacity:.55}
+.path .ptag{align-self:flex-start;display:inline-flex;gap:7px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;box-shadow:2px 2px 0 var(--ink)}
+.path h3{font-size:clamp(1.25rem,1.7vw,1.5rem);font-weight:800;letter-spacing:-.04em;line-height:1.08}
+.path p{margin:0;font-size:15px;color:rgba(13,14,28,.78)}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.chips li{font-size:12.5px;font-weight:600;padding:3px 10px;border:2px solid var(--ink);border-radius:999px;background:rgba(255,255,255,.65)}
+.path .pgo{margin-top:auto;display:inline-flex;gap:8px;align-items:center;font-weight:700;border-top:2px solid var(--ink);padding-top:14px}
+.path:hover .pgo svg{transform:translateX(4px)}.path .pgo svg{transition:transform .15s}
+.cmpw{overflow-x:auto;padding:0 8px 12px 0;margin-top:0}
+.cmp{min-width:900px;border:2px solid var(--ink);border-radius:12px;background:#fff;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
+.cmp-h,.cmp-r{display:grid;grid-template-columns:150px repeat(4,1fr)}
+.cmp-h>*{border-bottom:2px solid var(--ink)}.cmp-h>span{background:var(--lav)}
+.cmp-h button{display:flex;gap:8px;align-items:center;justify-content:center;padding:14px 10px;border:0;border-left:2px solid var(--ink);font:800 15px Unbounded,sans-serif;letter-spacing:-.03em;color:var(--ink)}
+.cmp-h button:hover{filter:brightness(.95)}
+.cmp-r>*{padding:14px 16px;font-size:14.5px;border-top:2px solid rgba(13,14,28,.14)}.cmp-r:first-of-type>*{border-top:0}
+.cmp-r>b{background:var(--lav);font:700 11.5px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center}
+.cmp-r>span{border-left:2px solid rgba(13,14,28,.14)}
+.sshow{display:grid;gap:84px}
+.srow{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:center}.srow.rev{grid-template-columns:1.2fr .8fr}.srow.rev>:first-child{order:2}.srow>*{min-width:0}
+.srow h3,.bdemo h3{font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:800;letter-spacing:-.04em;margin:0 0 12px}
+.srow p,.bdemo p{font-size:17px;color:var(--mu);margin:0 0 18px;max-width:26em}
+.br .bdemo p{color:rgba(13,14,28,.78)}
+.bdemo{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:center;margin-top:76px}.bdemo>*{min-width:0}
+.bdemo .dl{display:flex;gap:18px;flex-wrap:wrap}
+.dev{border:2px solid var(--ink);border-radius:14px;background:#fff;box-shadow:8px 8px 0 var(--ink);overflow:hidden;position:relative;min-width:0;color:var(--ink)}
+.dev-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--lav);border-bottom:2px solid var(--ink)}
+.dev-bar i{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:#fff}.dev-bar i:nth-child(1){background:var(--pk)}.dev-bar i:nth-child(2){background:var(--hl)}.dev-bar i:nth-child(3){background:var(--mn)}
+.dev-bar span{margin-left:10px;flex:1;max-width:280px;background:#fff;border:2px solid var(--ink);border-radius:6px;padding:1px 10px;font-size:12px;font-weight:600;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev.phone{max-width:300px;margin:0 auto;border-radius:34px;padding:12px;background:var(--ink)}.dev.phone .scr{border-radius:24px;overflow:hidden;background:#fff}
+.rm-cover{height:170px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;background:radial-gradient(circle at 18% 20%,var(--pk) 0,transparent 46%),radial-gradient(circle at 88% 14%,var(--hl) 0,transparent 42%),var(--ac);color:#fff;border-bottom:2px solid var(--ink)}
+.rm-cover span{display:inline-block;font:700 10px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.04em;background:var(--hl);color:var(--ink);border:2px solid var(--ink);padding:2px 8px;margin-bottom:8px;transform:rotate(-2deg)}
+.rm-cover b{display:block;font:800 21px/1.05 Unbounded,sans-serif;letter-spacing:-.04em}
+.rm-body{padding:16px;display:grid;gap:10px}.rm-meta{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mu);font-weight:500}
+.rm-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.rm-o{padding:9px 4px;border:2px solid var(--ln);border-radius:8px;background:#fff;font-size:12px;font-weight:700}.rm-o:hover{border-color:var(--ink)}
+.rm-o.on{border-color:var(--ink)}.rm-o.on.yes{background:var(--mn)}.rm-o.on.maybe{background:var(--hl)}.rm-o.on.no{background:var(--pk)}
+.rm-foot{display:flex;justify-content:space-between;align-items:center;border-top:2px dashed var(--ln);padding-top:10px;font-size:13px;color:var(--mu)}.rm-foot b{color:var(--ink);font:800 15px Unbounded,sans-serif}
+.em{display:grid;grid-template-columns:1.6fr 1fr;min-height:330px}
+.em-chat{border-right:2px solid var(--ink);display:flex;flex-direction:column;min-width:0}
+.em-hd{padding:10px 14px;border-bottom:2px solid var(--ln);font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center}
+.em-msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ebub{align-self:flex-start;max-width:82%;padding:8px 12px;border:2px solid var(--ink);border-radius:12px 12px 12px 2px;background:#fff;font-size:13px;line-height:1.35}
+.ebub.me{align-self:flex-end;background:var(--ac);color:#fff;border-radius:12px 12px 2px 12px}
+.ebub small{display:block;font-weight:700;color:var(--ac);font-size:11px;margin-bottom:2px}
+.ebub.typ{display:flex;gap:4px;padding:10px 12px}.ebub.typ i{width:6px;height:6px;border-radius:50%;background:var(--mu);animation:bnc 1s infinite}.ebub.typ i:nth-child(2){animation-delay:.15s}.ebub.typ i:nth-child(3){animation-delay:.3s}
+@keyframes bnc{50%{transform:translateY(-4px)}}
+.em-tasks{padding:14px;display:grid;gap:10px;align-content:start;background:var(--lav)}.em-tasks h6{margin:0 0 2px;font:700 12px Unbounded,sans-serif;display:flex;gap:7px;align-items:center}
+.etk{display:flex;gap:9px;align-items:flex-start;background:none;border:0;padding:0;text-align:left;font-size:13px;font-weight:500}
+.etk i{width:17px;height:17px;border:2px solid var(--ink);border-radius:4px;background:#fff;display:grid;place-items:center;margin-top:1px;flex-shrink:0}
+.etk.done i{background:var(--ok);color:#fff}.etk.done span{text-decoration:line-through;color:var(--mu)}
+.dm{position:relative;background:#fff;color:var(--ink)}
+.dm-top{padding:16px 18px 0}.dm-hd{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px}
+.dpill{display:inline-flex;gap:7px;align-items:center;border:2px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:var(--mn);margin-bottom:8px}
+.dpill i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pls 1.4s infinite}@keyframes pls{50%{opacity:.3}}
+.dm-hd h4{margin:0;font:800 16px Unbounded,sans-serif;letter-spacing:-.03em}.dm-hd small{color:var(--mu);font-size:13px}
+.dring{position:relative;width:56px;height:56px;flex-shrink:0}.dring svg{transform:rotate(-90deg)}.dring b{position:absolute;inset:0;display:grid;place-items:center;font:800 12px Unbounded,sans-serif}
+.dm-tabs{display:flex;gap:4px;border-bottom:2px solid var(--ink);flex-wrap:wrap}
+.dm-tabs button{border:2px solid transparent;border-bottom:0;background:none;padding:8px 14px;font-weight:700;font-size:13.5px;text-transform:capitalize;border-radius:8px 8px 0 0;margin-bottom:-2px;display:flex;gap:6px;align-items:center;color:var(--mu)}
+.dm-tabs button.on{background:var(--hl);border-color:var(--ink);color:var(--ink)}
+.dm-tabs b{background:var(--er);color:#fff;border-radius:999px;font-size:10px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 4px}
+.dm-body{padding:14px;min-height:300px;max-height:380px;overflow-y:auto;background:var(--lav)}
+.dg{display:flex;gap:12px;align-items:center;padding:10px 12px;border:2px solid var(--ink);border-radius:10px;background:#fff;margin-bottom:8px}
+.dg.in{background:#d6f7e8}.dg.bl{background:#ffe1de}.dg.fl{background:var(--acs)}.dg.ck{background:#f0f1fa}
+.dgi{width:42px;height:42px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;border:2px solid var(--ink);background:#fff;overflow:hidden}
+.dg.in .dgi{background:var(--ok);color:#fff}.dg.bl .dgi{background:var(--er);color:#fff}.dg.fl .dgi{background:var(--hl);font:800 10px Unbounded,sans-serif}
+.dgm{flex:1;min-width:0}.dgm p{margin:2px 0 0;font-size:12.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dgm strong{font-size:14.5px;margin-right:6px}
+.rl{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border:1.5px solid var(--ink);border-radius:999px;background:var(--lav);margin-right:4px}
+.rl.vip{background:var(--hl)}.rl.speaker{background:var(--mn)}.rl.sponsor{background:var(--pk)}.rl.bad{background:var(--er);color:#fff}
+.dgb{border:2px solid var(--ink);border-radius:8px;background:var(--hl);font-weight:700;font-size:13px;padding:6px 12px;box-shadow:2px 2px 0 var(--ink);flex-shrink:0}
+.dgb:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}.dgb.dn{background:#fff;box-shadow:none}.dgb.bad{background:var(--er);color:#fff}
+.dsim{margin-top:12px;padding:12px;border:2px dashed var(--ink);border-radius:10px;background:#fff}.dsim p{margin:0 0 8px;font-size:13px;color:var(--mu);font-weight:600}.dsim div{display:flex;gap:8px;flex-wrap:wrap}
+.dstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.dstat{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:10px;text-align:center}.dstat b{display:block;font:800 22px Unbounded,sans-serif}.dstat small{color:var(--mu);font-size:12px}
+.dm h5{margin:14px 0 8px;font:700 11px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:var(--mu)}
+.dprot{display:flex;gap:10px;padding:9px 12px;background:#fff;border:2px solid var(--ln);border-radius:8px;margin-bottom:6px}.dprot b{display:block;font-size:13px}.dprot span{color:var(--mu);font-size:12.5px}.dprot i{font-style:normal;color:var(--ok);font-weight:800}
+.dlg{display:flex;gap:9px;padding:9px 12px;border:2px solid var(--ink);border-radius:8px;margin-bottom:6px;font-size:13px;background:#fff}
+.dlg.ok{background:#d6f7e8}.dlg.high{background:var(--acs)}.dlg.critical{background:#ffe1de}.dlg.medium{background:#e0e6ff}.dlg small{display:block;color:var(--mu);font-size:11.5px}
+.dbar{height:10px;border:2px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden}.dbar i{display:block;height:100%;background:var(--ok);transition:width .6s}.dbar i.part{background:var(--hl)}
+.dm-ov{position:absolute;inset:0;z-index:5;background:rgba(13,14,28,.82);display:grid;place-items:center;padding:16px}
+.dm-card{background:#fff;border:2px solid var(--ink);border-radius:12px;box-shadow:6px 6px 0 var(--hl);padding:20px;width:100%;max-width:320px}
+.dm-card p{margin:0 0 12px}
+.vd{display:grid;grid-template-columns:1.3fr 1fr;color:var(--ink);background:#fff}
+.vd-floor{padding:16px;background:var(--lav);border-right:2px solid var(--ink)}
+.vd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.vd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.vtb{border:2px solid var(--ink);border-radius:12px;background:#fff;padding:10px 6px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:700}
+.vtb small{font-weight:500;color:var(--mu);font-size:12px}.vtb.free{background:var(--mn)}.vtb.seated{background:var(--pk)}.vtb.reserved{background:var(--hl)}.vtb.round{border-radius:50%}
+.vd-side{padding:16px;display:flex;flex-direction:column;gap:8px}.vd-side h5{margin:0}
+.vwt{display:flex;justify-content:space-between;gap:10px;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;font-size:13.5px;background:#fff}.vwt small{color:var(--mu)}
+.vd-msg{font-size:13px;color:var(--mu);min-height:40px;margin:0}
+.vlegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu);margin-top:12px}.vlegend i{display:inline-block;width:11px;height:11px;border:2px solid var(--ink);border-radius:3px;margin-right:5px;vertical-align:-2px}
+.br-enterprise{background:var(--pk)}.br-enterprise .br-h h2 .hl{background:linear-gradient(transparent 60%,var(--hl) 60%)}
+.oths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.oth{display:flex;flex-direction:column;gap:6px;padding:18px;border:2px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 var(--ink);color:var(--ink);transition:transform .15s,box-shadow .15s}
+.oth:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+.oth span{display:flex;gap:7px;align-items:center;font-size:13px;font-weight:700}.oth b{font:800 16px/1.15 Unbounded,sans-serif;letter-spacing:-.03em}.oth em{font-style:normal;font-size:14px;color:rgba(13,14,28,.75)}
+@media(max-width:1020px){.paths{grid-template-columns:1fr 1fr}}
+@media(max-width:960px){.srow,.srow.rev,.bdemo{grid-template-columns:minmax(0,1fr);gap:32px}.srow.rev>:first-child{order:0}.oths{grid-template-columns:1fr}.sshow{gap:64px}}
+@media(max-width:600px){.paths{grid-template-columns:1fr}.em{grid-template-columns:1fr}.em-chat{border-right:0;border-bottom:2px solid var(--ink)}.vd{grid-template-columns:1fr}.vd-floor{border-right:0;border-bottom:2px solid var(--ink)}.dm-body{padding:10px}.dm-top{padding:14px 12px 0}.dgb{padding:6px 9px}}
 `;
 
-function InjectGlobalCSS() {
+function InjectCSS() {
   useEffect(() => {
     const id = 'planit-home-styles';
-    if (!document.getElementById(id)) {
-      const s = document.createElement('style'); s.id = id; s.textContent = GLOBAL_CSS;
-      document.head.appendChild(s);
-    }
-    return () => { const el = document.getElementById(id); if (el) el.remove(); };
+    let s = document.getElementById(id);
+    if (!s) { s = document.createElement('style'); s.id = id; s.textContent = CSS; document.head.appendChild(s); }
+    return () => { document.getElementById(id)?.remove(); };
   }, []);
   return null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OPENING CINEMATIC, a movie-title-style entrance:
-//   black → distant light → atmosphere/particles drift in → a multilingual
-//   greeting montage that accelerates → a sudden stop to black → "PLANIT"
-//   assembles from separated letters with a light sweep and particle
-//   convergence → tagline → cinematic bloom → camera pullback → the panel
-//   rises to reveal the real homepage underneath.
-//
-// Everything here is one coordinated requestAnimationFrame loop keyed to real
-// elapsed time (never chained setTimeouts), and every visual is written
-// straight to the DOM/canvas via refs, no React re-renders during playback.
-// That's what keeps this smooth and identical on every run: every layer's
-// look at any instant is a pure function of elapsed milliseconds, not of how
-// many frames fired or how busy the main thread happened to be.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Easing ──────────────────────────────────────────────────────────────────
-const clamp01 = t => (t < 0 ? 0 : t > 1 ? 1 : t);
-const lerp = (a, b, t) => a + (b - a) * t;
-const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-const easeInCubic = t => t * t * t;
-const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const easeInOutExpo = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
-
-// ── The multilingual montage, reuses the greetings already established for
-// this cinematic. Each gets its own restrained visual treatment so the
-// montage reads as a system of variations, not a single repeated effect.
-const CINEMATIC_WORDS = [
-  { text: 'Hello',     variant: 'emerge',      dur: 700 },
-  { text: 'Hola',      variant: 'horizontal',  dur: 450 },
-  { text: 'Bonjour',   variant: 'tracking',    dur: 400 },
-  { text: 'こんにちは',   variant: 'depthBlur',   dur: 350 },
-  { text: '안녕하세요',   variant: 'converge',    dur: 300 },
-  { text: 'Ciao',      variant: 'push',        dur: 250 },
-  { text: 'Привет',    variant: 'directional', dur: 200 },
+// Bump when the Terms / Privacy Policy change in a way that needs fresh consent.
+const LEGAL_VERSION = '2026-10-03';
+const LEGAL_CHECKS = [
+  { key: 'agreeTerms', error: 'You need to agree to the Terms of Service and Privacy Policy.',
+    label: <>I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a> and the <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</> },
+  { key: 'agreeResponsible', error: 'Please confirm you are responsible for your event.',
+    label: 'I am responsible for my event and everything posted to it. I will not use PlanIt for anything illegal, harassing, deceptive, or spammy, and I understand PlanIt can remove events that break the rules.' },
+  { key: 'agreeGuestData', error: 'Please confirm you will handle guest data responsibly.',
+    label: 'I have the right to collect my guests\u2019 information (names, emails, RSVPs, check-ins) and will only use it to run this event.' },
+  { key: 'agreeAge', error: 'You must be at least 13 to create an event.', label: 'I am at least 13 years old.' },
 ];
 
-// ── Master timeline (ms from mount), computed once. Guidelines, tuned by
-// feel, not rigid: total runtime lands around 8s.
-function buildTimeline() {
-  const DARK_END = 650;
-  const ENV_END = 1650;
-  const wordStarts = [];
-  let acc = ENV_END;
-  for (const w of CINEMATIC_WORDS) { wordStarts.push(acc); acc += w.dur; }
-  const WORDS_END = acc;
-  const SILENCE_END = WORDS_END + 400;
-  const TITLE_START = SILENCE_END;
-  const TITLE_LOCK = TITLE_START + 900;
-  const SWEEP_END = TITLE_LOCK + 450;
-  const TAGLINE_START = TITLE_LOCK + 100;
-  const TAGLINE_END = TAGLINE_START + 700;
-  const BLOOM_START = Math.max(SWEEP_END, TAGLINE_END);
-  const BLOOM_END = BLOOM_START + 450;
-  const PULLBACK_START = BLOOM_END;
-  const PULLBACK_END = PULLBACK_START + 900;
-  const PANEL_RISE_START = PULLBACK_START + 400;
-  const PANEL_RISE_END = PANEL_RISE_START + 750;
-  return {
-    DARK_END, ENV_END, wordStarts, WORDS_END, SILENCE_END, TITLE_START, TITLE_LOCK,
-    SWEEP_END, TAGLINE_START, TAGLINE_END, BLOOM_START, BLOOM_END,
-    PULLBACK_START, PULLBACK_END, PANEL_RISE_START, PANEL_RISE_END,
-    COMPLETE: PANEL_RISE_END,
-  };
-}
-const TIMELINE = buildTimeline();
-
-// Short, simplified timeline for prefers-reduced-motion, same beats, none of
-// the camera/particle motion, much shorter.
-function buildReducedTimeline() {
-  const HELLO_END = 480;
-  const MONTAGE_START = HELLO_END + 140;
-  const WORD_DUR = 130;
-  const MONTAGE_END = MONTAGE_START + WORD_DUR * (CINEMATIC_WORDS.length - 1);
-  const SILENCE_END = MONTAGE_END + 160;
-  const TITLE_START = SILENCE_END;
-  const TITLE_END = TITLE_START + 420;
-  const TAGLINE_START = TITLE_END + 120;
-  const TAGLINE_END = TAGLINE_START + 360;
-  const HOLD_END = TAGLINE_END + 200;
-  const CLOSE_END = HOLD_END + 420;
-  return { HELLO_END, MONTAGE_START, WORD_DUR, MONTAGE_END, SILENCE_END, TITLE_START, TITLE_END, TAGLINE_START, TAGLINE_END, HOLD_END, COMPLETE: CLOSE_END };
-}
-const REDUCED_TIMELINE = buildReducedTimeline();
-
-// ── Per-word motion, each variant animates a different combination of
-// opacity/translate/scale/blur/tracking, but every one follows the same
-// enter → hold → exit shape, so the montage feels like one visual system.
-function getWordFrame(variant, localT, slotDur) {
-  const frame = { opacity: 1, tx: 0, ty: 0, scale: 1, blur: 0, tracking: 0, rotate: 0 };
-  const fadeIn = Math.min(slotDur * 0.42, variant === 'emerge' ? 420 : variant === 'directional' ? 70 : 120);
-  const fadeOut = Math.min(slotDur * 0.4, variant === 'emerge' ? 260 : variant === 'directional' ? 60 : 100);
-
-  if (localT < fadeIn) {
-    const e = easeOutCubic(clamp01(localT / fadeIn));
-    switch (variant) {
-      case 'emerge':
-        frame.opacity = e; frame.scale = lerp(0.65, 1.04, e); frame.ty = lerp(28, -2, e); frame.blur = lerp(20, 0, e);
-        break;
-      case 'horizontal':
-        frame.opacity = e; frame.tx = lerp(-32, 0, e);
-        break;
-      case 'tracking':
-        frame.opacity = e; frame.tracking = lerp(0.55, 0, e);
-        break;
-      case 'depthBlur':
-        frame.opacity = e; frame.ty = lerp(26, 0, e); frame.blur = lerp(11, 0, e);
-        break;
-      case 'converge':
-        frame.opacity = e; frame.scale = lerp(0.72, 1, e); frame.rotate = lerp(3.5, 0, e);
-        break;
-      case 'push':
-        frame.opacity = e; frame.scale = lerp(1.18, 1, e); frame.blur = lerp(3, 0, e);
-        break;
-      default: // directional
-        frame.opacity = e; frame.tx = lerp(36, 0, e);
-    }
-    return frame;
-  }
-
-  if (localT > slotDur - fadeOut) {
-    const e = easeInCubic(clamp01((localT - (slotDur - fadeOut)) / fadeOut));
-    switch (variant) {
-      case 'emerge':
-        frame.opacity = 1 - e; frame.scale = lerp(1, 1.05, e); frame.ty = lerp(0, -14, e); frame.blur = lerp(0, 6, e);
-        break;
-      case 'horizontal':
-        frame.opacity = 1 - e; frame.tx = lerp(0, 28, e);
-        break;
-      case 'tracking':
-        frame.opacity = 1 - e; frame.tracking = lerp(0, 0.42, e);
-        break;
-      case 'depthBlur':
-        frame.opacity = 1 - e; frame.ty = lerp(0, -20, e); frame.blur = lerp(0, 8, e);
-        break;
-      case 'converge':
-        frame.opacity = 1 - e; frame.scale = lerp(1, 1.08, e); frame.rotate = lerp(0, -3, e);
-        break;
-      case 'push':
-        frame.opacity = 1 - e; frame.scale = lerp(1, 0.92, e);
-        break;
-      default: // directional
-        frame.opacity = 1 - e; frame.tx = lerp(0, -32, e);
-    }
-    return frame;
-  }
-  return frame; // steady hold
-}
-
-// ── Particle field, a small, deterministic set of soft points across three
-// depth layers (background/midground/foreground). Foreground particles are
-// larger and drift faster, which is what sells the "camera moving forward"
-// illusion; background ones barely move. Drawn straight into one canvas
-// inside the same master loop, no separate rAF, no React state.
-function makeParticles(count) {
-  const list = [];
-  for (let i = 0; i < count; i++) {
-    const layer = i < count * 0.45 ? 0 : i < count * 0.8 ? 1 : 2;
-    list.push({
-      layer,
-      angle: Math.random() * Math.PI * 2,
-      baseRadius: 0.14 + Math.random() * 0.34,
-      phase: Math.random() * Math.PI * 2,
-      driftSpeed: 0.14 + Math.random() * 0.22,
-      size: layer === 0 ? 0.7 + Math.random() * 0.6 : layer === 1 ? 1.2 + Math.random() * 0.8 : 1.8 + Math.random() * 1.3,
-      baseOpacity: layer === 0 ? 0.16 + Math.random() * 0.16 : layer === 1 ? 0.24 + Math.random() * 0.2 : 0.32 + Math.random() * 0.26,
-      convergeJitterX: (Math.random() - 0.5) * 24,
-      convergeJitterY: (Math.random() - 0.5) * 16,
-      disperseAngle: Math.random() * Math.PI * 2,
-      disperseRadius: 0.5 + Math.random() * 0.55,
-    });
-  }
-  return list;
-}
-
-function drawParticles(ctx, W, H, elapsed, particles, activeCount) {
-  ctx.clearRect(0, 0, W, H);
-  const count = activeCount == null ? particles.length : activeCount;
-  const cx = W / 2, cy = H * 0.46;
-  const minDim = Math.min(W, H);
-  const t = elapsed * 0.001;
-  const { DARK_END, ENV_END, WORDS_END, SILENCE_END, TITLE_START, TITLE_LOCK, PULLBACK_START, PULLBACK_END, BLOOM_START, BLOOM_END } = TIMELINE;
-
-  let speedMult = 1;
-  if (elapsed >= ENV_END && elapsed < WORDS_END) speedMult = lerp(1, 2.4, clamp01((elapsed - ENV_END) / (WORDS_END - ENV_END)));
-  else if (elapsed >= WORDS_END) speedMult = 2.4;
-
-  let envelope = 0;
-  if (elapsed < DARK_END) envelope = 0;
-  else if (elapsed < ENV_END) envelope = easeOutCubic(clamp01((elapsed - DARK_END) / (ENV_END - DARK_END)));
-  else if (elapsed < WORDS_END) envelope = 1;
-  else if (elapsed < SILENCE_END) envelope = 1 - easeInCubic(clamp01((elapsed - WORDS_END) / (SILENCE_END - WORDS_END)));
-
-  const convergeWindowStart = TITLE_START - 250;
-  let convergeT = 0, convergeVisible = 0;
-  if (elapsed >= convergeWindowStart && elapsed < PULLBACK_START) {
-    convergeT = easeInOutCubic(clamp01((elapsed - convergeWindowStart) / (TITLE_LOCK - convergeWindowStart)));
-    convergeVisible = lerp(0, 0.8, easeOutCubic(clamp01((elapsed - convergeWindowStart) / 500)));
-  }
-  let disperseT = 0;
-  if (elapsed >= PULLBACK_START) disperseT = easeInOutCubic(clamp01((elapsed - PULLBACK_START) / (PULLBACK_END - PULLBACK_START)));
-
-  const bloomBoost = (elapsed >= BLOOM_START && elapsed <= BLOOM_END)
-    ? Math.sin(clamp01((elapsed - BLOOM_START) / (BLOOM_END - BLOOM_START)) * Math.PI) * 0.5
-    : 0;
-
-  const active = envelope > 0.003 || convergeT > 0 || disperseT > 0 || convergeVisible > 0;
-  if (!active) return;
-
-  for (let pi = 0; pi < count; pi++) {
-    const pt = particles[pi];
-    let x, y, opacity;
-    if (convergeT > 0 || disperseT > 0) {
-      const targetX = cx + pt.convergeJitterX;
-      const targetY = cy + pt.convergeJitterY;
-      const driftAngle = pt.angle + t * pt.driftSpeed * 0.06;
-      const fromX = cx + Math.cos(driftAngle) * pt.baseRadius * minDim;
-      const fromY = cy + Math.sin(driftAngle) * pt.baseRadius * minDim * 0.7;
-      if (disperseT <= 0) {
-        x = lerp(fromX, targetX, convergeT);
-        y = lerp(fromY, targetY, convergeT);
-        opacity = convergeVisible * pt.baseOpacity * 3 + bloomBoost * pt.baseOpacity;
-      } else {
-        const outX = cx + Math.cos(pt.disperseAngle) * pt.disperseRadius * minDim;
-        const outY = cy + Math.sin(pt.disperseAngle) * pt.disperseRadius * minDim * 0.7;
-        x = lerp(targetX, outX, disperseT);
-        y = lerp(targetY, outY, disperseT);
-        opacity = (1 - disperseT) * convergeVisible * pt.baseOpacity * 3;
-      }
-    } else {
-      const driftAngle = pt.angle + t * pt.driftSpeed * 0.06 * speedMult;
-      const depthFactor = pt.layer === 0 ? 0.5 : pt.layer === 1 ? 0.8 : 1.25;
-      const r = pt.baseRadius * minDim * depthFactor;
-      x = cx + Math.cos(driftAngle) * r + Math.sin(t * 0.3 + pt.phase) * 4 * depthFactor;
-      y = cy + Math.sin(driftAngle) * r * 0.7 + Math.cos(t * 0.25 + pt.phase) * 3 * depthFactor;
-      opacity = envelope * pt.baseOpacity * (1 + bloomBoost);
-    }
-    if (opacity <= 0.004) continue;
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(255,255,255,${clamp01(opacity).toFixed(3)})`;
-    ctx.arc(x, y, pt.size * (pt.layer === 2 ? 1.35 : 1), 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-const TITLE_LETTERS = Array.from('PLANIT');
-
-// ── Device capability tiering, a cheap, one-time read of hardware signals
-// (never sampled inside the render loop) used only to pick a rendering
-// quality level. Three tiers keep this simple: HIGH gets the full particle
-// count and a mildly higher canvas resolution, MEDIUM (the common laptop/
-// tablet case, and the default for mobile) is the previous baseline, LOW is
-// for weak/low-memory devices where the montage should still play but with
-// noticeably less to draw per frame.
-// Note: the environment layer's entrance no longer animates `filter: blur()`
-// at all (see envWrapRef handling below), animating blur across a
-// full-screen element every frame was the single most expensive thing this
-// cinematic was doing, so it's gone rather than tiered.
-const INTRO_QUALITY = {
-  LOW:    { particles: 16, dpr: 1   },
-  MEDIUM: { particles: 30, dpr: 1   },
-  HIGH:   { particles: 54, dpr: 1.5 },
-};
-function detectIntroQuality() {
-  if (typeof window === 'undefined') return 'MEDIUM';
-  const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-  const cores = navigator.hardwareConcurrency || 4;
-  const mem = navigator.deviceMemory; // undefined on many browsers, treat as unknown, not penalized
-  if (isMobile) {
-    if ((mem !== undefined && mem <= 3) || cores <= 3) return 'LOW';
-    return 'MEDIUM';
-  }
-  if (cores >= 8 && (mem === undefined || mem >= 8)) return 'HIGH';
-  if (cores <= 3 || (mem !== undefined && mem <= 3)) return 'LOW';
-  return 'MEDIUM';
-}
-
-function IntroCinematic({ onComplete }) {
-  const [reduced] = useState(
-    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  );
-  const [quality] = useState(detectIntroQuality);
-
-  const panelRef = useRef(null);
-  const lightRef = useRef(null);
-  const envWrapRef = useRef(null);
-  const canvasRef = useRef(null);
-  const wordRef = useRef(null);
-  const titleWrapRef = useRef(null);
-  const letterRefs = useRef([]);
-  const sweepRef = useRef(null);
-  const taglineWrapRef = useRef(null);
-  const line1Ref = useRef(null);
-  const line2Ref = useRef(null);
-  const bloomRef = useRef(null);
-
-  const rafRef = useRef(null);
-  const startRef = useRef(null);
-  const doneRef = useRef(false);
-  const particlesRef = useRef(null);
-
-  const finish = (cb) => { if (!doneRef.current) { doneRef.current = true; cb?.(); } };
-
-  // ── Reduced-motion path: short, simple opacity fades only. ────────────────
-  useEffect(() => {
-    if (!reduced) return;
-    const T = REDUCED_TIMELINE;
-
-    const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
-    window.addEventListener('keydown', onKey);
-
-    const tick = (now) => {
-      if (startRef.current == null) startRef.current = now;
-      const elapsed = now - startRef.current;
-
-      if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
-
-      // Word (Hello + montage), simple crossfade, no motion.
-      let wIdx = -1, wOpacity = 0;
-      if (elapsed < T.HELLO_END) { wIdx = 0; wOpacity = easeOutCubic(clamp01(elapsed / T.HELLO_END)); }
-      else if (elapsed < T.MONTAGE_START) { wIdx = 0; wOpacity = 1 - clamp01((elapsed - (T.HELLO_END - 80)) / 80); }
-      else if (elapsed < T.MONTAGE_END) {
-        const rel = elapsed - T.MONTAGE_START;
-        const i = Math.min(CINEMATIC_WORDS.length - 2, Math.floor(rel / T.WORD_DUR));
-        wIdx = i + 1;
-        const localT = rel - i * T.WORD_DUR;
-        const p = clamp01(localT / T.WORD_DUR);
-        wOpacity = Math.sin(p * Math.PI);
-      }
-      if (wordRef.current) {
-        if (wIdx >= 0 && wordRef.current.dataset.idx !== String(wIdx)) {
-          wordRef.current.textContent = CINEMATIC_WORDS[wIdx].text;
-          wordRef.current.dataset.idx = String(wIdx);
-        }
-        wordRef.current.style.opacity = String(wIdx >= 0 ? wOpacity : 0);
-      }
-
-      // Title, plain fade, letters already together.
-      if (titleWrapRef.current) {
-        let op = 0;
-        if (elapsed >= T.TITLE_START && elapsed < T.HOLD_END) {
-          op = elapsed < T.TITLE_END
-            ? easeOutCubic(clamp01((elapsed - T.TITLE_START) / (T.TITLE_END - T.TITLE_START)))
-            : 1;
-        } else if (elapsed >= T.HOLD_END) {
-          op = Math.max(0, 1 - clamp01((elapsed - T.HOLD_END) / (T.COMPLETE - T.HOLD_END)));
-        }
-        titleWrapRef.current.style.opacity = String(op);
-      }
-      letterRefs.current.forEach(el => { if (el) el.style.transform = 'translateX(0px)'; });
-      if (sweepRef.current) sweepRef.current.style.opacity = '0';
-
-      // Tagline, plain fade.
-      if (taglineWrapRef.current) {
-        let op = 0;
-        if (elapsed >= T.TAGLINE_START && elapsed < T.HOLD_END) {
-          op = elapsed < T.TAGLINE_END
-            ? easeOutCubic(clamp01((elapsed - T.TAGLINE_START) / (T.TAGLINE_END - T.TAGLINE_START)))
-            : 1;
-        } else if (elapsed >= T.HOLD_END) {
-          op = Math.max(0, 1 - clamp01((elapsed - T.HOLD_END) / (T.COMPLETE - T.HOLD_END)));
-        }
-        taglineWrapRef.current.style.opacity = String(op);
-      }
-
-      // Panel, plain fade out (no slide, minimal motion).
-      if (panelRef.current) {
-        const fadeStart = T.HOLD_END;
-        const op = elapsed >= fadeStart ? 1 - clamp01((elapsed - fadeStart) / (T.COMPLETE - fadeStart)) : 1;
-        panelRef.current.style.opacity = String(op);
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('keydown', onKey); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced]);
-
-  // ── Full cinematic path. ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (reduced) return;
-    const T = TIMELINE;
-    const cfg = INTRO_QUALITY[quality];
-    particlesRef.current = makeParticles(cfg.particles);
-    // How many of those precomputed particles actually get drawn each frame.
-    // Adaptive quality (below) can shrink this on a slow device without ever
-    // reallocating the particle array, it just draws a shorter slice of it.
-    let activeParticleCount = particlesRef.current.length;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    // DPR is capped (and only above 1 on the HIGH tier at all) so a
-    // high-density phone screen never blows the canvas up to millions of
-    // pixels, see cfg.dpr above.
-    const effectiveDPR = Math.min(window.devicePixelRatio || 1, cfg.dpr);
-    const resize = () => {
-      if (!canvas) return;
-      canvas.width = Math.round(window.innerWidth * effectiveDPR);
-      canvas.height = Math.round(window.innerHeight * effectiveDPR);
-    };
-    resize();
-    // Debounced, mobile browsers fire `resize` repeatedly as the address
-    // bar hides/shows while scrolling; we don't want to touch the canvas
-    // (or, if it ever needed to, regenerate particles) on every one of those.
-    let resizeTimer = null;
-    const onResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(resize, 150);
-    };
-    window.addEventListener('resize', onResize);
-
-    const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
-    window.addEventListener('keydown', onKey);
-
-    // ── Lightweight adaptive quality, a safety net, not the primary
-    // strategy (the primary strategy is simply not doing expensive work in
-    // the first place). If frame times are consistently poor we quietly
-    // draw fewer particles; if they recover we restore. Hysteresis (500ms /
-    // 1500ms) avoids flapping back and forth every other frame.
-    let slowSince = null, goodSince = null, degraded = false, lastFrameTime = null;
-    const minParticles = Math.ceil(particlesRef.current.length * 0.35);
-
-    // Dev-only perf readout, never rendered to the DOM, just a console
-    // marker so this is easy to sanity-check while working on it locally.
-    const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
-    let devFrames = 0, devTimeAcc = 0, devLastLog = 0;
-
-    const tick = (now) => {
-      if (startRef.current == null) startRef.current = now;
-      const elapsed = now - startRef.current;
-      const frameStart = isDev ? performance.now() : 0;
-
-      if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
-
-      // Act 0, distant light point.
-      if (lightRef.current) {
-        const p = clamp01((elapsed - 80) / (T.DARK_END - 80));
-        let opacity;
-        if (elapsed < T.DARK_END) opacity = easeOutCubic(p) * 0.9;
-        else opacity = Math.max(0, 0.9 * (1 - clamp01((elapsed - T.DARK_END) / 500)));
-        const scale = lerp(0.4, 1, easeOutCubic(p));
-        lightRef.current.style.opacity = String(opacity);
-        lightRef.current.style.transform = `scale(${scale})`;
-      }
-
-      // Act 1, environment (grid + particle canvas wrapper) entrance / hold / fade to black.
-      // Deliberately opacity + scale only, never `filter: blur()`, this
-      // wrapper is full-screen (it contains the grid SVG *and* the particle
-      // canvas), and animating blur across a full-screen element every
-      // frame is one of the most expensive things a browser can be asked to
-      // do. The zoom-in-from-1.08 alone reads as an atmospheric entrance
-      // without paying that cost.
-      if (envWrapRef.current) {
-        let envOpacity, envScale;
-        if (elapsed < T.DARK_END) { envOpacity = 0; envScale = 1.08; }
-        else if (elapsed < T.ENV_END) {
-          const p = easeOutCubic(clamp01((elapsed - T.DARK_END) / (T.ENV_END - T.DARK_END)));
-          envOpacity = p; envScale = lerp(1.08, 1, p);
-        } else if (elapsed < T.WORDS_END) {
-          envOpacity = 1; envScale = 1;
-        } else if (elapsed < T.SILENCE_END) {
-          const p = easeInCubic(clamp01((elapsed - T.WORDS_END) / (T.SILENCE_END - T.WORDS_END)));
-          envOpacity = lerp(1, 0, Math.min(p * 1.6, 1)); envScale = 1;
-        } else {
-          envOpacity = 0; envScale = 1;
-        }
-        envWrapRef.current.style.opacity = String(envOpacity);
-        envWrapRef.current.style.transform = `scale(${envScale})`;
-      }
-
-      // Particle canvas, drawn every frame regardless of act; the function
-      // itself figures out visibility from elapsed time. `activeParticleCount`
-      // is the adaptive-quality lever: normally the full array, shrunk to a
-      // slice of itself if frame times are struggling (see below).
-      if (ctx && canvas) {
-        drawParticles(ctx, canvas.width, canvas.height, elapsed, particlesRef.current, activeParticleCount);
-      }
-
-      // Acts 2–4, the word montage.
-      if (wordRef.current) {
-        if (elapsed < T.ENV_END) {
-          wordRef.current.style.opacity = '0';
-        } else if (elapsed < T.WORDS_END) {
-          let idx = 0;
-          for (let i = T.wordStarts.length - 1; i >= 0; i--) { if (elapsed >= T.wordStarts[i]) { idx = i; break; } }
-          const word = CINEMATIC_WORDS[idx];
-          const localT = elapsed - T.wordStarts[idx];
-          const frame = getWordFrame(word.variant, localT, word.dur);
-          if (wordRef.current.dataset.idx !== String(idx)) {
-            wordRef.current.textContent = word.text;
-            wordRef.current.dataset.idx = String(idx);
-          }
-          wordRef.current.style.opacity = String(clamp01(frame.opacity));
-          wordRef.current.style.transform = `translate(${frame.tx}px, ${frame.ty}px) scale(${frame.scale}) rotate(${frame.rotate}deg)`;
-          wordRef.current.style.filter = frame.blur > 0.05 ? `blur(${frame.blur}px)` : 'none';
-          wordRef.current.style.letterSpacing = `${-0.02 + frame.tracking}em`;
-        } else {
-          wordRef.current.style.opacity = '0';
-        }
-      }
-
-      // Act 5 (silence) needs no code of its own, the environment and word
-      // layers above have already faded to nothing by T.SILENCE_END, and the
-      // title below hasn't started yet, so the screen is genuinely black.
-
-      // Act 6, PLANIT: letters separate → converge, wrapper blur/scale/opacity, then light sweep.
-      if (titleWrapRef.current) {
-        if (elapsed < T.TITLE_START) {
-          titleWrapRef.current.style.opacity = '0';
-          if (sweepRef.current) sweepRef.current.style.opacity = '0';
-        } else if (elapsed < T.PULLBACK_START) {
-          const p = clamp01((elapsed - T.TITLE_START) / (T.TITLE_LOCK - T.TITLE_START));
-          const eIn = easeOutCubic(clamp01(p / 0.35));
-          const eSpacing = easeInOutCubic(p);
-          const wrapScale = p < 0.5 ? lerp(0.94, 1.02, easeOutCubic(p / 0.5)) : lerp(1.02, 1, easeOutCubic((p - 0.5) / 0.5));
-          titleWrapRef.current.style.opacity = String(eIn);
-          titleWrapRef.current.style.transform = `scale(${wrapScale})`;
-          titleWrapRef.current.style.filter = eIn < 0.98 ? `blur(${lerp(5, 0, eIn)}px)` : 'none';
-
-          const spacing = lerp(52, 2, eSpacing);
-          const n = letterRefs.current.length;
-          letterRefs.current.forEach((el, i) => { if (el) el.style.transform = `translateX(${(i - (n - 1) / 2) * spacing}px)`; });
-
-          if (sweepRef.current) {
-            if (elapsed >= T.TITLE_LOCK) {
-              const sp = clamp01((elapsed - T.TITLE_LOCK) / (T.SWEEP_END - T.TITLE_LOCK));
-              sweepRef.current.style.opacity = sp < 1 ? String(Math.sin(sp * Math.PI)) : '0';
-              sweepRef.current.style.transform = `translateX(${lerp(-140, 340, sp)}%)`;
-            } else {
-              sweepRef.current.style.opacity = '0';
-            }
-          }
-        } else {
-          const pp = clamp01((elapsed - T.PULLBACK_START) / (T.PULLBACK_END - T.PULLBACK_START));
-          titleWrapRef.current.style.opacity = String(1 - easeInCubic(pp));
-          titleWrapRef.current.style.transform = `scale(${lerp(1, 1.08, pp)})`;
-          titleWrapRef.current.style.filter = 'none';
-          if (sweepRef.current) sweepRef.current.style.opacity = '0';
-        }
-      }
-
-      // Act 7, tagline, two lines staggered slightly.
-      if (line1Ref.current && line2Ref.current) {
-        if (elapsed < T.PULLBACK_START) {
-          [line1Ref.current, line2Ref.current].forEach((el, i) => {
-            const localStart = T.TAGLINE_START + i * 140;
-            if (elapsed < localStart) { el.style.opacity = '0'; el.style.transform = 'translateY(14px)'; return; }
-            const dur = Math.max(T.TAGLINE_END - localStart, 1);
-            const e = easeOutCubic(clamp01((elapsed - localStart) / dur));
-            el.style.opacity = String(e);
-            el.style.transform = `translateY(${lerp(14, 0, e)}px)`;
-          });
-        } else {
-          const pp = clamp01((elapsed - T.PULLBACK_START) / (T.PULLBACK_END - T.PULLBACK_START));
-          const op = Math.max(0, 1 - easeInCubic(pp) * 1.3);
-          const ty = lerp(0, -10, pp);
-          [line1Ref.current, line2Ref.current].forEach(el => { el.style.opacity = String(op); el.style.transform = `translateY(${ty}px)`; });
-        }
-      }
-
-      // Act 8, cinematic bloom.
-      if (bloomRef.current) {
-        if (elapsed >= T.BLOOM_START && elapsed <= T.BLOOM_END) {
-          const intensity = Math.sin(clamp01((elapsed - T.BLOOM_START) / (T.BLOOM_END - T.BLOOM_START)) * Math.PI);
-          bloomRef.current.style.opacity = String(intensity * 0.55);
-        } else {
-          bloomRef.current.style.opacity = '0';
-        }
-      }
-
-      // Acts 9–10, camera pullback is expressed above (env fade, title/tagline
-      // recede); the panel itself rises last, overlapping the tail of pullback.
-      if (panelRef.current) {
-        if (elapsed >= T.PANEL_RISE_START) {
-          const rp = easeInOutExpo(clamp01((elapsed - T.PANEL_RISE_START) / (T.PANEL_RISE_END - T.PANEL_RISE_START)));
-          panelRef.current.style.transform = `translateY(${-100 * rp}%)`;
-        }
-      }
-
-      // ── Adaptive quality check, cheap arithmetic on numbers we already
-      // have, no allocations. A frame taking >22ms is roughly sub-45fps; if
-      // that's sustained for ~500ms, draw fewer particles. Recovery needs a
-      // longer, calmer window (1500ms under ~18ms/frame) before restoring,
-      // so this doesn't flap.
-      const frameMs = now - (lastFrameTime ?? now);
-      lastFrameTime = now;
-      if (frameMs > 22) {
-        if (slowSince == null) slowSince = now;
-        goodSince = null;
-        if (!degraded && now - slowSince > 500) {
-          degraded = true;
-          activeParticleCount = minParticles;
-        }
-      } else if (frameMs < 18) {
-        if (goodSince == null) goodSince = now;
-        slowSince = null;
-        if (degraded && now - goodSince > 1500) {
-          degraded = false;
-          activeParticleCount = particlesRef.current.length;
-        }
-      } else {
-        slowSince = null; goodSince = null;
-      }
-
-      if (isDev) {
-        devFrames++; devTimeAcc += performance.now() - frameStart;
-        if (now - devLastLog > 1000) {
-          devLastLog = now;
-          // eslint-disable-next-line no-console
-          console.debug(
-            `[intro-cinematic] ~${Math.round(1000 / (devTimeAcc / devFrames || 1))}fps · ` +
-            `${(devTimeAcc / devFrames).toFixed(2)}ms/frame · quality=${quality} · ` +
-            `particles=${activeParticleCount}/${particlesRef.current.length}${degraded ? ' (degraded)' : ''}`
-          );
-          devFrames = 0; devTimeAcc = 0;
-        }
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      clearTimeout(resizeTimer);
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('keydown', onKey);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced, quality]);
-
-  const titleTextStyle = {
-    fontSize: 'clamp(2.75rem, 11vw, 7.5rem)', fontWeight: 700, color: '#fff',
-    letterSpacing: '-0.01em', lineHeight: 1,
-  };
-
-  if (reduced) {
-    return (
-      <div ref={panelRef} className="fixed inset-0 flex items-center justify-center" style={{ background: '#050505', zIndex: 999 }}>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-          <div ref={wordRef} style={{ fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff', letterSpacing: '-0.02em', opacity: 0 }}>Hello</div>
-        </div>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-          <div ref={titleWrapRef} style={{ display: 'flex', opacity: 0 }}>
-            {TITLE_LETTERS.map((ch, i) => (
-              <span key={i} ref={el => { letterRefs.current[i] = el; }} style={{ ...titleTextStyle, display: 'inline-block' }}>{ch}</span>
-            ))}
-          </div>
-          <div ref={taglineWrapRef} style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-            <div ref={line1Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)' }}>PLAN SMART.</div>
-            <div ref={line2Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)' }}>EXECUTE FLAWLESSLY.</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={panelRef} className="fixed inset-0 overflow-hidden" style={{ background: '#04040a', zIndex: 999, willChange: 'transform' }}>
-      {/* Act 1, environment: faint grid + soft depth particles. Only
-          opacity/transform are ever written to this element's style, so
-          that's all it's promoted for, no `filter` in will-change since
-          nothing here animates it (see the tick loop above). */}
-      <div ref={envWrapRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0, willChange: 'opacity, transform' }}>
-        <CinematicGrid />
-        <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-      </div>
-
-      {/* Act 0, distant point of light */}
-      <div
-        ref={lightRef}
-        aria-hidden="true"
-        style={{
-          position: 'absolute', left: '50%', top: '46%', width: 5, height: 5, marginLeft: -2.5, marginTop: -2.5,
-          borderRadius: '50%', background: '#fff', opacity: 0,
-          boxShadow: '0 0 3px 1px rgba(255,255,255,0.9), 0 0 46px 14px rgba(200,210,255,0.28)',
-          willChange: 'transform, opacity',
-        }}
-      />
-
-      {/* Cinematic vignette, always present, gives the frame depth */}
-      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 72% 65% at 50% 48%, transparent 42%, rgba(0,0,0,0.6) 100%)' }} />
-
-      {/* Act 8, bloom */}
-      <div
-        ref={bloomRef}
-        aria-hidden="true"
-        style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0, mixBlendMode: 'screen',
-          background: 'radial-gradient(circle at 50% 46%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.22) 32%, transparent 66%)',
-        }}
-      />
-
-      {/* Word layer (Hello + montage) */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-        <div
-          ref={wordRef}
-          style={{
-            fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff', letterSpacing: '-0.02em',
-            opacity: 0, whiteSpace: 'nowrap', willChange: 'transform, opacity, filter',
-          }}
-        />
-      </div>
-
-      {/* Title + tagline layer */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-        <div ref={titleWrapRef} style={{ position: 'relative', display: 'flex', opacity: 0, willChange: 'transform, opacity, filter' }}>
-          {TITLE_LETTERS.map((ch, i) => (
-            <span key={i} ref={el => { letterRefs.current[i] = el; }} style={{ ...titleTextStyle, display: 'inline-block', willChange: 'transform' }}>{ch}</span>
-          ))}
-          <div
-            ref={sweepRef}
-            aria-hidden="true"
-            style={{
-              position: 'absolute', top: 0, bottom: 0, left: 0, width: '26%', opacity: 0, pointerEvents: 'none',
-              background: 'linear-gradient(78deg, transparent 0%, rgba(255,255,255,0.65) 45%, transparent 100%)',
-              mixBlendMode: 'screen', transform: 'translateX(-140%)',
-            }}
-          />
-        </div>
-        <div ref={taglineWrapRef} style={{ marginTop: '1.4rem', textAlign: 'center' }}>
-          <div ref={line1Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)', opacity: 0 }}>PLAN SMART.</div>
-          <div ref={line2Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)', opacity: 0, marginTop: 4 }}>EXECUTE FLAWLESSLY.</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ANIMATED GRID BACKGROUND
-// ─────────────────────────────────────────────────────────────────────────────
-function CinematicGrid() {
-  return (
-    <div aria-hidden="true" style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
-      {/* Animated grid lines */}
-      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', animation:'grid-pulse 6s ease-in-out infinite' }} preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <pattern id="grid-sm" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
-          </pattern>
-          <pattern id="grid-lg" width="240" height="240" patternUnits="userSpaceOnUse">
-            <path d="M 240 0 L 0 0 0 240" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
-          </pattern>
-          <radialGradient id="grid-fade" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor="white" stopOpacity="1"/>
-            <stop offset="100%" stopColor="white" stopOpacity="0"/>
-          </radialGradient>
-          <mask id="grid-mask"><rect width="100%" height="100%" fill="url(#grid-fade)"/></mask>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid-sm)" mask="url(#grid-mask)"/>
-        <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
-      </svg>
-    </div>
-  );
-}
-
-function slugify(text) {
-  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
-}
-function makeSubdomain(title) {
-  const slug = slugify(title);
-  if (!slug) return '';
-  return `${slug}-${Math.random().toString(36).substring(2, 6)}`;
-}
-
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(el); } }, { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return [ref, visible];
-}
-
-function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
-  const [count, setCount] = useState(0);
-  const [ref, visible] = useScrollReveal(0.1);
-  useEffect(() => {
-    if (!visible) return;
-    let startTime, raf;
-    const animate = (ts) => {
-      if (!startTime) startTime = ts;
-      const pct = Math.min((ts - startTime) / duration, 1);
-      setCount(Math.floor(end * pct));
-      if (pct < 1) raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [visible, end, duration]);
-  return <span ref={ref} className="tabular-nums">{count}{suffix}</span>;
-}
-
-function CopyLinkBox({ eventId, subdomain, mode }) {
-  const [copiedRsvp, setCopiedRsvp] = useState(false);
-  const [copiedEvent, setCopiedEvent] = useState(false);
-
-  const rsvpLink  = subdomain ? `${window.location.origin}/rsvp/${subdomain}` : null;
-  const eventLink = subdomain ? `${window.location.origin}/e/${subdomain}` : `${window.location.origin}/event/${eventId}`;
-
-  const showRsvp = mode !== 'table-service' && rsvpLink;
-
-  const copyRsvp = () => {
-    navigator.clipboard.writeText(rsvpLink);
-    setCopiedRsvp(true); toast.success('RSVP link copied');
-    setTimeout(() => setCopiedRsvp(false), 2000);
-  };
-  const copyEvent = () => {
-    navigator.clipboard.writeText(eventLink);
-    setCopiedEvent(true); toast.success('Event link copied');
-    setTimeout(() => setCopiedEvent(false), 2000);
-  };
-
-  return (
-    <div className="mt-3 space-y-2">
-      {showRsvp && (
-        <div className="rounded-2xl border border-indigo-700/50 overflow-hidden bg-indigo-950/40 hover:border-indigo-600/60 transition-all duration-300">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="flex-shrink-0 text-xs font-bold text-indigo-400 uppercase tracking-wider w-14">RSVP</div>
-            <span className="flex-1 text-xs text-indigo-300 font-mono truncate">{rsvpLink}</span>
-            <button onClick={copyRsvp} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedRsvp ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>
-              {copiedRsvp ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="rounded-2xl border border-neutral-700 overflow-hidden bg-neutral-900 hover:border-neutral-600 transition-all duration-300">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex-shrink-0 text-xs font-bold text-neutral-500 uppercase tracking-wider w-14">Space</div>
-          <span className="flex-1 text-xs text-neutral-300 font-mono truncate">{eventLink}</span>
-          <button onClick={copyEvent} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedEvent ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-900 hover:bg-neutral-100'}`}>
-            {copiedEvent ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
-          </button>
-        </div>
-      </div>
-      {showRsvp && (
-        <p className="text-xs text-neutral-600 px-1">The RSVP link is the primary shareable link. Enable the RSVP page in Event Settings to activate it.</p>
-      )}
-    </div>
-  );
-}
-
-// Grouped reveal for card grids: the whole grid fades up as ONE unit with a quick, even
-// cascade, instead of every card waiting for its own scroll trigger and blur filter.
-const GRID_PARENT = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
-const GRID_CHILD = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-};
-
-function Reveal(props) {
-  return <MotionReveal {...props} />;
-}
-
-// A soft, low-opacity gradient seam used between major sections so the page
-// reads as one continuous surface rather than a stack of hard-edged blocks.
-function SectionSeam({ tint = 'indigo' }) {
-  const colors = {
-    indigo: 'rgba(99,102,241,0.5)',
-    orange: 'rgba(249,115,22,0.4)',
-    violet: 'rgba(139,92,246,0.4)',
-    neutral: 'rgba(255,255,255,0.15)',
-  };
-  return (
-    <div aria-hidden="true" className="relative h-px w-full overflow-hidden" style={{ zIndex: 1 }}>
-      <div style={{
-        position: 'absolute', inset: 0, margin: '0 auto', maxWidth: 420, height: 1,
-        background: `linear-gradient(90deg, transparent, ${colors[tint] || colors.indigo}, transparent)`,
-        opacity: 0.6,
-      }} />
-    </div>
-  );
-}
-
-function SectionHeader({ eyebrow, title, subtitle }) {
-  return (
-    <Reveal className="text-center mb-20">
-      {eyebrow && (
-        <p className="inline-flex items-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-4">
-          <span className="w-4 h-px bg-neutral-700" />{eyebrow}<span className="w-4 h-px bg-neutral-700" />
-        </p>
-      )}
-      <h2 className="font-syne text-3xl sm:text-5xl md:text-6xl font-black text-white mb-5 leading-[1.05] tracking-tight">{title}</h2>
-      {subtitle && <p className="text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
-    </Reveal>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SLUG FINDER, lets users jump directly to an event by its link/slug
-// ─────────────────────────────────────────────────────────────────────────────
-function SlugFinder({ compact = false }) {
-  const navigate = useNavigate();
-  const [value, setValue] = useState('');
-  const [shaking, setShaking] = useState(false);
-
-  const handleGo = () => {
-    const raw = value.trim();
-    if (!raw) return;
-
-    // Accept full URL (e.g. https://planitapp.onrender.com/e/my-slug) or bare slug
-    let slug = raw;
-    try {
-      const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
-      const rsvpMatch  = url.pathname.match(/\/rsvp\/([^/?#]+)/);
-      const eventMatch = url.pathname.match(/\/e\/([^/?#]+)/);
-      if (rsvpMatch)       slug = rsvpMatch[1];
-      else if (eventMatch) slug = eventMatch[1];
-      else                 slug = url.pathname.replace(/^\/+|\/+$/g, '');
-    } catch {
-      // not a URL, use raw as slug
-    }
-    // Strip leading prefixes if typed manually
-    slug = slug.replace(/^\/?(rsvp\/|e\/)?/, '').replace(/\/+$/, '');
-
-    if (!slug) {
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
-      return;
-    }
-    navigate(`/e/${slug}`);
-  };
-
-  const handleKey = (e) => { if (e.key === 'Enter') handleGo(); };
-
-  if (compact) {
-    return (
-      <div className={`flex items-center gap-2 ${shaking ? 'animate-shake' : ''}`}>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
-          <input
-            type="text"
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder="Paste an event link or slug…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
-          />
-        </div>
-        <button
-          onClick={handleGo}
-          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all"
-        >
-          Go <CornerDownRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`lq-glass mt-4 flex items-center gap-1 max-w-sm mx-auto rounded-full p-1 ${shaking ? 'animate-shake' : ''}`}>
-      <div className="relative flex-1">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
-        <input
-          type="text"
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Have a link? Paste it here…"
-          className="w-full h-10 pl-10 pr-4 rounded-full text-sm text-white placeholder-white/40 bg-transparent focus:outline-none"
-        />
-      </div>
-      <button
-        onClick={handleGo}
-        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-medium bg-white text-neutral-900 hover:bg-white/90 transition-all"
-      >
-        Go <CornerDownRight className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-}
-
-function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
-  return (
-    <Reveal delay={delay}>
-      <div className="group relative p-6 sm:p-10 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
-        <div className="mb-5">
-          <div className="feature-icon w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:shadow-[0_0_24px_rgba(99,102,241,0.35)]">
-            <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
-          </div>
-        </div>
-        <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
-        <p className="text-sm text-neutral-400 leading-relaxed">{description}</p>
-      </div>
-    </Reveal>
-  );
-}
-
-function TestimonialCard({ quote, author, role, event, delay = 0, direction = 'up' }) {
-  return (
-    <Reveal delay={delay} direction={direction}>
-      <div className="lq-glass lq-lift group relative p-8 rounded-[1.25rem] h-full">
-        <span aria-hidden="true" className="absolute top-5 right-7 lq-display text-6xl text-white/15 group-hover:text-white/30 transition-colors duration-500 select-none leading-none">"</span>
-        <div className="flex items-start gap-4 mb-5">
-          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white flex items-center justify-center ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-indigo-400/40 transition-all duration-500">
-            <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
-          </div>
-          <div>
-            <p className="text-base font-semibold text-white">{author}</p>
-            <p className="text-xs text-neutral-500">{role}</p>
-            <p className="text-xs text-neutral-600 mt-0.5">{event}</p>
-          </div>
-        </div>
-        <p className="relative text-sm text-neutral-300 leading-relaxed mb-1">"{quote}"</p>
-      </div>
-    </Reveal>
-  );
-}
-
-
-// 
-// ENTERPRISE INTERACTIVE DEMO
-// 
-
-// 
-// ENTERPRISE INTERACTIVE DEMO
-// 
-
-const DEMO_GUESTS = [
-  { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP',      status: 'normal' },
-  { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker',  status: 'normal' },
-  { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
-  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor',  status: 'normal' },
-  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked',  blockReason: 'Duplicate identity: another invite with same email already checked in' },
-  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100, scanned from 3 different devices' },
+const EVENT_TYPES = [
+  ['wedding', 'Wedding', 'Ceremony, reception, the works'], ['birthday', 'Birthday', 'Milestone or casual celebration'],
+  ['conference', 'Conference', 'Speakers, sessions, networking'], ['corporate', 'Corporate', 'Retreat, offsite, team event'],
+  ['festival', 'Festival', 'Multi-stage, outdoor, crowd'], ['other', 'Other', 'Something totally unique'],
+];
+const VENUE_TYPES = [
+  ['restaurant', 'Restaurant', 'Full-service dining floor'], ['cafe', 'Cafe', 'Counter service and tables'],
+  ['bar', 'Bar / Pub', 'Drinks-led with seating'], ['popup', 'Pop-up', 'Temporary or market stall'],
+  ['hotel', 'Hotel dining', 'In-house restaurant or lounge'], ['other', 'Other venue', 'Something different entirely'],
 ];
 
-function ScrollProgressBar() {
-  const [progress, setProgress] = useState(0);
+const MODES = [
+  { id: 'standard', tab: 'Events', tone: 'lav', short: 'Team workspace: chat, tasks, polls, RSVP', icon: Calendar, title: 'Planning an event?', blurb: 'Weddings, conferences, retreats, galas. Chat, tasks, polls, RSVP and check-in in one workspace.',
+    launch: 'Create your event', sub: 'Build your planning workspace in under 60 seconds. No credit card required.', cta: 'Start building',
+    incl: ['Private event space with a custom URL', 'Unlimited team members', 'Real-time chat with file sharing', 'Task lists and deadlines', 'Polls and voting', 'RSVP management', 'Budgets and expense splitting', 'QR check-in for large events'] },
+  { id: 'enterprise', tab: 'Enterprise', tone: 'pk', short: 'Ticketed nights: personal QR and door security', icon: Zap, title: 'Running a big, ticketed night?', blurb: 'A personal QR invite for every guest, a live check-in dashboard and fraud checks at the door.',
+    launch: 'Launch an enterprise event', sub: 'Personalized QR invites, a check-in dashboard and live analytics for large events.', cta: 'Set up enterprise event',
+    incl: ['Personalized QR invite per guest', 'Real-time check-in dashboard', 'Group sizes and table assignments', 'Trust scoring and manager override', 'Duplicate and forgery detection', 'Everything in Standard'] },
+  { id: 'rsvp', tab: 'RSVP', tone: 'mn', short: 'Just a guest list and an RSVP page', icon: CheckSquare, title: 'Just need RSVPs?', blurb: 'A clean, section-based RSVP page and a guest list. Live in under a minute.',
+    launch: 'Create your RSVP page', sub: 'A guest list and a good-looking RSVP page. No seating charts, no floor management.', cta: 'Start building',
+    incl: ['Drag-and-drop RSVP page builder', '16-block library: hero, agenda, FAQ, gallery', 'Auto-generated cover graphic', 'The same guest list as every PlanIt event', 'Simple check-in', 'Views and response analytics'] },
+  { id: 'table-service', tab: 'Venue', tone: 'hl', short: 'Restaurant floor: tables, waitlist, reservations', icon: UtensilsCrossed, title: 'Running a restaurant floor?', blurb: 'Live floor map, walk-in waitlist, QR reservations and one-tap seating. Your data never expires.',
+    launch: 'Launch your venue', sub: 'Set up your floor plan and start managing tables in under 60 seconds.', cta: 'Set up your venue',
+    incl: ['Visual floor plan editor', 'Live table states', 'Walk-in waitlist with wait estimates', 'QR reservations with expiry windows', 'Per-venue timing and hours', 'Instant sync across staff devices', 'Floor plan never auto-deleted'] },
+];
+
+/* The four "start here" cards. Same copy the old home used for Events / RSVP / Venue, plus Enterprise. */
+const PATHS = [
+  { id: 'standard', branch: 'events', name: 'Events', tone: 'lav', icon: Calendar, tag: 'PlanIt Events', h: ['Planning an event?', 'Start here.'],
+    p: 'Weddings, conferences, corporate retreats, galas. The full planning workspace: chat, tasks, RSVP, QR check-in, all in one place.',
+    cta: 'Get started free', who: ['Weddings', 'Conferences', 'Retreats', 'Galas'] },
+  { id: 'enterprise', branch: 'enterprise', name: 'Enterprise', tone: 'pk', icon: Zap, tag: 'PlanIt Enterprise', h: ['Running a big,', 'ticketed night?'],
+    p: 'A personal QR invite for every guest, a live check-in dashboard and fraud checks at the door. Built for 50+ attendees.',
+    cta: 'See how the door works', who: ['Ticketed', '50+ guests', 'Access control'] },
+  { id: 'rsvp', branch: 'rsvp', name: 'RSVP', tone: 'mn', icon: CheckSquare, tag: 'RSVP Event', h: ['Just need RSVPs?', 'Skip the rest.'],
+    p: 'A beautiful, section-based RSVP page and guest list. No seating charts, no floor management, live in under a minute.',
+    cta: 'Create an RSVP page', who: ['Parties', 'Meetups', 'Small gatherings'] },
+  { id: 'table-service', branch: 'venue', name: 'Venue', tone: 'hl', icon: UtensilsCrossed, tag: 'PlanIt Venue', h: ['Running a restaurant', 'or venue floor?'],
+    p: 'Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.',
+    cta: 'Set up your venue', who: ['Restaurants', 'Cafes', 'Bars and pubs'] },
+];
+const COMPARE = [
+  ['Best for', ['Weddings, conferences, retreats, galas', 'Large, ticketed or access-controlled events (50+)', 'Parties, meetups, simple gatherings', 'Restaurants, cafes, bars and pop-ups']],
+  ['Core tools', ['Team chat, tasks, polls, budgets, RSVP', 'Everything in Events, plus personal QR invites', 'Drag-and-drop RSVP page and a guest list', 'Floor map, walk-in waitlist, QR reservations']],
+  ['At the door', ['QR check-in', 'Live check-in dashboard with fraud checks', 'Simple check-in', 'Public wait board and one-tap seating']],
+  ['Pick it if', ['You have a team to coordinate', 'You need to control who gets in', 'The guest list is the whole job', 'You run a floor every night']],
+  ['Skip it if', ['You only need a guest list (use RSVP)', 'Your event is open or team-only (use Events)', 'You need seating charts, floor management or ticketing', 'You are planning a one-off event']],
+  ['Your data', ['Auto-deleted 7 days after the event', 'Auto-deleted 7 days after the event', 'Auto-deleted 7 days after the event', 'Floor plan and history never expire']],
+];
+const BRANCH_MODE = { events: 'standard', enterprise: 'enterprise', rsvp: 'rsvp', venue: 'table-service' };
+
+const FEATURES = [
+  [QrCode, 'QR check-in', 'A personal QR for every guest. Scan at the door, watch attendance update live.', 'w2 c-ac'],
+  [Shield, 'Fraud-aware door', 'Duplicate detection, trust scoring and manager override built in.', 'c-hl'],
+  [MessageSquare, 'Team chat', 'Typing indicators, history and instant delivery for your planning channel.', ''],
+  [ListChecks, 'Shared tasks', 'Assign, prioritize and track every action item from one view.', ''],
+  [BarChart3, 'Live polls', 'Vote on venues, menus and dates. Results update on every screen.', ''],
+  [Users, 'Unlimited team', 'No per-seat pricing. Every organizer, vendor and volunteer is free.', 'w2 c-pk'],
+  [FileText, 'File sharing', 'Floor plans, contracts and schedules attached to the workspace.', ''],
+  [UtensilsCrossed, 'Floor manager', 'For restaurants: floor map, walk-in waitlist and live table status.', ''],
+  [Bot, 'Claude co-pilot', 'Manage guests, announcements and check-ins by just asking.', 'w2 c-ink'],
+];
+const USES = [...EVENT_TYPES.filter((t) => t[0] !== 'other'), ...VENUE_TYPES.slice(0, 3)];
+const STEPS = [
+  ['Name it', 'Pick a mode and give it a name. Your private space and link are ready in under a minute.'],
+  ['Bring your team', 'Share the link. Organizers, vendors and volunteers are unlimited, and guests need no account.'],
+  ['Run the day', 'Chat, tasks, polls, RSVPs and door check-in, live in one workspace.'],
+];
+const FAQ = [
+  ['Which type should I pick?', 'Events if you are coordinating a team. Enterprise if you are running a large ticketed night and need door security. RSVP if the guest list is the whole job. Venue if you run a restaurant floor.'],
+  ['Is PlanIt really free?', 'Yes. Free forever, with no credit card and no per-seat pricing. Your team is unlimited.'],
+  ['Do my guests need accounts?', 'No. Guests join by name with a personal QR, and RSVP pages open on any phone with no app and no account.'],
+  ['Can I switch between Standard and Enterprise later?', 'No. The mode is chosen when you create the event and cannot be changed afterwards. Pick Enterprise for large, ticketed or access-controlled events with 50+ attendees.'],
+  ['How long is my data kept?', 'Event data is auto-deleted 7 days after the event. For restaurants, your floor plan and history never expire.'],
+  ['Can I run my event from Claude?', 'Yes. Add PlanIt to Claude as a connector, then ask it to add guests, send announcements and check attendance.'],
+];
+
+const branchOf = (id) => ({ rsvp: 'rsvp', 'table-service': 'venue', enterprise: 'enterprise' }[id] || 'events');
+const BRANCHES = {
+  enterprise: {
+    eyebrow: 'For ticketed nights and big guest lists', h: ['Run the door.', 'Catch the fakes.'],
+    p: 'Enterprise is Events with a locked-down front gate: a personal QR invite for every guest, a live check-in dashboard and fraud checks at the door. Built for 50+ attendees.',
+    cta: 'Launch an enterprise event', note: 'Mode is locked once created', incTitle: 'Control who gets in.',
+    items: [
+      [QrCode, 'Personal QR invites', 'Every guest gets their own QR code. No shared links at the door.'],
+      [BarChart3, 'Live check-in dashboard', 'Watch attendance update in real time as guests arrive.'],
+      [Users, 'Groups and tables', 'Party sizes and table assignments sit on every invite.'],
+      [Shield, 'Trust scoring', 'Low-trust scans get flagged for manual review, with a manager PIN override.'],
+      [AlertCircle, 'Duplicate and forgery detection', 'The same identity on two invites, or a code not in the registry, gets stopped.'],
+      [Layers, 'Everything in Events', 'Team chat, tasks, polls, budgets and the full planning workspace.'],
+    ],
+  },
+  events: {
+    eyebrow: 'For event teams who actually have a lot going on', h: ['Everything your team needs.', 'Nothing you don\u2019t.'],
+    p: 'From 6 months out to the final wrap-up. PlanIt Events is the workspace for the whole team: organizers, vendors, volunteers, everyone.',
+    cta: 'Start planning free', note: 'No credit card · No account needed', incTitle: 'Every tool. One workspace.',
+    items: [
+      [MessageSquare, 'Real-time team chat', 'Typing indicators, reactions, threads. Your team stays in sync.'],
+      [ListChecks, 'Task management', 'Assign tasks, set deadlines, track completion down to the wire.'],
+      [BarChart3, 'Polls & voting', 'Vote on venues, dates, menus. Live results instantly.'],
+      [FileText, 'File sharing', 'Contracts, floor plans, schedules, all in one place.'],
+      [Users, 'Unlimited team', 'No caps. Every organizer, vendor, and volunteer included.'],
+      [QrCode, 'QR check-in', 'Professional guest check-in with real-time attendance.'],
+      [Bot, 'Claude AI co-pilot', 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements, all conversationally.'],
+    ],
+  },
+  rsvp: {
+    eyebrow: 'For when the guest list is the whole job', h: ['A gorgeous RSVP page.', 'Nothing else to configure.'],
+    p: 'Drag-and-drop a real page: hero, agenda, photos, FAQ, whatever the event needs. Then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.',
+    cta: 'Create an RSVP page', note: 'Live in under a minute', incTitle: 'Live in under a minute.',
+    items: [
+      [Layers, 'Section-based builder', 'Drag, drop, and reorder from a 16-block library: hero, agenda, FAQ, sponsors, and more.'],
+      [Zap, 'Auto-generated cover', 'Pick a template and accent color; your event\u2019s cover graphic builds itself, no design work.'],
+      [Users, 'Guest list + check-in', 'The same guest list and simple check-in as every PlanIt event, without the extra setup.'],
+    ],
+  },
+  venue: {
+    eyebrow: 'For restaurants that run a real floor every night', h: ['Run your floor.', 'Know your wait.', 'Seat every table.'],
+    p: 'Live table states. Walk-in waitlist with a public wait board guests scan at the door. One-tap seating. Your floor data never expires.',
+    cta: 'Set up your venue', note: 'Free · Data never expires', incTitle: 'Your whole floor, in one screen.',
+    items: [
+      [Layers, 'Visual floor editor', 'Drag tables to match your exact layout. Zones, shapes, labels.'],
+      [Users, 'Walk-in waitlist', 'Add parties instantly. Estimated wait times update as tables clear.'],
+      [QrCode, 'Public wait board', 'Guests scan the door QR, see the queue, and join from their phone.'],
+      [MapPin, 'Live sync', 'Every status update hits all staff screens in real time.'],
+      [CheckCircle2, 'One-tap seat next', 'Auto-picks the tightest-fit table and seats the next waiting party.'],
+      [Clock, 'Data never expires', 'Your floor plan and history persist forever. No cleanup, no resets.'],
+    ],
+  },
+};
+
+function Burst({ className, color, size = 110 }) {
+  const pts = Array.from({ length: 24 }, (_, i) => { const a = (i * Math.PI) / 12, r = i % 2 ? 36 : 50; return `${50 + r * Math.cos(a)},${50 + r * Math.sin(a)}`; }).join(' ');
+  return <svg className={`deco ${className}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true"><polygon points={pts} fill={color} stroke="#0d0e1c" strokeWidth="2.5" strokeLinejoin="round" /></svg>;
+}
+const Squiggle = ({ className }) => (
+  <svg className={`deco ${className}`} width="96" height="26" viewBox="0 0 84 24" fill="none" aria-hidden="true"><path d="M2 12 Q12 0 22 12 T42 12 T62 12 T82 12" stroke="#6ff0c0" strokeWidth="5" strokeLinecap="round" /></svg>
+);
+
+const slugify = (t) => t.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
+const makeSubdomain = (t) => { const s = slugify(t); return s ? `${s}-${Math.random().toString(36).substring(2, 6)}` : ''; };
+const sanitize = (s) => (s || '').trim().replace(/\s+/g, ' ');
+
+/* The existing PlanIt mark (same artwork as /planit-icon.svg) */
+function Logo({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" role="img" aria-label="PlanIt">
+      <rect width="32" height="32" rx="8" fill="#111111" />
+      <rect x="6" y="9" width="20" height="16" rx="2.5" fill="white" />
+      <rect x="6" y="9" width="20" height="6" rx="2.5" fill="#111111" />
+      <rect x="6" y="12" width="20" height="3" fill="#111111" />
+      <rect x="11" y="7" width="2.5" height="5" rx="1.25" fill="white" />
+      <rect x="18.5" y="7" width="2.5" height="5" rx="1.25" fill="white" />
+      <path d="M12 18.5l2.8 2.8 5.2-5.2" stroke="#111111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ── Live demos (ported from the old home, restyled) ───────────────────── */
+function DeviceFrame({ variant = 'browser', url = '/e/summer-rooftop', children }) {
+  if (variant === 'phone') return <div className="dev phone"><div className="scr">{children}</div></div>;
+  return <div className={`dev ${variant}`}><div className="dev-bar"><i /><i /><i /><span>{url}</span></div>{children}</div>;
+}
+
+function RSVPMockup() {
+  const [status, setStatus] = useState(null);
+  const [count, setCount] = useState(84);
+  const pick = (key) => {
+    setCount((c) => (key === status ? c : key === 'yes' ? c + 1 : status === 'yes' ? c - 1 : c));
+    setStatus(key);
+  };
+  return (
+    <div>
+      <div className="rm-cover"><span>You&apos;re invited</span><b>Summer Rooftop<br />Social</b></div>
+      <div className="rm-body">
+        <div className="rm-meta"><Calendar size={14} /> Sat, Aug 16 · 7:00 PM</div>
+        <div className="rm-meta"><MapPin size={14} /> The Hendrick Rooftop</div>
+        <div className="rm-opts">{[['yes', 'Attending'], ['maybe', 'Maybe'], ['no', 'Can\u2019t go']].map(([k, l]) => (
+          <button key={k} type="button" className={`rm-o ${k}${status === k ? ' on' : ''}`} onClick={() => pick(k)}>{l}</button>))}</div>
+        <div className="rm-foot"><span>Going</span><b>{count} guests</b></div>
+      </div>
+    </div>
+  );
+}
+
+function EventSpaceMockup() {
+  const [messages, setMessages] = useState([
+    { id: 1, user: 'Maya', text: 'Can we push the sound check to 4pm?', me: false },
+    { id: 2, user: 'You', text: 'Works for me. Updating the run of show now.', me: true },
+  ]);
+  const [typing, setTyping] = useState(false);
+  const [tasks, setTasks] = useState([
+    { label: 'Confirm catering headcount', done: true }, { label: 'Print name badges', done: true },
+    { label: 'Brief volunteer team', done: false }, { label: 'Load in AV equipment', done: false },
+  ]);
   useEffect(() => {
-    const update = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
-    };
-    window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
+    const t1 = setTimeout(() => setTyping(true), 1400);
+    const t2 = setTimeout(() => { setTyping(false); setMessages((m) => [...m, { id: 3, user: 'Jordan', text: 'Floor plan is finalized.', me: false }]); }, 2900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }}>
-      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', transition: 'width .1s linear', boxShadow: '0 0 8px rgba(99,102,241,0.5)' }} />
+    <div className="em">
+      <div className="em-chat">
+        <div className="em-hd"><MessageSquare size={15} /># general</div>
+        <div className="em-msgs">
+          {messages.map((m) => <div key={m.id} className={`ebub${m.me ? ' me' : ''}`}>{!m.me && <small>{m.user}</small>}{m.text}</div>)}
+          {typing && <div className="ebub typ"><i /><i /><i /></div>}
+        </div>
+      </div>
+      <div className="em-tasks">
+        <h6><ListChecks size={15} /> Tasks</h6>
+        {tasks.map((t, i) => (
+          <button key={t.label} type="button" className={`etk${t.done ? ' done' : ''}`} onClick={() => setTasks((a) => a.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))}>
+            <i>{t.done && <Check size={11} strokeWidth={3} />}</i><span>{t.label}</span></button>))}
+      </div>
     </div>
   );
 }
 
-function QRPattern({ code, size = 40, faded = false }) {
-  const cells = 10;
-  const hash = code.split('').reduce((acc, c) => acc * 31 + c.charCodeAt(0), 7);
+const DEMO_GUESTS = [
+  { id: 1, name: 'Sarah Johnson', group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP', status: 'normal' },
+  { id: 2, name: 'Marcus Rivera', group: 2, table: 5, code: 'MR2B-K3', role: 'Speaker', status: 'normal' },
+  { id: 3, name: 'Priya Sharma', group: 1, table: 8, code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
+  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3, code: 'TC2D-R1', role: 'Sponsor', status: 'normal' },
+  { id: 5, name: 'Dev Patel', group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked', blockReason: 'Duplicate identity: another invite with the same email already checked in' },
+  { id: 6, name: 'Amara Okafor', group: 1, table: 7, code: 'AO1F-Q2', role: 'Attendee', status: 'flagged', flagReason: 'Low trust score: 42/100, scanned from 3 different devices' },
+];
+
+function QRPattern({ code, size = 36 }) {
+  const cells = 8, hash = code.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
   return (
-    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 3, background: faded ? '#333' : 'white', borderRadius: 6, opacity: faded ? 0.4 : 1 }}>
-      {Array.from({ length: cells * cells }, (_, i) => {
-        const filled = ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0;
-        return <div key={i} style={{ background: filled ? (faded ? '#888' : '#111') : (faded ? '#333' : 'white'), borderRadius: 1 }} />;
-      })}
+    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 2, background: '#fff' }}>
+      {Array.from({ length: cells * cells }, (_, i) => <div key={i} style={{ background: ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0 ? '#0d0e1c' : '#fff' }} />)}
     </div>
   );
 }
 
 function EnterpriseDemo() {
+  const fresh = () => DEMO_GUESTS.map((g) => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 }));
   const [tab, setTab] = useState('guests');
-  const [guests, setGuests] = useState(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
+  const [guests, setGuests] = useState(fresh);
   const [scanning, setScanning] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [securityLog, setSecurityLog] = useState([]);
-  const [overrideTarget, setOverrideTarget] = useState(null); // guest being overridden
+  const [overrideTarget, setOverrideTarget] = useState(null);
   const [overridePin, setOverridePin] = useState('');
   const [overrideError, setOverrideError] = useState('');
   const [overrideSuccess, setOverrideSuccess] = useState(false);
   const [simulating, setSimulating] = useState(false);
 
-  const checkedInCount = guests.filter(g => g.checkedIn).length;
+  const checkedInCount = guests.filter((g) => g.checkedIn).length;
   const totalGuests = guests.reduce((s, g) => s + g.group, 0);
-  const checkedInPeople = guests.filter(g => g.checkedIn).reduce((s, g) => s + g.group, 0);
+  const checkedInPeople = guests.filter((g) => g.checkedIn).reduce((s, g) => s + g.group, 0);
   const pct = Math.round((checkedInPeople / totalGuests) * 100);
-
-  const addLog = (entry) => setSecurityLog(prev => [{ ...entry, id: Date.now() + Math.random(), ts: new Date() }, ...prev].slice(0, 20));
+  const addLog = (entry) => setSecurityLog((prev) => [{ ...entry, id: Date.now() + Math.random(), ts: new Date() }, ...prev].slice(0, 20));
 
   const handleCheckIn = (guest) => {
     if (scanning) return;
-
-    // Already checked in → duplicate attempt
-    if (guest.checkedIn) {
-      addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan: ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
-      return;
-    }
-
-    // Blocked guest
-    if (guest.status === 'blocked') {
-      addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name}, ${guest.blockReason}` });
-      setOverrideTarget(guest);
-      return;
-    }
-
-    // Flagged guest
-    if (guest.status === 'flagged') {
-      addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name}, ${guest.flagReason}` });
-      setOverrideTarget(guest);
-      return;
-    }
-
-    // Normal check-in
+    if (guest.checkedIn) { addLog({ type: 'duplicate', severity: 'high', msg: `Duplicate scan: ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` }); return; }
+    if (guest.status === 'blocked') { addLog({ type: 'blocked', severity: 'critical', msg: `BLOCKED: ${guest.name}, ${guest.blockReason}` }); setOverrideTarget(guest); return; }
+    if (guest.status === 'flagged') { addLog({ type: 'flagged', severity: 'high', msg: `WARNING: ${guest.name}, ${guest.flagReason}` }); setOverrideTarget(guest); return; }
     setScanning(guest.id);
-    setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g));
+    setGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g)));
     setTimeout(() => {
       const now = new Date();
-      setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
-      setLastChecked(guest.id);
-      setScanning(null);
-      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `Checked in: ${guest.name}, party of ${guest.group}, table ${guest.table}` });
+      setGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g)));
+      setLastChecked(guest.id); setScanning(null);
+      addLog({ type: 'success', severity: 'ok', msg: `Checked in: ${guest.name}, party of ${guest.group}, table ${guest.table}` });
       setTimeout(() => setLastChecked(null), 2500);
     }, 900);
   };
-
   const handleOverride = () => {
-    if (overridePin !== '1234') {
-      setOverrideError('Wrong PIN. Try 1234 for this demo.');
-      return;
-    }
-    setOverrideError('');
-    setOverrideSuccess(true);
+    if (overridePin !== '1234') { setOverrideError('Wrong PIN. Try 1234 for this demo.'); return; }
+    setOverrideError(''); setOverrideSuccess(true);
     const target = overrideTarget;
     setTimeout(() => {
       const now = new Date();
-      setGuests(prev => prev.map(g => g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g));
-      addLog({ type: 'override', severity: 'medium', name: target.name, msg: `Manager override approved: ${target.name} manually checked in` });
-      setOverrideTarget(null);
-      setOverridePin('');
-      setOverrideSuccess(false);
+      setGuests((prev) => prev.map((g) => (g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g)));
+      addLog({ type: 'override', severity: 'medium', msg: `Manager override approved: ${target.name} manually checked in` });
+      setOverrideTarget(null); setOverridePin(''); setOverrideSuccess(false);
     }, 1000);
   };
-
   const simulateUnauthorized = () => {
     if (simulating) return;
     setSimulating(true);
-    const fakeCodes = ['XX99-ZZ', 'FAKE-001', 'HACK-123'];
-    const code = fakeCodes[Math.floor(Math.random() * fakeCodes.length)];
-    addLog({ type: 'unauthorized', severity: 'critical', name: 'Unknown', msg: `UNAUTHORIZED: Code "${code}" not found, possible forged ticket` });
-    setTimeout(() => {
-      addLog({ type: 'ratelimit', severity: 'medium', name: 'System', msg: `Rate limit triggered: IP blocked for 60s after 3 failed attempts` });
-      setSimulating(false);
-    }, 1200);
+    const code = ['XX99-ZZ', 'FAKE-001', 'HACK-123'][Math.floor(Math.random() * 3)];
+    addLog({ type: 'unauthorized', severity: 'critical', msg: `UNAUTHORIZED: Code "${code}" not found, possible forged ticket` });
+    setTimeout(() => { addLog({ type: 'ratelimit', severity: 'medium', msg: 'Rate limit triggered: IP blocked for 60s after 3 failed attempts' }); setSimulating(false); }, 1200);
     if (tab !== 'security') setTab('security');
   };
-
   const handleReset = () => {
-    setGuests(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
-    setSecurityLog([]);
-    setLastChecked(null);
-    setScanning(null);
-    setOverrideTarget(null);
-    setOverridePin('');
-    setOverrideError('');
+    setGuests(fresh()); setSecurityLog([]); setLastChecked(null); setScanning(null); setOverrideTarget(null); setOverridePin(''); setOverrideError('');
   };
-
-  const roleColors = {
-    VIP: 'text-amber-400 bg-amber-400/10',
-    Speaker: 'text-blue-400 bg-blue-400/10',
-    Sponsor: 'text-purple-400 bg-purple-400/10',
-    Attendee: 'text-neutral-400 bg-neutral-800',
-  };
-  const logColors = {
-    ok: 'text-emerald-400 border-emerald-800/40 bg-emerald-950/20',
-    high: 'text-amber-400 border-amber-800/40 bg-amber-950/20',
-    critical: 'text-red-400 border-red-800/40 bg-red-950/20',
-    medium: 'text-blue-400 border-blue-800/40 bg-blue-950/20',
-  };
-  const logIcons = { success: '+', duplicate: '!', blocked: 'x', flagged: '!', unauthorized: 'x', override: 'o', ratelimit: '-' };
+  const alerts = securityLog.filter((l) => l.severity === 'critical' || l.severity === 'high').length;
+  const circ = 2 * Math.PI * 22;
 
   return (
-    <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
-
-      {/* Manager override modal */}
-      {overrideTarget && !overrideSuccess && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
-          <div className="w-full max-w-xs mx-4 bg-neutral-900 rounded-2xl border border-neutral-700 p-6">
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-4 ${overrideTarget.status === 'blocked' ? 'bg-red-950/50 border border-red-800/50 text-red-400' : 'bg-amber-950/50 border border-amber-800/50 text-amber-400'}`}>
-              {overrideTarget.status === 'blocked' ? 'Guest Blocked' : 'Guest Flagged'}
-            </div>
-            <p className="text-sm font-bold text-white mb-1">{overrideTarget.name}</p>
-            <p className="text-xs text-neutral-500 mb-4">{overrideTarget.blockReason || overrideTarget.flagReason}</p>
-            <p className="text-xs font-bold text-neutral-400 mb-2">Manager PIN required to override</p>
-            <input
-              type="password"
-              maxLength={4}
-              value={overridePin}
-              onChange={e => { setOverridePin(e.target.value); setOverrideError(''); }}
-              placeholder="Enter PIN (hint: 1234)"
-              className="dark-input text-center text-lg font-mono tracking-widest mb-2"
-              autoFocus
-            />
-            {overrideError && <p className="text-xs text-red-400 mb-2">{overrideError}</p>}
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => { setOverrideTarget(null); setOverridePin(''); setOverrideError(''); }}
-                className="flex-1 py-2 text-xs font-bold text-neutral-400 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-all">
-                Cancel
-              </button>
-              <button onClick={handleOverride}
-                className="flex-1 py-2 text-xs font-bold text-white bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-all">
-                Override
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {overrideTarget && overrideSuccess && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
-          <div className="text-center">
-            <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 animate-bounce">
-              <Check className="w-7 h-7 text-white" />
-            </div>
-            <p className="text-sm font-bold text-emerald-400">Override approved</p>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="px-5 pt-5 pb-0" style={{ position: 'relative' }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              Live Check-in Demo
-            </div>
-            <h3 className="text-sm font-bold text-white">Tech Summit 2025</h3>
-            <p className="text-xs text-neutral-500">{DEMO_GUESTS.length} invites · {totalGuests} guests</p>
-          </div>
-          <div className="relative w-12 h-12 flex-shrink-0">
-            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="18" fill="none" stroke="#262626" strokeWidth="4" />
-              <circle cx="24" cy="24" r="18" fill="none" stroke="#10b981" strokeWidth="4"
-                strokeDasharray={`${2 * Math.PI * 18}`}
-                strokeDashoffset={`${2 * Math.PI * 18 * (1 - pct / 100)}`}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-black text-white">{pct}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-neutral-800">
-          {['guests', 'security', 'analytics'].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${tab === t ? 'text-white border-white bg-white/5 rounded-t-lg' : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-white/3 rounded-t-lg'}`}>
-              {t === 'security' && securityLog.length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-black" style={{ fontSize: 9 }}>
-                  {securityLog.filter(l => l.severity === 'critical' || l.severity === 'high').length}
-                </span>
-              )}
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* GUESTS TAB */}
-      {tab === 'guests' && (
-        <div className="p-3" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
-          <div className="space-y-2">
-            {guests.map(guest => {
-              const isBlocked = guest.status === 'blocked' && !guest.checkedIn;
-              const isFlagged = guest.status === 'flagged' && !guest.checkedIn;
-              return (
-                <div key={guest.id}
-                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 ${
-                    guest.checkedIn  ? 'border-emerald-800/50 bg-emerald-950/30' :
-                    guest.checking   ? 'border-neutral-600 bg-neutral-800/80' :
-                    isBlocked        ? 'border-red-900/60 bg-red-950/20' :
-                    isFlagged        ? 'border-amber-900/50 bg-amber-950/15' :
-                    'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
-                  }`}>
-
-                  {/* QR / status icon */}
-                  <div className="flex-shrink-0">
-                    {guest.checking ? (
-                      <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin" />
-                      </div>
-                    ) : guest.checkedIn ? (
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-white" />
-                      </div>
-                    ) : isBlocked ? (
-                      <div className="w-10 h-10 rounded-lg bg-red-950/60 border border-red-900/50 flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-red-400" />
-                      </div>
-                    ) : isFlagged ? (
-                      <div className="w-10 h-10 rounded-lg bg-amber-950/60 border border-amber-900/50 flex items-center justify-center">
-                        <span className="text-amber-400 font-black text-xs">FLAG</span>
-                      </div>
-                    ) : (
-                      <QRPattern code={guest.code} size={40} />
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${roleColors[guest.role]}`}>{guest.role}</span>
-                      {isBlocked && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-red-950/60 text-red-400 border border-red-900/40">BLOCKED</span>}
-                      {isFlagged && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-amber-950/50 text-amber-400 border border-amber-900/40">FLAGGED</span>}
-                    </div>
-                    <p className="text-xs text-neutral-500 truncate">
-                      {guest.checkedIn
-                        ? `Checked in · Party of ${guest.group} · Table ${guest.table}`
-                        : isBlocked ? guest.blockReason
-                        : isFlagged ? guest.flagReason
-                        : `Party of ${guest.group} · Table ${guest.table}`}
-                    </p>
-                  </div>
-
-                  {/* Action */}
-                  <button
-                    onClick={() => handleCheckIn(guest)}
-                    disabled={!!scanning}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                      guest.checkedIn   ? 'bg-emerald-950/40 text-emerald-600 cursor-default' :
-                      scanning === guest.id ? 'bg-neutral-700 text-neutral-400 cursor-wait' :
-                      scanning          ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' :
-                      isBlocked         ? 'bg-red-950/50 text-red-400 border border-red-900/40 hover:bg-red-900/40' :
-                      isFlagged         ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40 hover:bg-amber-900/40' :
-                      'bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 active:scale-95'
-                    }`}>
-                    {guest.checkedIn ? 'Done' : scanning === guest.id ? '…' : isBlocked ? 'Blocked' : isFlagged ? 'Review' : 'Scan'}
-                  </button>
-
-                  {lastChecked === guest.id && (
-                    <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">In!</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Simulate unauthorized */}
-          <div className="mt-3 p-3 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/30">
-            <p className="text-xs text-neutral-600 mb-2 font-medium">Simulate security scenarios:</p>
-            <div className="flex gap-2">
-              <button onClick={simulateUnauthorized} disabled={simulating}
-                className="flex-1 py-1.5 text-xs font-bold text-red-400 border border-red-900/50 rounded-xl bg-red-950/20 hover:bg-red-950/40 transition-all disabled:opacity-40">
-                {simulating ? 'Scanning…' : 'Try forged ticket'}
-              </button>
-              {(checkedInCount > 0 || securityLog.length > 0) && (
-                <button onClick={handleReset} className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-400 border border-neutral-800 rounded-xl transition-colors">
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECURITY TAB */}
-      {tab === 'security' && (
-        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
-          {/* Security overview badges */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[
-              { label: 'Blocked', count: guests.filter(g => g.status === 'blocked' && !g.checkedIn).length, color: 'text-red-400', bg: 'bg-red-950/30 border-red-900/40' },
-              { label: 'Flagged', count: guests.filter(g => g.status === 'flagged' && !g.checkedIn).length, color: 'text-amber-400', bg: 'bg-amber-950/30 border-amber-900/40' },
-              { label: 'Alerts', count: securityLog.filter(l => l.severity !== 'ok').length, color: 'text-blue-400', bg: 'bg-blue-950/30 border-blue-900/40' },
-            ].map(s => (
-              <div key={s.label} className={`text-center p-2.5 rounded-xl border ${s.bg}`}>
-                <div className={`text-xl font-black tabular-nums ${s.color}`}>{s.count}</div>
-                <div className="text-xs text-neutral-500">{s.label}</div>
+    <div className="dm">
+      {overrideTarget && (
+        <div className="dm-ov">
+          {!overrideSuccess ? (
+            <div className="dm-card">
+              <span className={`rl ${overrideTarget.status === 'blocked' ? 'bad' : 'vip'}`}>{overrideTarget.status === 'blocked' ? 'Guest blocked' : 'Guest flagged'}</span>
+              <p style={{ fontWeight: 700, margin: '10px 0 2px' }}>{overrideTarget.name}</p>
+              <p style={{ fontSize: 13, color: 'var(--mu)' }}>{overrideTarget.blockReason || overrideTarget.flagReason}</p>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }} htmlFor="ov-pin">Manager PIN required to override</label>
+              <input id="ov-pin" className="inp" type="password" maxLength={4} autoFocus value={overridePin} placeholder="Enter PIN (hint: 1234)"
+                style={{ textAlign: 'center', letterSpacing: '.3em' }} onChange={(e) => { setOverridePin(e.target.value); setOverrideError(''); }} onKeyDown={(e) => e.key === 'Enter' && handleOverride()} />
+              {overrideError && <div className="err"><AlertCircle size={13} />{overrideError}</div>}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button className="btn sm" style={{ flex: 1 }} onClick={() => { setOverrideTarget(null); setOverridePin(''); setOverrideError(''); }}>Cancel</button>
+                <button className="btn pri sm" style={{ flex: 1 }} onClick={handleOverride}>Override</button>
               </div>
-            ))}
-          </div>
-
-          {/* Security features list */}
-          <div className="space-y-2 mb-4">
-            <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Active protections</p>
-            {[
-              { icon: 'X', label: 'Duplicate detection', desc: 'Flags same identity across multiple invites', active: true, color: 'text-emerald-400' },
-              { icon: '-', label: 'Rate limiting', desc: '3 failed scans → 60s IP lockout', active: true, color: 'text-emerald-400' },
-              { icon: '!', label: 'Trust scoring', desc: 'Flags low-trust guests for manual review', active: true, color: 'text-emerald-400' },
-              { icon: 'O', label: 'Manager override', desc: 'PIN-protected override for blocked guests', active: true, color: 'text-emerald-400' },
-              { icon: 'Q', label: 'QR forgery detection', desc: 'Rejects codes not in guest registry', active: true, color: 'text-emerald-400' },
-            ].map((f, i) => (
-              <div key={i} className="flex items-start gap-3 p-2.5 bg-neutral-900/40 rounded-xl border border-neutral-800">
-                <span className={`text-sm font-black flex-shrink-0 mt-0.5 ${f.color}`}>{f.icon}</span>
-                <div>
-                  <p className="text-xs font-bold text-white">{f.label}</p>
-                  <p className="text-xs text-neutral-500">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Live log */}
-          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">Security log</p>
-          {securityLog.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-xs text-neutral-700">No events yet.</p>
-              <p className="text-xs text-neutral-700 mt-1">Go to Guests → try scanning blocked/flagged guests or a forged ticket.</p>
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {securityLog.map(entry => (
-                <div key={entry.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs ${logColors[entry.severity]}`}>
-                  <span className="font-black flex-shrink-0 mt-0.5">{logIcons[entry.type] || '·'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium leading-snug">{entry.msg}</p>
-                    <p className="opacity-50 mt-0.5">{entry.ts.toLocaleTimeString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="dm-card" style={{ textAlign: 'center' }}><CheckCircle2 size={36} style={{ color: 'var(--ok)' }} /><p style={{ fontWeight: 700, margin: '8px 0 0' }}>Override approved</p></div>
           )}
         </div>
       )}
+      <div className="dm-top">
+        <div className="dm-hd">
+          <div><span className="dpill"><i />Live check-in demo</span><h4>Tech Summit</h4><small>{DEMO_GUESTS.length} invites · {totalGuests} guests</small></div>
+          <div className="dring">
+            <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="22" fill="none" stroke="#d9dbe8" strokeWidth="6" />
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#0c8a5b" strokeWidth="6" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset .6s' }} /></svg>
+            <b>{pct}%</b>
+          </div>
+        </div>
+        <div className="dm-tabs" role="tablist">
+          {['guests', 'security', 'analytics'].map((t) => (
+            <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}{t === 'security' && alerts > 0 && <b>{alerts}</b>}</button>))}
+        </div>
+      </div>
 
-      {/* ANALYTICS TAB */}
+      {tab === 'guests' && (
+        <div className="dm-body">
+          {guests.map((g) => {
+            const bl = g.status === 'blocked' && !g.checkedIn, fl = g.status === 'flagged' && !g.checkedIn;
+            return (
+              <div key={g.id} className={`dg${g.checkedIn ? ' in' : g.checking ? ' ck' : bl ? ' bl' : fl ? ' fl' : ''}`}>
+                <div className="dgi">{g.checking ? <div className="spin" /> : g.checkedIn ? <Check size={22} strokeWidth={3} /> : bl ? <Shield size={20} /> : fl ? 'FLAG' : <QRPattern code={g.code} />}</div>
+                <div className="dgm">
+                  <div><strong>{g.name}</strong><span className={`rl ${g.role.toLowerCase()}`}>{g.role}</span>{bl && <span className="rl bad">BLOCKED</span>}{fl && <span className="rl vip">FLAGGED</span>}</div>
+                  <p>{g.checkedIn ? `Checked in · Party of ${g.group} · Table ${g.table}` : bl ? g.blockReason : fl ? g.flagReason : `Party of ${g.group} · Table ${g.table}`}</p>
+                </div>
+                {lastChecked === g.id && <b style={{ color: 'var(--ok)', fontSize: 13 }}>In!</b>}
+                <button className={`dgb${g.checkedIn ? ' dn' : bl ? ' bad' : ''}`} disabled={!!scanning || g.checkedIn} onClick={() => handleCheckIn(g)}>
+                  {g.checkedIn ? 'Done' : scanning === g.id ? '…' : bl ? 'Blocked' : fl ? 'Review' : 'Scan'}</button>
+              </div>
+            );
+          })}
+          <div className="dsim"><p>Simulate a security scenario:</p>
+            <div><button className="btn sm" onClick={simulateUnauthorized} disabled={simulating}>{simulating ? 'Scanning…' : 'Try a forged ticket'}</button>
+              {(checkedInCount > 0 || securityLog.length > 0) && <button className="btn sm" onClick={handleReset}>Reset</button>}</div></div>
+        </div>
+      )}
+
+      {tab === 'security' && (
+        <div className="dm-body">
+          <div className="dstats">{[['Blocked', guests.filter((g) => g.status === 'blocked' && !g.checkedIn).length], ['Flagged', guests.filter((g) => g.status === 'flagged' && !g.checkedIn).length], ['Alerts', securityLog.filter((l) => l.severity !== 'ok').length]].map(([l, n]) => (
+            <div className="dstat" key={l}><b>{n}</b><small>{l}</small></div>))}</div>
+          <h5>Active protections</h5>
+          {[['Duplicate detection', 'Flags the same identity across multiple invites'], ['Rate limiting', '3 failed scans, then a 60s IP lockout'], ['Trust scoring', 'Flags low-trust guests for manual review'], ['Manager override', 'PIN-protected override for blocked guests'], ['QR forgery detection', 'Rejects codes that are not in the guest registry']].map(([t, d]) => (
+            <div className="dprot" key={t}><i>✓</i><div><b>{t}</b><span>{d}</span></div></div>))}
+          <h5>Security log</h5>
+          {securityLog.length === 0 ? <p style={{ fontSize: 13, color: 'var(--mu)', margin: 0 }}>No events yet. Go to Guests and scan a blocked or flagged guest, or try a forged ticket.</p>
+            : securityLog.map((l) => <div key={l.id} className={`dlg ${l.severity}`}><div><b style={{ fontSize: 13 }}>{l.msg}</b><small>{l.ts.toLocaleTimeString()}</small></div></div>)}
+        </div>
+      )}
+
       {tab === 'analytics' && (
-        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[
-              { label: 'Arrived',  value: checkedInPeople, color: 'text-emerald-400' },
-              { label: 'Pending',  value: totalGuests - checkedInPeople, color: 'text-amber-400' },
-              { label: 'Checked',  value: checkedInCount, color: 'text-blue-400' },
-            ].map(s => (
-              <div key={s.label} className="text-center p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
-                <div className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Guest breakdown</p>
-          <div className="space-y-2.5 mb-4">
-            {guests.map(g => (
-              <div key={g.id}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-neutral-400 truncate">{g.name}</span>
-                  <span className="text-xs text-neutral-500 flex-shrink-0 ml-2">
-                    {g.checkedIn ? `${g.group}/${g.group}` : `0/${g.group}`}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-700 ${
-                    g.checkedIn ? 'bg-emerald-500' :
-                    g.checking  ? 'bg-neutral-600' :
-                    g.status === 'blocked' ? 'bg-red-800' :
-                    g.status === 'flagged' ? 'bg-amber-800' : 'bg-neutral-700'
-                  }`} style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
-            <div className="flex justify-between mb-2">
-              <span className="text-xs font-bold text-neutral-400">Overall attendance</span>
-              <span className="text-xs font-black text-white">{pct}%</span>
-            </div>
-            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-            </div>
-            <p className="text-xs text-neutral-600 mt-2">{checkedInPeople} of {totalGuests} guests arrived</p>
-          </div>
-
-          {checkedInCount === 0 && (
-            <p className="text-center text-xs text-neutral-600 mt-4">← Switch to Guests and start checking people in</p>
-          )}
+        <div className="dm-body">
+          <div className="dstats">{[['Arrived', checkedInPeople], ['Pending', totalGuests - checkedInPeople], ['Invites in', checkedInCount]].map(([l, n]) => <div className="dstat" key={l}><b>{n}</b><small>{l}</small></div>)}</div>
+          <h5>Guest breakdown</h5>
+          {guests.map((g) => (
+            <div key={g.id} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}><span>{g.name}</span><span style={{ color: 'var(--mu)' }}>{g.checkedIn ? g.group : 0}/{g.group}</span></div>
+              <div className="dbar"><i className={g.checking ? 'part' : ''} style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }} /></div>
+            </div>))}
+          {checkedInCount === 0 && <p style={{ fontSize: 13, color: 'var(--mu)' }}>Switch to Guests and start checking people in.</p>}
         </div>
       )}
     </div>
   );
 }
 
-import CrossPlatformAd from '../components/CrossPlatformAd';
-import TurnstileWidget from '../components/TurnstileWidget';
-
-
-
-// 
-// MAIN
-// 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ONBOARDING WIZARD
-// ─────────────────────────────────────────────────────────────────────────────
-const EVENT_TYPES = [
-  { id:'wedding',    label:'Wedding',          hint:'Ceremony, reception, the works' },
-  { id:'birthday',   label:'Birthday',         hint:'Milestone or casual celebration' },
-  { id:'conference', label:'Conference',       hint:'Speakers, sessions, networking' },
-  { id:'corporate',  label:'Corporate',        hint:'Retreat, offsite, team event' },
-  { id:'festival',   label:'Festival',         hint:'Multi-stage, outdoor, crowd' },
-  { id:'other',      label:'Other',            hint:'Something totally unique' },
-];
-const VENUE_TYPES = [
-  { id:'restaurant', label:'Restaurant',       hint:'Full-service dining floor' },
-  { id:'cafe',       label:'Cafe',             hint:'Counter service and tables' },
-  { id:'bar',        label:'Bar / Pub',        hint:'Drinks-led with seating' },
-  { id:'popup',      label:'Pop-up',           hint:'Temporary or market stall' },
-  { id:'hotel',      label:'Hotel dining',     hint:'In-house restaurant or lounge' },
-  { id:'other',      label:'Other venue',      hint:'Something different entirely' },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DEVICE FRAME, chrome wrapper so mockups read as "a screen", not a raw div
-// ─────────────────────────────────────────────────────────────────────────────
-function DeviceFrame({ variant = 'browser', children }) {
-  if (variant === 'phone') {
-    return (
-      <div className="relative mx-auto" style={{ width: 260 }}>
-        <div className="rounded-[2.25rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden relative" style={{ height: 480 }}>
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-20 h-4 bg-neutral-800 rounded-b-xl z-20" />
-          <div className="w-full h-full overflow-hidden">{children}</div>
-        </div>
-      </div>
-    );
-  }
-  if (variant === 'tablet') {
-    return (
-      <div className="relative mx-auto w-full" style={{ maxWidth: 440 }}>
-        <div className="rounded-[1.5rem] border-[8px] border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden">
-          {children}
-        </div>
-      </div>
-    );
-  }
-  // browser
-  return (
-    <div className="relative mx-auto w-full rounded-2xl border border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-neutral-800 bg-neutral-900/60">
-        <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-        <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
-        <div className="ml-3 flex-1 h-6 rounded-md bg-neutral-800/70 flex items-center px-3 max-w-xs">
-          <span className="text-[10px] text-neutral-500 truncate">app.planit.events/acme-summit</span>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAGNETIC LINK, pulls toward the cursor when nearby (hover polish, CTA row)
-// ─────────────────────────────────────────────────────────────────────────────
-function MagneticLink({ className = '', children, strength = 12, ...props }) {
-  const ref = useRef(null);
-  const onMouseMove = (e) => {
-    const el = ref.current; if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left - r.width / 2) / (r.width / 2);
-    const y = (e.clientY - r.top - r.height / 2) / (r.height / 2);
-    el.style.transform = `translate(${(x * strength).toFixed(1)}px, ${(y * strength).toFixed(1)}px)`;
-  };
-  const onMouseLeave = () => { if (ref.current) ref.current.style.transform = 'translate(0px,0px)'; };
-  return (
-    <a ref={ref} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave} className={className}
-      style={{ transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)' }} {...props}>
-      {children}
-    </a>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RSVP MOCKUP (phone), fake render, but the status buttons actually respond
-// ─────────────────────────────────────────────────────────────────────────────
-const RSVP_STATUS_STYLE = {
-  yes:   'bg-emerald-500 border-emerald-500 text-white',
-  maybe: 'bg-amber-500 border-amber-500 text-white',
-  no:    'bg-red-500 border-red-500 text-white',
-};
-function RSVPMockup() {
-  const [status, setStatus] = useState(null);
-  const [count, setCount] = useState(84);
-  const pick = (key) => {
-    setCount(c => {
-      if (key === status) return c;
-      if (key === 'yes') return c + 1;
-      if (status === 'yes') return c - 1;
-      return c;
-    });
-    setStatus(key);
-  };
-  return (
-    <div className="h-full flex flex-col text-white" style={{ background: '#0d0714' }}>
-      <div className="relative flex-shrink-0 flex items-end p-4" style={{
-        height: 168,
-        background: 'radial-gradient(circle at 20% 20%, rgba(99,102,241,0.55) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,209,102,0.5) 0%, transparent 40%), radial-gradient(circle at 80% 90%, rgba(255,93,143,0.55) 0%, transparent 45%), linear-gradient(135deg,#150a24,#0e1626)',
-      }}>
-        <div>
-          <span className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-white/15 backdrop-blur mb-1.5">You&apos;re invited</span>
-          <p className="font-syne font-black text-lg leading-tight">Summer Rooftop<br />Social</p>
-        </div>
-      </div>
-      <div className="flex-1 p-4 flex flex-col gap-2.5">
-        <div className="flex items-center gap-2 text-[11px] text-neutral-400"><Calendar className="w-3 h-3 flex-shrink-0" /> Sat, Aug 16 · 7:00 PM</div>
-        <div className="flex items-center gap-2 text-[11px] text-neutral-400"><MapPin className="w-3 h-3 flex-shrink-0" /> The Hendrick Rooftop</div>
-        <div className="flex gap-1.5 mt-2">
-          {[{ key:'yes', label:'Attending' }, { key:'maybe', label:'Maybe' }, { key:'no', label:"Can't go" }].map(o => (
-            <button key={o.key} onClick={() => pick(o.key)}
-              className={`flex-1 py-2 rounded-xl text-[10px] font-bold border transition-all duration-200 ${status === o.key ? RSVP_STATUS_STYLE[o.key] : 'border-white/15 text-neutral-400 hover:border-white/30'}`}>
-              {o.label}
-            </button>
-          ))}
-        </div>
-        <div className="mt-auto flex items-center justify-between pt-3 border-t border-white/10">
-          <span className="text-[10px] text-neutral-500">Going</span>
-          <span className="text-sm font-black tabular-nums">{count} guests</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EVENT SPACE MOCKUP (browser), fake render; a typing bubble resolves into
-// a new message once, so the panel has a little life without needing real data
-// ─────────────────────────────────────────────────────────────────────────────
-function EventSpaceMockup() {
-  const [messages, setMessages] = useState([
-    { id: 1, user: 'Maya',  text: 'Can we push the sound check to 4pm?', me: false },
-    { id: 2, user: 'You',   text: 'Works for me. Updating the run of show now.', me: true },
-  ]);
-  const [typing, setTyping] = useState(false);
-  useEffect(() => {
-    const t1 = setTimeout(() => setTyping(true), 1400);
-    const t2 = setTimeout(() => {
-      setTyping(false);
-      setMessages(m => [...m, { id: Date.now(), user: 'Jordan', text: 'Floor plan is finalized ✅', me: false }]);
-    }, 2900);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-  const tasks = [
-    { label: 'Confirm catering headcount', done: true },
-    { label: 'Print name badges',          done: true },
-    { label: 'Brief volunteer team',       done: false },
-    { label: 'Load in AV equipment',       done: false },
-  ];
-  return (
-    <div className="flex text-white" style={{ background: '#0a0a0f', height: 340 }}>
-      <div className="w-2/3 flex flex-col border-r border-white/5">
-        <div className="px-4 py-2.5 border-b border-white/5 flex items-center gap-2 flex-shrink-0">
-          <MessageSquare className="w-3.5 h-3.5 text-indigo-400" /><span className="text-xs font-bold"># general</span>
-        </div>
-        <div className="flex-1 p-4 space-y-3 overflow-hidden">
-          {messages.map(m => (
-            <div key={m.id} className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-[11px] leading-snug ${m.me ? 'bg-indigo-500 text-white rounded-br-sm' : 'bg-white/8 text-neutral-200 rounded-bl-sm'}`}>
-                {!m.me && <p className="text-[9px] font-bold text-indigo-300 mb-0.5">{m.user}</p>}
-                {m.text}
-              </div>
-            </div>
-          ))}
-          {typing && (
-            <div className="flex justify-start">
-              <div className="px-3 py-2.5 rounded-2xl bg-white/8 flex gap-1 rounded-bl-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="w-1/3 p-3.5 flex flex-col gap-2.5 overflow-hidden">
-        <div className="flex items-center gap-1.5 mb-0.5 flex-shrink-0"><ListChecks className="w-3.5 h-3.5 text-emerald-400" /><span className="text-xs font-bold">Tasks</span></div>
-        {tasks.map(t => (
-          <div key={t.label} className="flex items-start gap-2">
-            <div className={`w-3.5 h-3.5 rounded-md border flex-shrink-0 mt-0.5 flex items-center justify-center ${t.done ? 'bg-emerald-500 border-emerald-500' : 'border-white/20'}`}>
-              {t.done && <Check className="w-2.5 h-2.5 text-white" />}
-            </div>
-            <span className={`text-[10.5px] leading-snug ${t.done ? 'text-neutral-500 line-through' : 'text-neutral-300'}`}>{t.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PRODUCT SHOWCASE, static, no scroll logic. Each step sits directly next to
-// its own device frame; nothing swaps, nothing is pinned. Step 3 renders the
-// real EnterpriseDemo (already built above), so that one isn't even a fake
-// render, it's genuinely interactive.
-// ─────────────────────────────────────────────────────────────────────────────
-const SHOWCASE_STEPS = [
-  { key: 'rsvp',    eyebrow: 'Step 01', title: 'Guests RSVP in seconds',   desc: 'No app, no account: a beautiful invite page guests can respond to from any phone.',                                device: 'phone',   node: <RSVPMockup /> },
-  { key: 'space',   eyebrow: 'Step 02', title: 'Your team plans together', desc: 'Chat, shared tasks, and polls in one live workspace instead of five different apps.',                                device: 'browser', node: <EventSpaceMockup /> },
-  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door',desc: 'Real, working check-in demo below. Duplicate detection and manager overrides included. Try it.',                     device: 'tablet',  node: <EnterpriseDemo /> },
-];
-function ProductShowcase() {
-  return (
-    <section id="showcase" className="relative overflow-hidden">
-      <Aurora palette="sunset" stars={false} />
-      <div className="relative max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
-        <Reveal className="text-center mb-16 sm:mb-20">
-          <p className="lq-kicker mb-5">{'// See it in action'}</p>
-          <h2 className="font-syne text-3xl sm:text-5xl font-black text-white leading-tight">
-            Not just a Free Trial.<br /><span className="text-white/40">This is the real thing.</span>
-          </h2>
-        </Reveal>
-
-        <div className="space-y-20 sm:space-y-28">
-          {SHOWCASE_STEPS.map((s, i) => (
-            <div key={s.key} className={`grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
-              <Reveal direction={i % 2 === 1 ? 'right' : 'left'}>
-                <span className="lq-kicker mb-3 block">{'// '}{s.eyebrow}</span>
-                <h3 className="font-syne text-2xl sm:text-3xl font-black mb-3 text-white">{s.title}</h3>
-                <p className="text-sm sm:text-base font-light leading-snug max-w-sm text-white/75">{s.desc}</p>
-              </Reveal>
-              <Reveal direction={i % 2 === 1 ? 'left' : 'right'} delay={100}>
-                <DeviceFrame variant={s.device}>{s.node}</DeviceFrame>
-              </Reveal>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Bump this when the Terms / Privacy Policy change in a way that needs fresh consent.
-const LEGAL_VERSION = '2026-10-03';
-
-const LEGAL_CHECKS = [
-  {
-    key: 'agreeTerms',
-    error: 'You need to agree to the Terms of Service and Privacy Policy.',
-    label: (
-      <>
-        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Terms of Service</a> and the{' '}
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Privacy Policy</a>.
-      </>
-    ),
-  },
-  {
-    key: 'agreeResponsible',
-    error: 'Please confirm you are responsible for your event.',
-    label: 'I am responsible for my event and everything posted to it. I will not use PlanIt for anything illegal, harassing, deceptive, or spammy, and I understand PlanIt can remove events that break the rules.',
-  },
-  {
-    key: 'agreeGuestData',
-    error: 'Please confirm you will handle guest data responsibly.',
-    label: 'I have the right to collect my guests\u2019 information (names, emails, RSVPs, check-ins) and will only use it to run this event.',
-  },
-  {
-    key: 'agreeAge',
-    error: 'You must be at least 13 to create an event.',
-    label: 'I am at least 13 years old.',
-  },
-];
-
-function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
-  const isVenue = mode === 'table-service';
-  const isRsvp  = mode === 'rsvp';
-  const accent  = isVenue ? '#f97316' : '#6366f1';
-  const accentHover = isVenue ? '#fb923c' : '#818cf8';
-
-  const [step, setStep]           = useState(0);
-  const [dir, setDir]             = useState('forward');
-  const [stepKey, setStepKey]     = useState(0);
-  const [eventType, setEventType] = useState('');
-  const [venueType, setVenueType] = useState('');
-  const [showPw, setShowPw]       = useState(false);
-  const [showPw2, setShowPw2]     = useState(false);
-  const [localErr, setLocalErr]   = useState({});
-  const firstInputRef             = useRef(null);
-
-  // Expose step navigation to the parent so it can redirect back after a server error
-  useEffect(() => {
-    if (stepControlRef) {
-      stepControlRef.current = {
-        goTo: (n) => {
-          setDir(n < step ? 'back' : 'forward');
-          setStep(n);
-          setStepKey(k => k + 1);
-          setLocalErr({});
-        },
-        getStep: () => step,
-      };
-    }
+function VenueDemo() {
+  const init = () => ({
+    tables: [{ id: 'T1', seats: 2, s: 'seated' }, { id: 'T2', seats: 2, s: 'free' }, { id: 'T3', seats: 4, s: 'reserved' }, { id: 'T4', seats: 4, s: 'free' }, { id: 'T5', seats: 6, s: 'seated' }, { id: 'T6', seats: 8, s: 'free' }],
+    wait: [{ name: 'Okafor', n: 2 }, { name: 'Lindqvist', n: 4 }, { name: 'Rivera', n: 6 }],
   });
+  const [d, setD] = useState(init);
+  const [msg, setMsg] = useState('Hit Seat next to place the first party on the waitlist.');
+  const seatNext = () => {
+    if (!d.wait.length) { setMsg('Waitlist is empty. Tap Reset to run the service again.'); return; }
+    const [first, ...rest] = d.wait;
+    const fit = d.tables.filter((t) => t.s === 'free' && t.seats >= first.n).sort((a, b) => a.seats - b.seats)[0];
+    if (!fit) { setMsg(`No free table fits ${first.name} (${first.n}). Tap a seated table to clear it.`); return; }
+    setD({ tables: d.tables.map((t) => (t.id === fit.id ? { ...t, s: 'seated' } : t)), wait: rest });
+    setMsg(`Seated ${first.name} (${first.n}) at ${fit.id}, the tightest fit.`);
+  };
+  const clear = (id) => setD((p) => ({ ...p, tables: p.tables.map((t) => (t.id === id && t.s === 'seated' ? { ...t, s: 'free' } : t)) }));
+  return (
+    <div className="vd">
+      <div className="vd-floor">
+        <div className="vd-top"><span className="dpill" style={{ margin: 0 }}><i />Live floor</span><button className="btn sm" onClick={() => { setD(init()); setMsg('Reset. Hit Seat next to start.'); }}>Reset</button></div>
+        <div className="vd-grid">{d.tables.map((t) => (
+          <button key={t.id} type="button" className={`vtb ${t.s}${t.seats <= 2 ? ' round' : ''}`} onClick={() => clear(t.id)} aria-label={`Table ${t.id}, ${t.seats} seats, ${t.s}`}>
+            {t.id}<small>{t.seats} seats · {t.s}</small></button>))}</div>
+        <div className="vlegend"><span><i style={{ background: 'var(--mn)' }} />Free</span><span><i style={{ background: 'var(--pk)' }} />Seated (tap to clear)</span><span><i style={{ background: 'var(--hl)' }} />Reserved</span></div>
+      </div>
+      <div className="vd-side">
+        <h5 style={{ margin: 0, font: '700 11px Unbounded,sans-serif', textTransform: 'uppercase', color: 'var(--mu)' }}>Walk-in waitlist</h5>
+        {d.wait.length === 0 ? <div className="vwt"><small>Nobody waiting</small></div> : d.wait.map((w, i) => <div className="vwt" key={w.name}><span><b>{w.name}</b> · party of {w.n}</span><small>~{(i + 1) * 8} min</small></div>)}
+        <button className="btn pri" onClick={seatNext}>Seat next <ArrowRight size={16} /></button>
+        <p className="vd-msg" aria-live="polite">{msg}</p>
+      </div>
+    </div>
+  );
+}
 
-  // ── Draft persistence state ────────────────────────────────────────────────
-  const [pendingDraft, setPendingDraft]           = useState(null);
-  const [draftBannerVisible, setDraftBannerVisible] = useState(false);
-  const debounceRef = useRef(null);
-  const stepRef     = useRef(step);
+const SHOWCASE = [
+  { key: 'rsvp', eyebrow: 'Step 01', title: 'Guests RSVP in seconds', desc: 'No app, no account: a beautiful invite page guests can respond to from any phone. Tap a response.', device: 'phone', node: <RSVPMockup />, cta: 'See RSVP pages', mode: 'rsvp' },
+  { key: 'space', eyebrow: 'Step 02', title: 'Your team plans together', desc: 'Chat, shared tasks, and polls in one live workspace instead of five different apps. Tick a task off.', device: 'browser', node: <EventSpaceMockup />, cta: 'See Events', mode: 'standard' },
+  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door', desc: 'A real, working check-in demo. Duplicate detection and manager overrides included. Try it.', device: 'tablet', url: '/e/tech-summit/check-in', node: <EnterpriseDemo />, cta: 'See Enterprise', mode: 'enterprise' },
+];
+const BRANCH_DEMOS = {
+  events: { k: 'Live demo', h: 'Your team workspace, in motion.', p: 'Chat, shared tasks and polls in one live workspace instead of five different apps. Tick a task off to try it.', device: 'browser', url: '/e/summer-rooftop', node: <EventSpaceMockup />, links: [['Try the invite demo', '/demo/invite'], ['Try the RSVP demo', '/demo/rsvp']] },
+  enterprise: { k: 'Live demo', h: 'Work the door yourself.', p: 'Scan guests in, hit a blocked or flagged one and override it with the manager PIN (1234). Then fire a forged ticket and watch the security log.', device: 'tablet', url: '/e/tech-summit/check-in', node: <EnterpriseDemo />, links: [] },
+  rsvp: { k: 'Live demo', h: 'What your guests see.', p: 'The page opens on any phone with no app and no account. Tap a response and watch the count move.', device: 'phone', node: <RSVPMockup />, links: [['Try the RSVP demo', '/demo/rsvp']] },
+  venue: { k: 'Live demo', h: 'Seat a walk-in in one tap.', p: 'Hit Seat next and the tightest-fit free table goes to the next party on the waitlist. Tap a seated table to clear it.', device: 'browser', url: '/e/taverna-roma/floor', node: <VenueDemo />, links: [] },
+};
+/* ── Find an event by link ─────────────────────────────────────────────── */
+function SlugFinder() {
+  const navigate = useNavigate();
+  const [value, setValue] = useState('');
+  const [shake, setShake] = useState(false);
+  const go = () => {
+    const raw = value.trim(); if (!raw) return;
+    let slug = raw;
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
+      const m = url.pathname.match(/\/rsvp\/([^/?#]+)/) || url.pathname.match(/\/e\/([^/?#]+)/);
+      slug = m ? m[1] : url.pathname.replace(/^\/+|\/+$/g, '');
+    } catch { /* use raw */ }
+    slug = slug.replace(/^\/?(rsvp\/|e\/)?/, '').replace(/\/+$/, '');
+    if (!slug) { setShake(true); setTimeout(() => setShake(false), 450); return; }
+    navigate(`/e/${slug}`);
+  };
+  return (
+    <div className={`find${shake ? ' shake' : ''}`}>
+      <input value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()}
+        placeholder="Already have an event link? Paste it here" aria-label="Event link or slug" />
+      <button onClick={go}>Open <CornerDownRight size={14} /></button>
+    </div>
+  );
+}
 
-  // Keep stepRef in sync for beforeunload closure
+function CopyLinkBox({ eventId, subdomain, mode }) {
+  const [copied, setCopied] = useState('');
+  const origin = window.location.origin;
+  const rsvp = subdomain && mode !== 'table-service' ? `${origin}/rsvp/${subdomain}` : null;
+  const space = subdomain ? `${origin}/e/${subdomain}` : `${origin}/event/${eventId}`;
+  const copy = (key, text, msg) => { navigator.clipboard?.writeText(text); setCopied(key); toast.success(msg); setTimeout(() => setCopied(''), 2000); };
+  const Row = ({ k, label, url, msg }) => (
+    <div className="link"><small>{label}</small><code>{url}</code>
+      <button className="sm-btn go" onClick={() => copy(k, url, msg)}>{copied === k ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}</button></div>
+  );
+  return (
+    <div className="done">
+      {rsvp && <Row k="rsvp" label="RSVP" url={rsvp} msg="RSVP link copied" />}
+      <Row k="space" label="Space" url={space} msg="Event link copied" />
+      {rsvp && <small style={{ color: 'var(--mu)' }}>The RSVP link is the one to share. Enable the RSVP page in Event Settings to activate it.</small>}
+    </div>
+  );
+}
+
+/* ── Create wizard ─────────────────────────────────────────────────────── */
+function Field({ label, hint, error, children }) {
+  return <div><label>{label} {hint && <small>{hint}</small>}</label>{children}{error && <div className="err"><AlertCircle size={13} />{error}</div>}</div>;
+}
+
+function Wizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
+  const isVenue = mode === 'table-service', isRsvp = mode === 'rsvp';
+  const steps = isVenue ? ['type', 'name', 'who', 'pw'] : isRsvp ? ['type', 'name', 'when', 'who', 'pw'] : ['type', 'name', 'when', 'kind', 'who', 'pw'];
+  const [step, setStep] = useState(0);
+  const [stepKey, setStepKey] = useState(0);
+  const [type, setType] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
+  const [localErr, setLocalErr] = useState({});
+  const [draft, setDraft] = useState(null);
+  const firstRef = useRef(null);
+  const stepRef = useRef(step);
+  const debounce = useRef(null);
+  const total = steps.length, cur = steps[step];
+
   useEffect(() => { stepRef.current = step; }, [step]);
-
-  // Mount effect: track feature start, detect saved draft, register abandon listener
+  useEffect(() => { // lets the parent send the user back to a step after a server error
+    if (stepControlRef) stepControlRef.current = { goTo: (n) => { setStep(n); setStepKey((k) => k + 1); setLocalErr({}); }, getStep: () => step };
+  });
   useEffect(() => {
-    trackFeature('event_creation_start');
-    trackGAEvent('event_creation_started');
-
+    trackFeature('event_creation_start'); trackGAEvent('event_creation_started');
     try {
       const raw = localStorage.getItem('planit_event_draft');
-      if (raw) {
-        const draft = JSON.parse(raw);
-        const SEVENTY_TWO_HOURS = 72 * 60 * 60 * 1000;
-        if (draft.timestamp && (Date.now() - draft.timestamp) < SEVENTY_TWO_HOURS) {
-          setPendingDraft(draft);
-          setDraftBannerVisible(true);
-        }
-      }
+      if (raw) { const d = JSON.parse(raw); if (d.timestamp && Date.now() - d.timestamp < 72 * 3600 * 1000) setDraft(d); }
     } catch { /* ignore */ }
-
-    const handleBeforeUnload = () => {
-      if (!submittedRef?.current) {
-        trackFeature('event_creation_abandon', { step: stepRef.current });
-        flushTracker();
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-save draft on formData/step change (debounced 1.2s)
+    const onUnload = () => { if (!submittedRef?.current) { trackFeature('event_creation_abandon', { step: stepRef.current }); flushTracker(); } };
+    window.addEventListener('beforeunload', onUnload);
+    return () => { window.removeEventListener('beforeunload', onUnload); clearTimeout(debounce.current); };
+  }, []); // eslint-disable-line
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => {
       try {
-        const vid = localStorage.getItem('planit_vid');
         localStorage.setItem('planit_event_draft', JSON.stringify({
-          // Consent is never restored from a draft; the user re-confirms on the last step.
-          formData: { ...formData, agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false },
-          step,
-          timestamp: Date.now(),
-          visitorId: vid,
+          formData: { ...formData, agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false }, // consent is never restored
+          step, timestamp: Date.now(), visitorId: localStorage.getItem('planit_vid'),
         }));
       } catch { /* ignore */ }
     }, 1200);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [formData, step]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => clearTimeout(debounce.current);
+  }, [formData, step]);
+  useEffect(() => { const t = setTimeout(() => firstRef.current?.focus(), 320); return () => clearTimeout(t); }, [step]);
 
-  // Focus first input on step change
-  useEffect(() => {
-    const t = setTimeout(() => firstInputRef.current?.focus(), 360);
-    return () => clearTimeout(t);
-  }, [step]);
-
-  const totalSteps = isVenue ? 4 : (isRsvp ? 5 : 6);
-
-  const go = (delta) => {
-    setDir(delta > 0 ? 'forward' : 'back');
-    setStep(s => s + delta);
-    setStepKey(k => k + 1);
-    setLocalErr({});
-  };
-
+  const go = (d) => { setStep((s) => s + d); setStepKey((k) => k + 1); setLocalErr({}); };
   const validate = () => {
     const e = {};
-    if (step === 1) {
-      if (!formData.title.trim()) e.title = isVenue ? 'Venue name is required.' : 'Event title is required.';
-    }
-    if (!isVenue && step === 2) {
-      if (!formData.date)     e.date     = 'Date and time is required.';
-      if (!formData.timezone) e.timezone = 'Timezone is required.';
-    }
-    const nameStep = isVenue ? 2 : (isRsvp ? 3 : 4);
-    if (step === nameStep) {
+    if (cur === 'name' && !formData.title.trim()) e.title = isVenue ? 'Venue name is required.' : 'Event title is required.';
+    if (cur === 'when') { if (!formData.date) e.date = 'Date and time is required.'; if (!formData.timezone) e.timezone = 'Timezone is required.'; }
+    if (cur === 'who') {
       if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
       if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
       else if (!validateEmail(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
     }
-    const pwStep = isVenue ? 3 : (isRsvp ? 4 : 5);
-    if (step === pwStep) {
+    if (cur === 'pw') {
       if (!formData.accountPassword) e.accountPassword = 'Password is required.';
       else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
       for (const c of LEGAL_CHECKS) if (!formData[c.key]) e[c.key] = c.error;
     }
-    setLocalErr(e);
-    return Object.keys(e).length === 0;
+    setLocalErr(e); return !Object.keys(e).length;
   };
-
-  const next = () => {
-    if (!validate()) return;
-    if (step < totalSteps - 1) { go(1); }
-    else { onSubmit(); }
-  };
-
-  const update = (field) => (e) => {
+  const next = () => { if (!validate()) return; step < total - 1 ? go(1) : onSubmit(); };
+  const set = (f) => (e) => {
     onUserInput?.();
-    setFormData(p => ({ ...p, [field]: e.target.value, ...(field === 'timezone' ? { _tzTouched: true } : {}) }));
-    if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
-    if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
+    setFormData((p) => ({ ...p, [f]: e.target.value, ...(f === 'timezone' ? { _tzTouched: true } : {}) }));
+    if (localErr[f]) setLocalErr((p) => ({ ...p, [f]: '' }));
+    if (fieldErrors[f]) setFieldErrors((p) => ({ ...p, [f]: '' }));
   };
-
-  const handleTitleChange = (e) => {
-    onUserInput?.();
-    const title = e.target.value;
-    setFormData(prev => ({
-      ...prev, title,
-      subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title),
-    }));
-    if (localErr.title) setLocalErr(p => ({ ...p, title: '' }));
-  };
-
-  // Merge server-side errors into localErr
   const err = { ...localErr, ...fieldErrors };
+  const enter = (e) => e.key === 'Enter' && next();
 
-  const renderStatusCard = () => abuseStatus ? (
-    <div style={{ background:'rgba(99,102,241,0.10)', border:'1px solid rgba(129,140,248,0.35)', borderRadius:14, padding:'12px 14px', marginBottom:18, color:'#e0e7ff', fontSize:13, lineHeight:1.5 }}>
-      <strong style={{ display:'block', marginBottom:4 }}>{abuseStatus.title}</strong>
-      <span>{abuseStatus.message}</span>
-    </div>
-  ) : null;
-
-  // ── Step content factory ────────────────────────────────────────────────────
-  const renderStep = () => {
-    // Step 0: type picker
-    if (step === 0) {
-      const types = isVenue ? VENUE_TYPES : EVENT_TYPES;
-      const selected = isVenue ? venueType : eventType;
-      const setSelected = isVenue
-        ? (id) => { setVenueType(id); }
-        : (id) => { setEventType(id); };
-      return (
-        <div>
-          <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-            {isVenue ? 'What kind of venue?' : 'What are you planning?'}
-          </p>
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:28 }}>
-            This helps us personalise your setup. You can change anything later.
-          </p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:4 }}>
-            {types.map((t, i) => {
-              const active = selected === t.id;
-              return (
-                <button key={t.id} type="button"
-                  className={`wiz-type-card${active ? ' active' : ''}`}
-                  style={{
-                    background: active ? (isVenue ? 'rgba(249,115,22,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.03)',
-                    border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.07)'}`,
-                    borderRadius:12, padding:'14px 10px', textAlign:'center',
-                    boxShadow: active ? `0 0 20px ${accent}28` : 'none',
-                    animationDelay:`${i*0.04}s`,
-                  }}
-                  onClick={() => { setSelected(t.id); }}
-                >
-                  <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,0.55)', marginBottom:4, letterSpacing:'-0.01em' }}>{t.label}</div>
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.28)', lineHeight:1.3 }}>{t.hint}</div>
-                </button>
-              );
-            })}
-          </div>
-          {selected && (
-            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
-              <CheckCircle2 style={{ width:13, height:13 }} />
-              Selection confirmed. Continue when ready.
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    // Step 1: Name
-    if (step === 1) {
-      return (
-        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-          <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-              {isVenue ? 'What\'s your venue called?' : 'What\'s your event called?'}
-            </p>
-            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              {isVenue ? 'Your restaurant name (guests will see this).' : 'Give it a name your team will recognise.'}
-            </p>
-          </div>
-          <div>
-            <input
-              ref={firstInputRef}
-              type="text"
-              className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.title ? ' error' : ''}`}
-              placeholder={isVenue ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2025'}
-              value={formData.title}
-              onChange={handleTitleChange}
-              onKeyDown={e => e.key === 'Enter' && next()}
-              autoComplete="off"
-            />
-            {err.title && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.title}</p>}
-          </div>
-          {formData.title && (
-            <div style={{ background: err.subdomain ? 'rgba(248,113,113,0.06)' : 'rgba(255,255,255,0.03)', border: err.subdomain ? '1px solid rgba(248,113,113,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'10px 14px' }}>
-              <p style={{ fontSize:11, color: err.subdomain ? '#f87171' : 'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.12em' }}>Your URL</p>
-              <div style={{ display:'flex', alignItems:'center', gap:0 }}>
-                <span style={{ fontSize:13, color:'rgba(255,255,255,0.25)', fontFamily:'monospace' }}>/e/</span>
-                <input
-                  type="text"
-                  value={formData.subdomain}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-{2,}/g,'-');
-                    setFormData(p => ({ ...p, subdomain: cleaned, _subdomainTouched: true }));
-                    if (fieldErrors.subdomain) setFieldErrors(p => ({ ...p, subdomain: '' }));
-                  }}
-                  style={{ flex:1, background:'transparent', border:'none', outline:'none', color: err.subdomain ? '#fca5a5' : 'rgba(255,255,255,0.7)', fontFamily:'monospace', fontSize:13 }}
-                  spellCheck={false}
-                />
-              </div>
-              {err.subdomain && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.subdomain}</p>}
-            </div>
-          )}
-          {!isVenue && (
-            <div>
-              <textarea
-                className={`wiz-input${err.description ? ' error' : ''}`}
-                style={{ resize:'none', minHeight:80 }}
-                placeholder="A short description (optional)"
-                value={formData.description}
-                onChange={update('description')}
-                rows={3}
-              />
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Events Step 2: Date + location + enterprise
-    if (!isVenue && step === 2) {
-      return (
-        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-          <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-              When and where?
-            </p>
-            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              Set the date and location (guests see this on their invite).
-            </p>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Date & time *</label>
-              <input
-                ref={firstInputRef}
-                type="datetime-local"
-                className={`wiz-input${err.date ? ' error' : ''}`}
-                value={formData.date}
-                onChange={update('date')}
-                style={{ colorScheme:'dark' }}
-              />
-              {err.date && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.date}</p>}
-            </div>
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Timezone *</label>
-              <div style={{ position:'relative' }}>
-                <select className="wiz-select" value={formData.timezone} onChange={update('timezone')}>
-                  {getTimezoneOptions(formData.timezone).map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-                </select>
-                <ChevronRight style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%) rotate(90deg)', width:16, height:16, color:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
-              </div>
-            </div>
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Location</label>
-              <input
-                type="text"
-                className="wiz-input"
-                placeholder="Central Park, NYC"
-                value={formData.location}
-                onChange={update('location')}
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Events Step 3: Enterprise decision slide (not shown for RSVP-only events)
-    if (!isVenue && !isRsvp && step === 3) {
-      const isEnt = formData.isEnterpriseMode;
-      return (
-        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-          <p className="wiz-question" style={{ fontSize:'clamp(1.3rem,3.5vw,2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-            Choose your event mode.
-          </p>
-          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-            This setting <span style={{ color:'rgba(239,68,68,0.85)', fontWeight:700 }}>cannot be changed</span> after your event is created. Choose carefully.
-          </p>
-
-          {/* Mode cards */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
-            {/* Standard */}
-            <button type="button"
-              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: false }))}
-              style={{
-                background: !isEnt ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
-                border: `1.5px solid ${!isEnt ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
-                transition:'all 0.2s ease',
-                boxShadow: !isEnt ? '0 0 24px rgba(255,255,255,0.06)' : 'none',
-              }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Calendar style={{ width:14, height:14, color:'rgba(255,255,255,0.6)' }} />
-                </div>
-                <span style={{ fontSize:13, fontWeight:700, color: !isEnt ? '#fff' : 'rgba(255,255,255,0.4)' }}>Standard</span>
-                {!isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(255,255,255,0.1)', borderRadius:6, padding:'2px 6px', color:'rgba(255,255,255,0.5)', fontWeight:600 }}>Selected</span>}
-              </div>
-              <ul style={{ fontSize:12, color:'rgba(255,255,255,0.35)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
-                {['Open RSVP link', 'Team chat & tasks', 'Polls & budget', 'Unlimited members'].map(f => (
-                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                    <span style={{ color:'rgba(255,255,255,0.2)', fontSize:10 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-            </button>
-
-            {/* Enterprise */}
-            <button type="button"
-              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: true }))}
-              style={{
-                background: isEnt ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.03)',
-                border: `1.5px solid ${isEnt ? 'rgba(99,102,241,0.55)' : 'rgba(99,102,241,0.15)'}`,
-                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
-                transition:'all 0.2s ease',
-                boxShadow: isEnt ? '0 0 28px rgba(99,102,241,0.15)' : 'none',
-              }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Zap style={{ width:14, height:14, color:'#818cf8' }} />
-                </div>
-                <span style={{ fontSize:13, fontWeight:700, color: isEnt ? '#a5b4fc' : 'rgba(99,102,241,0.5)' }}>Enterprise</span>
-                {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(99,102,241,0.2)', borderRadius:6, padding:'2px 6px', color:'#a5b4fc', fontWeight:600 }}>Selected</span>}
-              </div>
-              <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(99,102,241,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
-                {['Personalized QR invites', 'Check-in dashboard', 'Everything in Standard', 'Table assignments + groups'].map(f => (
-                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                    <span style={{ color: isEnt ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.25)', fontSize:10 }}>✦</span>{f}
-                  </li>
-                ))}
-              </ul>
-            </button>
-          </div>
-
-          {/* When to use Enterprise, description block */}
-          <div style={{
-            background:'rgba(99,102,241,0.05)', border:'1px solid rgba(99,102,241,0.12)',
-            borderRadius:14, padding:'14px 16px',
-          }}>
-            <p style={{ fontSize:12, fontWeight:700, color:'rgba(99,102,241,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
-            <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.65, margin:0 }}>
-              Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite: galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
-            </p>
-          </div>
-
-          {/* Immutable warning */}
-          <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:14, padding:'10px 14px', background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.18)', borderRadius:10 }}>
-            <AlertCircle style={{ width:14, height:14, color:'#f87171', flexShrink:0, marginTop:1 }} />
-            <p style={{ fontSize:12, color:'rgba(239,68,68,0.75)', lineHeight:1.5, margin:0 }}>
-              <strong>This cannot be changed later.</strong> Once your event is created, switching between Standard and Enterprise modes is not possible.
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // Name step (events: 4, rsvp: 3, venue: 2)
-    const nameStep = isVenue ? 2 : (isRsvp ? 3 : 4);
-    if (step === nameStep) {
-      return (
-        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-          <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-              {isVenue ? 'Who manages this venue?' : 'Who\'s organizing this?'}
-            </p>
-            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              {isVenue ? 'We\'ll send important updates here and you\'ll use this to log back in.' : 'This is your organizer account. Keep these details safe.'}
-            </p>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager name' : 'Your name'} *</label>
-              <input
-                ref={firstInputRef}
-                type="text"
-                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerName ? ' error' : ''}`}
-                placeholder={isVenue ? 'Head Manager' : 'Alex Smith'}
-                value={formData.organizerName}
-                onChange={update('organizerName')}
-                onKeyDown={e => e.key === 'Enter' && next()}
-              />
-              {err.organizerName && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerName}</p>}
-            </div>
-            <div style={{ gridColumn:'1/-1' }}>
-              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager email' : 'Your email'} *</label>
-              <input
-                type="email"
-                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerEmail ? ' error' : ''}`}
-                placeholder={isVenue ? 'manager@restaurant.com' : 'alex@company.com'}
-                value={formData.organizerEmail}
-                onChange={update('organizerEmail')}
-                onKeyDown={e => e.key === 'Enter' && next()}
-              />
-              {err.organizerEmail && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerEmail}</p>}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Password step (events: 5, rsvp: 4, venue: 3)
-    const pwStep = isVenue ? 3 : (isRsvp ? 4 : 5);
-    if (step === pwStep) {
-      const secondPwLabel = isVenue ? 'Staff password' : 'Event password';
-      const secondPwHint  = isVenue
-        ? 'PIN your floor staff enter to log in (optional)'
-        : isRsvp
-          ? "Restrict who can access your event space (optional). Your RSVP page itself stays open to anyone with the link, unless you password-protect it separately in RSVP Settings."
-          : 'Restrict who can join your event (optional)';
-      return (
-        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-          <div>
-            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
-              {isVenue ? 'Secure your venue.' : 'Secure your event.'}
-            </p>
-            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              {isVenue
-                ? 'Set a password to manage the venue. Share a staff PIN with your team.'
-                : 'Your account password gets you back in from any device.'}
-            </p>
-          </div>
-          <div>
-            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
-              <Lock style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
-              {isVenue ? 'Organizer password' : 'Account password'} *
-            </label>
-            <div style={{ position:'relative' }}>
-              <input
-                ref={firstInputRef}
-                type={showPw ? 'text' : 'password'}
-                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.accountPassword ? ' error' : ''}`}
-                style={{ paddingRight:48 }}
-                placeholder="Minimum 4 characters"
-                value={formData.accountPassword}
-                onChange={update('accountPassword')}
-                minLength={4}
-                onKeyDown={e => e.key === 'Enter' && next()}
-              />
-              <button type="button" onClick={() => setShowPw(p => !p)}
-                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
-                {showPw ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
-              </button>
-            </div>
-            {err.accountPassword && <p style={{ fontSize:12, color:'#f87171', marginTop:5, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.accountPassword}</p>}
-          </div>
-          <div>
-            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
-              <Shield style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
-              {secondPwLabel} <span style={{ color:'rgba(255,255,255,0.2)', textTransform:'none', letterSpacing:'normal', fontSize:11 }}>(optional)</span>
-            </label>
-            <div style={{ position:'relative' }}>
-              <input
-                type={showPw2 ? 'text' : 'password'}
-                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}`}
-                style={{ paddingRight:48 }}
-                placeholder={isVenue ? 'Staff PIN or password' : 'Leave empty for open access'}
-                value={isVenue ? formData.staffPassword : formData.password}
-                onChange={update(isVenue ? 'staffPassword' : 'password')}
-              />
-              <button type="button" onClick={() => setShowPw2(p => !p)}
-                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
-                {showPw2 ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
-              </button>
-            </div>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginTop:6 }}>{secondPwHint}</p>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:4, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.08)' }}>
-            {LEGAL_CHECKS.map(c => (
-              <div key={c.key}>
-                <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', fontSize:12.5, lineHeight:1.5, color:'rgba(255,255,255,0.55)' }}>
-                  <input
-                    type="checkbox"
-                    checked={!!formData[c.key]}
-                    onChange={(e) => {
-                      onUserInput?.();
-                      const checked = e.target.checked;
-                      setFormData(p => ({ ...p, [c.key]: checked }));
-                      if (checked) setLocalErr(prev => { const n = { ...prev }; delete n[c.key]; return n; });
-                    }}
-                    style={{ marginTop:3, width:16, height:16, flexShrink:0, accentColor: accent, cursor:'pointer' }}
-                  />
-                  <span>{c.label}</span>
-                </label>
-                {err[c.key] && <p style={{ fontSize:12, color:'#f87171', marginTop:4, marginLeft:26, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err[c.key]}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const isLastStep = step === totalSteps - 1;
-  const canSkipType = step === 0; // type picker: can proceed without selection
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-      {/* Progress bar */}
-      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:36 }}>
-        {Array.from({ length: totalSteps }).map((_, i) => (
-          <div key={i} className="wiz-pill" style={{
-            background: i < step ? accent : i === step ? accent : 'rgba(255,255,255,0.1)',
-            width: i === step ? 40 : 28,
-            opacity: i > step ? 0.4 : 1,
-          }} />
-        ))}
-        <span style={{ marginLeft:'auto', fontSize:12, color:'rgba(255,255,255,0.3)', whiteSpace:'nowrap' }}>
-          Step {step + 1} of {totalSteps}
-        </span>
+  const head = (t, p) => <><h3>{t}</h3><p>{p}</p></>;
+  const body = () => {
+    if (cur === 'type') return <>
+      {head(isVenue ? 'What kind of venue?' : 'What are you planning?', 'This helps us personalise your setup. You can change anything later.')}
+      <div className="opts">{(isVenue ? VENUE_TYPES : EVENT_TYPES).map(([id, l, h]) => (
+        <button key={id} type="button" className={`opt${type === id ? ' on' : ''}`} onClick={() => setType(id)}><b>{l}</b><span>{h}</span></button>))}</div>
+    </>;
+    if (cur === 'name') return <>
+      {head(isVenue ? 'What\u2019s your venue called?' : 'What\u2019s your event called?', isVenue ? 'Your restaurant name. Guests will see this.' : 'Give it a name your team will recognise.')}
+      <div className="fld">
+        <Field error={err.title}><input ref={firstRef} className={`inp${err.title ? ' bad' : ''}`} value={formData.title} autoComplete="off" onKeyDown={enter}
+          placeholder={isVenue ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2026'} aria-label="Title"
+          onChange={(e) => { onUserInput?.(); const title = e.target.value; setFormData((p) => ({ ...p, title, subdomain: p._subdomainTouched ? p.subdomain : makeSubdomain(title) })); if (localErr.title) setLocalErr((p) => ({ ...p, title: '' })); }} /></Field>
+        {formData.title && <Field label="Your URL" error={err.subdomain}><div className="slug">/e/<input value={formData.subdomain} spellCheck={false} aria-label="URL slug"
+          onChange={(e) => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-'); setFormData((p) => ({ ...p, subdomain: v, _subdomainTouched: true })); if (fieldErrors.subdomain) setFieldErrors((p) => ({ ...p, subdomain: '' })); }} /></div></Field>}
+        {!isVenue && <textarea className="inp" rows={3} style={{ resize: 'none' }} placeholder="A short description (optional)" aria-label="Description" value={formData.description} onChange={set('description')} />}
+      </div></>;
+    if (cur === 'when') return <>
+      {head('When and where?', 'Set the date and location. Guests see this on their invite.')}
+      <div className="fld">
+        <Field label="Date & time *" error={err.date}><input ref={firstRef} type="datetime-local" className={`inp${err.date ? ' bad' : ''}`} value={formData.date} onChange={set('date')} /></Field>
+        <Field label="Timezone *" error={err.timezone}><select className="inp" value={formData.timezone} onChange={set('timezone')}>{getTimezoneOptions(formData.timezone).map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}</select></Field>
+        <Field label="Location"><input className="inp" placeholder="Central Park, NYC" value={formData.location} onChange={set('location')} /></Field>
+      </div></>;
+    if (cur === 'kind') return <>
+      {head('Choose your event mode.', <>This <b style={{ color: 'var(--er)' }}>cannot be changed</b> after your event is created.</>)}
+      <div className="opts">
+        {[[false, 'Standard', ['Open RSVP link', 'Team chat & tasks', 'Polls & budget', 'Unlimited members']], [true, 'Enterprise', ['Personalized QR invites', 'Check-in dashboard', 'Everything in Standard', 'Table assignments + groups']]].map(([v, l, items]) => (
+          <button key={l} type="button" className={`opt${formData.isEnterpriseMode === v ? ' on' : ''}`} onClick={() => setFormData((p) => ({ ...p, isEnterpriseMode: v }))}>
+            <b>{l}</b><ul>{items.map((i) => <li key={i}>{i}</li>)}</ul></button>))}
       </div>
-
-      {/* Draft recovery banner */}
-      {draftBannerVisible && pendingDraft && (
-        <div style={{
-          background: 'rgba(99,102,241,0.08)',
-          border: '1px solid rgba(99,102,241,0.2)',
-          borderRadius: 12,
-          padding: '14px 16px',
-          marginBottom: 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#a5b4fc', margin: 0 }}>
-              You were in the middle of creating an event.
-            </p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
-              Want to continue where you left off?
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFormData(pendingDraft.formData);
-              setStep(pendingDraft.step);
-              setStepKey(k => k + 1);
-              setPendingDraft(null);
-              setDraftBannerVisible(false);
-            }}
-            style={{
-              background: '#6366f1', color: '#fff', border: 'none',
-              borderRadius: 8, padding: '8px 16px',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            Continue
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.removeItem('planit_event_draft');
-              setPendingDraft(null);
-              setDraftBannerVisible(false);
-            }}
-            style={{
-              background: 'transparent', color: 'rgba(255,255,255,0.4)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '8px 16px',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            Start Fresh
-          </button>
-        </div>
-      )}
-
-      {/* Animated step content */}
-      <div key={stepKey} className={dir === 'forward' ? 'wiz-forward' : 'wiz-back'}
-        onPaste={onUserPaste}
-        style={{ minHeight:260 }}>
-        {renderStatusCard()}
-            {renderStep()}
-            {requiresVerification && (
-              <div style={{ marginTop:18, display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-                <p style={{ color:'rgba(255,255,255,0.65)', fontSize:13, textAlign:'center' }}>Please complete the verification step to continue.</p>
-                <TurnstileWidget onToken={onCaptchaToken} resetKey={captchaResetKey} theme="dark" />
-              </div>
-            )}
-      </div>
-
-      {/* Nav */}
-      <div style={{ display:'flex', gap:10, marginTop:36 }}>
-        {step > 0 && (
-          <button className="wiz-btn-back" type="button" onClick={() => go(-1)}>
-            <ArrowRight style={{ width:14, height:14, transform:'rotate(180deg)' }} /> Back
-          </button>
-        )}
-        <button
-          className={`wiz-btn-next${isVenue ? ' venue' : ''}`}
-          type="button"
-          onClick={next}
-          disabled={loading}
-          style={{ flex:1, justifyContent:'center' }}
-        >
-          {loading ? (
-            <><div style={{ width:16, height:16, border:`2px solid ${isVenue ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}`, borderTop:`2px solid ${isVenue ? '#fff' : '#111'}`, borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Creating…</>
-          ) : isLastStep ? (
-            <>{isVenue ? 'Launch venue' : 'Create event'} <ArrowRight style={{ width:16, height:16 }} /></>
-          ) : (
-            <>Continue <ArrowRight style={{ width:16, height:16 }} /></>
-          )}
-        </button>
-      </div>
-
-      {/* Keyboard hint */}
-      <p style={{ fontSize:11, color:'rgba(255,255,255,0.18)', textAlign:'center', marginTop:12 }}>
-        Press Enter to continue · Esc to go back
-      </p>
-    </div>
-  );
-}
-
-function HeroProductPreview() {
-  const [tab, setTab] = useState('overview');
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Layers },
-    { id: 'guests', label: 'Guests', icon: Users },
-    { id: 'insights', label: 'Insights', icon: BarChart3 },
-  ];
-
-  const overview = (
-    <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
-      <div className="hero-preview-heading"><div><p>Tuesday, September 17</p><h3>Spring Product Forum</h3></div><button>View agenda</button></div>
-      <div className="hero-preview-summary">
-        <div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Today&apos;s plan</strong><span>3 items</span></div><div className="hero-preview-schedule"><span className="hero-preview-time">09:30</span><div className="hero-preview-event"><strong>Speaker arrivals</strong><span>Green room · 8 guests</span></div></div><div className="hero-preview-schedule"><span className="hero-preview-time">10:00</span><div className="hero-preview-event teal"><strong>Keynote begins</strong><span>Main stage · 420 seats</span></div></div></div>
-        <div className="hero-preview-card"><div className="hero-preview-card-label"><span>Expected guests</span><TrendingUp /></div><div className="hero-preview-number">428</div><div className="hero-preview-positive"><TrendingUp /> 14% ahead of plan</div></div>
-      </div>
-      <div className="hero-preview-bottom"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Team checklist</strong><span>3 of 4</span></div><div className="hero-preview-check"><i><Check /></i>Confirm signage</div><div className="hero-preview-check"><i><Check /></i>Send guest reminder</div><div className="hero-preview-check"><i />Review catering count</div></div><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>RSVP trend</strong><span>Live</span></div><div className="hero-preview-bars"><span /><span /><span /><span /><span /><span /></div></div></div>
-    </motion.div>
-  );
-
-  const guests = (
-    <motion.div key="guests" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
-      <div className="hero-preview-heading"><div><p>Spring Product Forum</p><h3>Guest list</h3></div><button>Export list</button></div>
-      <div className="hero-preview-guest-grid"><div className="hero-preview-card hero-preview-guest-card"><span>Confirmed</span><strong>428</strong><em>+14% this week</em></div><div className="hero-preview-card hero-preview-guest-card"><span>Pending</span><strong>36</strong><em>8 need a nudge</em></div><div className="hero-preview-card hero-preview-guest-card"><span>Checked in</span><strong>0</strong><em>Event day view</em></div></div>
-      <div className="hero-preview-guest-list"><div className="hero-preview-guest-row" style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8, textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 800 }}><span>Guest</span><span>Source</span><span>Status</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i>AM</i>Alex Morgan</span><span>Team</span><span className="hero-preview-status">Confirmed</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i className="green">JC</i>Jamie Chen</span><span>Invite</span><span className="hero-preview-status">Confirmed</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i className="orange">KT</i>Kai Taylor</span><span>Invite</span><span className="hero-preview-status pending">Pending</span></div></div>
-    </motion.div>
-  );
-
-  const insights = (
-    <motion.div key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
-      <div className="hero-preview-heading"><div><p>Spring Product Forum</p><h3>Live insights</h3></div><button>Last 30 days</button></div>
-      <div className="hero-preview-insights"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Response momentum</strong><span>Aug 18 to Sep 17</span></div><div className="hero-preview-chart"><svg viewBox="0 0 500 140" preserveAspectRatio="none" aria-hidden="true"><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24" fill="none" stroke="#817aff" strokeWidth="4" strokeLinecap="round" /><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24 L500 140 L0 140Z" fill="url(#heroChartFade)" opacity=".25" /><defs><linearGradient id="heroChartFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#817aff" /><stop offset="1" stopColor="#817aff" stopOpacity="0" /></linearGradient></defs></svg></div></div><div className="hero-preview-card hero-preview-forecast"><div className="hero-preview-card-label"><strong>Attendance forecast</strong><TrendingUp /></div><strong>91%</strong><p>Based on responses, reminders, and guest history.</p></div></div>
-      <div className="hero-preview-note"><TrendingUp /> Response rate is up 14% since your last reminder.</div>
-    </motion.div>
-  );
-
-  const content = tab === 'guests' ? guests : tab === 'insights' ? insights : overview;
-  return (
-    <Reveal delay={180} className="w-full max-w-6xl mx-auto mt-16 sm:mt-24">
-      <div className="hero-preview-shell">
-        <div className="hero-preview-chrome"><div className="hero-preview-brand"><span className="hero-preview-brand-mark"><Calendar /></span>PlanIt workspace</div><div className="hero-preview-chrome-meta"><span className="hero-preview-live"><i /> Live</span><span>planit.app/workspace</span></div></div>
-        <div className="hero-preview-tabs" role="tablist" aria-label="Product preview views">{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`hero-preview-tab ${tab === id ? 'active' : ''}`} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}><Icon className="inline-block w-3 h-3 mr-1.5" />{label}</button>)}</div>
-        <div className="hero-preview-body">
-          <aside className="hero-preview-rail"><div className="hero-preview-rail-label">Workspace</div><div className={`hero-preview-rail-item ${tab === 'overview' ? 'active' : ''}`}><Layers />Overview</div><div className="hero-preview-rail-item"><MessageSquare />Updates</div><div className={`hero-preview-rail-item ${tab === 'guests' ? 'active' : ''}`}><Users />Guests</div><div className="hero-preview-rail-item"><FileText />Details</div><div className="hero-preview-rail-label mt-5">Operations</div><div className="hero-preview-rail-item"><QrCode />Check-in</div><div className={`hero-preview-rail-item ${tab === 'insights' ? 'active' : ''}`}><BarChart3 />Insights</div></aside>
-          <main className="hero-preview-main"><AnimatePresence mode="wait" initial={false}>{content}</AnimatePresence></main>
-        </div>
-      </div>
-    </Reveal>
-  );
-}
-
-let homePreloadShown = false;
-
-export default function Home() {
-  const { wl, isWL } = useWhiteLabel();
-  const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
-  const wlLogo    = isWL ? (wl?.branding?.logoUrl    || '') : '';
-  const wlPrimary = isWL ? (wl?.branding?.primaryColor || '') : '';
-  // Pages content from WL portal
-  const wlPages   = isWL ? (wl?.pages  || {}) : {};
-  const wlFeatures= isWL ? (wl?.features || {}) : {};
-  // Home page overrides
-  const heroHeadline    = wlPages?.home?.headline    || '';
-  const heroSubheadline = wlPages?.home?.subheadline || '';
-  const heroCta         = wlPages?.home?.ctaText     || '';
-  const heroImage       = wlPages?.home?.heroImageUrl|| '';
-  const navigate = useNavigate();
-  // Opening cinematic, plays once per browser session, skipped entirely on
-  // white-label domains (they get their own branded hero, not PlanIt's).
-  // The opening cinematic is retired: the PlanIt loading screen below is the only
-  // loader. To bring the cinematic back, restore the old initial value:
-  //   !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
-  const [showIntro, setShowIntro] = useState(false);
-  // Loading screen (counter + curtain). Plays once per full page load, never on
-  // white-label domains. The intro cinematic mounts underneath it so the curtain
-  // opens onto the page.
-  const siteReady = useSiteReady();
-  const [preloading, setPreloading] = useState(() => !isWL && !homePreloadShown);
-  const [introGate, setIntroGate] = useState(() => !(!isWL && !homePreloadShown));
-  const revealFromPreloader = useCallback(() => setIntroGate(true), []);
-  const finishPreloader = useCallback(() => { homePreloadShown = true; setPreloading(false); }, []);
-  // Scroll lock: held while the loader or the intro is up, always released after.
-  const scrollLocked = preloading || (showIntro && introGate);
-  useEffect(() => {
-    if (!scrollLocked) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [scrollLocked]);
-
-  // Blur-rise entrance used across the hero. It waits for the loader's iris to
-  // start opening (introGate), so the hero plays as the page is revealed
-  // instead of finishing unseen behind the loader.
-  const blurHidden = { opacity: 0, y: 22 }; // transform + opacity only: blur filters stutter on phones
-  const blurShown  = { opacity: 1, y: 0 };
-  const enter = (delay) => ({
-    initial: blurHidden,
-    animate: introGate ? blurShown : blurHidden,
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: delay * 0.5 },
-  });
-
-  const dismissIntro = () => {
-    sessionStorage.setItem('planit_intro_played', '1');
-    setShowIntro(false);
-  };
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [navScrolled, setNavScrolled] = useState(false);
-  // Nav starts transparent over the hero, then picks up a blurred surface once scrolled
-  useEffect(() => {
-    const onScroll = () => setNavScrolled(window.scrollY > 48);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  const [mode, setMode] = useState('standard');
-  const [formData, setFormData] = useState({
-    subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
-    organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
-    isEnterpriseMode: false, maxParticipants: 10000,
-    agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false,
-  });
-  // Default the timezone from the visitor's location (IP geo headers via the
-  // backend, else browser tz). Never overrides a zone the user already picked.
-  useEffect(() => {
-    let cancelled = false;
-    detectTimezone(() => eventAPI.detectTimezone()).then((tz) => {
-      if (cancelled || !tz) return;
-      setFormData(f => (f._tzTouched || f.timezone !== getUserTimezone()) ? f : { ...f, timezone: tz });
-    });
-    return () => { cancelled = true; };
-  }, []);
-  const [loading, setLoading] = useState(false);
-  const [created, setCreated] = useState(null);
-  const [showAd, setShowAd] = useState(false);
-  const [organizerRecoveryCode, setOrganizerRecoveryCode] = useState(null); // shown once after event creation
-  const [showPassword, setShowPassword] = useState(false);
-  const [showAccountPassword, setShowAccountPassword] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue' | 'rsvp'
-  const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
-  const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
-  const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
-  const wizardStepRef = useRef(null);       // populated by OnboardingWizard with { goTo(n), getStep() }
-  const [abuseStatus, setAbuseStatus] = useState(null);
-  const [requiresVerification, setRequiresVerification] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [captchaResetKey, setCaptchaResetKey] = useState(0);
-  const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
-  // On white-label domains, skip the branch selector and go straight to event creation
-  useEffect(() => { if (isWL) { setSelectedBranch('events'); setShowIntro(false); } }, [isWL]);
-  // The branded WL landing page links here so clients can launch the same
-  // protected, full-feature wizard used on the standard PlanIt homepage.
-  useEffect(() => {
-    if (isWL && new URLSearchParams(window.location.search).get('new') === '1') {
-      setSelectedBranch('events');
-      setWizardOpen(true);
-    }
-  }, [isWL]);
-
-  // Close wizard on Escape key
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') setWizardOpen(false); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  const selectBranch = (branch) => {
-    setSelectedBranch(branch);
-    setMode(branch === 'venue' ? 'table-service' : branch === 'rsvp' ? 'rsvp' : 'standard');
-    setWizardKey(k => k + 1); // reset wizard to step 0
-    setTimeout(() => {
-      document.getElementById(branch === 'venue' ? 'planit-venue' : branch === 'rsvp' ? 'planit-rsvp' : 'planit-events')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
-  };
-
-  const handleTitleChange = (e) => {
-    const title = e.target.value;
-    setFormData(prev => ({ ...prev, title, subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title) }));
-  };
-  const update = (field) => (e) => {
-    if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now();
-    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}), ...(field === 'timezone' ? { _tzTouched: true } : {}) }));
-  };
-
-  // Sanitise a string: trim whitespace, collapse internal whitespace
-  const sanitize = (str) => (str || '').trim().replace(/\s+/g, ' ');
-
-  const handleSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-
-    //  Client-side field validation 
-    const errs = {};
-    const isTS = mode === 'table-service';
-    if (!formData.title.trim())            errs.title          = isTS ? 'Restaurant name is required.' : 'Event title is required.';
-    if (!isTS && !formData.date)           errs.date           = 'Date and time is required.';
-    if (!isTS && !formData.timezone)       errs.timezone       = 'Timezone is required.';
-    if (!formData.organizerName.trim())    errs.organizerName  = isTS ? 'Manager name is required.' : 'Your name is required.';
-    if (!formData.organizerEmail.trim())   errs.organizerEmail = isTS ? 'Manager email is required.' : 'Your email is required.';
-    else if (!validateEmail(formData.organizerEmail.trim()))
-                                           errs.organizerEmail = 'Please enter a valid email address.';
-    if (!formData.accountPassword)         errs.accountPassword = 'Account password is required.';
-    else if (formData.accountPassword.length < 4)
-                                           errs.accountPassword = 'Password must be at least 4 characters.';
-    if (isTS && formData.staffPassword && formData.staffPassword.length < 4)
-                                           errs.staffPassword  = 'Staff PIN must be at least 4 characters.';
-    for (const c of LEGAL_CHECKS) if (!formData[c.key]) errs[c.key] = c.error;
-
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      // Scroll to first error
-      const firstField = document.querySelector('.field-error');
-      if (firstField) firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    setFieldErrors({});
-    setLoading(true);
-
-    const dateValue = (!isTS && formData.date) ? localDateTimeToUTC(formData.date, formData.timezone) : undefined;
-    const payload = {
-      title:          sanitize(formData.title),
-      description:    sanitize(formData.description),
-      ...(dateValue ? { date: dateValue, timezone: formData.timezone } : {}),
-      location:       sanitize(formData.location),
-      organizerName:  sanitize(formData.organizerName),
-      organizerEmail: sanitize(formData.organizerEmail),
-      accountPassword:formData.accountPassword,
-      password:       formData.password || undefined,
-      staffPassword:  (isTS && formData.staffPassword) ? formData.staffPassword : undefined,
-      subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
-      isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode,
-      isTableServiceMode: isTS,
-      eventType:      mode === 'rsvp' ? 'rsvpOnly' : 'standard',
-      maxParticipants: formData.maxParticipants,
-      agreedToTerms:  true,
-      legalVersion:   LEGAL_VERSION,
-      ...(turnstileToken ? { turnstileToken } : {}),
-      behavior: { ...eventFormTimingRef.current, submittedAt: Date.now(), formStartedAt: eventFormTimingRef.current.formStartedAt || eventFormTimingRef.current.pageLoadedAt },
-      browserMeta: {
-        webdriver: navigator.webdriver === true,
-        language: navigator.language || '',
-        platform: navigator.platform || '',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-        hardwareConcurrency: navigator.hardwareConcurrency || 0,
-        deviceMemory: navigator.deviceMemory || 0,
-        plugins: navigator.plugins ? Array.from(navigator.plugins).slice(0, 5).map(p => p.name) : [],
-        userAgent: navigator.userAgent || '',
-      },
-    };
-    try {
-      const response = await eventAPI.create(payload);
-      localStorage.setItem('eventToken', response.data.token);
-      localStorage.setItem('username', sanitize(formData.organizerName));
-      setCreated(response.data.event);
-      if (response.data.recoveryCode) {
-        setOrganizerRecoveryCode(response.data.recoveryCode);
-      }
-      // Draft cleanup and completion tracking
-      wizardSubmittedRef.current = true;
-      localStorage.removeItem('planit_event_draft');
-      trackFeature('event_creation_complete');
-      trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
-      setRequiresVerification(false);
-      setAbuseStatus(null);
-      // Cross-promo ad disabled, don't show it after event creation.
-      // setShowAd(true);
-      return true;
-    } catch (error) {
-      const data = error.response?.data;
-
-      // Friendly labels for server field paths
-      const FIELD_LABELS = {
-        date:            'Date and time',
-        timezone:        'Timezone',
-        title:           mode === 'table-service' ? 'Restaurant name' : 'Event title',
-        organizerName:   mode === 'table-service' ? 'Manager name' : 'Your name',
-        organizerEmail:  mode === 'table-service' ? 'Manager email' : 'Your email',
-        accountPassword: 'Account password',
-        password:        mode === 'table-service' ? 'Staff PIN' : 'Event password',
-        subdomain:       mode === 'table-service' ? 'Restaurant URL' : 'Event URL',
-        agreedToTerms:   'Terms agreement',
-      };
-
-      if (data?.requiresVerification || data?.code === 'VERIFICATION_REQUIRED' || data?.code === 'INVALID_VERIFICATION') {
-        setRequiresVerification(true);
-        setCaptchaResetKey(k => k + 1);
-        setTurnstileToken('');
-        setAbuseStatus({ title: data?.code === 'INVALID_VERIFICATION' ? 'Invalid Verification' : 'Verification Required', message: data?.userMessage || 'Please complete the verification step to continue.' });
-        return;
-      }
-      if (['TRY_AGAIN_LATER', 'ADDITIONAL_REVIEW_REQUIRED', 'SUBMISSION_RECEIVED'].includes(data?.code)) {
-        setAbuseStatus({ title: 'Please Try Again', message: data?.userMessage || 'We couldn’t complete your request right now. Please try again shortly.' });
-        return;
-      }
-
-      if (data?.errors && Array.isArray(data.errors)) {
-        const serverErrs = {};
-        const toastMsgs = [];
-        data.errors.forEach(e => {
-          const path = e.path || e.param || '';
-          const label = FIELD_LABELS[path] || path;
-          const msg = e.msg || e.message || 'Invalid value';
-          // Skip date errors entirely for table-service (shouldn't reach here but safety net)
-          if (path === 'date' && mode === 'table-service') return;
-          serverErrs[path] = `${label}: ${msg}`;
-          toastMsgs.push(`${label}: ${msg}`);
-        });
-        setFieldErrors(serverErrs);
-        if (toastMsgs.length === 1) {
-          toast.error(toastMsgs[0]);
-        } else if (toastMsgs.length > 1) {
-          toast.error(`${toastMsgs.length} fields need attention:\n${toastMsgs.map(m => `• ${m}`).join('\n')}`, { duration: 6000 });
-        }
-      } else {
-        const msg = data?.error || 'Failed to create';
-        const isTS2 = mode === 'table-service';
-        const isRsvp2 = mode === 'rsvp';
-        const nameStepNum = isTS2 ? 2 : (isRsvp2 ? 3 : 4);
-
-        if (msg.includes('already taken')) {
-          // Taken slug, show inline error and navigate back to the URL step
-          setFieldErrors({ subdomain: 'This URL is already taken. Please choose a different one.' });
-          wizardStepRef.current?.goTo(1);
-        } else if (msg.includes('not available')) {
-          // Banned slug, show inline error and navigate back to the URL step
-          setFieldErrors({ subdomain: 'This URL is not available. Please choose a different one.' });
-          wizardStepRef.current?.goTo(1);
-        } else if (msg.includes('not allowed') || msg.toLowerCase().includes('display name')) {
-          // Banned organizer/display name, navigate back to the name step
-          setFieldErrors({ organizerName: 'This display name is not allowed. Please choose a different one.' });
-          wizardStepRef.current?.goTo(nameStepNum);
-        } else if (msg.includes('email')) {
-          setFieldErrors({ organizerEmail: 'Please enter a valid email address.' });
-          wizardStepRef.current?.goTo(nameStepNum);
-        } else if (msg.includes('password')) {
-          setFieldErrors({ accountPassword: 'Password must be at least 6 characters.' });
-        } else {
-          toast.error(msg || 'Something went wrong. Please check your details and try again.');
-        }
-      }
-      return false;
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className={`min-h-screen text-white relative${isWL ? '' : ' lq-page'}`} style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
-      <InjectGlobalCSS />
-      <PerfGovernor />
-      <SmoothScroll enabled={!scrollLocked} />
-      <AnimatePresence>
-        {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
-      </AnimatePresence>
-      {preloading && <HomePreloader ready={siteReady} onReveal={revealFromPreloader} onDone={finishPreloader} />}
-      {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
-      {/* Recovery code modal, shown once when organizer sets an account password at creation */}
-      {organizerRecoveryCode && (
-        <RecoveryCodeModal
-          code={organizerRecoveryCode}
-          onDismiss={() => {
-            setOrganizerRecoveryCode(null);
-            // Navigate to the event after dismissing the modal
-            if (created) {
-              const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
-              // Don't auto-navigate, let them read the screen first
-            }
-          }}
-          eventSlug={created?.subdomain}
-        />
-      )}
-      {isWL && <ScrollProgressBar />}
-      {!isWL && <HomeScrollChrome rail={false} key={String(selectedBranch)} />}
-
-
-      {/* Nav: a floating liquid-glass pill */}
-      <header
-        className="fixed inset-x-0 z-50 flex items-center justify-between px-4 sm:px-8 lg:px-14"
-        style={{ top: 'calc(1rem + var(--safe-top, 0px))', paddingTop: 0 }}
-      >
-        <a
-          href="#hero-top"
-          aria-label={isWL ? (wlName || 'Home') : 'PlanIt home'}
-          className="group flex items-center gap-3 text-white"
-        >
-          <span className="lq-glass relative flex shrink-0 items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
-            {isWL && wlLogo
-              ? <img src={wlLogo} alt={wlName} className="h-6 w-6 object-contain" />
-              : selectedBranch === 'venue'
-                ? <UtensilsCrossed className="h-5 w-5 text-orange-300" />
-                : <span className="lq-display text-[26px] leading-none">{(isWL ? wlName : 'P').charAt(0) || 'P'}</span>}
-            {!isWL && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
-          </span>
-          <span className="lq-display hidden text-2xl leading-none sm:block">{isWL ? wlName : 'PlanIt'}</span>
-        </a>
-
-        <nav
-          aria-label="Primary"
-          className="lq-glass hidden items-center rounded-full px-1.5 py-1.5 md:flex"
-          style={navScrolled ? { background: 'rgba(8,8,16,0.55)' } : undefined}
-        >
-          {selectedBranch && (
-            <button
-              onClick={() => setSelectedBranch(null)}
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
-            >
-              <ChevronRight className="h-3 w-3 rotate-180" /> Change
-            </button>
-          )}
-          {!isWL && (
-            <a href="#planit-venue"
-              onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-              style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-orange-300/90 transition-colors hover:text-orange-200">
-              <UtensilsCrossed className="h-3.5 w-3.5" />
-              PlanIt Venue
-            </a>
-          )}
-          <a href="#planit-events"
-            onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-            style={{ display: selectedBranch === 'venue' ? 'inline-flex' : 'none' }}
-            className="items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
-            <Calendar className="h-3.5 w-3.5" />
-            PlanIt Events
-          </a>
-          <a href="/discover" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Discover</a>
-          <a href="/blog" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Blog</a>
-          <a href="/status" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Status
-          </a>
-          <a href="/help" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Help</a>
-          <a href="/about" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">About</a>
-          <a href="#planit-events"
-            onClick={(e) => { e.preventDefault(); selectBranch(selectedBranch || 'events'); }}
-            className="ml-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90">
-            Start free
-            <ArrowUpRight className="h-4 w-4" />
-          </a>
-        </nav>
-
-        {/* Hamburger (mobile) / spacer that keeps the pill centred (desktop) */}
-        <button
-          className="lq-glass flex items-center justify-center rounded-full text-white md:hidden"
-          style={{ width: 48, height: 48 }}
-          onClick={() => setMobileMenuOpen(o => !o)}
-          aria-label="Toggle menu"
-          aria-expanded={mobileMenuOpen}
-        >
-          {mobileMenuOpen ? (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          ) : (
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-          )}
-        </button>
-        <div aria-hidden="true" className="hidden shrink-0 md:block" style={{ width: 48, height: 48 }} />
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="lq-glass-strong absolute left-4 right-4 top-full mt-3 space-y-1 rounded-3xl p-3 md:hidden" style={{ background: 'rgba(8,8,16,0.78)' }}>
-            {!isWL && (
-              <a href="#planit-venue" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch('venue'); }} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-orange-300 transition-all hover:bg-white/5">
-                <UtensilsCrossed className="h-4 w-4" />PlanIt Venue
-              </a>
-            )}
-            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <Zap className="h-4 w-4 text-white/50" />Discover
-            </a>
-            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <span className="ml-0.5 mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />Status
-            </a>
-            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
-            </a>
-            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
-              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog
-            </a>
-            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/70 transition-all hover:bg-white/5">
-              About
-            </a>
-            <a href="#planit-events" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch(selectedBranch || 'events'); }} className="mt-1 flex items-center justify-center gap-1.5 rounded-full bg-white px-4 py-3 text-sm font-medium text-black">
-              Start free <ArrowUpRight className="h-4 w-4" />
-            </a>
-            <div className="mt-1 flex gap-2 border-t border-white/10 pt-1">
-              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Terms</a>
-              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Privacy</a>
-            </div>
-          </div>
-        )}
-      </header>
-
-      <main className="relative" style={{ zIndex: 2, overflowX: 'clip', maxWidth: '100vw' }}>
-        {/* HERO: cinematic skyline, clear message, and a responsive product preview */}
-        <section id="hero-top" className="relative flex min-h-[100svh] items-center bg-[#05050f]" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {(isWL && heroImage)
-            ? <div aria-hidden="true" className="absolute inset-0" style={{ backgroundImage: `linear-gradient(180deg, rgba(5,5,15,.25), rgba(5,5,15,.85)), url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.72 }} />
-            : isWL ? <CinematicGrid /> : (
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{
-                zIndex: 0,
-                backgroundImage: 'linear-gradient(180deg, rgba(5,5,15,.18) 0%, rgba(5,5,15,.25) 34%, rgba(5,5,15,.62) 68%, #05050f 100%), linear-gradient(90deg, rgba(5,5,15,.34) 0%, rgba(5,5,15,.02) 48%, rgba(5,5,15,.3) 100%), url("/media/planit-skyline.webp")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center 68%',
-                transform: 'scale(1.015)',
-              }} />
-            )}
-          {!isWL && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] opacity-30" style={{
-            backgroundImage: 'linear-gradient(rgba(199,210,254,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.04) 1px, transparent 1px)',
-            backgroundSize: '80px 80px',
-            maskImage: 'radial-gradient(ellipse at 50% 32%, black, transparent 78%)',
-            WebkitMaskImage: 'radial-gradient(ellipse at 50% 32%, black, transparent 78%)',
-          }} />}
-          <div className="w-full relative" style={{ zIndex: 2 }}>
-            <div className="max-w-[110rem] mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
-
-              {/* Badge */}
-              <motion.div {...enter(0.4)} className="mb-8 sm:mb-10">
-                <a href="/help#claude" className="lq-glass inline-flex max-w-full items-center gap-2 rounded-full p-1 text-left">
-                  <span className="shrink-0 rounded-full border border-indigo-200/20 bg-indigo-300/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-100">{isWL ? 'WELCOME' : 'ONE WORKSPACE'}</span>
-                  <span className="min-w-0 break-words pr-3 text-sm font-light text-white/90">{isWL ? (wlName || 'Your event platform') : 'Plan it together. Run it seamlessly.'}</span>
-                </a>
-              </motion.div>
-
-              {/* Main headline, word-by-word blur-in */}
-              {(isWL && heroHeadline)
-                ? (
-                  <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.9, delay:0.25 }}
-                    className="font-syne font-black leading-[0.92] tracking-tight mb-8 text-white"
-                    style={{ fontSize:'clamp(2.5rem,8.5vw,7rem)' }}>
-                    {heroHeadline}
-                  </motion.h1>
-                ) : (
-                  <div className="mb-6 sm:mb-8"><HeroHeadline start={introGate} /></div>
-                )
-              }
-
-              {/* Sub-headline */}
-              <motion.p {...enter(0.9)}
-                className="text-base sm:text-lg md:text-xl text-white/80 max-w-sm sm:max-w-2xl mx-auto leading-snug font-light mb-10 sm:mb-12"
-              >
-                {isWL
-                  ? (heroSubheadline || wlName || 'Your event platform')
-                  : <>The complete workspace for events &amp; hospitality:{' '}
-                      <span className="text-white font-normal">team chat, tasks, RSVP, check-in</span>
-                      {' '}and a live floor manager for restaurants.</>
-                }
-              </motion.p>
-
-              {/* CTA buttons */}
-              <motion.div {...enter(1.1)}
-                className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-12">
-                <MagneticLink href="#planit-events"
-                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  strength={10}
-                  className="cta-primary group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 bg-white text-neutral-900 text-sm font-semibold rounded-full shadow-2xl">
-                  <Calendar className="w-4 h-4" />
-                  {(isWL && heroCta) ? heroCta : 'Start with Events'}
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#create"
-                  onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <Zap className="w-4 h-4 text-indigo-300" />
-                  Enterprise
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#planit-venue"
-                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <UtensilsCrossed className="w-4 h-4 text-orange-300" />
-                  Explore Venue
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-                <MagneticLink href="#planit-rsvp"
-                  onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                  strength={10}
-                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
-                  <CheckSquare className="w-4 h-4 text-emerald-300" />
-                  Just Need RSVPs?
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </MagneticLink>
-              </motion.div>
-
-              {/* Slug finder, jump to a private event */}
-              <motion.div {...enter(1.2)} className="mb-10 sm:mb-12">
-                <p className="text-xs text-white/50 uppercase tracking-widest mb-2">Already have an event link?</p>
-                <SlugFinder />
-              </motion.div>
-
-              {/* Trust stats */}
-              <motion.div {...enter(1.3)} className="mx-auto mb-12 grid w-full max-w-sm grid-cols-1 gap-3 sm:mb-14 sm:max-w-[48rem] sm:grid-cols-3 sm:gap-4">
-                {[
-                  { tag: 'Free forever',   desc: 'No credit card required',          Icon: Sparkles },
-                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',     Icon: Zap },
-                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included', Icon: Users },
-                ].map(({ tag, desc, Icon }) => (
-                  <div key={tag} className="lq-glass lq-stat flex min-w-0 cursor-default items-center gap-4 rounded-[1.25rem] p-4 text-left text-white sm:min-h-[11rem] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-                    <Icon className="h-6 w-6 shrink-0 text-indigo-200 sm:h-7 sm:w-7" strokeWidth={1.5} />
-                    <div className="min-w-0">
-                      <div className="lq-display lq-stat-title">{tag}</div>
-                      <div className="mt-1.5 text-xs font-light leading-snug text-white/75 sm:mt-2 sm:text-[13px]">{desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-
-              {/* What's inside, in the spirit of a logo strip */}
-              {!isWL && (
-                <motion.div {...enter(1.4)} className="flex flex-col items-center gap-4 mb-14 sm:mb-16">
-                  <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
-                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-3xl sm:gap-3" aria-label="What's included">
-                    {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
-                      <li key={w} className="lq-glass lq-display whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm text-white sm:px-5 sm:py-2.5 sm:text-base">{w}</li>
-                    ))}
-                  </ul>
-                </motion.div>
-              )}
-
-              <ScrollFloat distance={36}><HeroProductPreview /></ScrollFloat>
-
-              {/* Scroll indicator */}
-              <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.5 }}>
-                <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-white/60">Scroll</span>
-                <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(165,180,252,0.7), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {!(selectedBranch || isWL) && <ProductShowcase />}
-
-        {!(selectedBranch || isWL) && (
-          <>
-            <ZoomReveal
-              id="real-events" media={MEDIA.home.hero} label="media.js → home.hero"
-              kicker="// Made for real nights"
-              title="Every event, in one place."
-              text="Guest list, seating, door check-in and live updates, on a link your guests can open without an account."
-            />
-            <ScrollStory id="story" items={MEDIA.home.story} label="media.js → home.story" kicker="// From first invite to last dance" />
-          </>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════
-            SOCIAL PROOF STRIP, replaces branch gateway
-        ═══════════════════════════════════════════════════════════ */}
-        <section id="features" className="relative overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
-          <Aurora palette="violet" density={0.00012} />
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 py-24 sm:py-32">
-
-            {/* Section label */}
-            <Reveal className="text-center mb-16">
-              <p className="lq-kicker mb-6">{'// The complete event platform'}</p>
-              <BlurText
-                as="h2"
-                text={'Everything in one place.\nNothing spread across five apps.'}
-                accent={[4, 5, 6, 7, 8]}
-                accentClass="text-white/40"
-                className="lq-display text-white leading-[1.05] text-4xl sm:text-6xl lg:text-7xl mb-8"
-              />
-              <p className="text-white/75 text-base sm:text-lg font-light max-w-2xl mx-auto leading-snug">
-                Most teams plan events across group chats, email threads, shared spreadsheets, and scattered notes.
-                PlanIt puts it all in one workspace, with your whole team, from day one.
-              </p>
-            </Reveal>
-
-            {/* Feature grid */}
-            <motion.div
-              className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-24"
-              variants={GRID_PARENT} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.06 }}
-            >
-              {[
-                { icon: MessageSquare, label: 'Real-time team chat',  desc: 'Your planning channel. Typing indicators, persistent history, instant delivery.' },
-                { icon: ListChecks,    label: 'Shared task lists',    desc: 'Assign, prioritize, and track every action item from one shared view.' },
-                { icon: BarChart3,     label: 'Live polls',           desc: 'Vote on venues, menus, dates. Results update on every screen in real time.' },
-                { icon: Users,         label: 'Unlimited team',       desc: 'No per-seat pricing. Add every organizer, vendor, and volunteer for free.' },
-                { icon: QrCode,        label: 'QR check-in',          desc: 'Personal QR invites for every guest. Scan at the door, see live attendance.' },
-                { icon: Bot,           label: 'Claude AI co-pilot',   desc: 'Manage guests, send announcements, and check attendance, all conversationally.' },
-                { icon: FileText,      label: 'File sharing',         desc: 'Floor plans, contracts, schedules, attached directly to the workspace.' },
-                { icon: Shield,        label: 'Anti-fraud check-in',  desc: 'Duplicate detection, trust scoring, and manager override built in.' },
-                { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
-              ].map((f, i) => (
-                <motion.article
-                  key={f.label}
-                  variants={GRID_CHILD}
-                  className="lq-glass lq-lift group relative flex min-h-[250px] flex-col rounded-[1.25rem] p-6 sm:p-7"
-                  onMouseMove={(e) => {
-                    const r = e.currentTarget.getBoundingClientRect();
-                    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-                    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-                  }}
-                >
-                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{ background: 'radial-gradient(260px circle at var(--mx, 30%) var(--my, 0%), rgba(129,140,248,0.18), transparent 65%)' }} />
-                  <div className="lq-glass relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.75rem]">
-                    <f.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1" />
-                  <h3 className="lq-display relative mt-6 w-full min-w-0 max-w-full break-words text-[clamp(1.2rem,5.1vw,1.875rem)] leading-[1.05] text-white sm:text-3xl" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{f.label}</h3>
-                  <p className="relative mt-3 max-w-[34ch] text-sm font-light leading-snug text-white/85">{f.desc}</p>
-                </motion.article>
-              ))}
-            </motion.div>
-
-            {/* Stats row */}
-            <motion.div
-              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-24"
-              variants={GRID_PARENT} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }}
-            >
-                {[
-                  { value: '< 60s',   label: 'To create an event',    sub: 'No account needed' },
-                  { value: '∞',       label: 'Team members',          sub: 'No per-seat caps' },
-                  { value: '4',       label: 'Event modes',           sub: 'Standard, Enterprise, RSVP, Venue' },
-                  { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
-                ].map((s, i) => (
-                  <motion.div key={s.label} variants={GRID_CHILD} className="lq-glass text-center p-6 sm:p-7 rounded-[1.25rem] cursor-default h-full">
-                    <div className="lq-display text-4xl sm:text-5xl text-white mb-2 leading-none">{s.value}</div>
-                    <div className="text-xs font-medium text-white mb-1">{s.label}</div>
-                    <div className="text-xs font-light text-white/60">{s.sub}</div>
-                  </motion.div>
-                ))}
-            </motion.div>
-
-            {/* Three paths */}
-            <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-                <Reveal direction="left">
-                <a href="#planit-events"
-                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.16) 0%, transparent 60%)' }} />
-                  <div className="relative">
-                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-300" />
-                      <span className="text-xs font-medium text-white/90">PlanIt Events</span>
-                    </div>
-                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
-                      Planning an event?<br />Start here.
-                    </h3>
-                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
-                      Weddings, conferences, corporate retreats, galas. The full planning workspace: chat, tasks, RSVP, QR check-in, all in one place.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-indigo-200 group-hover:text-white transition-colors">
-                      Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </a>
-                </Reveal>
-
-                <Reveal direction="up">
-                <a href="#planit-rsvp"
-                  onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.16) 0%, transparent 60%)' }} />
-                  <div className="relative">
-                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
-                      <CheckSquare className="w-3.5 h-3.5 text-emerald-300" />
-                      <span className="text-xs font-medium text-white/90">RSVP Event</span>
-                    </div>
-                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
-                      Just need RSVPs?<br />Skip the rest.
-                    </h3>
-                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
-                      A beautiful, section-based RSVP page and guest list. No seating charts, no floor management, live in under a minute.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-200 group-hover:text-white transition-colors">
-                      Create an RSVP page <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </a>
-                </Reveal>
-
-                <Reveal direction="right">
-                <a href="#planit-venue"
-                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 100% 50%, rgba(249,115,22,0.16) 0%, transparent 60%)' }} />
-                  <div className="relative">
-                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
-                      <UtensilsCrossed className="w-3.5 h-3.5 text-orange-300" />
-                      <span className="text-xs font-medium text-white/90">PlanIt Venue</span>
-                    </div>
-                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
-                      Running a restaurant<br />or venue floor?
-                    </h3>
-                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
-                      Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-orange-200 group-hover:text-white transition-colors">
-                      Set up your venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </a>
-                </Reveal>
-            </div>
-          </div>
-        </section>{/* end SOCIAL PROOF STRIP */}
-
-        <SectionSeam tint="indigo" />
-
-        {/* ═══════════════════════════════════════════════════════════
-            PLANIT EVENTS, its own "page" section
-        ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-events" className="relative overflow-hidden" style={{ background: 'var(--bg-surface)', display: selectedBranch === 'events' ? 'block' : 'none' }}>
-          <Aurora palette="indigo" stars={false} />
-          {/* Page-break top border with glow */}
-          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
-          {/* Background texture */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(circle at 15% 50%, rgba(100,116,139,0.06) 0%, transparent 50%), radial-gradient(circle at 85% 20%, rgba(148,163,184,0.04) 0%, transparent 40%)',
-          }} />
-          {/* Animated SVG grid decoration */}
-          <svg style={{ position:'absolute', top:0, right:0, width:320, height:320, opacity:0.4, pointerEvents:'none' }} viewBox="0 0 320 320" aria-hidden="true">
-            <defs><radialGradient id="evg" cx="100%" cy="0%"><stop offset="0%" stopColor="rgba(148,163,184,0.15)"/><stop offset="100%" stopColor="transparent"/></radialGradient></defs>
-            <rect width="320" height="320" fill="url(#evg)"/>
-            {Array.from({length:6},(_,i)=><line key={i} x1={i*60} y1="0" x2={i*60} y2="320" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>)}
-            {Array.from({length:6},(_,i)=><line key={i} x1="0" y1={i*60} x2="320" y2={i*60} stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>)}
-            {/* Floating task nodes */}
-            {[[60,60],[180,40],[260,120],[120,200],[200,260]].map(([cx,cy],i)=>(
-              <g key={i}>
-                <circle cx={cx} cy={cy} r="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1">
-                  <animate attributeName="cy" values={`${cy};${cy-8};${cy}`} dur={`${5+i*0.8}s`} begin={`${i*0.6}s`} repeatCount="indefinite"/>
-                </circle>
-                <line x1={cx} y1={cy-5} x2={cx+8} y2={cy-5} stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round"/>
-                <line x1={cx} y1={cy} x2={cx+12} y2={cy} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round"/>
-                <line x1={cx} y1={cy+5} x2={cx+6} y2={cy+5} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeLinecap="round"/>
-              </g>
-            ))}
-          </svg>
-
-          {/* Product "page header" */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
-            <Reveal>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-neutral-300" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">{isWL ? '' : 'PlanIt'}</div>
-                  <div className="text-lg font-black text-white tracking-tight leading-none">Events</div>
-                </div>
-                <div className="ml-2 h-px flex-1 bg-neutral-800" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">Branch 01</span>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* Hero headline */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <Reveal>
-                <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
-                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
-                  Everything your<br />
-                  team needs.<br />
-                  <span style={{ color: '#64748b' }}>Nothing you don't.</span>
-                </h2>
-                <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
-                  From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team: organizers, vendors, volunteers, everyone.
-                </p>
-                <div className="flex items-center gap-4">
-                  <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-full font-semibold hover:bg-neutral-100 transition-colors text-sm">
-                    Start planning free <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <span className="text-xs text-neutral-700">No credit card · No account needed</span>
-                </div>
-              </Reveal>
-
-              {/* Animated workspace mockup */}
-              <Reveal delay={120}>
-                <div className="relative rounded-2xl border border-neutral-800 overflow-hidden" style={{ background: 'rgba(13,13,22,0.9)' }}>
-                  {/* App chrome */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800/60" style={{ background: 'rgba(10,10,18,0.95)' }}>
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                    </div>
-                    <div className="flex-1 flex justify-center">
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-800/60 border border-neutral-700/40">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[9px] text-neutral-500 font-mono">Summer Gala 2026</span>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Two-panel layout */}
-                  <div className="grid grid-cols-5 divide-x divide-neutral-800/60" style={{ minHeight: 320 }}>
-                    {/* Sidebar */}
-                    <div className="col-span-2 p-4 space-y-1">
-                      {[['Chat','active'],['Tasks',''],['Guests',''],['Polls',''],['Budget','']].map(([label,active]) => (
-                        <div key={label} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-white/6 text-white' : 'text-neutral-600 hover:text-neutral-400'}`}>
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: active ? 'rgba(255,255,255,0.5)' : '#404040' }} />{label}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Chat panel */}
-                    <div className="col-span-3 flex flex-col">
-                      <div className="px-3 py-2 border-b border-neutral-800/40">
-                        <span className="text-[10px] font-bold text-neutral-500"># planning-team</span>
-                      </div>
-                      <div className="flex-1 p-3 space-y-2.5 overflow-hidden">
-                        <div className="msg-1 flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-violet-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
-                            <span className="text-[7px] font-bold text-violet-300">A</span>
-                          </div>
-                          <div>
-                            <div className="text-[9px] font-bold text-violet-400 mb-0.5">Alex</div>
-                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed</div>
-                          </div>
-                        </div>
-                        <div className="msg-2 flex items-start gap-2">
-                          <div className="w-5 h-5 rounded-full bg-sky-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
-                            <span className="text-[7px] font-bold text-sky-300">S</span>
-                          </div>
-                          <div>
-                            <div className="text-[9px] font-bold text-sky-400 mb-0.5">Sam</div>
-                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Floor plan uploaded to files</div>
-                          </div>
-                        </div>
-                        <div className="msg-3 flex items-start gap-2 justify-end">
-                          <div>
-                            <div className="text-[10px] text-neutral-300 bg-neutral-700/80 px-2 py-1.5 rounded-lg rounded-tr-none">On it! Creating checklist now</div>
-                          </div>
-                        </div>
-                      </div>
-                      {/* typing */}
-                      <div className="px-3 pb-3">
-                        <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-neutral-800/40 border border-neutral-700/30">
-                          <span className="text-[9px] text-neutral-600">Alex is typing</span>
-                          <div className="flex items-end gap-0.5">
-                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
-                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
-                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-
-          {/* Features grid */}
-          <div className="relative border-t border-neutral-800/40">
-            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
-              <Reveal className="mb-10">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-600 mb-2">What's included</p>
-                <h3 className="font-syne text-2xl font-black text-white">Every tool. One workspace.</h3>
-              </Reveal>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { icon: MessageSquare, label: 'Real-time team chat',    desc: 'Typing indicators, reactions, threads. Your team stays in sync.' },
-                  { icon: ListChecks,    label: 'Task management',        desc: 'Assign tasks, set deadlines, track completion down to the wire.' },
-                  { icon: BarChart3,     label: 'Polls & voting',         desc: 'Vote on venues, dates, menus. Live results instantly.' },
-                  { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules, all in one place.' },
-                  { icon: Users,         label: 'Unlimited team',         desc: 'No caps. Every organizer, vendor, and volunteer included.' },
-                  { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
-                  { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements, all conversationally.' },
-                ].map((f, i) => (
-                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                    <div className="lq-glass lq-lift group p-6 rounded-[1.25rem] h-full">
-                      <div className="feature-icon w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-4 group-hover:bg-neutral-700">
-                        <f.icon className="w-4 h-4 text-neutral-400" />
-                      </div>
-                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
-                      <div className="text-xs text-neutral-400 leading-relaxed">{f.desc}</div>
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Invite/RSVP demo advertisement */}
-          <div className="border-t border-neutral-800/40">
-            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
-              <Reveal>
-                <div
-                  onClick={() => navigate('/demo/invite')}
-                  role="link"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter') navigate('/demo/invite'); }}
-                  className="lq-glass lq-lift group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-[1.5rem] cursor-pointer"
-                >
-                  <div className="flex-1 p-8 sm:p-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-5">
-                      <Ticket className="w-3.5 h-3.5 text-indigo-400" />
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">See it in action</span>
-                    </div>
-                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
-                      Invites and RSVP pages guests actually want to share.
-                    </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-6 max-w-lg">
-                      Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest. Try the real thing below, no account needed.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      <span className="inline-flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                        Try the invite demo <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                      </span>
-                      <a
-                        href="/demo/rsvp"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-neutral-200 transition-colors"
-                      >
-                        <Share2 className="w-3.5 h-3.5" /> Try the RSVP demo
-                      </a>
-                    </div>
-                  </div>
-                  <div className="hidden sm:flex w-64 flex-shrink-0 items-center justify-center p-8 border-l border-indigo-500/10" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                    <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
-                      <p className="text-[10px] uppercase tracking-widest text-neutral-600 mb-2">You're invited to</p>
-                      <p className="font-syne text-lg font-black text-white mb-3 leading-tight">Bonfire &amp; vinyl</p>
-                      <div className="flex gap-1.5 mb-3">
-                        {['D', 'H', 'M', 'S'].map((u) => (
-                          <div key={u} className="flex-1 text-center rounded-md bg-neutral-900 border border-neutral-800 py-1.5">
-                            <div className="text-xs font-mono font-bold text-neutral-300">09</div>
-                            <div className="text-[8px] text-neutral-600">{u}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="h-8 rounded-lg bg-indigo-500/80 flex items-center justify-center text-[11px] font-bold text-white">I'm going</div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-
-          {/* Enterprise strip */}
-          <div className="border-t border-neutral-800/40">
-            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-12">
-              <Reveal>
-                <div className="lq-glass lq-lift flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-[1.25rem]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center flex-shrink-0">
-                      <Zap className="w-5 h-5 text-neutral-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-black text-white mb-0.5">Enterprise Mode</div>
-                      <div className="text-xs text-neutral-600">Personalized QR invites, check-in dashboard, real-time attendance analytics. For 100+ guest events.</div>
-                    </div>
-                  </div>
-                  <a href="#create" className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 border border-neutral-700 rounded-xl text-xs font-bold text-neutral-300 hover:border-neutral-500 hover:text-white transition-all">
-                    Set up Enterprise <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-
-          {/* Bottom page-break */}
-          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(148,163,184,0.08) 80%, transparent)' }} />
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════
-            BRANCH TRANSITION, visual page turn
-        ═══════════════════════════════════════════════════════════ */}
-        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-base)', display: selectedBranch ? 'none' : 'flex' }}>
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
-          <Reveal>
-            <div className="relative flex items-center gap-5 text-center">
-              <div className="h-px w-16 bg-neutral-800" />
-              <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
-                  <Calendar className="w-3 h-3 text-neutral-700" /> Events
-                </div>
-                <span className="text-neutral-800">·</span>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
-                  <UtensilsCrossed className="w-3 h-3 text-neutral-700" /> Venue
-                </div>
-              </div>
-              <div className="h-px w-16 bg-neutral-800" />
-            </div>
-          </Reveal>
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════
-            PLANIT RSVP, its own "page" section
-        ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-rsvp" className="relative overflow-hidden" style={{ background: 'rgba(6,20,16,0.97)', display: selectedBranch === 'rsvp' ? 'block' : 'none' }}>
-          <Aurora palette="mint" stars={false} />
-          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.15) 20%, rgba(52,211,153,0.3) 50%, rgba(16,185,129,0.15) 80%, transparent)' }} />
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(circle at 15% 40%, rgba(16,185,129,0.07) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(52,211,153,0.05) 0%, transparent 40%)',
-          }} />
-
-          {/* Product "page header" */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
-            <Reveal>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-950/60 border border-emerald-800/50 flex items-center justify-center">
-                  <CheckSquare className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-800">{isWL ? '' : 'PlanIt'}</div>
-                  <div className="text-lg font-black text-white tracking-tight leading-none">RSVP</div>
-                </div>
-                <div className="ml-2 h-px flex-1 bg-emerald-900/50" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Branch 03</span>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* Hero headline */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-16">
-            <Reveal>
-              <p className="text-xs font-bold text-emerald-500/70 uppercase tracking-[0.2em] mb-6">For when the guest list is the whole job</p>
-              <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8 max-w-3xl" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
-                A gorgeous RSVP page.<br />
-                <span style={{ color: '#34d399' }}>Nothing else to configure.</span>
-              </h2>
-              <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
-                Drag-and-drop a real page: hero, agenda, photos, FAQ, whatever the event needs. Then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.
-              </p>
-              <div className="flex items-center gap-4">
-                <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-emerald-950 rounded-full font-semibold hover:bg-emerald-300 transition-colors text-sm">
-                  Create an RSVP page <ArrowRight className="w-4 h-4" />
-                </a>
-                <span className="text-xs text-emerald-900">Live in under a minute</span>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* Feature highlights */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-20">
-            <div className="grid sm:grid-cols-3 gap-4">
-              {[
-                { icon: Layers, label: 'Section-based builder', body: 'Drag, drop, and reorder from a 16-block library: hero, agenda, FAQ, sponsors, and more.' },
-                { icon: Zap, label: 'Auto-generated cover', body: 'Pick a template and accent color; your event\u2019s cover graphic builds itself, no design work.' },
-                { icon: Users, label: 'Guest list + check-in', body: 'The same guest list and simple check-in as every PlanIt event, without the extra setup.' },
-              ].map(({ icon: Icon, label, body }, i) => (
-                <Reveal key={label} delay={i * 80}>
-                  <div className="lq-glass lq-lift p-6 rounded-[1.25rem] h-full">
-                    <Icon className="w-5 h-5 text-emerald-400 mb-3" />
-                    <p className="text-sm font-bold text-white mb-1.5">{label}</p>
-                    <p className="text-xs text-neutral-500 leading-relaxed">{body}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          {/* Standard Event vs RSVP Event comparison, styled cards, not a plain table */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-24">
-            <Reveal>
-              <p className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-6 text-center">Which one do you actually need?</p>
-              <div className="grid md:grid-cols-2 gap-5">
-                {/* Standard Event card */}
-                <div className="lq-glass rounded-[1.5rem] p-8">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar className="w-4 h-4 text-indigo-400" />
-                    <span className="text-sm font-black text-white">Standard Event</span>
-                  </div>
-                  <p className="text-xs text-neutral-600 mb-6">The full workspace</p>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between border-b border-neutral-800/60 pb-3"><span className="text-neutral-500">Setup time</span><span className="text-neutral-300 font-semibold">~5–10 min</span></div>
-                    <div className="flex items-start justify-between border-b border-neutral-800/60 pb-3"><span className="text-neutral-500">Included</span><span className="text-neutral-300 font-semibold text-right">Seating charts, floor management,<br />enterprise check-in, RSVP page</span></div>
-                    <div className="flex items-center justify-between"><span className="text-neutral-500">Best for</span><span className="text-neutral-300 font-semibold">Weddings, galas, multi-day events</span></div>
-                  </div>
-                </div>
-                {/* RSVP Event card */}
-                <div className="lq-glass rounded-[1.5rem] p-8 relative">
-                  <div className="absolute top-0 right-0 text-[10px] font-black uppercase tracking-widest text-emerald-950 bg-emerald-400 px-3 py-1 rounded-bl-xl">Lightweight</div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckSquare className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-black text-white">RSVP Event</span>
-                  </div>
-                  <p className="text-xs text-emerald-800 mb-6">Just the RSVP page</p>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Setup time</span><span className="text-white font-semibold">~1 min</span></div>
-                    <div className="flex items-start justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Included</span><span className="text-white font-semibold text-right">Guest list, RSVP builder,<br />basic check-in, analytics</span></div>
-                    <div className="flex items-start justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Intentionally left out</span><span className="text-white font-semibold text-right">Seating charts, floor management,<br />ticketing, advanced fraud detection</span></div>
-                    <div className="flex items-center justify-between"><span className="text-emerald-700">Best for</span><span className="text-white font-semibold">Parties, meetups, simple gatherings</span></div>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-
-          <div className="max-w-screen-xl mx-auto px-6 sm:px-10 pb-10">
-            <Reveal>
-              <div className="flex items-center gap-3">
-                <div className="h-px w-16 bg-emerald-900/50" />
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-900 uppercase tracking-widest">
-                    <Calendar className="w-3 h-3 text-emerald-900" /> Events
-                  </div>
-                  <span className="text-emerald-950">·</span>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-900 uppercase tracking-widest">
-                    <UtensilsCrossed className="w-3 h-3 text-emerald-900" /> Venue
-                  </div>
-                </div>
-                <div className="h-px w-16 bg-emerald-900/50" />
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════
-            PLANIT VENUE, its own "page" section
-        ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-venue" className="relative overflow-hidden" style={{ background: 'var(--bg-venue)', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
-          <Aurora palette="amber" stars={false} />
-          {/* Page-break top border with orange glow */}
-          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
-          {/* Background */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(circle at 85% 40%, rgba(249,115,22,0.06) 0%, transparent 50%), radial-gradient(circle at 15% 80%, rgba(234,88,12,0.03) 0%, transparent 40%)',
-          }} />
-          {/* Animated venue floor SVG decoration */}
-          <svg style={{ position:'absolute', top:0, left:0, width:280, height:280, opacity:0.35, pointerEvents:'none' }} viewBox="0 0 280 280" aria-hidden="true">
-            <defs><radialGradient id="vng" cx="0%" cy="0%"><stop offset="0%" stopColor="rgba(249,115,22,0.12)"/><stop offset="100%" stopColor="transparent"/></radialGradient></defs>
-            <rect width="280" height="280" fill="url(#vng)"/>
-            {Array.from({length:5},(_,i)=><line key={i} x1={i*60} y1="0" x2={i*60} y2="280" stroke="rgba(249,115,22,0.05)" strokeWidth="1"/>)}
-            {Array.from({length:5},(_,i)=><line key={i} x1="0" y1={i*60} x2="280" y2={i*60} stroke="rgba(249,115,22,0.05)" strokeWidth="1"/>)}
-            {/* Mini table shapes */}
-            {[[50,60,18,'#22c55e'],[130,50,16,'#ef4444'],[60,160,14,'#f59e0b'],[170,150,18,'#22c55e']].map(([cx,cy,r,c],i)=>(
-              <g key={i}>
-                <circle cx={cx} cy={cy} r={r} fill={`${c}12`} stroke={c} strokeWidth="1" opacity="0.7">
-                  <animate attributeName="cy" values={`${cy};${cy-6};${cy}`} dur={`${4+i*0.9}s`} begin={`${i*0.7}s`} repeatCount="indefinite"/>
-                </circle>
-                <text x={cx} y={cy+4} textAnchor="middle" fill={c} fontSize="8" fontWeight="800" opacity="0.8">T{i+1}</text>
-              </g>
-            ))}
-          </svg>
-
-          {/* Product "page header" */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
-            <Reveal>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center">
-                  <UtensilsCrossed className="w-5 h-5 text-orange-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500/40">PlanIt</div>
-                  <div className="text-lg font-black text-white tracking-tight leading-none">Venue</div>
-                </div>
-                <div className="ml-2 h-px flex-1 bg-orange-500/10" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/30">Branch 02</span>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* Hero headline */}
-          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <Reveal>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-6">For restaurants that run a real floor every night</p>
-                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
-                  Run your floor.<br />
-                  Know your wait.<br />
-                  <span style={{ color: 'rgba(249,115,22,0.5)' }}>Seat every table.</span>
-                </h2>
-                <p className="text-neutral-600 text-lg leading-relaxed mb-10 max-w-lg">
-                  Live table states. Walk-in waitlist with a public wait board guests scan at the door. One-tap seating. Your floor data never expires.
-                </p>
-                <div className="flex items-center gap-4">
-                  <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-400 transition-colors text-sm">
-                    Set up your venue <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <span className="text-xs text-neutral-700">Free · Data never expires</span>
-                </div>
-              </Reveal>
-
-              {/* Animated floor map */}
-              <Reveal delay={120}>
-                <div className="relative rounded-2xl border border-orange-500/15 overflow-hidden" style={{ background: 'rgba(13,10,5,0.95)' }}>
-                  {/* App chrome */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10" style={{ background: 'rgba(10,8,3,0.98)' }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
-                        <UtensilsCrossed className="w-2.5 h-2.5 text-orange-400" />
-                      </div>
-                      <span className="text-xs font-bold text-neutral-400">Taverna Roma</span>
-                      <span className="text-[9px] text-orange-400/40 font-bold uppercase tracking-wider">PlanIt Venue</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln']].map(([c,l]) => (
-                        <span key={l} className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md bg-neutral-900 text-neutral-500">
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Floor plan SVG */}
-                  <div className="p-4">
-                    <svg viewBox="0 0 520 260" className="w-full" style={{ height: 220 }}>
-                      <defs>
-                        <pattern id="vg" width="28" height="28" patternUnits="userSpaceOnUse">
-                          <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(249,115,22,0.04)" strokeWidth="0.5" />
-                        </pattern>
-                      </defs>
-                      <rect width="520" height="260" fill="url(#vg)" />
-                      {/* Zone */}
-                      <rect x="18" y="10" width="155" height="90" rx="8" fill="rgba(249,115,22,0.02)" stroke="rgba(249,115,22,0.08)" strokeDasharray="6 3" />
-                      <text x="95" y="58" textAnchor="middle" fill="rgba(249,115,22,0.2)" fontSize="11" fontWeight="700" letterSpacing="2">MAIN ROOM</text>
-                      {/* Tables */}
-                      {[
-                        {x:65,  y:155, r:26, status:'available', label:'T1', cap:'4'},
-                        {x:145, y:155, r:26, status:'occupied',  label:'T2', cap:'4', party:'Smith', time:'38m'},
-                        {x:215, y:135, r:30, status:'occupied',  label:'T3', cap:'6', party:'Chen',  time:'19m'},
-                        {x:300, y:155, r:26, status:'cleaning',  label:'T4', cap:'4'},
-                        {x:370, y:135, r:30, status:'available', label:'T5', cap:'6'},
-                        {x:455, y:155, r:26, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
-                      ].map(t => {
-                        const c = t.status==='available'?'#22c55e':t.status==='occupied'?'#ef4444':t.status==='cleaning'?'#8b5cf6':'#f59e0b';
-                        const pulse = t.status === 'available';
-                        return (
-                          <g key={t.label}>
-                            <circle cx={t.x} cy={t.y} r={t.r+4} fill="none" stroke={c} strokeWidth="1.5" opacity={pulse ? undefined : "0.5"} className={pulse ? 'table-pulse-ring' : ''} />
-                            <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}18`} stroke={c} strokeWidth="1" className={pulse ? 'table-pulse-fill' : ''} />
-                            <text x={t.x} y={t.y-3} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="9" fontWeight="800">{t.label}</text>
-                            <text x={t.x} y={t.y+8} textAnchor="middle" fill={c} fontSize="8">{t.cap}</text>
-                            {t.time && <text x={t.x+t.r-2} y={t.y-t.r+4} textAnchor="middle" fill="white" fontSize="7.5" fontWeight="700" opacity="0.8">{t.time}</text>}
-                          </g>
-                        );
-                      })}
-                      {/* Waitlist widget */}
-                      <rect x="18" y="178" width="130" height="60" rx="8" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.18)" />
-                      <text x="30" y="196" fill="#f59e0b" fontSize="8" fontWeight="800" letterSpacing="1">WAITLIST</text>
-                      <text x="90" y="196" fill="rgba(245,158,11,0.5)" fontSize="8" fontWeight="700" className="waitlist-tick">·3</text>
-                      <text x="30" y="212" fill="rgba(255,255,255,0.4)" fontSize="8">Martinez · 4 · ~14m</text>
-                      <text x="30" y="226" fill="rgba(255,255,255,0.4)" fontSize="8">Taylor · 2 · ~8m</text>
-                    </svg>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-
-          {/* Features grid */}
-          <div className="relative border-t border-orange-500/8">
-            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
-              <Reveal className="mb-10">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-2">What's included</p>
-                <h3 className="font-syne text-2xl font-black text-white">Your whole floor, in one screen.</h3>
-              </Reveal>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { icon: Layers,       label: 'Visual floor editor',    desc: 'Drag tables to match your exact layout. Zones, shapes, labels.' },
-                  { icon: Users,        label: 'Walk-in waitlist',       desc: 'Add parties instantly. Estimated wait times update as tables clear.' },
-                  { icon: QrCode,       label: 'Public wait board',      desc: 'Guests scan the door QR, see the queue, and join from their phone.' },
-                  { icon: MapPin,       label: 'Live sync',              desc: 'Every status update hits all staff screens in real time.' },
-                  { icon: CheckCircle2, label: 'One-tap seat next',      desc: 'Auto-picks the tightest-fit table and seats the next waiting party.' },
-                  { icon: Clock,        label: 'Data never expires',     desc: 'Your floor plan and history persist forever. No cleanup, no resets.' },
-                ].map((f, i) => (
-                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                    <div className="lq-glass lq-lift group p-6 rounded-[1.25rem] h-full">
-                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 transition-all duration-500 group-hover:bg-orange-500/20 group-hover:scale-110 group-hover:-rotate-6">
-                        <f.icon className="w-4 h-4 text-orange-400" />
-                      </div>
-                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
-                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom page-break */}
-          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.08) 20%, rgba(249,115,22,0.25) 50%, rgba(249,115,22,0.08) 80%, transparent)' }} />
-        </section>
-
-        {/* TESTIMONIALS */}
-        <section className="py-32 border-t border-neutral-800/40" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
-            <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard direction="left" quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
-              <TestimonialCard direction="up" quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts. We used it for 4 months of planning." author="Sarah Williams" role="Lead Wedding Planner" event="Williams-Martinez Wedding" delay={120} />
-              <TestimonialCard direction="right" quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff." author="David Martinez" role="Development Director" event="Charity Gala 2025" delay={240} />
-            </div>
-          </div>
-        </section>
-
-        <SectionSeam tint="violet" />
-        <section className="py-32 border-t border-orange-500/8" style={{ display: selectedBranch === 'venue' ? 'block' : 'none' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <SectionHeader eyebrow="Testimonials" title="Trusted by restaurant floors" subtitle="See how venues are using PlanIt to run service, night after night" />
-            <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard direction="left" quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad. Now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
-              <TestimonialCard direction="up" quote="Walk-ins used to mean guessing at wait times. Now guests scan a QR at the door, see the real queue, and we seat the next table with one tap." author="Sarah Williams" role="Front of House Manager" event="The Oak Room" delay={120} />
-              <TestimonialCard direction="right" quote="Our floor history just sits there. No resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
-            </div>
-          </div>
-        </section>
-
-        {/* CLAUDE INTEGRATION */}
-        <section className="relative overflow-hidden py-28 border-t border-white/5" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
-          <Aurora palette="violet" stars={false} />
-          <div className="relative max-w-screen-xl mx-auto px-4 sm:px-8">
-            <div className="flex flex-col lg:flex-row items-center gap-16">
-              {/* Left: copy */}
-              <div className="flex-1">
-                <Reveal direction="left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
-                    style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)' }}>
-                    <Bot size={13} className="text-violet-400" />
-                    <span className="text-violet-400 text-xs font-semibold">Now available · Claude Integration</span>
-                  </div>
-                  <h2 className="font-syne font-black text-white mb-4 leading-tight" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
-                    Manage your event<br />by talking to Claude.
-                  </h2>
-                  <p className="text-neutral-400 text-lg leading-relaxed mb-8 max-w-lg">
-                    Add PlanIt to Claude once. Then just have a conversation: build your guest list, set up seating,
-                    send announcements, and monitor check-ins without touching the dashboard.
-                  </p>
-                  <div className="space-y-3 mb-8">
-                    {[
-                      '"Add Sarah Jones, email sarah@example.com"',
-                      '"How many people have checked in so far?"',
-                      '"Send an announcement: doors open in 10 minutes"',
-                      '"Create 15 round tables of 10"',
-                    ].map((q, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <Bot size={14} className="text-violet-500 flex-shrink-0" />
-                        <span className="text-sm text-neutral-400 font-mono">{q}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <a
-                      href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
-                      style={{ background: '#7c3aed' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
-                      onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
-                    >
-                      <Bot size={16} /> Add to Claude <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </a>
-                    <a href="/help#claude"
-                      className="inline-flex items-center gap-2 px-5 py-3 lq-glass rounded-full text-white/90 text-sm transition-colors hover:text-white">
-                      How it works
-                    </a>
-                    <a href="/mcp-docs"
-                      className="inline-flex items-center gap-2 px-5 py-3 lq-glass rounded-full text-white/90 text-sm transition-colors hover:text-white">
-                      View full docs
-                    </a>
-                  </div>
-                </Reveal>
-              </div>
-
-              {/* Right: chat mockup */}
-              <Reveal delay={120} direction="right" className="flex-1 max-w-md w-full">
-                <div className="lq-glass-strong lq-lift rounded-[1.25rem]">
-                  {/* Chrome */}
-                  <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,18,0.95)' }}>
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                    </div>
-                    <div className="flex items-center gap-2 mx-auto">
-                      <div className="w-4 h-4 rounded-md bg-violet-600/30 flex items-center justify-center">
-                        <Bot size={9} className="text-violet-300" />
-                      </div>
-                      <span className="text-[11px] text-neutral-500 font-medium">Claude + PlanIt</span>
-                    </div>
-                  </div>
-                  {/* Messages */}
-                  <div className="p-4 space-y-3 text-sm">
-                    <div className="flex justify-end">
-                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
-                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                        Add Sarah Jones to the guest list, sarah@example.com
-                      </div>
-                    </div>
-                    <div className="flex gap-2 items-start">
-                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
-                      </div>
-                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        Done! Sarah Jones has been added. Her invite link is ready to share.
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
-                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                        How many people have checked in?
-                      </div>
-                    </div>
-                    <div className="flex gap-2 items-start">
-                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
-                      </div>
-                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        87 of 150 guests checked in (58%). Last scan 2 minutes ago.
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
-                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                        Send an announcement: doors open in 10 minutes
-                      </div>
-                    </div>
-                    <div className="flex gap-2 items-start">
-                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
-                        <Bot size={11} className="text-violet-300" />
-                      </div>
-                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        Announcement sent to all guests and staff ✓
-                      </div>
-                    </div>
-                  </div>
-                  {/* Footer */}
-                  <div className="px-4 pb-4">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <span className="text-[11px] text-neutral-600 flex-1">Message Claude…</span>
-                      <Bot size={12} className="text-neutral-700" />
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* DISCOVER + STATUS CARDS */}
-        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <Reveal className="text-center mb-12">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
-              <h2 className="font-syne text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
-              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health, all in one place.</p>
-            </Reveal>
-            <div className={selectedBranch === 'venue' ? 'grid max-w-lg mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
-              {/* Discover Card, events only */}
-              {selectedBranch !== 'venue' && (
-              <Reveal delay={0} direction="left">
-                <a href="/discover" className="lq-glass lq-lift group relative block p-8 sm:p-10 rounded-[1.5rem] h-full">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
-                      <Zap className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-3">Discover Events</h3>
-                    <p className="text-neutral-400 leading-relaxed mb-6">Browse public events happening right now. Find meetups, workshops, and gatherings open to everyone.</p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
-                      Browse events
-                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                    </div>
-                  </div>
-                </a>
-              </Reveal>
-              )}
-
-              {/* Status Card */}
-              <Reveal delay={120} direction="right">
-                <a href="/status" className="lq-glass lq-lift group relative block p-8 sm:p-10 rounded-[1.5rem] h-full">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
-                      <TrendingUp className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-2xl font-bold text-white">System Status</h3>
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-900/50 text-emerald-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                        Operational
-                      </span>
-                    </div>
-                    <p className="text-neutral-400 leading-relaxed mb-6">Monitor real-time uptime, API performance, and incident history. Stay informed about service health.</p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
-                      View status
-                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                    </div>
-                  </div>
-                </a>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* CREATE EVENT */}
-        <SectionSeam tint="neutral" />
-        <section id="create" className="py-28 sm:py-32 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
-          <div className="max-w-8xl mx-auto px-4 sm:px-6">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
-
-              <div className="lg:sticky lg:top-24">
-                <Reveal direction="left">
-                  <div className="mb-10">
-                    <h2 className="font-syne font-black text-white mb-6 tracking-tight leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)' }}>
-                      {created
-                        ? mode === 'table-service' ? 'Venue created!' : mode === 'rsvp' ? 'Your RSVP page is live!' : 'Event created!'
-                        : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : mode === 'rsvp' ? 'Create your RSVP page' : 'Start planning your event'}
-                    </h2>
-                    <p className="text-lg sm:text-xl text-neutral-400 leading-relaxed">
-                      {created
-                        ? mode === 'table-service'
-                          ? 'Your floor management system is live. Set up your seating layout and go.'
-                          : mode === 'rsvp'
-                            ? 'Your section-based RSVP builder is ready. Add blocks, pick a cover, and share your link.'
-                            : 'Your planning hub is ready. Share the link with your team and get started.'
-                        : mode === 'table-service'
-                          ? 'Create your restaurant workspace in 60 seconds. Your data never expires.'
-                          : mode === 'enterprise'
-                            ? 'Built for large-scale, ticketed events. Every guest gets a personalized QR invite and seamless check-in.'
-                            : mode === 'rsvp'
-                              ? 'Just a guest list and a beautiful RSVP page. No seating charts, no floor management. Live in under a minute.'
-                              : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
-                    </p>
-                  </div>
-                </Reveal>
-
-                {!created && (
-                  <Reveal delay={100}>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
-                      {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
-                        <div key={i} className="lq-glass lq-lift group text-center p-5 rounded-[1.25rem]">
-                          <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2 transition-transform duration-400 group-hover:scale-110 group-hover:text-neutral-200" />
-                          <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {mode === 'table-service' ? (
-                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
-                        <p className="text-base font-bold text-white mb-4">Everything included in Table Service:</p>
-                        {['Visual floor plan editor: drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted: your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
-                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
-                            <CheckCircle2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : mode === 'enterprise' ? (
-                      <div className="rounded-3xl border border-indigo-500/20 overflow-hidden" style={{ background: 'rgba(8,8,20,0.7)' }}>
-                        {/* Enterprise vs Standard comparison header */}
-                        <div className="grid grid-cols-2 border-b border-indigo-500/15">
-                          <div className="px-5 py-3 border-r border-indigo-500/10">
-                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Standard</span>
-                          </div>
-                          <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(99,102,241,0.06)' }}>
-                            <Zap className="w-3 h-3 text-indigo-400" />
-                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Enterprise</span>
-                          </div>
-                        </div>
-                        {[
-                          ['Open RSVP link', 'Personalized QR invite per guest'],
-                          ['Basic attendance count', 'Real-time check-in dashboard'],
-                          ['No guest tracking', 'Group sizes + table assignments'],
-                          ['No trust scoring', 'Security flags + override tools'],
-                          ['No entry verification', 'Duplicate & fraud detection'],
-                          ['Chat, tasks, polls, budget', 'All Standard features included'],
-                        ].map(([std, ent], i) => (
-                          <div key={i} className="grid grid-cols-2 border-b border-white/[0.04] last:border-b-0">
-                            <div className="px-5 py-3 border-r border-white/[0.04] flex items-start gap-2.5">
-                              <span className="mt-0.5 text-neutral-600 text-xs flex-shrink-0">✕</span>
-                              <span className="text-xs text-neutral-600 leading-relaxed">{std}</span>
-                            </div>
-                            <div className="px-5 py-3 flex items-start gap-2.5" style={{ background: 'rgba(99,102,241,0.03)' }}>
-                              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
-                              <span className="text-xs text-indigo-300/70 leading-relaxed">{ent}</span>
-                            </div>
-                          </div>
-                        ))}
-                        {/* Warning */}
-                        <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(239,68,68,0.06)', borderTop: '1px solid rgba(239,68,68,0.12)' }}>
-                          <AlertCircle className="w-3.5 h-3.5 text-red-400/70 flex-shrink-0" />
-                          <span className="text-xs text-red-400/60">Mode cannot be changed after creation</span>
-                        </div>
-                      </div>
-                    ) : mode === 'rsvp' ? (
-                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
-                        <p className="text-base font-bold text-white mb-4">What's included in an RSVP Event:</p>
-                        {['Section-based drag-and-drop RSVP page builder', 'A 16-block library: hero, agenda, FAQ, gallery, sponsors, and more', 'Auto-generated cover graphic, no design work needed', 'Guest list with the same tools as every PlanIt event', 'Simple check-in (scan or confirm)', 'Analytics on views and responses'].map((item, i) => (
-                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">{item}</span>
-                          </div>
-                        ))}
-                        <div className="flex items-start gap-3 text-sm pt-2 mt-2 border-t border-neutral-800/60">
-                          <X className="w-5 h-5 text-neutral-600 flex-shrink-0 mt-0.5" />
-                          <span className="leading-relaxed text-neutral-600">No seating charts, floor management, ticketing, or enterprise check-in: that's what Standard Event and Venue are for.</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
-                        <p className="text-base font-bold text-white mb-4">Everything included:</p>
-                        {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
-                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Reveal>
-                )}
-
-                {created && (
-                  <Reveal delay={100}>
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-center p-10 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
-                        <div className="text-center">
-                          <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce shadow-lg">
-                            <Check className="w-10 h-10 text-white" />
-                          </div>
-                          <p className="text-lg font-bold text-emerald-400">
-                            {mode === 'table-service' ? 'Venue created!' : mode === 'enterprise' ? 'Enterprise event created!' : mode === 'rsvp' ? 'Your RSVP page is live!' : 'Your planning hub is live!'}
-                          </p>
-                        </div>
-                      </div>
-                      {mode === 'table-service' ? (
-                        <div className="lq-glass p-8 rounded-[1.5rem]">
-                          <div className="flex items-start gap-4">
-                            <UtensilsCrossed className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
-                            <div className="w-full">
-                              <p className="text-base font-bold text-white mb-4">Your venue is live!</p>
-                              {formData.staffPassword && (
-                                <div className="mb-4 p-3 bg-neutral-800 border border-neutral-700 rounded-xl">
-                                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Default staff login</p>
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-neutral-400">Username</span>
-                                    <span className="text-white font-mono font-bold">staff</span>
-                                  </div>
-                                  <div className="flex justify-between text-sm mt-1">
-                                    <span className="text-neutral-400">Password</span>
-                                    <span className="text-white font-mono font-bold">{formData.staffPassword}</span>
-                                  </div>
-                                  <p className="text-xs text-neutral-600 mt-2">Share this with your team: they log in at <code className="text-neutral-500">/login</code></p>
-                                </div>
-                              )}
-                              <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
-                                <li>Open your floor dashboard and click "Edit Layout"</li>
-                                <li>Drag and drop tables to match your restaurant's floor plan</li>
-                                <li>Set each table's capacity and label</li>
-                                <li>Open Settings to configure dining time and operating hours</li>
-                                <li>Staff log in at <code className="text-neutral-500">/login</code> and go straight to the floor</li>
-                              </ol>
-                            </div>
-                          </div>
-                        </div>
-                      ) : mode === 'enterprise' ? (
-                        <div className="lq-glass p-8 rounded-[1.5rem]">
-                          <div className="flex items-start gap-4">
-                            <Zap className="w-6 h-6 text-neutral-400 flex-shrink-0 mt-1" />
-                            <div>
-                              <p className="text-base font-bold text-white mb-4">Next steps for Enterprise Mode:</p>
-                              <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
-                                <li>Enter your event and click "Manage Guest Invites"</li>
-                                <li>Add all guests with names, email, and group sizes</li>
-                                <li>Send personalized invite links with QR codes to each guest</li>
-                                <li>On event day, use the check-in dashboard to scan QR codes</li>
-                                <li>View real-time attendance analytics as guests arrive</li>
-                              </ol>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-sm font-bold text-neutral-300 mb-3">Your event link:</p>
-                          <CopyLinkBox eventId={created.id} subdomain={created.subdomain} mode={mode} />
-                          <p className="text-xs text-neutral-600 mt-3">Share this link with your planning team to get started</p>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => {
-                          const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
-                          navigate(
-                            mode === 'table-service' ? `${base}/floor`
-                              : mode === 'rsvp' ? `${base}/rsvp-dashboard`
-                              : `${base}?new=1`
-                          );
-                        }}
-                        className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
-                      >
-                        {mode === 'table-service' ? 'Open Floor Dashboard' : mode === 'enterprise' ? 'Set Up Guest Invites' : mode === 'rsvp' ? 'Open RSVP Dashboard' : 'Enter your planning hub'}
-                        <ArrowUpRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </Reveal>
-                )}
-              </div>
-
-              {!created && (
-                <Reveal delay={80}>
-                  <div className="sticky top-24">
-                    {/* Mode selector keeps the full set of WL event types available inside the same wizard. */}
-                    {(isWL || selectedBranch === 'events' || selectedBranch === 'rsvp') && (
-                      <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
-                        {[
-                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
-                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
-                          { val:'rsvp',       label:'RSVP',       sub:'Just RSVPs'     },
-                          ...(isWL ? [{ val:'table-service', label:'Restaurant', sub:'Tables + bookings' }] : []),
-                        ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => {
-                              setMode(val);
-                              setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' }));
-                              setWizardKey(k => k + 1);
-                              const nextBranch = val === 'table-service' ? 'venue' : val === 'rsvp' ? 'rsvp' : 'events';
-                              if (nextBranch !== selectedBranch) {
-                                setSelectedBranch(nextBranch);
-                                setTimeout(() => document.getElementById(nextBranch === 'venue' ? 'planit-venue' : nextBranch === 'rsvp' ? 'planit-rsvp' : 'planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
-                              }
-                            }}
-                            data-mode={val}
-                            style={{
-                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
-                              color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
-                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.3)' : 'none',
-                            }}>
-                            <div>{label}</div>
-                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Launch wizard CTA */}
-                    <div
-                      className="lq-glass-strong"
-                      style={{
-                        borderRadius:24,
-                        padding:'48px 40px',
-                        textAlign:'center',
-                        position:'relative',
-                        overflow:'hidden',
-                      }}
-                    >
-                      {/* Ambient glow */}
-                      <div aria-hidden="true" style={{
-                        position:'absolute', inset:0, pointerEvents:'none',
-                        background: mode === 'table-service'
-                          ? 'radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.07) 0%, transparent 70%)'
-                          : mode === 'enterprise'
-                            ? 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)'
-                            : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
-                      }} />
-
-                      {/* Icon */}
-                      <div style={{
-                        width:56, height:56, borderRadius:16, margin:'0 auto 24px',
-                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'enterprise' ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
-                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : mode === 'enterprise' ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(99,102,241,0.2)',
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : mode === 'enterprise' ? '0 0 40px rgba(99,102,241,0.25)' : '0 0 32px rgba(99,102,241,0.12)',
-                      }}>
-                        {mode === 'table-service'
-                          ? <UtensilsCrossed style={{ width:26, height:26, color:'#f97316' }} />
-                          : mode === 'enterprise'
-                            ? <Zap style={{ width:26, height:26, color:'#a5b4fc' }} />
-                            : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
-                        }
-                      </div>
-
-                      <p style={{
-                        fontFamily:'Syne,sans-serif', fontSize:'clamp(1.4rem,3vw,1.75rem)',
-                        fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:10,
-                      }}>
-                        {mode === 'table-service' ? 'Launch your venue' : mode === 'enterprise' ? 'Launch enterprise event' : 'Create your event'}
-                      </p>
-                      <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:36, lineHeight:1.6, maxWidth:260, margin:'0 auto 36px' }}>
-                        {mode === 'table-service'
-                          ? 'Set up your floor plan and start managing tables in under 60 seconds.'
-                          : mode === 'enterprise'
-                            ? 'Personalized QR invites, check-in dashboard, and real-time analytics for large events.'
-                            : 'Build your planning workspace in under 60 seconds. No credit card required.'}
-                      </p>
-
-                      <button
-                        onClick={() => { setFormData(p => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey(k => k + 1); eventFormTimingRef.current.formStartedAt = Date.now(); setWizardOpen(true); }}
-                        style={{
-                          width:'100%', padding:'16px 28px', borderRadius:14, border:'none', cursor:'pointer',
-                          background: mode === 'table-service'
-                            ? 'linear-gradient(135deg, #f97316, #fb923c)'
-                            : mode === 'enterprise'
-                              ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
-                              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                          color:'#fff', fontSize:15, fontWeight:700,
-                          display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-                          transition:'transform 0.2s ease, box-shadow 0.2s ease',
-                          boxShadow: mode === 'table-service'
-                            ? '0 8px 28px rgba(249,115,22,0.35)'
-                            : mode === 'enterprise'
-                              ? '0 8px 32px rgba(79,70,229,0.5)'
-                              : '0 8px 28px rgba(99,102,241,0.35)',
-                          fontFamily:'DM Sans,sans-serif',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : mode === 'enterprise' ? '0 16px 40px rgba(79,70,229,0.6)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : mode === 'enterprise' ? '0 8px 32px rgba(79,70,229,0.5)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
-                      >
-                        {mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Set up enterprise event' : 'Start building'}
-                        <ArrowRight style={{ width:18, height:18 }} />
-                      </button>
-
-                      {/* Trust signals */}
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20, marginTop:24 }}>
-                        {[
-                          { icon: Clock, text:'~60 seconds' },
-                          { icon: Shield, text:'Encrypted' },
-                          { icon: CheckCircle2, text:'Free forever' },
-                        ].map(({ icon: Icon, text }) => (
-                          <div key={text} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'rgba(255,255,255,0.28)' }}>
-                            <Icon style={{ width:12, height:12 }} />
-                            {text}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-              )}
-
-              {/* Fullscreen wizard overlay */}
-              {wizardOpen && !created && (
-                <div
-                  style={{
-                    position:'fixed', inset:0, zIndex:1000,
-                    background:'rgba(5,5,10,0.96)',
-                    backdropFilter:'blur(20px)',
-                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-                    animation:'wiz-overlay-in 0.35s cubic-bezier(0.22,1,0.36,1) both',
-                    padding:'24px',
-                  }}
-                >
-                  {/* Ambient orb */}
-                  <div aria-hidden="true" style={{
-                    position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)',
-                    width:600, height:600, borderRadius:'50%', pointerEvents:'none',
-                    background: mode === 'table-service'
-                      ? 'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)'
-                      : mode === 'rsvp'
-                      ? 'radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 65%)'
-                      : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 65%)',
-                    filter:'blur(40px)',
-                  }} />
-
-                  {/* Close button */}
-                  <button
-                    onClick={() => setWizardOpen(false)}
-                    style={{
-                      position:'absolute', top:24, right:24,
-                      width:40, height:40, borderRadius:12,
-                      background:'rgba(255,255,255,0.05)',
-                      border:'1px solid rgba(255,255,255,0.08)',
-                      color:'rgba(255,255,255,0.5)',
-                      cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                      transition:'background 0.2s, color 0.2s',
-                      fontFamily:'DM Sans,sans-serif',
-                      fontSize:20, lineHeight:1,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.1)'; e.currentTarget.style.color='#fff'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.5)'; }}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-
-                  {/* Wordmark */}
-                  <div style={{ position:'absolute', top:26, left:28, display:'flex', alignItems:'center', gap:10 }}>
-                    <div style={{
-                      width:32, height:32, borderRadius:9,
-                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'rsvp' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)',
-                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : mode === 'rsvp' ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(99,102,241,0.25)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                    }}>
-                      {mode === 'table-service'
-                        ? <UtensilsCrossed style={{ width:15, height:15, color:'#f97316' }} />
-                        : mode === 'rsvp'
-                        ? <CheckSquare style={{ width:15, height:15, color:'#34d399' }} />
-                        : <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
-                      }
-                    </div>
-                    <span style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:17, color:'rgba(255,255,255,0.7)', letterSpacing:'-0.02em' }}>PlanIt</span>
-                  </div>
-
-                  {/* Wizard card */}
-                  <div style={{
-                    width:'100%', maxWidth:520,
-                    background:'rgba(12,12,20,0.9)',
-                    border:'1px solid rgba(255,255,255,0.08)',
-                    borderRadius:28,
-                    padding:'clamp(28px,6vw,52px)',
-                    boxShadow:'0 40px 100px rgba(0,0,0,0.7)',
-                    position:'relative',
-                  }}>
-                    {/* Mode tabs (events + rsvp; hidden for venue) */}
-                    {selectedBranch !== 'venue' && (
-                      <div style={{ display:'flex', gap:6, marginBottom:32, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
-                        {[
-                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
-                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
-                          { val:'rsvp',       label:'RSVP',       sub:'Just RSVPs'     },
-                        ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); if (val === 'rsvp' && selectedBranch !== 'rsvp') setSelectedBranch('rsvp'); if (val !== 'rsvp' && selectedBranch === 'rsvp') setSelectedBranch('events'); }}
-                            style={{
-                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
-                              color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
-                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
-                              fontFamily:'DM Sans,sans-serif',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.35)' : 'none',
-                            }}>
-                            <div>{label}</div>
-                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    <OnboardingWizard
-                      key={wizardKey}
-                      mode={mode}
-                      formData={formData}
-                      setFormData={setFormData}
-                      fieldErrors={fieldErrors}
-                      setFieldErrors={setFieldErrors}
-                      loading={loading}
-                      submittedRef={wizardSubmittedRef}
-                      stepControlRef={wizardStepRef}
-                      abuseStatus={abuseStatus}
-                      requiresVerification={requiresVerification}
-                      onCaptchaToken={setTurnstileToken}
-                      captchaResetKey={captchaResetKey}
-                      onUserInput={() => { if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now(); }}
-                      onUserPaste={(e) => { const len = e.clipboardData?.getData('text')?.length || 0; if (len > eventFormTimingRef.current.largestPasteChars) { eventFormTimingRef.current.largestPasteChars = len; eventFormTimingRef.current.largestPasteElapsedMs = Date.now() - (eventFormTimingRef.current.firstInputAt || eventFormTimingRef.current.pageLoadedAt); } }}
-                      onSubmit={async () => { const ok = await handleSubmit(); if (ok) setWizardOpen(false); }}
-                    />
-                  </div>
-
-                  <p style={{ marginTop:20, fontSize:12, color:'rgba(255,255,255,0.18)', letterSpacing:'0.05em' }}>
-                    Press Esc to close
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* FINALE: a cinematic close with a clear next step */}
-        {!(selectedBranch || isWL) && (
-          <SpotlightStage id="start" minHeight="92dvh">
-            <div className="flex flex-col justify-between gap-16 px-8 pb-10 pt-28 md:px-16 lg:px-20" style={{ minHeight: '92dvh' }}>
-              <div>
-                <p className="lq-kicker mb-6">{'// Start'}</p>
-                <BlurText
-                  as="h2"
-                  justify="start"
-                  text={"Let's plan\nsomething."}
-                  className="lq-display text-white leading-[0.95] text-5xl md:text-7xl lg:text-8xl"
-                />
-                <p className="mt-6 max-w-[44ch] text-sm md:text-base font-light leading-snug text-white/90">
-                  Free for every event. Create your workspace in under a minute: no credit card, and no accounts for your guests.
-                </p>
-                <div className="mt-8 flex flex-wrap items-center gap-6">
-                  <button onClick={() => selectBranch('events')} className="lq-glass-strong inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white">
-                    Start with Events <ArrowUpRight className="h-5 w-5" />
-                  </button>
-                  <button onClick={() => selectBranch('venue')} className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">
-                    Explore Venue <ArrowUpRight className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => selectBranch('rsvp')} className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">
-                    Just need RSVPs? <ArrowUpRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Highlights">
-                {[
-                  ['Free forever', 'No credit card, no per-seat pricing'],
-                  ['No guest accounts', 'Guests join by name with a personal QR'],
-                  ['Unlimited team', 'Organizers, vendors and volunteers'],
-                  ['Tidy by default', 'Event data auto-deleted 7 days after'],
-                ].map(([t, d]) => (
-                  <li key={t} className="lq-glass-strong rounded-[1.25rem] p-5 text-white">
-                    <div className="lq-display text-2xl leading-tight">{t}</div>
-                    <div className="mt-2 text-xs font-light text-white/90">{d}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </SpotlightStage>
-        )}
-
-        {/* FOOTER */}
-        <footer className="pi-footer relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(8,8,12,0.92) 0%, rgba(16,16,22,0.97) 100%)' }}>
-          <div aria-hidden="true" className="pi-footer-glow" />
-          <div className="max-w-screen-xl mx-auto px-5 sm:px-10 pt-16 sm:pt-20">
-            <div className="pi-footer-rule" aria-hidden="true" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12 pt-10 sm:pt-12">
-              <div className="col-span-2 md:col-span-1">
-                <h3 className="pi-footer-label">{isWL ? wlName : 'PlanIt'}</h3>
-                {isWL && wlLogo && <img src={wlLogo} alt={wlName} className="h-8 object-contain mb-4" />}
-                <p className="pi-footer-copy max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
-                <p className="pi-footer-status mt-5"><span className="pi-footer-dot" aria-hidden="true" />Built by Aakshat Hariharan</p>
-              </div>
-              <div>
-                <h3 className="pi-footer-label">Product</h3>
-                <ul className="pi-footer-list">
-                  {[['Features', '#features'], ['RSVP Pages', '#planit-rsvp'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create']].map(([l, h]) => (
-                    <li key={l}><a href={h} onClick={l === 'RSVP Pages' ? (e) => { e.preventDefault(); selectBranch('rsvp'); } : undefined} className="pi-footer-link">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="pi-footer-label">Company</h3>
-                <ul className="pi-footer-list">
-                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="pi-footer-link">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="pi-footer-label">Connect</h3>
-                <ul className="pi-footer-list">
-                  {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="pi-footer-link">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className="pi-footer-mark-wrap" aria-hidden="true">
-            <div className="pi-footer-mark">{isWL ? wlName : 'PlanIt'}</div>
-          </div>
-
-          <div className="pi-footer-bottom max-w-screen-xl mx-auto px-5 sm:px-10">
-            <span>© 2026 {isWL ? wlName : 'PlanIt'}. All rights reserved.</span>
-            <span>{isWL ? '' : 'Planning an office offsite or big event? Start free in a minute.'}</span>
-          </div>
-        </footer>
-
-      </main>
-    </div>
-  );
-}
+      <p style={{ fontSize: 13.5, color: 'var(--mu)', margin: '16px 0 0' }}>Enterprise is built for large, ticketed or access-controlled events with 50+ attendees. For open RSVP or team-only events, Standard is all you need.</p>
+      <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} /><span><b>This cannot be changed later.</b> Switching between Standard and Enterprise isn&apos;t possible after creation.</span></div></>;
+    if (cur === 'who') return <>
+      {head(isVenue ? 'Who manages this venue?' : 'Who\u2019s organizing this?', isVenue ? 'Updates go here, and you\u2019ll use it to log back in.' : 'This is your organizer account. Keep these details safe.')}
+      <div className="fld">
+        <Field label={`${isVenue ? 'Manager name' : 'Your name'} *`} error={err.organizerName}><input ref={firstRef} className={`inp${err.organizerName ? ' bad' : ''}`} placeholder={isVenue ? 'Head Manager' : 'Alex Smith'} value={
