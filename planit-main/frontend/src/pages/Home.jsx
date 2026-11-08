@@ -1263,6 +1263,8 @@ By accessing any component of the PlanIt platform, You acknowledge that:
 
 ================================================================================
 ================================================================================
+
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 */
 
 const CSS = `@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Hanken+Grotesk:wght@400;500;600&display=swap');
@@ -2148,4 +2150,516 @@ function Wizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSu
     if (cur === 'who') return <>
       {head(isVenue ? 'Who manages this venue?' : 'Who\u2019s organizing this?', isVenue ? 'Updates go here, and you\u2019ll use it to log back in.' : 'This is your organizer account. Keep these details safe.')}
       <div className="fld">
-        <Field label={`${isVenue ? 'Manager name' : 'Your name'} *`} error={err.organizerName}><input ref={firstRef} className={`inp${err.organizerName ? ' bad' : ''}`} placeholder={isVenue ? 'Head Manager' : 'Alex Smith'} value={
+        <Field label={`${isVenue ? 'Manager name' : 'Your name'} *`} error={err.organizerName}><input ref={firstRef} className={`inp${err.organizerName ? ' bad' : ''}`} placeholder={isVenue ? 'Head Manager' : 'Alex Smith'} value={formData.organizerName} onChange={set('organizerName')} onKeyDown={enter} /></Field>
+        <Field label={`${isVenue ? 'Manager email' : 'Your email'} *`} error={err.organizerEmail}><input type="email" className={`inp${err.organizerEmail ? ' bad' : ''}`} placeholder={isVenue ? 'manager@restaurant.com' : 'alex@company.com'} value={formData.organizerEmail} onChange={set('organizerEmail')} onKeyDown={enter} /></Field>
+      </div></>;
+    const second = isVenue ? 'Staff password' : 'Event password';
+    const hint = isVenue ? 'The PIN your floor staff use to log in (optional)' : isRsvp ? 'Restricts who can open your event space (optional). The RSVP page stays open to anyone with the link unless you protect it in RSVP Settings.' : 'Restrict who can join your event (optional)';
+    return <>
+      {head(isVenue ? 'Secure your venue.' : 'Secure your event.', isVenue ? 'Set a password to manage the venue and a staff PIN for your team.' : 'Your account password gets you back in from any device.')}
+      <div className="fld">
+        <Field label={<><Lock size={12} style={{ verticalAlign: -1 }} /> {isVenue ? 'Organizer password' : 'Account password'} *</>} error={err.accountPassword}>
+          <div className="pw"><input ref={firstRef} type={showPw ? 'text' : 'password'} className={`inp${err.accountPassword ? ' bad' : ''}`} placeholder="Minimum 4 characters" minLength={4} value={formData.accountPassword} onChange={set('accountPassword')} onKeyDown={enter} />
+            <button type="button" onClick={() => setShowPw((p) => !p)} aria-label="Show password">{showPw ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></Field>
+        <Field label={second} hint="(optional)"><div className="pw"><input type={showPw2 ? 'text' : 'password'} className="inp" placeholder={isVenue ? 'Staff PIN or password' : 'Leave empty for open access'} value={isVenue ? formData.staffPassword : formData.password} onChange={set(isVenue ? 'staffPassword' : 'password')} />
+          <button type="button" onClick={() => setShowPw2((p) => !p)} aria-label="Show password">{showPw2 ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
+          <small style={{ color: 'var(--mu)', display: 'block', marginTop: 6 }}>{hint}</small></Field>
+        <div className="fld" style={{ gap: 10, paddingTop: 14, borderTop: '1px solid var(--ln)' }}>
+          {LEGAL_CHECKS.map((c) => (
+            <div key={c.key}><label className="chk"><input type="checkbox" checked={!!formData[c.key]} onChange={(e) => { onUserInput?.(); const v = e.target.checked; setFormData((p) => ({ ...p, [c.key]: v })); if (v) setLocalErr((p) => { const n = { ...p }; delete n[c.key]; return n; }); }} /><span>{c.label}</span></label>
+              {err[c.key] && <div className="err" style={{ marginLeft: 26 }}><AlertCircle size={13} />{err[c.key]}</div>}</div>))}
+        </div>
+      </div></>;
+  };
+
+  return (
+    <div>
+      <div className="prog">{steps.map((_, i) => <i key={i} className={i <= step ? 'on' : ''} />)}<span>Step {step + 1} of {total}</span></div>
+      {draft && (
+        <div className="banner"><span><b>You were in the middle of creating an event.</b> Continue where you left off?</span>
+          <button className="btn pri sm" onClick={() => { setFormData(draft.formData); setStep(draft.step); setStepKey((k) => k + 1); setDraft(null); }}>Continue</button>
+          <button className="btn sm" onClick={() => { localStorage.removeItem('planit_event_draft'); setDraft(null); }}>Start fresh</button></div>)}
+      <div key={stepKey} className="step" onPaste={onUserPaste}>
+        {abuseStatus && <div className="banner"><span><b>{abuseStatus.title}</b> {abuseStatus.message}</span></div>}
+        {body()}
+        {requiresVerification && <div style={{ marginTop: 18, display: 'grid', justifyItems: 'center', gap: 10 }}><p style={{ fontSize: 13, color: 'var(--mu)', margin: 0 }}>Please complete the verification step to continue.</p><TurnstileWidget onToken={onCaptchaToken} resetKey={captchaResetKey} theme="light" /></div>}
+      </div>
+      <div className="nv">
+        {step > 0 && <button className="btn" type="button" onClick={() => go(-1)}>Back</button>}
+        <button className="btn pri" type="button" onClick={next} disabled={loading}>
+          {loading ? <><div className="spin" />Creating…</> : step === total - 1 ? <>{isVenue ? 'Launch venue' : 'Create event'} <ArrowRight size={16} /></> : <>Continue <ArrowRight size={16} /></>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Page ──────────────────────────────────────────────────────────────── */
+export default function Home() {
+  const navigate = useNavigate();
+  const { wl, isWL } = useWhiteLabel();
+  const wlName = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
+  const wlLogo = isWL ? (wl?.branding?.logoUrl || '') : '';
+  const wlPrimary = isWL ? (wl?.branding?.primaryColor || '') : '';
+  const wlHome = isWL ? (wl?.pages?.home || {}) : {};
+  const brand = isWL ? wlName : 'PlanIt';
+
+  const [menu, setMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mode, setMode] = useState('standard');
+  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'rsvp' | 'venue'
+  const [formData, setFormData] = useState({
+    subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
+    organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
+    isEnterpriseMode: false, maxParticipants: 10000, agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(null);
+  const [recoveryCode, setRecoveryCode] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [wizardKey, setWizardKey] = useState(0);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [abuseStatus, setAbuseStatus] = useState(null);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const submittedRef = useRef(false);
+  const stepRef = useRef(null);
+  const timing = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
+  const m = MODES.find((x) => x.id === mode) || MODES[0];
+
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 8); on();
+    window.addEventListener('scroll', on, { passive: true }); return () => window.removeEventListener('scroll', on);
+  }, []);
+  useEffect(() => { // default the timezone from the visitor's location, never overriding a manual pick
+    let off = false;
+    detectTimezone(() => eventAPI.detectTimezone()).then((tz) => { if (!off && tz) setFormData((f) => (f._tzTouched || f.timezone !== getUserTimezone() ? f : { ...f, timezone: tz })); });
+    return () => { off = true; };
+  }, []);
+  useEffect(() => { // the white-label landing page links here with ?new=1
+    if (isWL && new URLSearchParams(window.location.search).get('new') === '1') setWizardOpen(true);
+  }, [isWL]);
+  useEffect(() => {
+    const h = (e) => { if (e.key === 'Escape') setWizardOpen(false); };
+    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h);
+  }, []);
+  useEffect(() => {
+    if (!wizardOpen) return; const p = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = p; };
+  }, [wizardOpen]);
+
+  const pickMode = (id, target) => {
+    setSelectedBranch((b) => (b ? branchOf(id) : b));
+    setMode(id); setFormData((p) => ({ ...p, isEnterpriseMode: id === 'enterprise' })); setWizardKey((k) => k + 1);
+    if (target) setTimeout(() => { document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); document.getElementById(target === 'start' ? 'hero-title' : 'create-title')?.focus({ preventScroll: true }); }, 30);
+  };
+  const selectBranch = (id) => { pickMode(id); setSelectedBranch(branchOf(id)); setTimeout(() => document.getElementById('branch')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
+  const backToAll = () => { setSelectedBranch(null); setTimeout(() => document.getElementById('modes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
+  const goHash = (e, href) => {
+    if (!href.startsWith('#')) return;
+    e.preventDefault(); setMenu(false);
+    const key = href.startsWith('#planit-') ? href.slice(8) : '';
+    if (BRANCH_MODE[key]) { selectBranch(BRANCH_MODE[key]); return; }
+    const go = () => document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (selectedBranch && !['#start', '#create', '#branch'].includes(href)) { setSelectedBranch(null); setTimeout(go, 60); } else go();
+  };
+  useEffect(() => { // old links like /#planit-events, /#planit-rsvp and /#planit-venue still open that type's page
+    const k = window.location.hash.startsWith('#planit-') ? window.location.hash.slice(8) : '';
+    if (!isWL && BRANCH_MODE[k]) selectBranch(BRANCH_MODE[k]);
+  }, []); // eslint-disable-line
+  const heroTitle = (e) => { const title = e.target.value; setFormData((p) => ({ ...p, title, subdomain: p._subdomainTouched ? p.subdomain : makeSubdomain(title) })); };
+  const openWizard = () => { setFormData((p) => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey((k) => k + 1); timing.current.formStartedAt = Date.now(); setWizardOpen(true); };
+
+  const handleSubmit = async () => {
+    const TS = mode === 'table-service', errs = {};
+    if (!formData.title.trim()) errs.title = TS ? 'Restaurant name is required.' : 'Event title is required.';
+    if (!TS && !formData.date) errs.date = 'Date and time is required.';
+    if (!TS && !formData.timezone) errs.timezone = 'Timezone is required.';
+    if (!formData.organizerName.trim()) errs.organizerName = TS ? 'Manager name is required.' : 'Your name is required.';
+    if (!formData.organizerEmail.trim()) errs.organizerEmail = TS ? 'Manager email is required.' : 'Your email is required.';
+    else if (!validateEmail(formData.organizerEmail.trim())) errs.organizerEmail = 'Please enter a valid email address.';
+    if (!formData.accountPassword) errs.accountPassword = 'Account password is required.';
+    else if (formData.accountPassword.length < 4) errs.accountPassword = 'Password must be at least 4 characters.';
+    if (TS && formData.staffPassword && formData.staffPassword.length < 4) errs.staffPassword = 'Staff PIN must be at least 4 characters.';
+    for (const c of LEGAL_CHECKS) if (!formData[c.key]) errs[c.key] = c.error;
+    if (Object.keys(errs).length) { setFieldErrors(errs); return false; }
+    setFieldErrors({}); setLoading(true);
+
+    const dateValue = !TS && formData.date ? localDateTimeToUTC(formData.date, formData.timezone) : undefined;
+    const payload = {
+      title: sanitize(formData.title), description: sanitize(formData.description),
+      ...(dateValue ? { date: dateValue, timezone: formData.timezone } : {}),
+      location: sanitize(formData.location), organizerName: sanitize(formData.organizerName), organizerEmail: sanitize(formData.organizerEmail),
+      accountPassword: formData.accountPassword, password: formData.password || undefined,
+      staffPassword: TS && formData.staffPassword ? formData.staffPassword : undefined,
+      subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
+      isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode, isTableServiceMode: TS,
+      eventType: mode === 'rsvp' ? 'rsvpOnly' : 'standard', maxParticipants: formData.maxParticipants,
+      agreedToTerms: true, legalVersion: LEGAL_VERSION, ...(turnstileToken ? { turnstileToken } : {}),
+      behavior: { ...timing.current, submittedAt: Date.now(), formStartedAt: timing.current.formStartedAt || timing.current.pageLoadedAt },
+      browserMeta: {
+        webdriver: navigator.webdriver === true, language: navigator.language || '', platform: navigator.platform || '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '', hardwareConcurrency: navigator.hardwareConcurrency || 0,
+        deviceMemory: navigator.deviceMemory || 0, plugins: navigator.plugins ? Array.from(navigator.plugins).slice(0, 5).map((p) => p.name) : [], userAgent: navigator.userAgent || '',
+      },
+    };
+    try {
+      const res = await eventAPI.create(payload);
+      localStorage.setItem('eventToken', res.data.token); localStorage.setItem('username', sanitize(formData.organizerName));
+      setCreated(res.data.event);
+      if (res.data.recoveryCode) setRecoveryCode(res.data.recoveryCode);
+      submittedRef.current = true; localStorage.removeItem('planit_event_draft');
+      trackFeature('event_creation_complete'); trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
+      setRequiresVerification(false); setAbuseStatus(null);
+      return true;
+    } catch (error) {
+      const data = error.response?.data;
+      const L = { date: 'Date and time', timezone: 'Timezone', title: TS ? 'Restaurant name' : 'Event title', organizerName: TS ? 'Manager name' : 'Your name', organizerEmail: TS ? 'Manager email' : 'Your email', accountPassword: 'Account password', password: TS ? 'Staff PIN' : 'Event password', subdomain: TS ? 'Restaurant URL' : 'Event URL', agreedToTerms: 'Terms agreement' };
+      if (data?.requiresVerification || data?.code === 'VERIFICATION_REQUIRED' || data?.code === 'INVALID_VERIFICATION') {
+        setRequiresVerification(true); setCaptchaResetKey((k) => k + 1); setTurnstileToken('');
+        setAbuseStatus({ title: data?.code === 'INVALID_VERIFICATION' ? 'Invalid verification.' : 'Verification required.', message: data?.userMessage || 'Please complete the verification step to continue.' });
+        return;
+      }
+      if (['TRY_AGAIN_LATER', 'ADDITIONAL_REVIEW_REQUIRED', 'SUBMISSION_RECEIVED'].includes(data?.code)) {
+        setAbuseStatus({ title: 'Please try again.', message: data?.userMessage || 'We couldn\u2019t complete your request right now. Please try again shortly.' }); return;
+      }
+      if (Array.isArray(data?.errors)) {
+        const se = {}, msgs = [];
+        data.errors.forEach((e) => {
+          const path = e.path || e.param || ''; if (path === 'date' && TS) return;
+          const t = `${L[path] || path}: ${e.msg || e.message || 'Invalid value'}`; se[path] = t; msgs.push(t);
+        });
+        setFieldErrors(se);
+        if (msgs.length === 1) toast.error(msgs[0]); else if (msgs.length) toast.error(`${msgs.length} fields need attention:\n${msgs.map((x) => `• ${x}`).join('\n')}`, { duration: 6000 });
+      } else {
+        const msg = data?.error || 'Failed to create', nameStep = TS ? 2 : mode === 'rsvp' ? 3 : 4;
+        if (msg.includes('already taken')) { setFieldErrors({ subdomain: 'This URL is already taken. Please choose a different one.' }); stepRef.current?.goTo(1); }
+        else if (msg.includes('not available')) { setFieldErrors({ subdomain: 'This URL is not available. Please choose a different one.' }); stepRef.current?.goTo(1); }
+        else if (msg.includes('not allowed') || msg.toLowerCase().includes('display name')) { setFieldErrors({ organizerName: 'This display name is not allowed. Please choose a different one.' }); stepRef.current?.goTo(nameStep); }
+        else if (msg.includes('email')) { setFieldErrors({ organizerEmail: 'Please enter a valid email address.' }); stepRef.current?.goTo(nameStep); }
+        else if (msg.includes('password')) setFieldErrors({ accountPassword: 'Password must be at least 6 characters.' });
+        else toast.error(msg || 'Something went wrong. Please check your details and try again.');
+      }
+      return false;
+    } finally { setLoading(false); }
+  };
+
+  const doneLabel = { 'table-service': 'Open floor dashboard', enterprise: 'Set up guest invites', rsvp: 'Open RSVP dashboard' }[mode] || 'Enter your planning hub';
+  const enterEvent = () => {
+    const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
+    navigate(mode === 'table-service' ? `${base}/floor` : mode === 'rsvp' ? `${base}/rsvp-dashboard` : `${base}?new=1`);
+  };
+  const createdView = created && (
+    <div className="done">
+      <h3>{mode === 'table-service' ? 'Venue created.' : mode === 'rsvp' ? 'Your RSVP page is live.' : 'Event created.'}</h3>
+      <p style={{ margin: 0, color: 'var(--mu)' }}>Share the link with your team and get started.</p>
+      {mode !== 'table-service' && mode !== 'enterprise' && <CopyLinkBox eventId={created.id} subdomain={created.subdomain} mode={mode} />}
+      {mode === 'table-service' && formData.staffPassword && <div className="link" style={{ display: 'block' }}><small>Staff login</small><br />Username <b>staff</b> · Password <b>{formData.staffPassword}</b><br /><small>Staff sign in at /login</small></div>}
+      <button className="btn pri wide" onClick={enterEvent}>{doneLabel}</button>
+    </div>
+  );
+  const nameLabel = mode === 'table-service' ? 'Venue name' : mode === 'rsvp' ? 'What are you hosting?' : 'Event name';
+  const namePh = mode === 'table-service' ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2026';
+  const nav = isWL ? [['Discover', '/discover'], ['Help', '/help'], ['About', '/about']] : [['Features', '#features'], ['Event types', '#modes'], ['Demos', '#showcase'], ['Claude', '#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Help', '/help']];
+  const startFree = (e) => { e.preventDefault(); setMenu(false); pickMode(mode, 'start'); };
+
+  return (
+    <div className="pi" style={wlPrimary ? { '--ac': wlPrimary, '--acs': `color-mix(in srgb, ${wlPrimary} 12%, white)` } : undefined}>
+      <InjectCSS />
+      {recoveryCode && <RecoveryCodeModal code={recoveryCode} onDismiss={() => setRecoveryCode(null)} eventSlug={created?.subdomain} />}
+
+      <header className={`nav${scrolled ? ' sc' : ''}`}>
+        <div className="wrap">
+          <a href="#top" className="brand" aria-label={`${brand} home`}>
+            {isWL ? <span className="mark">{wlLogo ? <img src={wlLogo} alt="" /> : (brand.charAt(0) || 'P')}</span> : <Logo />}{brand}
+          </a>
+          <nav className="links" aria-label="Primary">
+            {nav.map(([l, h]) => <a key={l} href={h} onClick={(e) => goHash(e, h)}>{l}</a>)}
+            <a href="#start" className="btn pri sm" onClick={startFree}>Start free</a>
+          </nav>
+          <button className="burger" aria-label="Toggle menu" aria-expanded={menu} onClick={() => setMenu((o) => !o)}>{menu ? <X /> : <Menu />}</button>
+        </div>
+        {menu && <div className="menu">{nav.map(([l, h]) => <a key={l} href={h} onClick={(e) => goHash(e, h)}>{l}</a>)}<a href="/terms">Terms</a><a href="/privacy">Privacy</a>
+          <a href="#start" className="btn pri" onClick={startFree}>Start free</a></div>}
+      </header>
+
+      <main id="top">
+        <section className="hero">
+          <Burst className="d1 spin-slow" color="#ff7ac6" size={96} /><Squiggle className="d2 float" />
+          <div className="wrap hero-g">
+            <div>
+              <span className="eye">{isWL ? 'Event platform' : 'For event teams & venues'}</span>
+              {wlHome.headline ? <h1>{wlHome.headline}</h1> : <h1>Plan the night.<br /><em>Run the door.</em></h1>}
+              <p className="lead">{isWL ? (wlHome.subheadline || wlName || 'Your event platform') : 'One workspace for events and hospitality: team chat, tasks, RSVPs, check-in, and a live floor manager for restaurants.'}</p>
+              <SlugFinder />
+            </div>
+            <div className="panel" id="start">
+              <span className="stick" aria-hidden="true">Free<br />forever</span>
+              {created ? createdView : (
+                <>
+                  <h2 className="ph">Start free</h2>
+                  <label className="l" htmlFor="hero-title">{nameLabel}</label>
+                  <input id="hero-title" className="inp" value={formData.title} onChange={heroTitle} onKeyDown={(e) => e.key === 'Enter' && openWizard()} placeholder={namePh} autoComplete="off" />
+                  <div className="perf" aria-hidden="true" />
+                  <div className="choose" role="radiogroup" aria-label="Event mode">
+                    {MODES.map((x) => (
+                      <button key={x.id} type="button" role="radio" aria-checked={mode === x.id} data-mode={x.id} className={`ch${mode === x.id ? ' on' : ''}`} onClick={() => pickMode(x.id)}>
+                        <span className={`chi t-${x.tone}`}><x.icon size={16} strokeWidth={2.2} /></span>
+                        <span style={{ flex: 1 }}><b>{x.tab}</b><small>{x.short}</small>
+                          {mode === x.id && <span className="mini">{x.incl.slice(0, 4).map((i) => <span key={i}>{i}</span>)}</span>}</span>
+                        <span className="dot" />
+                      </button>))}
+                  </div>
+                  <button className="btn pri wide" onClick={openWizard}>{m.cta}</button>
+                  <p className="sub2">{m.sub}</p>
+                  {!isWL && <p className="sub2" style={{ marginTop: 8 }}><button className="lnk" onClick={() => selectBranch(mode)}>See everything in {m.tab}</button> &nbsp;·&nbsp; <a className="lnk" href="#modes" onClick={(e) => goHash(e, '#modes')}>Compare all four</a></p>}
+                  {mode === 'enterprise' && <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} />Mode cannot be changed after creation.</div>}
+                </>
+              )}
+            </div>
+          </div>
+          <div className="wrap">
+            {wlHome.heroImageUrl && <img className="hero-img" src={wlHome.heroImageUrl} alt="" />}
+            <ul className="facts">{[['Free forever', 'No credit card, no per-seat pricing'], ['No guest accounts', 'Guests join by name with a personal QR'], ['Unlimited team', 'Organizers, vendors and volunteers'], ['Tidy by default', 'Event data auto-deleted 7 days after']].map(([t, d]) => <li key={t}><b>{t}</b>{d}</li>)}</ul>
+          </div>
+        </section>
+
+        {!isWL && !selectedBranch && <div className="belt" aria-hidden="true"><div>{[0, 1].map((k) => FEATURES.map(([, t]) => <span key={`${k}-${t}`}>{t}</span>))}</div></div>}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec" id="modes">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">Pick your path</span><h2>Four ways to start. Pick the one that sounds like you.</h2></div><p>Each one has its own page that shows exactly what you get, with a live demo. Tap a card to see how it works.</p></div>
+              <div className="paths">
+                {PATHS.map((pt, i) => (
+                  <a key={pt.id} href={`#planit-${pt.branch}`} className={`path t-${pt.tone}`} onClick={(e) => { e.preventDefault(); selectBranch(pt.id); }}>
+                    <span className="pn">0{i + 1}</span>
+                    <span className="ptag"><pt.icon size={15} strokeWidth={2.2} />{pt.tag}</span>
+                    <h3>{pt.h[0]}<br />{pt.h[1]}</h3>
+                    <p>{pt.p}</p>
+                    <ul className="chips">{pt.who.map((c) => <li key={c}>{c}</li>)}</ul>
+                    <span className="pgo">{pt.cta} <ArrowRight size={16} /></span>
+                  </a>))}
+              </div>
+              <div className="sh2" style={{ marginTop: 84 }}><span className="eye">Side by side</span><h3>Not sure which one? Compare.</h3></div>
+              <div className="cmpw">
+                <div className="cmp" role="table" aria-label="Compare the four types">
+                  <div className="cmp-h" role="row"><span />{PATHS.map((pt) => <button key={pt.id} className={`t-${pt.tone}`} onClick={() => selectBranch(pt.id)} aria-label={`See ${pt.name}`}><pt.icon size={16} />{pt.name}</button>)}</div>
+                  {COMPARE.map(([label, cells]) => <div className="cmp-r" role="row" key={label}><b role="rowheader">{label}</b>{cells.map((c, i) => <span role="cell" key={i}>{c}</span>)}</div>)}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec lav" id="showcase">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">See it in action</span><h2>Not just a free trial. This is the real thing.</h2></div><p>Tap around. The RSVP page, the team workspace and the door check-in below are live demos, no sign-up needed.</p></div>
+              <div className="sshow">
+                {SHOWCASE.map((s, i) => (
+                  <div key={s.key} className={`srow${i % 2 ? ' rev' : ''}`}>
+                    <div><span className="eye">{s.eyebrow}</span><h3>{s.title}</h3><p>{s.desc}</p>
+                      <button className="lnk" onClick={() => selectBranch(s.mode)}>{s.cta} <ArrowRight size={14} style={{ verticalAlign: -2 }} /></button></div>
+                    <DeviceFrame variant={s.device} url={s.url}>{s.node}</DeviceFrame>
+                  </div>))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {!isWL && selectedBranch && (() => {
+          const b = BRANCHES[selectedBranch];
+          const demo = BRANCH_DEMOS[selectedBranch];
+          const jump = () => pickMode(BRANCH_MODE[selectedBranch], 'create');
+          const others = PATHS.filter((pt) => pt.branch !== selectedBranch);
+          return (
+            <section className={`sec br br-${selectedBranch}`} id="branch">
+              <span id={`planit-${selectedBranch}`} />
+              <div className="wrap">
+                <button className="back" onClick={backToAll}><ArrowRight size={15} style={{ transform: 'rotate(180deg)' }} />All options</button>
+                <div className="br-h">
+                  <div><span className="eye">{b.eyebrow}</span><h2>{b.h.map((l, i) => <span key={l} className={i === b.h.length - 1 ? 'hl' : ''}>{l}<br /></span>)}</h2></div>
+                  <div><p className="br-p">{b.p}</p><div className="cta"><button className="btn dk" onClick={jump}>{b.cta} <ArrowRight size={16} /></button><span className="br-note">{b.note}</span></div></div>
+                </div>
+                <div className="sh2"><span className="eye">What&apos;s included</span><h3>{b.incTitle}</h3></div>
+                <div className="feats br-f">{b.items.map(([I, t, d]) => <div className="feat" key={t}><I size={26} strokeWidth={1.7} /><h3>{t}</h3><p>{d}</p></div>)}</div>
+
+                <div className="bdemo">
+                  <div><span className="eye">{demo.k}</span><h3>{demo.h}</h3><p>{demo.p}</p>
+                    {demo.links.length > 0 && <div className="dl">{demo.links.map(([l, h]) => <a key={h} className="lnk" href={h}>{l}</a>)}</div>}</div>
+                  <DeviceFrame variant={demo.device} url={demo.url}>{demo.node}</DeviceFrame>
+                </div>
+
+                {selectedBranch === 'events' && (
+                  <div className="callouts">
+                    <div className="callout"><b>See it in action</b><p>Invites and RSVP pages guests actually want to share. Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest. Try the real thing, no account needed.</p>
+                      <div className="cta"><a className="btn pri sm" href="/demo/invite">Open the invite demo <ArrowUpRight size={14} /></a><a className="btn sm" href="/demo/rsvp"><Share2 size={14} /> Try the RSVP demo</a></div></div>
+                    <div className="callout alt"><b>Need door security?</b><p>Enterprise adds personalized QR invites, a check-in dashboard and real-time attendance analytics. For events with 50+ guests.</p><button className="btn dk sm" onClick={() => selectBranch('enterprise')}>See Enterprise <ArrowRight size={14} /></button></div>
+                  </div>)}
+
+                {selectedBranch === 'enterprise' && (
+                  <div style={{ marginTop: 64 }}>
+                    <div className="sh2"><span className="eye">Compare</span><h3>Events or Enterprise?</h3></div>
+                    <div className="vs">
+                      <div className="vcard"><b><Calendar size={17} /> Events (Standard)</b><small>The full planning workspace</small>
+                        <dl><div><dt>Guests</dt><dd>Open RSVP link</dd></div><div><dt>Team</dt><dd>Chat, tasks, polls, budget, unlimited members</dd></div><div><dt>Best for</dt><dd>Weddings, retreats, team-run events</dd></div></dl></div>
+                      <div className="vcard on"><span className="tagl">Locked down</span><b><Zap size={17} /> Enterprise</b><small>Everything in Events, plus the door</small>
+                        <dl><div><dt>Guests</dt><dd>Personalized QR invites, groups and tables</dd></div><div><dt>Door</dt><dd>Check-in dashboard, trust scoring, duplicate and forgery detection</dd></div><div><dt>Best for</dt><dd>Large, ticketed or access-controlled events, 50+ attendees</dd></div></dl></div>
+                    </div>
+                    <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} /><span><b>This cannot be changed later.</b> Switching between Standard and Enterprise isn&apos;t possible after your event is created.</span></div>
+                  </div>)}
+
+                {selectedBranch === 'rsvp' && (
+                  <div style={{ marginTop: 64 }}>
+                    <div className="sh2"><span className="eye">Compare</span><h3>Which one do you actually need?</h3></div>
+                    <div className="vs">
+                      <div className="vcard"><b><Calendar size={17} /> Standard Event</b><small>The full workspace</small>
+                        <dl><div><dt>Setup time</dt><dd>~5–10 min</dd></div><div><dt>Included</dt><dd>Seating charts, floor management, enterprise check-in, RSVP page</dd></div><div><dt>Best for</dt><dd>Weddings, galas, multi-day events</dd></div></dl></div>
+                      <div className="vcard on"><span className="tagl">Lightweight</span><b><CheckSquare size={17} /> RSVP Event</b><small>Just the RSVP page</small>
+                        <dl><div><dt>Setup time</dt><dd>~1 min</dd></div><div><dt>Included</dt><dd>Guest list, RSVP builder, basic check-in, analytics</dd></div><div><dt>Intentionally left out</dt><dd>Seating charts, floor management, ticketing, advanced fraud detection</dd></div><div><dt>Best for</dt><dd>Parties, meetups, simple gatherings</dd></div></dl></div>
+                    </div>
+                  </div>)}
+
+                <div style={{ marginTop: 64 }}>
+                  <div className="sh2"><span className="eye">Not quite it?</span><h3>The other three types</h3></div>
+                  <div className="oths">{others.map((pt) => (
+                    <a key={pt.id} href={`#planit-${pt.branch}`} className={`oth t-${pt.tone}`} onClick={(e) => { e.preventDefault(); selectBranch(pt.id); }}>
+                      <span><pt.icon size={15} />{pt.tag}</span><b>{pt.h[0]} {pt.h[1]}</b><em>{pt.cta} →</em></a>))}</div>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec" id="uses">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">Built for</span><h2>Every kind of room you run.</h2></div><p>From a wedding for 80 to a conference floor to a Friday-night dining room, the same workspace fits.</p></div>
+              <div className="uses">{USES.map(([id, l, h], i) => <div key={id} className={`use u${i % 4}`}><b>{l}</b><span>{h}</span></div>)}</div>
+            </div>
+          </section>
+        )}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec ink" id="how">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">How it works</span><h2>Live in about a minute.</h2></div><p>No setup call, no seat licences, no guest sign-ups. Three steps and your team is in.</p></div>
+              <div className="steps">{STEPS.map(([t, d], i) => <div key={t} className="stp"><i>{`0${i + 1}`}</i><h3>{t}</h3><p>{d}</p></div>)}</div>
+            </div>
+          </section>
+        )}
+
+
+        {!isWL && !selectedBranch && (
+          <section className="sec lav" id="features">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">Features</span><h2>Everything in one place. Nothing across five apps.</h2></div><p>Most teams plan across group chats, email threads and spreadsheets. PlanIt puts the whole team in one workspace from day one.</p></div>
+              <div className="feats">{FEATURES.map(([I, t, d, c]) => <div className={`feat ${c}`} key={t}><I size={26} strokeWidth={1.7} /><h3>{t}</h3><p>{d}</p></div>)}</div>
+            </div>
+          </section>
+        )}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec yel" id="claude">
+            <div className="wrap cl">
+              <div>
+                <span className="eye" style={{ background: '#fff' }}>Claude integration</span>
+                <h2>Run your event by talking to Claude.</h2>
+                <p className="sub">Add PlanIt to Claude once, then just ask. Build the guest list, set up seating, send announcements and watch check-ins without opening the dashboard.</p>
+                <div className="cta">
+                  <a className="btn dk" target="_blank" rel="noopener noreferrer" href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp">Add to Claude <ArrowUpRight size={15} /></a>
+                  <a className="btn" href="/help#claude">How it works</a><a className="btn" href="/mcp-docs">Docs</a>
+                </div>
+              </div>
+              <ul className="say">{['\u201cAdd Sarah Jones, sarah@example.com\u201d', '\u201cHow many people have checked in so far?\u201d', '\u201cSend an announcement: doors open in 10 minutes\u201d', '\u201cCreate 15 round tables of 10\u201d'].map((q) => <li key={q}>{q}</li>)}</ul>
+            </div>
+          </section>
+        )}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec pk" id="white-label">
+            <div className="wrap wlb">
+              <div><span className="eye" style={{ background: '#fff' }}>White label</span><h2>Launch your own branded event platform.</h2><p>Run PlanIt under your own name, logo and colours, on your own domain.</p></div>
+              <a className="btn dk" href="/white-label">Explore white label <ArrowUpRight size={15} /></a>
+            </div>
+          </section>
+        )}
+
+        {!isWL && !selectedBranch && (
+          <section className="sec" id="faq">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">FAQ</span><h2>Good questions.</h2></div><p>The short answers. Anything else, the help centre has it.</p></div>
+              <div className="faq">{FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
+            </div>
+          </section>
+        )}
+
+        <section className="sec ac" id="create">
+          <div className="wrap">
+            <div className="sh"><div><span className="eye">Get started</span><h2>Pick your event type.</h2></div><p>See what each one includes, then launch it. Takes about a minute and costs nothing.</p></div>
+            <div className="cr">
+              <div>
+                <div className="mtabs" role="tablist" aria-label="Event type">
+                  {MODES.map((x) => <button key={x.id} role="tab" aria-selected={mode === x.id} className={`mt${mode === x.id ? ' on' : ''}`} onClick={() => pickMode(x.id)}><x.icon size={17} />{x.tab}</button>)}
+                </div>
+                <h3 className="crh">{m.title}</h3>
+                <p className="crp">{m.blurb}</p>
+                <ul className="incl two">{m.incl.map((i) => <li key={i}><Check size={14} />{i}</li>)}</ul>
+              </div>
+              <div className="panel" style={{ marginTop: 0 }}>
+                {created ? createdView : (
+                  <>
+                    <m.icon size={28} style={{ color: 'var(--ac)', marginBottom: 14 }} />
+                    <h2 className="ph" style={{ fontSize: 24 }}>{m.launch}</h2>
+                    <label className="l" htmlFor="create-title">{nameLabel}</label>
+                    <input id="create-title" className="inp" value={formData.title} onChange={heroTitle} onKeyDown={(e) => e.key === 'Enter' && openWizard()} placeholder={namePh} autoComplete="off" />
+                    <div className="perf" aria-hidden="true" />
+                    <button className="btn pri wide" onClick={openWizard}>{m.cta}</button>
+                    <p className="sub2">{m.sub}</p>
+                    {mode === 'enterprise' && <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} />Mode cannot be changed after creation.</div>}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {wizardOpen && !created && (
+        <div className="ov" role="dialog" aria-modal="true" aria-label="Create">
+          <div className="wz">
+            <button className="x" onClick={() => setWizardOpen(false)} aria-label="Close">×</button>
+            {mode !== 'table-service' && (
+              <div className="seg">
+                {MODES.filter((x) => x.id !== 'table-service').map((x) => <button key={x.id} className={mode === x.id ? 'on' : ''} onClick={() => pickMode(x.id)}>{x.tab}</button>)}
+              </div>)}
+            <p className="wmeta"><b>{m.tab}:</b> {m.short}.</p>
+            <Wizard key={wizardKey} mode={mode} formData={formData} setFormData={setFormData} fieldErrors={fieldErrors} setFieldErrors={setFieldErrors}
+              loading={loading} submittedRef={submittedRef} stepControlRef={stepRef} abuseStatus={abuseStatus} requiresVerification={requiresVerification}
+              onCaptchaToken={setTurnstileToken} captchaResetKey={captchaResetKey}
+              onUserInput={() => { if (!timing.current.firstInputAt) timing.current.firstInputAt = Date.now(); }}
+              onUserPaste={(e) => { const len = e.clipboardData?.getData('text')?.length || 0; if (len > timing.current.largestPasteChars) { timing.current.largestPasteChars = len; timing.current.largestPasteElapsedMs = Date.now() - (timing.current.formStartedAt || timing.current.pageLoadedAt); } }}
+              onSubmit={async () => { const ok = await handleSubmit(); if (ok) setWizardOpen(false); }} />
+            <p style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--mu)', margin: '18px 0 0' }}>Press Esc to close</p>
+          </div>
+        </div>
+      )}
+
+      <footer className="foot">
+        <div className="wrap">
+          <div>
+            <div><h4 style={{ fontSize: 22, fontFamily: 'Unbounded,sans-serif', color: '#fff' }}>{brand}</h4>{isWL && wlLogo && <img src={wlLogo} alt={brand} style={{ height: 32, objectFit: 'contain', marginBottom: 12 }} />}
+              <p style={{ color: 'var(--mu)', fontSize: 14.5, maxWidth: 280, margin: 0 }}>{isWL ? '' : 'The planning hub for event teams, plus standalone RSVP pages when that\u2019s all you need.'}</p></div>
+            {[['Product', [['Features', '#features'], ['Event types', '#modes'], ['RSVP pages', '#planit-rsvp'], ['Venue', '#planit-venue'], ['Claude integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get started', '#start']]],
+              ['Company', [['About', '/about'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']]],
+              ['Connect', [['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']]]].map(([t, ls]) => (
+              <div key={t}><h4>{t}</h4><ul>{ls.map(([l, h]) => <li key={l}><a href={h} onClick={(e) => goHash(e, h)}>{l}</a></li>)}</ul></div>))}
+          </div>
+          <div className="fine"><span>© 2026 {brand}. All rights reserved.</span>{!isWL && <span>Built by Aakshat Hariharan</span>}</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
