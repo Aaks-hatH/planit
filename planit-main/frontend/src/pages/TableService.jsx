@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import '../styles/piColor.css';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, AlertTriangle, Settings, Plus,
@@ -221,8 +222,8 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
       const zw = obj.width || 200, zh = obj.height || 120;
       return (
         <g key={obj.id} transform={`translate(${obj.x - zw/2}, ${obj.y - zh/2})`}>
-          <rect width={zw} height={zh} rx={8} fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.1)" strokeDasharray="6 4" />
-          <text x={zw/2} y={zh/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize="14" fontWeight="600">{obj.label || 'Zone'}</text>
+          <rect width={zw} height={zh} rx={8} fill="rgba(34,54,255,0.06)" stroke="rgba(34,54,255,0.45)" strokeDasharray="6 4" />
+          <text x={zw/2} y={zh/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(13,14,28,0.55)" fontSize="14" fontWeight="600">{obj.label || 'Zone'}</text>
         </g>
       );
     }
@@ -239,18 +240,18 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
       <g key={obj.id} transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
          style={{ cursor: 'pointer' }}>
         {isSelected && (isRound
-          ? <circle cx={0} cy={0} r={w/2+8}  fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
-          : <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx={10} fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
+          ? <circle cx={0} cy={0} r={w/2+8}  fill="none" stroke="#0d0e1c" strokeWidth={2} opacity={0.6} />
+          : <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx={10} fill="none" stroke="#0d0e1c" strokeWidth={2} opacity={0.6} />
         )}
         {isRound
           ? <circle cx={0} cy={0} r={w/2+3}  fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
           : <rect x={-w/2-3} y={-h/2-3} width={w+6} height={h+6} rx={9} fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
         }
         {isRound
-          ? <circle cx={0} cy={0} r={w/2} fill={`${sm.color}22`} />
-          : <rect x={-w/2} y={-h/2} width={w} height={h} rx={6} fill={`${sm.color}22`} />
+          ? <circle cx={0} cy={0} r={w/2} fill={`${sm.color}40`} />
+          : <rect x={-w/2} y={-h/2} width={w} height={h} rx={6} fill={`${sm.color}40`} />
         }
-        <text x={0} y={-4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="11" fontWeight="700">{obj.label || `T${obj.id.slice(-3)}`}</text>
+        <text x={0} y={-4} textAnchor="middle" dominantBaseline="middle" fill="#0d0e1c" fontSize="11" fontWeight="800">{obj.label || `T${obj.id.slice(-3)}`}</text>
         <text x={0} y={10} textAnchor="middle" dominantBaseline="middle" fill={sm.color} fontSize="10" fontWeight="500">
           {state.status === 'occupied' ? `${state.partySize || '?'}/${obj.capacity}` : `cap ${obj.capacity}`}
         </text>
@@ -289,7 +290,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
   };
 
   return (
-    <div className="relative w-full h-full bg-white select-none" style={{ touchAction: 'none' }}>
+    <div className="relative w-full h-full bg-acs select-none" style={{ touchAction: 'none' }}>
       <svg
         ref={svgRef}
         className="w-full h-full"
@@ -302,7 +303,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
       >
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(34,54,255,0.14)" strokeWidth="1" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
@@ -319,11 +320,11 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 flex gap-3 flex-wrap">
+      <div className="absolute bottom-4 left-4 flex gap-3 flex-wrap bg-white border-2 border-ink rounded-lg px-3 py-1.5 shadow-hard-sm">
         {Object.entries(STATUS_META).map(([k, v]) => (
           <div key={k} className="flex items-center gap-1.5 text-xs">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: v.color }} />
-            <span className="text-neutral-500">{v.label}</span>
+            <span className="text-ink font-semibold">{v.label}</span>
           </div>
         ))}
       </div>
@@ -3198,7 +3199,7 @@ export default function TableService() {
       </div>
     );
   }  return (
-    <div className="h-screen flex flex-col bg-white text-ink overflow-hidden">
+    <div className="pi-color h-screen flex flex-col text-ink overflow-hidden">
 
       {/* Alert popup */}
       <AlertPopup
@@ -3213,15 +3214,15 @@ export default function TableService() {
       />
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 h-14 border-b border-ink bg-white flex items-center px-4 gap-4">
+      <header className="flex-shrink-0 h-14 border-b-2 border-ink bg-ac text-white flex items-center px-4 gap-4">
         {/* Logo + name */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-            <Utensils className="w-4 h-4 text-neutral-900" />
+          <div className="w-7 h-7 bg-hl border-2 border-ink rounded-lg flex items-center justify-center flex-shrink-0">
+            <Utensils className="w-4 h-4 text-ink" />
           </div>
           <div className="min-w-0">
-            <span className="font-bold text-ink text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
-            <span className="hidden sm:inline text-neutral-600 text-xs ml-2">Table Service</span>
+            <span className="font-bold text-white text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
+            <span className="hidden sm:inline text-white/80 text-xs ml-2">Table Service</span>
           </div>
         </div>
 
@@ -3247,22 +3248,22 @@ export default function TableService() {
           {tableStates.filter(s => s.guestAlert).length > 0 && (
             <button
               onClick={() => setSideTab('alerts')}
-              className="relative p-2 hover:bg-lav rounded-lg transition-colors"
+              className="relative p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <Bell className="w-4 h-4 text-amber-700" />
+              <Bell className="w-4 h-4 text-hl" />
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
                 {tableStates.filter(s => s.guestAlert).length}
               </span>
             </button>
           )}
-          <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><RefreshCw className="w-4 h-4" /></button>
-          <button onClick={() => setShowTour(true)} title="Take the tour" className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><Sparkles className="w-4 h-4" /></button>
+          <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-white/20 rounded-lg text-white hover:text-hl transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => setShowTour(true)} title="Take the tour" className="p-2 hover:bg-white/20 rounded-lg text-white hover:text-hl transition-colors"><Sparkles className="w-4 h-4" /></button>
           {isTableService && (subdomain || eid) && (
             <a
               href={subdomain ? `/e/${subdomain}/server` : `/event/${eid}/server`}
               target="_blank" rel="noopener noreferrer"
               title="Server View"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-ink text-ink rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Users className="w-3.5 h-3.5" />Servers
             </a>
@@ -3272,7 +3273,7 @@ export default function TableService() {
               href={subdomain ? `/e/${subdomain}/kitchen` : `/event/${eid}/kitchen`}
               target="_blank" rel="noopener noreferrer"
               title="Kitchen Display"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-ink text-ink rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Utensils className="w-3.5 h-3.5" />Kitchen
             </a>
@@ -3280,13 +3281,13 @@ export default function TableService() {
           <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border-2 border-amber-700 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <ScanLine className="w-3.5 h-3.5" />Scan QR
           </button>
-          <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
+          <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-ink text-ink rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <LayoutGrid className="w-3.5 h-3.5" />Edit Layout
           </button>
-          <button onClick={() => setShowFloorEditor(true)} className="sm:hidden p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors" title="Edit Layout">
+          <button onClick={() => setShowFloorEditor(true)} className="sm:hidden p-2 hover:bg-white/20 rounded-lg text-white hover:text-hl transition-colors" title="Edit Layout">
             <LayoutGrid className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><Settings className="w-4 h-4" /></button>
+          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-white/20 rounded-lg text-white hover:text-hl transition-colors"><Settings className="w-4 h-4" /></button>
         </div>
       </header>
 
@@ -3338,9 +3339,9 @@ export default function TableService() {
         </div>
 
         {/* Right sidebar */}
-        <div className="w-80 xl:w-96 flex-shrink-0 border-l border-ink flex flex-col bg-lav">
+        <div className="w-80 xl:w-96 flex-shrink-0 border-l-2 border-ink flex flex-col bg-lav">
           {/* Tabs — table-service only */}
-          <div className="flex border-b border-ink flex-shrink-0">
+          <div className="flex gap-1 p-1.5 border-b-2 border-ink bg-white flex-shrink-0">
             {[
               ...(isTableService ? [
                 { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
@@ -3352,7 +3353,7 @@ export default function TableService() {
               <button
                 key={id}
                 onClick={() => setSideTab(id)}
-                className={`flex-1 py-3 text-xs font-semibold transition-all border-b-2 ${sideTab === id ? 'text-ink border-ink' : 'text-neutral-500 border-transparent hover:text-neutral-600'}`}
+                className={`flex-1 py-2 text-xs font-bold transition-all rounded-lg border-2 ${sideTab === id ? 'text-ink border-ink bg-hl' : 'text-neutral-600 border-transparent hover:bg-lav'}`}
               >
                 {label}
                 {badge > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-lav rounded-full text-[10px] font-bold">{badge}</span>}
