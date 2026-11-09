@@ -55,6 +55,7 @@
  * it's reused as-is inside OrganizerSettings (a light modal) too.
  */
 import { useState, useEffect } from 'react';
+import '../styles/piColor.css';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Sparkles, Users, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -201,23 +202,23 @@ export default function RSVPEventDashboard() {
   const base = subdomain ? `/e/${subdomain}` : `/event/${paramEventId}`;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-50">
+    <div className="pi-color min-h-screen">
+      <header className="bg-ac border-b-2 border-ink sticky top-0 z-50">
         <div className="max-w-screen-lg mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <button onClick={() => navigate('/')}
-            className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+            className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center flex-shrink-0 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-neutral-900 truncate leading-tight">{event.title}</h1>
-            <p className="text-[11px] font-semibold text-emerald-600">RSVP Event</p>
+            <h1 className="text-sm font-bold text-white truncate leading-tight">{event.title}</h1>
+            <p className="text-[11px] font-bold text-mn">RSVP Event</p>
           </div>
           <a href={`/rsvp/${event.subdomain}`} target="_blank" rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 border-2 border-ink bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex-shrink-0 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             View live page <ExternalLink className="w-3 h-3" />
           </a>
           <button onClick={() => setShowTour(true)} title="Take the tour"
-            className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+            className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center flex-shrink-0 transition-colors">
             <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
           </button>
         </div>
@@ -231,10 +232,10 @@ export default function RSVPEventDashboard() {
         {/* Builder — full-page tool, linked out to rather than embedded, see file header */}
         <button
           onClick={() => navigate(`${base}/rsvp-builder`)}
-          className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-ink bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left font-bold"
+          className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-ink bg-hl hover:bg-acs shadow-hard transition-all text-left font-bold"
         >
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <LayoutTemplate className="w-5 h-5 text-emerald-600" />
+          <div className="w-11 h-11 rounded-xl bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
+            <LayoutTemplate className="w-5 h-5 text-ink" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-neutral-900">RSVP Page Builder</p>
@@ -247,24 +248,24 @@ export default function RSVPEventDashboard() {
         <CloneEventButton variant="card" event={event} eventId={eventId} />
 
         {/* Guests & Check-in / Analytics */}
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden">
-          <div className="flex border-b border-neutral-200/80 px-2">
+        <div className="bg-white rounded-2xl border-2 border-ink shadow-hard overflow-hidden">
+          <div className="flex gap-1 border-b-2 border-ink bg-lav p-1.5">
             <button
               onClick={() => setTab('guests')}
-              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-2 transition-colors ${
                 tab === 'guests'
-                  ? 'border-ink text-neutral-900'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-600'
+                  ? 'border-ink text-ink bg-hl rounded-lg'
+                  : 'border-transparent text-neutral-600 hover:bg-white rounded-lg'
               }`}
             >
               <Users className="w-3.5 h-3.5" /> Guests
             </button>
             <button
               onClick={() => setTab('analytics')}
-              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-2 transition-colors ${
                 tab === 'analytics'
-                  ? 'border-ink text-neutral-900'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-600'
+                  ? 'border-ink text-ink bg-hl rounded-lg'
+                  : 'border-transparent text-neutral-600 hover:bg-white rounded-lg'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
