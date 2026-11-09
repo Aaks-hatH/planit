@@ -10,6 +10,7 @@ import {
   Star, Shield, LogIn, UserPlus, HelpCircle, Bot, Sparkles
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI, rsvpAPI } from '../services/api';
+import '../styles/piColor.css';
 import socketService from '../services/socket';
 import { setEventContext } from '../services/tracker';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
@@ -324,7 +325,7 @@ export function JoinGate({ eventId, onJoined }) {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#ffffff' }}>
+    <div className="pi-color min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
@@ -597,7 +598,7 @@ export function JoinGate({ eventId, onJoined }) {
 
   return (
     <>
-    <div className="min-h-screen flex flex-col" style={{ background: '#ffffff' }}>
+    <div className="pi-color min-h-screen flex flex-col">
       {/* Ambient background glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute top-[-15%] left-[8%] w-[700px] h-[700px] rounded-full"
@@ -1523,14 +1524,14 @@ export default function EventSpace() {
 
   /* ── Gate / Loading ── */
   if (resolving || (loading && !event)) return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+    <div className="pi-color min-h-screen flex items-center justify-center">
       <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
     </div>
   );
   if (needsJoin) return <JoinGate eventId={eventId} onJoined={handleJoined} />;
   if (!event)   return null;
   if (loading)  return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+    <div className="pi-color min-h-screen flex items-center justify-center">
       <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
     </div>
   );
@@ -1538,7 +1539,7 @@ export default function EventSpace() {
   return (
     <>
     {showCasualAd && <CrossPlatformAd trigger="casual" onClose={() => setShowCasualAd(false)} />}
-    <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
+    <div className="pi-color min-h-screen flex flex-col">
       <DeletionWarningBanner eventId={eventId} />
       {/* Recovery code banner — shown to any authenticated user with a password but no recovery code */}
       {eventId && currentUser && (
@@ -1581,26 +1582,26 @@ export default function EventSpace() {
       {event?.coverImage && (
         <div className="w-full h-40 md:h-52 overflow-hidden flex-shrink-0 relative">
           <img src={event.coverImage} alt="Event cover" className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: '#ffffff' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom,transparent 50%,#eceeff 100%)' }} />
         </div>
       )}
 
       {/* ── Header ── */}
-      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-50">
+      <header className="bg-ac border-b-2 border-ink sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <a href="/"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center flex-shrink-0 transition-colors">
               <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
             </a>
             <div className="min-w-0">
-              <h1 className="text-sm font-bold text-neutral-900 truncate leading-tight">{event?.title}</h1>
+              <h1 className="text-sm font-bold text-white truncate leading-tight">{event?.title}</h1>
               {countdown ? (
-                <p className="text-[11px] font-semibold text-violet-600 truncate">
+                <p className="text-[11px] font-bold text-hl truncate">
                   {countdown.d > 0 && `${countdown.d}d `}{String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')} to go
                 </p>
               ) : (
-                <p className="text-[11px] text-neutral-500 truncate">{formatDate(event?.date)}</p>
+                <p className="text-[11px] text-white/80 truncate">{formatDate(event?.date)}</p>
               )}
             </div>
           </div>
@@ -1608,7 +1609,7 @@ export default function EventSpace() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Mobile sidebar toggle */}
             <button onClick={() => setShowMobileSidebar(true)} title="Event info"
-              className="lg:hidden w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              className="lg:hidden w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
               <svg className="w-3.5 h-3.5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h7" /></svg>
             </button>
             {onlineUsers.length > 0 && (
@@ -1619,22 +1620,22 @@ export default function EventSpace() {
               </div>
             )}
             <button onClick={() => setShowQR(true)} title="QR Code"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
               <QrCode className="w-3.5 h-3.5 text-neutral-600" />
             </button>
             <button onClick={handleCopyLink} title="Copy link"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
             </button>
             {isOrganizer && event?.isEnterpriseMode && (
               <button onClick={() => navigate(`/event/${eventId}/checkin`)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hl hover:bg-white text-ink text-xs font-bold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <UserCheck className="w-3.5 h-3.5" />Check-in
               </button>
             )}
             {isOrganizer && wlShowWaitlist && (
               <button onClick={() => navigate(`/event/${eventId}/waitlist`)} title="Waitlist"
-                className="relative w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+                className="relative w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
                 <ClipboardList className="w-3.5 h-3.5 text-neutral-600" />
                 {waitlistCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-ink text-[9px] font-bold rounded-full flex items-center justify-center">
@@ -1645,15 +1646,15 @@ export default function EventSpace() {
             )}
             <button title="Leave event"
               onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-red-50 border-2 border-ink flex items-center justify-center transition-colors group">
               <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-700 transition-colors" />
             </button>
             <button onClick={() => setShowOnboarding(true)} title="Take the tour"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
               <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
             </button>
             <a href="/help" title="Help Center"
-              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              className="w-8 h-8 rounded-lg bg-white hover:bg-hl border-2 border-ink flex items-center justify-center transition-colors">
               <HelpCircle className="w-3.5 h-3.5 text-neutral-600" />
             </a>
           </div>
@@ -1683,9 +1684,9 @@ export default function EventSpace() {
           {/* Enterprise banner */}
           {event?.isEnterpriseMode && isOrganizer && (
             <div className="p-4 rounded-2xl flex items-center justify-between gap-4 text-ink"
-              style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
+              style={{ background: '#6ff0c0', border: '2px solid #0d0e1c' }}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-lav flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
                   <UserCheck className="w-4.5 h-4.5" />
                 </div>
                 <div>
@@ -1702,10 +1703,10 @@ export default function EventSpace() {
 
           {/* Claude AI banner — shown to organizers who haven't dismissed it */}
           {isOrganizer && !claudeBannerDismissed && (
-            <div className="rounded-2xl border-2 border-ink bg-white p-4 shadow-sm sm:p-5">
+            <div className="rounded-2xl border-2 border-ink bg-acs p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-white text-ink flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-hl border-2 border-ink text-ink flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
@@ -1773,23 +1774,23 @@ export default function EventSpace() {
           )}
 
           {/* Main content card */}
-          <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex flex-col min-h-0"
+          <div className="bg-white rounded-2xl border-2 border-ink overflow-hidden flex flex-col min-h-0"
             style={{ boxShadow: '4px 4px 0 #0d0e1c', height: 'calc(100vh - 7rem)' }}>
 
             {/* ── Tabs ── */}
-            <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide flex-shrink-0" style={{ background: '#fafafa' }}>
+            <div className="flex gap-1 p-1.5 border-b-2 border-ink overflow-x-auto scrollbar-hide flex-shrink-0 bg-lav">
               {tabs.map(({ id, label, icon: Icon, count }) => (
                 <button key={id} onClick={() => setActiveTab(id)}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex-shrink-0 ${
                     activeTab === id
-                      ? 'text-neutral-900 border-ink bg-white border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                      ? 'text-ink border-ink bg-hl border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                       : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-white'
                   }`}>
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="hidden xs:inline sm:inline">{label}</span>
                   {count > 0 && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
-                      activeTab === id ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-500'
+                      activeTab === id ? 'bg-ink text-white' : 'bg-white text-neutral-600 border border-ink/20'
                     }`}>
                       {count > 99 ? '99+' : count}
                     </span>
@@ -2336,7 +2337,7 @@ export default function EventSpace() {
           <div className="sticky top-20 space-y-3">
 
             {event?.date && (
-              <div className="bg-white rounded-2xl border-2 border-ink p-4 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
+              <div className="bg-hl rounded-2xl border-2 border-ink p-4 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
                 <Countdown eventDate={event.date} />
               </div>
             )}
@@ -2388,7 +2389,7 @@ export default function EventSpace() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border-2 border-ink p-4 space-y-2 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
+            <div className="bg-lav rounded-2xl border-2 border-ink p-4 space-y-2 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
               {isOrganizer && (
                 <>
                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1 pb-0.5">Organizer</p>
