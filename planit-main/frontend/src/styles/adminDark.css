@@ -226,3 +226,186 @@ html.admin-dark-html { color-scheme: dark; background: #0b0d12; }
 .admin-dark .text-violet-700{color:#c4b5fd!important}
 .admin-dark .text-violet-800{color:#ddd6fe!important}
 .admin-dark .text-violet-900{color:#ddd6fe!important}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+ * Neo-brutalist reconciliation (added with the restyle)
+ *
+ * The restyled theme paints cards/buttons/inputs with 2px near-black borders, hard
+ * black offset shadows and pure white fills. That is fine on the marketing pages
+ * but reads as a glaring white wall (light) or invisible borders (dark) inside the
+ * dense admin panel. Everything below is scoped to .admin-root, so no other page
+ * is affected. `:root` prefixes lift specificity above planit-theme.css's
+ * `:root .btn.btn-*` rules without needing !important.
+ * ═════════════════════════════════════════════════════════════════════════════ */
+
+/* ── DARK ─────────────────────────────────────────────────────────────────── */
+.admin-dark {
+  --ad-text-dim: #a0a8b8;
+  --ad-border: #3a4252;
+  --ink: #f3f5f9;          /* anything still reading var(--ink) becomes light text */
+  --lav: #1c212b;
+  --ln: #2a303d;
+  --mu: #a0a8b8;
+  --sh-sm: none; --sh-md: none; --sh-lg: none; --sh-xl: none;
+  background-color: var(--ad-page);
+  color: var(--ad-text);
+}
+html.admin-dark-html body { background: #0b0d12; color: #f3f5f9; }
+
+/* hard black shadows disappear on dark; flatten them */
+.admin-dark .shadow, .admin-dark .shadow-sm, .admin-dark .shadow-md, .admin-dark .shadow-lg,
+.admin-dark .shadow-hard, .admin-dark .shadow-hard-sm, .admin-dark .shadow-hard-lg, .admin-dark .shadow-2xl,
+.admin-dark [class*="shadow-[" ] { box-shadow: none !important; }
+.admin-dark .card, .admin-dark .pi-stat, .admin-dark .pi-table-wrap, .admin-dark .pi-modal,
+:root .admin-dark .btn, :root .admin-dark .btn-sm { box-shadow: none; }
+:root .admin-dark .btn:hover:not(:disabled), :root .admin-dark .btn:active:not(:disabled) { transform: none; box-shadow: none; }
+
+/* black borders → visible slate borders */
+.admin-dark .border-ink, .admin-dark .border-black { border-color: var(--ad-border) !important; }
+.admin-dark .border-b-ink, .admin-dark .divide-ink > :not([hidden]) ~ :not([hidden]) { border-color: var(--ad-border) !important; }
+.admin-dark .card, .admin-dark .pi-stat, .admin-dark .pi-table-wrap, .admin-dark .pi-modal { border-color: var(--ad-border); }
+.admin-dark .pi-table th { background: #171b24; color: #cfd4de; border-bottom-color: var(--ad-border); }
+.admin-dark .pi-table td { color: var(--ad-text); border-top-color: #232936; }
+.admin-dark .pi-table tbody tr:hover td { background: #171b24; }
+
+/* text that was hard-coded to ink */
+.admin-dark .text-ink, .admin-dark .hover\:text-ink:hover { color: #f3f5f9 !important; }
+.admin-dark .text-mu { color: #a0a8b8 !important; }
+.admin-dark .bg-lav { background-color: #1c212b !important; }
+.admin-dark .hover\:bg-lav:hover { background-color: #262c38 !important; }
+.admin-dark .bg-ink\/60 { background-color: rgba(0,0,0,.7) !important; }
+.admin-dark .bg-ink { background-color: #2b3240 !important; color: #f3f5f9; }
+.admin-dark .bg-black { background-color: #07080c !important; }
+
+/* yellow / mint / pink brand fills keep dark text so they stay readable */
+.admin-dark .bg-hl, .admin-dark .bg-hl *, .admin-dark .bg-mn, .admin-dark .bg-mn *,
+.admin-dark .bg-pk, .admin-dark .bg-pk * { color: #0d0e1c !important; }
+.admin-dark .bg-hl { border-color: #0d0e1c !important; }
+.admin-dark .bg-ac, .admin-dark .bg-ac * { color: #fff !important; }
+
+/* buttons (specificity matches planit-theme's `:root .btn.btn-*`) */
+:root .admin-dark .btn { background: #1c212b; color: #e2e6ee; border-color: var(--ad-border); }
+:root .admin-dark .btn:hover:not(:disabled):not([aria-disabled=true]) { background: #2b3240; color: #fff; }
+:root .admin-dark .btn.btn-primary { background: #ffe14d; color: #0d0e1c; border-color: #ffe14d; }
+:root .admin-dark .btn.btn-primary:hover:not(:disabled) { background: #ffec85; color: #0d0e1c; }
+:root .admin-dark .btn.btn-secondary { background: #1c212b; color: #e2e6ee; border-color: var(--ad-border); }
+:root .admin-dark .btn.btn-secondary:hover:not(:disabled) { background: #2b3240; color: #fff; }
+:root .admin-dark .btn.btn-dark, :root .admin-dark .btn.dk { background: #2b3240; color: #fff; border-color: var(--ad-border); }
+:root .admin-dark .btn.btn-danger { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.45); }
+:root .admin-dark .btn.btn-danger:hover:not(:disabled) { background: #d12f2f; color: #fff; }
+:root .admin-dark .btn.btn-ghost { background: transparent; color: #cfd4de; border-color: transparent; }
+:root .admin-dark .btn.btn-ghost:hover:not(:disabled) { background: #1c212b; color: #fff; border-color: var(--ad-border); }
+:root .admin-dark .btn:disabled, :root .admin-dark .btn[aria-disabled=true] { background: #171b24; color: #5b6475; border-color: #2a303d; }
+/* the !text-red-* escape hatches the restyle added on small icon buttons */
+.admin-dark .\!text-red-600, .admin-dark .\!text-red-400 { color: #f87171 !important; }
+.admin-dark .hover\:\!bg-red-50:hover { background-color: rgba(239,68,68,.12) !important; }
+
+/* form fields: beat the `border-2 border-ink bg-white` utilities the restyle put on inputs */
+:root .admin-dark .input, :root .admin-dark .inp,
+:root .admin-dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+:root .admin-dark textarea, :root .admin-dark select {
+  background-color: var(--ad-well) !important; color: var(--ad-text) !important; border-color: #323a49 !important;
+}
+:root .admin-dark .input:focus, :root .admin-dark input:focus, :root .admin-dark textarea:focus, :root .admin-dark select:focus {
+  border-color: #6674ff !important; box-shadow: 0 0 0 2px rgba(102,116,255,.45) !important;
+}
+.admin-dark input::placeholder, .admin-dark textarea::placeholder { color: #6b7385; opacity: 1; }
+.admin-dark :focus-visible { outline-color: #ffe14d; }
+
+/* status banners from planit-theme */
+.admin-dark .pi-error { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.45); }
+.admin-dark .pi-ok    { background: rgba(16,185,129,.12); color: #6ee7b7; border-color: rgba(16,185,129,.45); }
+.admin-dark .pi-warn  { background: rgba(245,158,11,.12); color: #fcd34d; border-color: rgba(245,158,11,.45); }
+.admin-dark .pi-info  { background: rgba(59,130,246,.12); color: #bfdbfe; border-color: rgba(59,130,246,.4); }
+.admin-dark .pi-empty { background: #12151c; border-color: var(--ad-border); color: #cfd4de; }
+.admin-dark .pi-empty p { color: #a0a8b8; }
+.admin-dark .badge { border-color: var(--ad-border); }
+.admin-dark .st-ok { background: rgba(16,185,129,.14); color: #a7f3d0; }
+.admin-dark .st-hl { background: rgba(245,158,11,.14); color: #fde68a; }
+.admin-dark .st-pk { background: rgba(236,72,153,.14); color: #f9a8d4; }
+.admin-dark .st-er { background: rgba(239,68,68,.14); color: #fecaca; }
+
+/* because --ink is flipped to light inside the dark admin, keep dark text on the
+ * bright brand fills and give the remaining ink-bordered pieces a slate border */
+.admin-dark .pi-tab.on, .admin-dark .pi-tab[aria-selected=true], :root .admin-dark .pi-tab.on,
+.admin-dark .pi-eye, .admin-dark .pi-tag, .admin-dark .pi-modal-x,
+.admin-dark .badge-pink, .admin-dark .badge-amber.solid { color: #0d0e1c !important; }
+.admin-dark .pi-tab.on { border-color: #ffe14d; }
+:root .admin-dark .pi-tab { color: #a0a8b8; }
+:root .admin-dark .pi-tab:hover { color: #fff; background: #1c212b; }
+.admin-dark .pi-tabs { border-bottom-color: var(--ad-border); }
+.admin-dark .pi-bar { background: #0e1117; border-color: var(--ad-border); }
+.admin-dark .pi-eye, .admin-dark .pi-tag { box-shadow: none; }
+.admin-dark .pi-modal-x { border-color: #0d0e1c; }
+.admin-dark .label { color: #cfd4de; }
+
+/* sidebar divider + scrollbars */
+.admin-dark > aside { border-right: 1px solid var(--ad-line); }
+.admin-dark ::-webkit-scrollbar-track { background: #0b0d12; }
+.admin-dark ::-webkit-scrollbar-thumb { background: #3a4252; border-color: #0b0d12; }
+.admin-dark ::-webkit-scrollbar-thumb:hover { background: #5b6475; }
+
+/* ── LIGHT ────────────────────────────────────────────────────────────────── */
+/* Not so white: tinted page, white cards that stand out from it, softer borders
+ * and shadows, and no more faint grey text below readable contrast. */
+.admin-light {
+  --al-page: #e3e7f3;
+  --al-line: #b4b9d0;
+  --al-shadow: 2px 2px 0 rgba(13,14,28,.16);
+  background-color: var(--al-page) !important;
+}
+html:not(.admin-dark-html) body:has(.admin-light) { background: #e3e7f3; }
+.admin-light.min-h-screen,
+.admin-light .min-h-screen.bg-neutral-50,
+.admin-light .min-h-screen.bg-neutral-100 { background-color: var(--al-page) !important; }
+
+/* sidebar: slightly tinted instead of stark white, with a divider */
+.admin-light > aside { background-color: #f3f5fc !important; border-right: 2px solid var(--al-line); }
+.admin-light > aside .border-ink, .admin-light .border-ink { border-color: var(--al-line) !important; }
+.admin-light .border-b-ink { border-bottom-color: var(--al-line) !important; }
+
+/* cards, rows and tables: white surface, soft border, short soft shadow */
+.admin-light .card, .admin-light .pi-stat, .admin-light .pi-table-wrap {
+  background: #fff; border: 1.5px solid var(--al-line); box-shadow: var(--al-shadow);
+}
+.admin-light .shadow, .admin-light .shadow-hard, .admin-light .shadow-hard-sm { box-shadow: var(--al-shadow) !important; }
+.admin-light .shadow-md, .admin-light .shadow-lg { box-shadow: 3px 3px 0 rgba(13,14,28,.18) !important; }
+.admin-light .card:hover { transform: none; box-shadow: 3px 3px 0 rgba(13,14,28,.22); }
+.admin-light .bg-neutral-50 { background-color: #f1f3fb !important; }       /* wells inside white cards */
+.admin-light .bg-neutral-100 { background-color: #e6e9f5 !important; }
+.admin-light .pi-table th { background: #eef0fa; border-bottom: 1.5px solid var(--al-line); }
+.admin-light .pi-table tbody tr:hover td { background: #f1f3fb; }
+
+/* inputs: clear boundary without the heavy black frame */
+:root .admin-light .input, :root .admin-light .inp,
+:root .admin-light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+:root .admin-light textarea, :root .admin-light select {
+  border-color: #8f95b3 !important; background-color: #fff;
+}
+:root .admin-light input:focus, :root .admin-light textarea:focus, :root .admin-light select:focus { border-color: #2236ff !important; }
+
+/* buttons: keep the brand look, drop the heavy shadow, lighter border */
+:root .admin-light .btn { border-color: #3b3e57; box-shadow: 2px 2px 0 rgba(13,14,28,.25); }
+:root .admin-light .btn.btn-primary { border-color: #0d0e1c; }
+:root .admin-light .btn.btn-secondary { background: #fff; }
+:root .admin-light .btn.btn-secondary:hover:not(:disabled) { background: #0d0e1c; color: #fff; }
+:root .admin-light .btn.btn-ghost { box-shadow: none; }
+
+/* readable secondary text: lift the faint greys to >= 4.5:1 on white and on the tinted page */
+.admin-light .text-neutral-300 { color: #6d7086 !important; }
+.admin-light .text-neutral-400 { color: #565971 !important; }
+.admin-light .text-neutral-500 { color: #474a60 !important; }
+.admin-light .text-neutral-600 { color: #34364a !important; }
+.admin-light .placeholder\:text-neutral-400::placeholder, .admin-light input::placeholder { color: #6d7086; }
+.admin-light .text-amber-500 { color: #8a6a00 !important; }
+.admin-light .text-amber-600 { color: #7a5c00 !important; }
+.admin-light .text-emerald-500, .admin-light .text-emerald-600 { color: #0a7149 !important; }
+.admin-light .text-green-500, .admin-light .text-green-600 { color: #0a7149 !important; }
+.admin-light .text-red-400, .admin-light .text-red-500 { color: #b42323 !important; }
+.admin-light .text-blue-500 { color: #1a2ad1 !important; }
+.admin-light .text-orange-500, .admin-light .text-orange-600 { color: #9a4a00 !important; }
+.admin-light .text-sky-500, .admin-light .text-sky-600 { color: #0b6a8f !important; }
+
+/* shared scrollbar track was near-white */
+.admin-light ::-webkit-scrollbar-track { background: #e3e7f3; }
+.admin-light ::-webkit-scrollbar-thumb { border-color: #e3e7f3; }
