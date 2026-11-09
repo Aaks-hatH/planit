@@ -146,7 +146,7 @@ export default function Announcements({ eventId, socket, isOrganizer }) {
           announcements.map(announcement => (
             <div
               key={announcement.id}
-              className={`p-4 rounded-lg border ${
+              className={`p-4 rounded-lg border-2 border-ink shadow ${
                 announcement.important
                   ? 'bg-amber-50 border-amber-200'
                   : 'bg-white border-neutral-200'
@@ -172,7 +172,7 @@ export default function Announcements({ eventId, socket, isOrganizer }) {
                 {isOrganizer && (
                   <button
                     onClick={() => deleteAnnouncement(announcement.id)}
-                    className="flex-shrink-0 text-neutral-400 hover:text-red-600 transition-colors"
+                    className="flex-shrink-0 text-neutral-500 hover:text-red-600 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

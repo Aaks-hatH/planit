@@ -22,7 +22,7 @@ export default function GuestAvatarStack({ names = [], count = 0, max = 4, size 
         {shown.map((name, i) => (
           <div
             key={i}
-            className="rounded-full flex items-center justify-center font-bold text-white ring-2 ring-neutral-950"
+            className="rounded-full flex items-center justify-center font-bold text-white ring-2 ring-ink"
             style={{
               width: size, height: size, fontSize: size * 0.36,
               background: ACCENTS[i % ACCENTS.length],

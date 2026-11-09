@@ -120,220 +120,8 @@ function Pusher({ refs }) {
 }
 
 export function HomePreloader({ ready, onReveal, onDone }) {
-  const reduce = useReducedMotion();
-  const rootRef = useRef(null);
-  const panelRef = useRef(null);
-  const charRef = useRef(null);
-  const wordRef = useRef(null);
-  const letterRefs = useRef([]);
-  const capRef = useRef(null);
-  const pctRef = useRef(null);
-  const partRefs = useRef({});
-  const readyRef = useRef(ready);
-  const speedRef = useRef(1);
-  const cbRef = useRef({ onReveal, onDone });
-  readyRef.current = ready;
-  cbRef.current = { onReveal, onDone };
-
-  useEffect(() => {
-    const root = rootRef.current;
-    const panel = panelRef.current;
-    const charEl = charRef.current;
-    const word = wordRef.current;
-    const letters = letterRefs.current;
-    const P = partRefs.current;
-    if (!root || !panel || !charEl || !word) return undefined;
-
-    let seen = false;
-    try { seen = !!localStorage.getItem('planit_preloader_seen'); } catch { /* storage blocked */ }
-    speedRef.current = seen ? 1.6 : 1;
-
-    // geometry (re-measured on resize only)
-    let vw = window.innerWidth;
-    let charH = 200; let charW = 167; let travel = vw + charW;
-    let lefts = [];
-    const measure = () => {
-      vw = window.innerWidth;
-      charH = Math.max(170, Math.min(330, vw * 0.22 + 60));
-      charW = charH * (200 / 240);
-      charEl.style.height = `${charH}px`;
-      charEl.style.width = `${charW}px`;
-      charEl.style.marginTop = `${(-charH * 0.5).toFixed(1)}px`;
-      travel = vw + charW;
-      const wr = word.getBoundingClientRect();
-      lefts = letters.map((el) => wr.left + el.offsetLeft);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    if (document.fonts?.ready) document.fonts.ready.then(measure).catch(() => {});
-
-    let raf = 0;
-    const t0 = performance.now();
-    let last = t0;
-    let el = 0;
-    let pos = 0;
-    let prevEdge = 0;
-    let phase = 0;
-    let revealed = false;
-    let fadeAt = null;
-    let finished = false;
-    let lastPct = -1;
-    let lastWord = '';
-    const popAt = letters.map(() => null);
-    const popDone = letters.map(() => false);
-
-    const setLegs = (angF, angB) => {
-      P.legF.setAttribute('transform', `rotate(${angF.toFixed(2)} 98 156)`);
-      P.legB.setAttribute('transform', `rotate(${angB.toFixed(2)} 90 150)`);
-      P.shoeF.setAttribute('transform', `rotate(${(-angF * 0.85).toFixed(2)} 98 226)`);
-      P.shoeB.setAttribute('transform', `rotate(${(-angB * 0.85).toFixed(2)} 72 226)`);
-    };
-
-    const startFade = () => {
-      if (fadeAt != null) return;
-      fadeAt = el;
-      root.style.transition = 'opacity 620ms cubic-bezier(.4,0,.2,1)';
-      root.style.opacity = '0';
-      word.style.transition = 'transform 620ms cubic-bezier(.22,1,.36,1)';
-      word.style.transform = 'scale(1.06)';
-    };
-
-    const frame = (now) => {
-      const rdt = Math.min(50, now - last); last = now;
-      const dt = rdt * speedRef.current;
-      el += dt;
-      const canGo = readyRef.current || (now - t0) > 4800;
-
-      // target progress: slow heave to start, steady shove, holds near the end until ready
-      const u = clamp01((el - 250) / 2300);
-      const base = easeInOutCubic(u);
-      const target = Math.min(base, canGo ? 1 : 0.8);
-      pos += (target - pos) * (1 - Math.exp(-dt / 110));
-      if (target === 1 && pos > 0.9992) pos = 1;
-
-      const edge = pos * travel;
-      const dEdge = edge - prevEdge; prevEdge = edge;
-
-      // the panel + the character share one edge, and only transform changes
-      panel.style.transform = `translate3d(${edge.toFixed(1)}px,0,0)`;
-
-      // walk cycle tied to distance, so feet don't skate; small idle strain when held
-      const s = charH / 240;
-      phase += (dEdge * Math.PI) / (80 * s) + (dEdge < 0.15 ? dt * 0.006 : 0);
-      const sw = Math.sin(phase);
-      const strain = (1 - u) * 0.9 + 0.1;
-      setLegs(-6 + 26 * sw, 14 - 26 * sw);
-      const bob = Math.abs(Math.cos(phase)) * 3 * s + Math.sin(el * 0.05) * 0.8 * strain;
-      const lean = 11 + 3 * Math.sin(el * 0.02) * strain;
-      P.body.setAttribute('transform', `translate(0 ${(-bob).toFixed(2)}) rotate(${lean.toFixed(2)} 96 232)`);
-      charEl.style.transform = `translate3d(${(edge - charW * 0.97).toFixed(1)}px,0,0)`;
-
-      // letters rise + fade in as the panel uncovers them
-      for (let i = 0; i < letters.length; i += 1) {
-        if (popDone[i]) continue;
-        if (popAt[i] == null && edge > lefts[i]) popAt[i] = el;
-        if (popAt[i] == null) continue;
-        const k = clamp01((el - popAt[i]) / 520);
-        const e = easeOutBack(k);
-        letters[i].style.opacity = String(clamp01(k * 2.2));
-        letters[i].style.transform = `translate3d(0,${((1 - e) * 0.14).toFixed(3)}em,0) scale(${(0.9 + 0.1 * e).toFixed(3)})`;
-        if (k >= 1) { popDone[i] = true; letters[i].style.opacity = '1'; letters[i].style.transform = 'none'; }
-      }
-
-      // caption + percent only touch the DOM when they change
-      const pct = Math.round(pos * 100);
-      if (pct !== lastPct && pctRef.current) { lastPct = pct; pctRef.current.textContent = String(pct).padStart(2, '0'); }
-      const w = LOAD_WORDS[Math.min(LOAD_WORDS.length - 1, Math.floor(pos * LOAD_WORDS.length))];
-      if (w !== lastWord && capRef.current) { lastWord = w; capRef.current.textContent = w; }
-
-      if (!revealed && edge > vw * 0.86) { revealed = true; cbRef.current.onReveal?.(); }
-      if (fadeAt == null && edge > vw * 1.02) startFade();
-      if (fadeAt != null && el - fadeAt > 640 && !finished) {
-        finished = true;
-        try { localStorage.setItem('planit_preloader_seen', '1'); } catch { /* storage blocked */ }
-        cbRef.current.onDone?.();
-        return;
-      }
-      raf = requestAnimationFrame(frame);
-    };
-
-    const frameReduced = (now) => {
-      letters.forEach((l) => { l.style.opacity = '1'; });
-      panel.style.display = 'none'; charEl.style.display = 'none';
-      const e = now - t0;
-      if (!revealed && (readyRef.current || e > 4000) && e > 450) {
-        revealed = true; cbRef.current.onReveal?.();
-        root.style.transition = 'opacity 320ms ease'; root.style.opacity = '0';
-        setTimeout(() => { if (!finished) { finished = true; cbRef.current.onDone?.(); } }, 340);
-      }
-      if (!finished) raf = requestAnimationFrame(frameReduced);
-    };
-
-    raf = requestAnimationFrame(reduce ? frameReduced : frame);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', measure); };
-  }, [reduce]);
-
-  const legsRef = (k) => (el) => { partRefs.current[k] = el; };
-  const refs = { body: legsRef('body'), legF: legsRef('legF'), legB: legsRef('legB'), shoeF: legsRef('shoeF'), shoeB: legsRef('shoeB') };
-
-  return (
-    <div
-      ref={rootRef}
-      className="fixed inset-0 overflow-hidden"
-      style={{ zIndex: 1100, background: '#05050f', touchAction: 'manipulation' }}
-      role="status"
-      aria-label="Loading PlanIt"
-      onPointerDown={() => { speedRef.current = Math.max(speedRef.current, 3); }}
-    >
-      {/* the site's own atmosphere under the wordmark */}
-      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 28% 42%, rgba(99,102,241,.28), rgba(99,102,241,0) 70%), radial-gradient(50% 50% at 78% 70%, rgba(244,114,182,.15), rgba(244,114,182,0) 70%)' }} />
-
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div
-          ref={wordRef}
-          aria-hidden="true"
-          className="lq-display select-none whitespace-nowrap leading-none"
-          style={{ fontSize: 'clamp(4rem, 21vw, 15rem)', letterSpacing: '-0.045em', color: '#f1f3ff', willChange: 'transform' }}
-        >
-          {WORD.map((ch, i) => (
-            <span
-              key={i}
-              ref={(e) => { letterRefs.current[i] = e; }}
-              style={{
-                display: 'inline-block', opacity: 0, willChange: 'transform, opacity',
-                ...(i >= 4 ? { background: 'linear-gradient(180deg,#a5b4fc 0%,#f472b6 70%,#fb923c 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' } : null),
-              }}
-            >{ch}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* the panel being shoved: solid black, starts covering the whole screen, ends off to the right */}
-      <div
-        ref={panelRef}
-        aria-hidden="true"
-        className="absolute inset-y-0 left-0 w-full"
-        style={{ willChange: 'transform', background: '#000', boxShadow: '-1px 0 0 rgba(165,180,252,.55), -36px 0 70px -18px rgba(129,140,248,.40)' }}
-      />
-
-      {/* the character, hands on the panel's edge */}
-      <div
-        ref={charRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute left-0"
-        style={{ top: '50%', willChange: 'transform' }}
-      >
-        <div style={{ position: 'absolute', inset: 0, transform: 'translateY(0)' }}>
-          <Pusher refs={refs} />
-        </div>
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-6 text-[11px] uppercase tracking-[0.25em] text-white/70 sm:p-10" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-        <span ref={capRef}>Setting the stage</span>
-        <span className="text-[clamp(1.4rem,4vw,2.6rem)] tracking-normal tabular-nums text-white/90"><span ref={pctRef}>00</span>%</span>
-      </div>
-    </div>
-  );
+  useEffect(() => { if (onReveal) onReveal(); if (onDone) onDone(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 /* ─── Hero headline ─────────────────────────────────────────────────────────
@@ -553,7 +341,7 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
       <h1
         ref={h1Ref}
         aria-label={full}
-        className={`lq-display relative mx-auto text-white ${className}`}
+        className={`lq-display relative mx-auto text-ink ${className}`}
         style={{ fontSize: 'min(12cqw, 15.5vh)', lineHeight: 0.94, letterSpacing: '-0.045em', textAlign: 'center' }}
       >
         {lines.map((line, li) => (
@@ -583,14 +371,14 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
                 if (ch === ' ') return null;
                 return (
                   <span key={`k${k}-${ci}`} ref={(e) => { badgeRefs.current[k] = e; }} aria-hidden="true" className="pointer-events-none absolute left-0 top-0 flex items-center justify-center rounded-full"
-                    style={{ opacity: 0, width: '0.3em', height: '0.3em', marginLeft: '-0.15em', marginTop: '-0.15em', background: GOOD, boxShadow: '0 0 16px rgba(52,211,153,.75)', zIndex: 4, willChange: 'transform, opacity' }}>
+                    style={{ opacity: 0, width: '0.3em', height: '0.3em', marginLeft: '-0.15em', marginTop: '-0.15em', background: GOOD, boxShadow: 'none', zIndex: 4, willChange: 'transform, opacity' }}>
                     <svg viewBox="0 0 24 24" width="62%" height="62%" fill="none" stroke="#04210f" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                   </span>
                 );
               }));
             })()}
-            <div ref={beamRef} aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0" style={{ opacity: 0, height: 3, zIndex: 3, background: `linear-gradient(90deg, transparent, ${GOOD}, #fff, ${GOOD}, transparent)`, boxShadow: '0 0 26px 8px rgba(52,211,153,.5), 0 -40px 60px -10px rgba(52,211,153,.18)' }} />
-            <span ref={ringRef} aria-hidden="true" className="pointer-events-none absolute rounded-full" style={{ border: '2px solid rgba(251,146,60,.9)', opacity: 0, animation: nudge ? 'hh-ring 2.6s ease-out 3' : 'none', animationFillMode: 'none' }} />
+            <div ref={beamRef} aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0" style={{ opacity: 0, height: 3, zIndex: 3, background: `linear-gradient(90deg, transparent, ${GOOD}, #fff, ${GOOD}, transparent)`, boxShadow: 'none' }} />
+            <span ref={ringRef} aria-hidden="true" className="pointer-events-none absolute rounded-full" style={{ border: '2px solid #6e5400', opacity: 0, animation: nudge ? 'hh-ring 2.6s ease-out 3' : 'none', animationFillMode: 'none' }} />
             {/* the egg: invisible button over the final full stop */}
             <button
               ref={btnRef}
@@ -602,7 +390,7 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
               onMouseLeave={() => { hoverRef.current = false; }}
               onFocus={() => { hoverRef.current = true; }}
               onBlur={() => { hoverRef.current = false; }}
-              className="absolute rounded-full outline-none focus-visible:ring-2 focus-visible:ring-orange-300/80"
+              className="absolute rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-orange-300/80"
               style={{ cursor: 'pointer', background: 'transparent', zIndex: 6, letterSpacing: 0 }}
             />
           </>
@@ -613,7 +401,7 @@ export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' 
 
       {!reduce && (
         <div aria-live="polite" className="pointer-events-none absolute left-1/2 z-10 -translate-x-1/2" style={{ top: '100%', marginTop: -2 }}>
-          <div className="lq-glass whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium text-white sm:text-sm"
+          <div className="lq-glass whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium text-ink sm:text-sm"
             style={{ opacity: toast ? 1 : 0, transform: `translateY(${toast ? 0 : -6}px) scale(${toast ? 1 : 0.96})`, transition: 'opacity .35s ease, transform .45s cubic-bezier(.22,1,.36,1)' }}>
             <span style={{ color: GOOD }}>&#10003;</span> {toast ? 'Event ready. Everyone checked in.' : ''}
           </div>
@@ -661,8 +449,8 @@ export function HomeScrollChrome({ rail = true }) {
     <>
       <motion.div
         aria-hidden="true"
-        style={{ scaleX: bar, zIndex: 9998, boxShadow: '0 0 8px rgba(99,102,241,0.5)' }}
-        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-500 to-violet-500"
+        style={{ scaleX: bar, zIndex: 9998, boxShadow: 'none' }}
+        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-lav text-ink"
       />
       {rail && items.length > 1 && (
         <div className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
@@ -672,12 +460,12 @@ export function HomeScrollChrome({ rail = true }) {
               <span className={cx(
                 'text-[10px] font-medium uppercase tracking-[0.22em] transition-all duration-300',
                 active === r.id
-                  ? 'translate-x-0 text-white opacity-100'
+                  ? 'translate-x-0 text-ink opacity-100'
                   : 'translate-x-2 text-neutral-500 opacity-0 group-hover:translate-x-0 group-hover:opacity-100',
               )}>{r.label}</span>
               <span className={cx(
                 'block rounded-full transition-all duration-300',
-                active === r.id ? 'h-2.5 w-2.5 bg-violet-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60',
+                active === r.id ? 'h-2.5 w-2.5 bg-violet-400' : 'h-1.5 w-1.5 bg-lav group-hover:bg-white',
               )} />
             </button>
           ))}

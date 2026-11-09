@@ -64,13 +64,13 @@ function LivePass({ pass, onClose }) {
       <div className="relative inline-block p-3 rounded-2xl bg-white">
         {qr ? <img src={qr} alt="Rotating check-in code" className="w-64 h-64" /> : <div className="w-64 h-64" />}
       </div>
-      <div className="mt-4 h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div className="mt-4 h-1.5 rounded-full bg-lav overflow-hidden">
         <div className="h-full" style={{ width: `${frac * 100}%`, background: frac < 0.2 ? '#FB7185' : ACCENT }} />
       </div>
       <p className="font-mono text-[11px] text-neutral-500 mt-2">
         New code in {Math.ceil(left / 1000)}s &middot; screenshots stop working
       </p>
-      <button onClick={onClose} className="mt-6 px-4 py-2 rounded-lg border border-white/15 text-sm text-neutral-300">Close</button>
+      <button onClick={onClose} className="mt-6 px-4 py-2 rounded-lg border-2 border-ink text-sm text-neutral-600 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Close</button>
     </div>
   );
 }
@@ -84,13 +84,13 @@ function WalletTab({ wallet, setWallet, active, setActive }) {
         Open a pass link from your host to add it here. The code on screen changes every 30 seconds.
       </p>
       {wallet.length === 0 && (
-        <div className="rounded-xl border border-dashed border-white/15 p-6 text-sm text-neutral-400 text-center">
+        <div className="rounded-xl border-2 border-dashed border-ink p-6 text-sm text-neutral-500 text-center shadow-md">
           No passes yet. Ask the host for your pass link, or use &ldquo;Open as guest&rdquo; on the Host tab to try it on this device.
         </div>
       )}
       <div className="space-y-3">
         {wallet.map((p) => (
-          <div key={p.e + p.g} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div key={p.e + p.g} className="flex items-center gap-3 rounded-xl border-2 border-ink bg-white/[0.03] p-4 shadow">
             <div className="flex-1 min-w-0">
               <div className="font-semibold truncate">{p.gn}</div>
               <div className="text-xs text-neutral-500 truncate">{p.n}</div>
@@ -99,7 +99,7 @@ function WalletTab({ wallet, setWallet, active, setActive }) {
             <button
               aria-label="Remove pass"
               onClick={() => setWallet(wallet.filter((x) => !(x.e === p.e && x.g === p.g)))}
-              className="p-2 text-neutral-500 hover:text-rose-300"
+              className="p-2 text-neutral-500 hover:text-red-700"
             ><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
@@ -145,7 +145,7 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
         <div className="flex gap-2 mb-3">
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()}
             placeholder="New event name" maxLength={60}
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#5EEAD4]" />
+            className="flex-1 bg-lav border-2 border-ink rounded-lg px-3 py-2.5 text-sm outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
           <button onClick={create} className="px-4 rounded-lg text-sm font-bold text-[#05050f] flex items-center gap-1.5" style={{ background: ACCENT }}>
             <CalendarPlus className="w-4 h-4" />Create
           </button>
@@ -153,7 +153,7 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
         <div className="flex flex-wrap gap-2">
           {events.map((e) => (
             <button key={e.id} onClick={() => { setOpenId(e.id); setQrFor(null); }}
-              className={`px-3 py-1.5 rounded-full text-sm border ${e.id === openId ? 'border-[#5EEAD4] text-[#5EEAD4]' : 'border-white/15 text-neutral-400'}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${e.id === openId ? 'border-ink text-blue-700' : 'border-ink text-neutral-500'}`}>
               {e.name}
             </button>
           ))}
@@ -161,7 +161,7 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
       </div>
 
       {ev && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="rounded-2xl border-2 border-ink bg-white/[0.03] p-5 shadow-md">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h4 className="font-display font-bold text-lg">{ev.name}</h4>
@@ -171,20 +171,20 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => copy(staffLink(ev), 'Staff scanner link copied \u2014 it contains the event secret, share only with staff.')}
-                className="px-3 py-1.5 rounded-lg border border-white/15 text-xs text-neutral-300 flex items-center gap-1.5">
+                className="px-3 py-1.5 rounded-lg border-2 border-ink text-xs text-neutral-600 flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <ShieldCheck className="w-3.5 h-3.5" />Staff link
               </button>
               <button
                 aria-label="Delete event"
                 onClick={() => { if (window.confirm(`Delete "${ev.name}" and its passes?`)) { setEvents(events.filter((e) => e.id !== ev.id)); setOpenId(null); } }}
-                className="p-2 text-neutral-500 hover:text-rose-300"><Trash2 className="w-4 h-4" /></button>
+                className="p-2 text-neutral-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
 
           <textarea value={guestText} onChange={(e) => setGuestText(e.target.value)} rows={3}
             placeholder={'Add guests, one name per line'}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#5EEAD4] mb-2" />
-          <button onClick={addGuests} className="mb-5 px-3 py-2 rounded-lg border border-white/15 text-sm text-neutral-200 flex items-center gap-1.5">
+            className="w-full bg-lav border-2 border-ink rounded-lg px-3 py-2.5 text-sm outline-none focus:border-ink mb-2 focus:ring-[3px] focus:ring-ac" />
+          <button onClick={addGuests} className="mb-5 px-3 py-2 rounded-lg border-2 border-ink text-sm text-ink flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
             <UserPlus className="w-4 h-4" />Add guests
           </button>
 
@@ -193,12 +193,12 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
               <div key={g.id} className="py-3 flex items-center gap-2 flex-wrap">
                 <div className="flex-1 min-w-[8rem]">
                   <div className="text-sm font-medium">{g.name}</div>
-                  {g.checkedInAt && <div className="text-[11px] text-teal-300 font-mono">in at {new Date(g.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>}
+                  {g.checkedInAt && <div className="text-[11px] text-emerald-700 font-mono">in at {new Date(g.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>}
                 </div>
-                <button onClick={async () => copy(await linkFor(g), 'Pass link copied')} className="p-2 text-neutral-400 hover:text-white" aria-label="Copy pass link"><Link2 className="w-4 h-4" /></button>
-                <button onClick={async () => setQrFor(await linkFor(g))} className="p-2 text-neutral-400 hover:text-white" aria-label="Show pass link QR"><QrCode className="w-4 h-4" /></button>
-                <button onClick={async () => { addToWallet(await passFor(g)); goWallet(); }} className="px-2.5 py-1.5 rounded-lg border border-white/15 text-xs text-neutral-300 flex items-center gap-1"><Eye className="w-3.5 h-3.5" />Open as guest</button>
-                <button onClick={() => update(ev.id, (e) => ({ ...e, guests: e.guests.filter((x) => x.id !== g.id) }))} className="p-2 text-neutral-600 hover:text-rose-300" aria-label="Remove guest"><Trash2 className="w-4 h-4" /></button>
+                <button onClick={async () => copy(await linkFor(g), 'Pass link copied')} className="p-2 text-neutral-500 hover:text-ink" aria-label="Copy pass link"><Link2 className="w-4 h-4" /></button>
+                <button onClick={async () => setQrFor(await linkFor(g))} className="p-2 text-neutral-500 hover:text-ink" aria-label="Show pass link QR"><QrCode className="w-4 h-4" /></button>
+                <button onClick={async () => { addToWallet(await passFor(g)); goWallet(); }} className="px-2.5 py-1.5 rounded-lg border-2 border-ink text-xs text-neutral-600 flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Eye className="w-3.5 h-3.5" />Open as guest</button>
+                <button onClick={() => update(ev.id, (e) => ({ ...e, guests: e.guests.filter((x) => x.id !== g.id) }))} className="p-2 text-neutral-600 hover:text-red-700" aria-label="Remove guest"><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
             {ev.guests.length === 0 && <p className="text-sm text-neutral-500 py-2">No guests yet.</p>}
@@ -208,7 +208,7 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
             <div className="mt-5 text-center">
               <div className="inline-block p-3 bg-white rounded-xl">{qrImg && <img src={qrImg} alt="Pass link QR" className="w-56 h-56" />}</div>
               <p className="text-xs text-neutral-500 mt-2">The guest scans this once with their phone camera to add the pass. It is not the check-in code.</p>
-              <button onClick={() => setQrFor(null)} className="mt-2 text-xs text-neutral-400 underline">Hide</button>
+              <button onClick={() => setQrFor(null)} className="mt-2 text-xs text-neutral-500 underline">Hide</button>
             </div>
           )}
         </div>
@@ -281,17 +281,17 @@ function ScanTab({ events, setEvents }) {
     <div className="max-w-md mx-auto">
       <h3 className="font-display font-bold text-xl mb-3">Scan guests in</h3>
       <select value={eventId} onChange={(e) => setEventId(e.target.value)}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm mb-4">
+        className="w-full bg-lav border-2 border-ink rounded-lg px-3 py-2.5 text-sm mb-4 focus:ring-[3px] focus:ring-ac focus:outline-none">
         {events.length === 0 && <option value="">No events on this device</option>}
         {events.map((e) => <option key={e.id} value={e.id} className="text-black">{e.name}</option>)}
       </select>
 
-      <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-square mb-4">
+      <div className="relative rounded-2xl overflow-hidden bg-white border border-white/10 aspect-square mb-4">
         {camError
-          ? <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-sm text-neutral-300"><CameraOff className="w-9 h-9 text-rose-400 mb-3" />{camError}</div>
+          ? <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-sm text-neutral-600"><CameraOff className="w-9 h-9 text-red-700 mb-3" />{camError}</div>
           : <div id="qrpass-reader" className="w-full h-full" />}
         {result && (
-          <div className={`absolute inset-x-3 bottom-3 rounded-xl p-3.5 flex items-start gap-3 backdrop-blur ${result.ok ? 'bg-teal-500/90 text-[#05050f]' : 'bg-rose-500/90 text-white'}`}>
+          <div className={`absolute inset-x-3 bottom-3 rounded-xl p-3.5 flex items-start gap-3 ${result.ok ? 'bg-emerald-50 text-[#05050f]' : 'bg-red-50 text-ink'}`}>
             {result.ok ? <CheckCircle2 className="w-6 h-6 shrink-0" /> : <XCircle className="w-6 h-6 shrink-0" />}
             <div className="text-left">
               <div className="font-bold leading-tight">{result.text}</div>
@@ -303,8 +303,8 @@ function ScanTab({ events, setEvents }) {
 
       <div className="flex gap-2">
         <input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="Or paste a PQ1… code"
-          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono outline-none" />
-        <button onClick={() => { handle(manual); setManual(''); }} className="px-4 rounded-lg border border-white/15 text-sm text-neutral-200">Check</button>
+          className="flex-1 bg-lav border-2 border-ink rounded-lg px-3 py-2.5 text-sm font-mono outline-none focus:ring-[3px] focus:ring-ac" />
+        <button onClick={() => { handle(manual); setManual(''); }} className="px-4 rounded-lg border-2 border-ink text-sm text-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Check</button>
       </div>
       <p className="text-[11px] text-neutral-500 mt-4 leading-relaxed">
         Check-in state lives on this device only. If several staff phones scan, each keeps its own list, so use one scanning phone per entrance and compare counts at the end.
@@ -360,9 +360,9 @@ export default function QRPass() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#05050f] text-white" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
+    <div className="min-h-screen bg-white text-ink" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
+        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-500 hover:text-ink text-sm -ml-2 px-2 py-1.5 rounded-lg">
           <ArrowLeft className="w-4 h-4" />Back
         </button>
         <div className="flex items-center gap-2 font-display font-bold tracking-tight text-sm">
@@ -397,13 +397,13 @@ export default function QRPass() {
       <>
       <div className="max-w-2xl mx-auto px-5 pt-8">
         <h1 className="font-display font-extrabold text-3xl sm:text-4xl tracking-tight mb-2">A ticket that expires<br />while you watch.</h1>
-        <p className="text-neutral-400 text-sm max-w-md mb-6">
+        <p className="text-neutral-500 text-sm max-w-md mb-6">
           Each guest&rsquo;s code is signed on their phone and changes every 30 seconds, so a forwarded screenshot is useless. Everything runs in your browser &mdash; no server, no account.
         </p>
-        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 mb-8">
+        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border-2 border-ink mb-8 shadow">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold ${tab === id ? 'bg-white text-black' : 'text-neutral-400'}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold ${tab === id ? 'bg-white text-black border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500'}`}>
               <Icon className="w-4 h-4" />{label}
             </button>
           ))}

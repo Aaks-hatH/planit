@@ -22,8 +22,8 @@ export default function FaceModeMobileNotice({ className = '' }) {
   if (!mobile || dismissed) return null;
 
   return (
-    <div className={`flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-3.5 py-3 text-xs text-amber-200/90 leading-relaxed ${className}`}>
-      <Laptop className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+    <div className={`flex items-start gap-2.5 rounded-xl border border-amber-700 bg-amber-400/[0.07] px-3.5 py-3 text-xs text-amber-200/90 leading-relaxed ${className}`}>
+      <Laptop className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
       <span className="flex-1">
         You&rsquo;re on a phone or tablet. Face detection in this beta is built and tested for a
         desktop/laptop webcam &mdash; on mobile it may fail to find a face, time out, or just not
@@ -31,7 +31,7 @@ export default function FaceModeMobileNotice({ className = '' }) {
       </span>
       <button
         onClick={() => setDismissed(true)}
-        className="shrink-0 text-amber-400/60 hover:text-amber-300"
+        className="shrink-0 text-amber-400/60 hover:text-amber-700"
         aria-label="Dismiss"
       >
         <X className="w-3.5 h-3.5" />

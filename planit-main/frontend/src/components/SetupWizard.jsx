@@ -16,7 +16,7 @@ function StepDots({ current, total }) {
           key={i}
           className={`rounded-full transition-all duration-300 ${
             i === current
-              ? 'w-6 h-2 bg-neutral-900'
+              ? 'w-6 h-2 bg-white'
               : i < current
               ? 'w-2 h-2 bg-neutral-400'
               : 'w-2 h-2 bg-neutral-200'
@@ -32,7 +32,7 @@ function Step1({ eventId, onAddManually, onImportCsv, onSkip }) {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Step 1 of 4</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Step 1 of 4</p>
         <h2 className="text-2xl font-black text-neutral-900 mb-2">Build your guest list</h2>
         <p className="text-neutral-500 text-sm leading-relaxed">
           Add guests so staff can scan their QR codes at the door.
@@ -43,10 +43,10 @@ function Step1({ eventId, onAddManually, onImportCsv, onSkip }) {
         {/* Add manually card */}
         <button
           onClick={onAddManually}
-          className="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all text-left"
+          className="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-neutral-200 hover:border-ink hover:bg-neutral-50 transition-all text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
         >
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 group-hover:bg-neutral-900 group-hover:text-white flex items-center justify-center transition-all">
-            <UserPlus className="w-6 h-6 text-neutral-700 group-hover:text-white transition-colors" />
+          <div className="w-12 h-12 rounded-xl bg-neutral-100 group-hover:bg-white group-hover:text-ink flex items-center justify-center transition-all">
+            <UserPlus className="w-6 h-6 text-neutral-700 group-hover:text-ink transition-colors" />
           </div>
           <div>
             <p className="font-bold text-neutral-900 text-sm mb-1">Add manually</p>
@@ -57,10 +57,10 @@ function Step1({ eventId, onAddManually, onImportCsv, onSkip }) {
         {/* Import CSV card */}
         <button
           onClick={onImportCsv}
-          className="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all text-left"
+          className="group flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-neutral-200 hover:border-ink hover:bg-neutral-50 transition-all text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
         >
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 group-hover:bg-neutral-900 flex items-center justify-center transition-all">
-            <Upload className="w-6 h-6 text-neutral-700 group-hover:text-white transition-colors" />
+          <div className="w-12 h-12 rounded-xl bg-neutral-100 group-hover:bg-white flex items-center justify-center transition-all">
+            <Upload className="w-6 h-6 text-neutral-700 group-hover:text-ink transition-colors" />
           </div>
           <div>
             <p className="font-bold text-neutral-900 text-sm mb-1">Import CSV</p>
@@ -69,14 +69,14 @@ function Step1({ eventId, onAddManually, onImportCsv, onSkip }) {
         </button>
       </div>
 
-      <p className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-4 border border-neutral-100 leading-relaxed mb-6">
+      <p className="text-xs text-neutral-500 bg-neutral-50 rounded-xl p-4 border-2 border-ink leading-relaxed mb-6">
         <span className="font-semibold text-neutral-600">Tip:</span> You can also sync guests automatically from Stripe, Luma, or Eventbrite — set that up in Settings after adding your first guest.
       </p>
 
       <div className="mt-auto pt-4 border-t border-neutral-100">
         <button
           onClick={onSkip}
-          className="text-sm text-neutral-400 hover:text-neutral-600 underline underline-offset-2 transition-colors"
+          className="text-sm text-neutral-500 hover:text-neutral-600 underline underline-offset-2 transition-colors"
         >
           Skip for now →
         </button>
@@ -93,7 +93,7 @@ function Step2({ invites, onNext, onBack }) {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Step 2 of 4</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Step 2 of 4</p>
         <h2 className="text-2xl font-black text-neutral-900 mb-2">The QR invite</h2>
         <p className="text-neutral-500 text-sm leading-relaxed">
           Each guest receives a unique QR code. Staff scan it at the door to admit them instantly.
@@ -107,9 +107,9 @@ function Step2({ invites, onNext, onBack }) {
             <img
               src={`/api/invite/${firstInvite.inviteCode}/qr.svg`}
               alt="Guest QR card"
-              className="w-60 h-auto mx-auto rounded-xl shadow-md border border-neutral-100"
+              className="w-60 h-auto mx-auto rounded-xl shadow-md border-2 border-ink"
             />
-            <p className="text-xs text-neutral-400 mt-3 font-mono">{firstInvite.inviteCode}</p>
+            <p className="text-xs text-neutral-500 mt-3 font-mono">{firstInvite.inviteCode}</p>
             <p className="text-xs text-neutral-500 mt-1">
               This is {firstInvite.guestName}'s QR card — sent directly to them.
             </p>
@@ -117,11 +117,11 @@ function Step2({ invites, onNext, onBack }) {
         ) : (
           <div className="flex flex-col items-center gap-4 px-8 py-10 rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50 w-full max-w-xs text-center">
             <div className="w-14 h-14 rounded-2xl bg-neutral-200 flex items-center justify-center">
-              <QrCode className="w-7 h-7 text-neutral-400" />
+              <QrCode className="w-7 h-7 text-neutral-500" />
             </div>
             <div>
               <p className="font-semibold text-neutral-600 text-sm">Your QR card will appear here</p>
-              <p className="text-xs text-neutral-400 mt-1">after you add a guest.</p>
+              <p className="text-xs text-neutral-500 mt-1">after you add a guest.</p>
             </div>
           </div>
         )}
@@ -136,7 +136,7 @@ function Step2({ invites, onNext, onBack }) {
         </button>
         <button
           onClick={onNext}
-          className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           Next <ChevronRight className="w-4 h-4" />
         </button>
@@ -189,8 +189,8 @@ function Step3({ eventId, onNext, onBack }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-neutral-900' : 'bg-neutral-200'
+      className={`relative inline-flex h-6 w-11 items-center rounded-lg transition-colors ${
+        checked ? 'bg-white' : 'bg-neutral-200'
       }`}
     >
       <span
@@ -204,7 +204,7 @@ function Step3({ eventId, onNext, onBack }) {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Step 3 of 4</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Step 3 of 4</p>
         <h2 className="text-2xl font-black text-neutral-900 mb-2">How check-in works</h2>
         <p className="text-neutral-500 text-sm leading-relaxed">
           Configure what staff see and require at the door. You can change these at any time.
@@ -218,7 +218,7 @@ function Step3({ eventId, onNext, onBack }) {
       ) : (
         <div className="flex-1 space-y-4 mb-6">
           {/* Require PIN */}
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-neutral-200 bg-white">
+          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border-2 border-ink bg-white shadow">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
                 <Lock className="w-4 h-4 text-neutral-600" />
@@ -237,7 +237,7 @@ function Step3({ eventId, onNext, onBack }) {
           </div>
 
           {/* Allow manual override */}
-          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-neutral-200 bg-white">
+          <div className="flex items-start justify-between gap-4 p-4 rounded-xl border-2 border-ink bg-white shadow">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
                 <Shield className="w-4 h-4 text-neutral-600" />
@@ -256,7 +256,7 @@ function Step3({ eventId, onNext, onBack }) {
           </div>
 
           {/* Staff note */}
-          <div className="p-4 rounded-xl border border-neutral-200 bg-white">
+          <div className="p-4 rounded-xl border-2 border-ink bg-white shadow">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
                 <FileText className="w-4 h-4 text-neutral-600" />
@@ -273,7 +273,7 @@ function Step3({ eventId, onNext, onBack }) {
               onChange={(e) => setLocalSettings((s) => ({ ...s, staffNote: e.target.value }))}
               placeholder="e.g. Blue wristband for VIP, direct to Table A"
               rows={2}
-              className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400 resize-none"
+              className="w-full text-sm border-2 border-ink rounded-lg px-3 py-2 focus:outline-none focus:border-ink resize-none focus:ring-[3px] focus:ring-ac bg-white"
             />
           </div>
         </div>
@@ -289,11 +289,11 @@ function Step3({ eventId, onNext, onBack }) {
         <button
           onClick={handleNext}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all disabled:opacity-60"
+          className="flex items-center gap-2 px-5 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl transition-all disabled:opacity-60 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           {saving ? (
             <>
-              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-ink border-t-white rounded-full animate-spin" />
               Saving…
             </>
           ) : (
@@ -310,7 +310,7 @@ function Step4({ event, invites, checkinSettings, onDone }) {
   return (
     <div className="flex flex-col h-full">
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Step 4 of 4</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Step 4 of 4</p>
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -324,8 +324,8 @@ function Step4({ event, invites, checkinSettings, onDone }) {
 
       {/* Summary cards */}
       <div className="flex-1 space-y-3 mb-6">
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-100">
-          <div className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border-2 border-ink shadow">
+          <div className="w-9 h-9 rounded-lg bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
             <Users className="w-4 h-4 text-neutral-600" />
           </div>
           <div>
@@ -338,8 +338,8 @@ function Step4({ event, invites, checkinSettings, onDone }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-100">
-          <div className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border-2 border-ink shadow">
+          <div className="w-9 h-9 rounded-lg bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
             <Lock className="w-4 h-4 text-neutral-600" />
           </div>
           <div>
@@ -350,8 +350,8 @@ function Step4({ event, invites, checkinSettings, onDone }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border border-neutral-100">
-          <div className="w-9 h-9 rounded-lg bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 border-2 border-ink shadow">
+          <div className="w-9 h-9 rounded-lg bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
             <FileText className="w-4 h-4 text-neutral-600" />
           </div>
           <div>
@@ -368,7 +368,7 @@ function Step4({ event, invites, checkinSettings, onDone }) {
       <div className="space-y-3 pt-4 border-t border-neutral-100">
         <button
           onClick={onDone}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white font-bold rounded-xl hover:bg-black transition-all"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-hl text-ink font-bold rounded-xl hover:bg-hl transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           Go to dashboard <ArrowRight className="w-4 h-4" />
         </button>
@@ -376,7 +376,7 @@ function Step4({ event, invites, checkinSettings, onDone }) {
           href="https://docs.planitapp.com/checkin-guide"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm text-neutral-500 hover:text-neutral-900 border border-neutral-200 rounded-xl transition-all"
+          className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm text-neutral-500 hover:text-neutral-900 border-2 border-ink rounded-xl transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
         >
           <BookOpen className="w-4 h-4" /> View check-in guide
         </a>
@@ -436,7 +436,7 @@ export default function SetupWizard({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-ink/60" />
 
       {/* Panel */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
@@ -445,8 +445,8 @@ export default function SetupWizard({
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-neutral-100">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <QrCode className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
+              <QrCode className="w-4 h-4 text-ink" />
             </div>
             <span className="text-sm font-bold text-neutral-700">Check-in Setup</span>
           </div>
@@ -454,7 +454,7 @@ export default function SetupWizard({
             <StepDots current={step} total={4} />
             <button
               onClick={handleDone}
-              className="p-1 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-700"
+              className="p-1 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-500 hover:text-neutral-700"
               title="Close wizard"
             >
               <X className="w-4 h-4" />

@@ -41,13 +41,13 @@ function ImageUploadField({ eventId, value, onChange, purpose }) {
   return (
     <div className="flex items-center gap-2">
       {value ? (
-        <img src={value} alt="" className="w-10 h-10 rounded object-cover border border-white/10" />
+        <img src={value} alt="" className="w-10 h-10 rounded object-cover border-2 border-ink" />
       ) : (
-        <div className="w-10 h-10 rounded border border-dashed border-white/20 flex items-center justify-center">
+        <div className="w-10 h-10 rounded border-2 border-dashed border-ink flex items-center justify-center">
           <ImagePlus size={16} className="opacity-40" />
         </div>
       )}
-      <label className="text-xs px-2 py-1 rounded bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1">
+      <label className="text-xs px-2 py-1 rounded bg-lav hover:bg-lav cursor-pointer flex items-center gap-1">
         {busy ? <Loader2 size={12} className="animate-spin" /> : null}
         {value ? 'Replace' : 'Upload'}
         <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={busy} />
@@ -59,17 +59,17 @@ function ImageUploadField({ eventId, value, onChange, purpose }) {
 function Field({ eventId, field, value, onChange }) {
   switch (field.type) {
     case 'textarea':
-      return <textarea rows={3} className="w-full text-sm rounded-lg bg-white/5 border border-white/10 px-3 py-2" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
+      return <textarea rows={3} className="w-full text-sm rounded-lg bg-lav border-2 border-ink px-3 py-2 focus:ring-[3px] focus:ring-ac focus:outline-none" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
     case 'datetime':
-      return <input type="datetime-local" className="w-full text-sm rounded-lg bg-white/5 border border-white/10 px-3 py-2" value={toDatetimeLocal(value)} onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : null)} />;
+      return <input type="datetime-local" className="w-full text-sm rounded-lg bg-lav border-2 border-ink px-3 py-2 focus:ring-[3px] focus:ring-ac focus:outline-none" value={toDatetimeLocal(value)} onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : null)} />;
     case 'number':
-      return <input type="number" className="w-full text-sm rounded-lg bg-white/5 border border-white/10 px-3 py-2" value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))} />;
+      return <input type="number" className="w-full text-sm rounded-lg bg-lav border-2 border-ink px-3 py-2 focus:ring-[3px] focus:ring-ac focus:outline-none" value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))} />;
     case 'url':
-      return <input type="url" placeholder="https://" className="w-full text-sm rounded-lg bg-white/5 border border-white/10 px-3 py-2" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
+      return <input type="url" placeholder="https://" className="w-full text-sm rounded-lg bg-lav border-2 border-ink px-3 py-2 focus:ring-[3px] focus:ring-ac focus:outline-none" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
     case 'imageUpload':
       return <ImageUploadField eventId={eventId} value={value} onChange={onChange} />;
     default:
-      return <input type="text" className="w-full text-sm rounded-lg bg-white/5 border border-white/10 px-3 py-2" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
+      return <input type="text" className="w-full text-sm rounded-lg bg-lav border-2 border-ink px-3 py-2 focus:ring-[3px] focus:ring-ac focus:outline-none" value={value || ''} onChange={(e) => onChange(e.target.value)} />;
   }
 }
 
@@ -82,14 +82,14 @@ function ListEditor({ eventId, field, items = [], onChange }) {
   return (
     <div className="flex flex-col gap-2">
       {(items || []).map((item, i) => (
-        <div key={i} className="rounded-lg border border-white/10 p-2 flex flex-col gap-2 relative">
+        <div key={i} className="rounded-lg border-2 border-ink p-2 flex flex-col gap-2 relative shadow">
           <button type="button" onClick={() => removeItem(i)} className="absolute top-1.5 right-1.5 opacity-40 hover:opacity-100">
             <Trash2 size={12} />
           </button>
           {isPlainStrings ? (
             <input
               type="text"
-              className="w-full text-sm rounded bg-white/5 border border-white/10 px-2 py-1.5 pr-6"
+              className="w-full text-sm rounded bg-lav border-2 border-ink px-2 py-1.5 pr-6 focus:ring-[3px] focus:ring-ac focus:outline-none"
               value={item}
               onChange={(e) => updateItem(i, e.target.value)}
             />
@@ -103,7 +103,7 @@ function ListEditor({ eventId, field, items = [], onChange }) {
           )}
         </div>
       ))}
-      <button type="button" onClick={addItem} className="self-start text-xs flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10">
+      <button type="button" onClick={addItem} className="self-start text-xs flex items-center gap-1 px-2 py-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         <Plus size={12} /> Add {field.label.toLowerCase().replace(/s$/, '')}
       </button>
     </div>
@@ -157,19 +157,19 @@ function CoverPickerField({
           real, device-accurate crop preview lives in the "Crop & position"
           panel below, so this doesn't show a third, misleading aspect ratio. */}
       {previewUrl && (
-        <div className="w-full rounded-lg border border-white/10 bg-black/30 flex items-center justify-center overflow-hidden" style={{ maxHeight: 160 }}>
+        <div className="w-full rounded-lg border-2 border-ink bg-lav flex items-center justify-center overflow-hidden shadow" style={{ maxHeight: 160 }}>
           <img src={previewUrl} alt="Banner source" className="max-w-full max-h-40 object-contain" />
         </div>
       )}
 
-      <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 flex items-start gap-2">
-        <Info size={12} className="mt-0.5 shrink-0 text-white/35" />
-        <p className="text-[11px] leading-relaxed text-white/55">
-          Pick <strong className="text-white/80 font-semibold">one</strong> source for your banner — generate a graphic from your event details, or upload your own photo. Switching to the other mode replaces whichever one is active.
+      <div className="rounded-lg border-2 border-ink bg-white/[0.03] px-3 py-2 flex items-start gap-2 shadow">
+        <Info size={12} className="mt-0.5 shrink-0 text-neutral-500" />
+        <p className="text-[11px] leading-relaxed text-neutral-500">
+          Pick <strong className="text-ink font-semibold">one</strong> source for your banner — generate a graphic from your event details, or upload your own photo. Switching to the other mode replaces whichever one is active.
         </p>
       </div>
 
-      <div className="flex gap-1 p-0.5 rounded-lg bg-white/5 w-fit">
+      <div className="flex gap-1 p-0.5 rounded-lg bg-lav w-fit">
         <button type="button" onClick={() => setMode('generate')}
           className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-colors"
           style={mode === 'generate' ? { background: accentColor, color: '#0a0a12' } : { opacity: 0.6 }}>
@@ -198,8 +198,8 @@ function CoverPickerField({
                 key={t}
                 type="button"
                 onClick={() => setTemplate(t)}
-                className="text-[11px] px-2 py-1 rounded-full border"
-                style={template === t ? { borderColor: accentColor, color: accentColor } : { borderColor: 'rgba(255,255,255,0.15)', opacity: 0.6 }}
+                className="text-[11px] px-2 py-1 rounded-lg border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
+                style={template === t ? { borderColor: accentColor, color: accentColor } : { borderColor: '#0d0e1c', opacity: 0.6 }}
               >
                 {t.replace(/-/g, ' ')}
               </button>
@@ -223,13 +223,13 @@ function CoverPickerField({
 
       {mode === 'upload' && (
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1.5 w-fit">
+          <label className="text-xs px-3 py-1.5 rounded-lg bg-lav hover:bg-lav cursor-pointer flex items-center gap-1.5 w-fit">
             {uploading ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
             {uploadedUrl ? 'Replace image' : 'Upload image'}
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
           </label>
           {uploadedUrl && (
-            <button type="button" onClick={onClearUpload} className="text-xs text-red-400 hover:text-red-300">
+            <button type="button" onClick={onClearUpload} className="text-xs text-red-700 hover:text-red-700">
               Remove
             </button>
           )}
@@ -241,7 +241,7 @@ function CoverPickerField({
       )}
 
       {hasCover && (
-        <div className="rounded-lg border border-white/10 p-2.5 flex flex-col gap-2">
+        <div className="rounded-lg border-2 border-ink p-2.5 flex flex-col gap-2 shadow">
           <label className="flex items-start gap-2 text-[11px] cursor-pointer select-none">
             <input
               type="checkbox"
@@ -262,16 +262,16 @@ function CoverPickerField({
           {desktopEnabled && (
             <div className="pl-6 flex flex-col gap-2">
               {uploadedUrlDesktop && (
-                <img src={uploadedUrlDesktop} alt="Desktop banner source" className="max-w-full max-h-24 object-contain rounded border border-white/10 bg-black/30" />
+                <img src={uploadedUrlDesktop} alt="Desktop banner source" className="max-w-full max-h-24 object-contain rounded border-2 border-ink bg-lav" />
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <label className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1.5 w-fit">
+                <label className="text-xs px-3 py-1.5 rounded-lg bg-lav hover:bg-lav cursor-pointer flex items-center gap-1.5 w-fit">
                   {uploadingDesktop ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
                   {uploadedUrlDesktop ? 'Replace desktop image' : 'Upload desktop image'}
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileDesktop} disabled={uploadingDesktop} />
                 </label>
                 {uploadedUrlDesktop && (
-                  <button type="button" onClick={onClearUploadDesktop} className="text-xs text-red-400 hover:text-red-300">
+                  <button type="button" onClick={onClearUploadDesktop} className="text-xs text-red-700 hover:text-red-700">
                     Remove
                   </button>
                 )}
@@ -322,11 +322,11 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
   return (
     <div className="flex flex-col gap-3">
       {type === 'hero' && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 flex items-start gap-2">
-          <Info size={13} className="mt-0.5 shrink-0 text-white/40" />
-          <div className="text-[11px] leading-relaxed text-white/60 space-y-1">
-            <p><strong className="text-white/85">How the banner works:</strong> generate a graphic from your event details, or upload your own photo — not both at once.</p>
-            <p>Then use <strong className="text-white/85">Crop &amp; position</strong> to fit it on desktop and mobile, since the banner isn't the same shape on both — and optionally upload a second image just for desktop if one photo doesn't work well on both screen shapes.</p>
+        <div className="rounded-lg border-2 border-ink bg-white/[0.03] px-3 py-2.5 flex items-start gap-2 shadow">
+          <Info size={13} className="mt-0.5 shrink-0 text-neutral-500" />
+          <div className="text-[11px] leading-relaxed text-neutral-500 space-y-1">
+            <p><strong className="text-ink">How the banner works:</strong> generate a graphic from your event details, or upload your own photo — not both at once.</p>
+            <p>Then use <strong className="text-ink">Crop &amp; position</strong> to fit it on desktop and mobile, since the banner isn't the same shape on both — and optionally upload a second image just for desktop if one photo doesn't work well on both screen shapes.</p>
           </div>
         </div>
       )}

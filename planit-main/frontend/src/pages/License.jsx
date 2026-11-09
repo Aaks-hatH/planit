@@ -130,7 +130,7 @@ function LexChat() {
       {/* Floating button */}
       <button onClick={() => setOpen(o => !o)}
         title="Ask Lex — PlanIt Legal Assistant"
-        style={{ position: 'fixed', bottom: '1.75rem', right: '1.75rem', zIndex: 999, width: '52px', height: '52px', borderRadius: '50%', background: '#1e293b', border: '2px solid #334155', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', transition: 'all 0.2s ease', animation: open ? 'none' : 'lexPulse 3s infinite' }}
+        style={{ position: 'fixed', bottom: '1.75rem', right: '1.75rem', zIndex: 999, width: '52px', height: '52px', borderRadius: '50%', background: '#ffffff', border: '2px solid #0d0e1c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '4px 4px 0 #0d0e1c', transition: 'all 0.2s ease', animation: open ? 'none' : 'lexPulse 3s infinite' }}
         onMouseEnter={e => { e.currentTarget.style.background = '#334155'; e.currentTarget.style.transform = 'scale(1.06)'; }}
         onMouseLeave={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'scale(1)'; }}>
         {open
@@ -140,16 +140,16 @@ function LexChat() {
       </button>
 
       {/* Chat panel */}
-      <div style={{ position: 'fixed', bottom: '5.25rem', right: '1.75rem', zIndex: 998, width: '360px', height: '480px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.12)', transform: open ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)', opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none', transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', bottom: '5.25rem', right: '1.75rem', zIndex: 998, width: '360px', height: '480px', background: '#fff', border: '2px solid #2236ff', borderRadius: '8px', display: 'flex', flexDirection: 'column', boxShadow: '4px 4px 0 #0d0e1c', transform: open ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)', opacity: open ? 1 : 0, pointerEvents: open ? 'all' : 'none', transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ padding: '1rem 1.1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', flexShrink: 0 }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '1rem 1.1rem', borderBottom: '1px solid #2236ff', display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#eceeff', flexShrink: 0 }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="15" height="15" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Lex</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#22c55e' }} />
+              <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#0c8a5b' }} />
               <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0 }}>PlanIt Legal Assistant</p>
             </div>
           </div>
@@ -160,7 +160,7 @@ function LexChat() {
           {msgs.map((m, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', gap: '0.5rem' }}>
               {m.role === 'assistant' && (
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '0.1rem' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '0.1rem' }}>
                   <svg width="10" height="10" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
               )}
@@ -170,10 +170,10 @@ function LexChat() {
           ))}
           {loading && (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="10" height="10" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
-              <div style={{ padding: '0.6rem 0.85rem', borderRadius: '2px 12px 12px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.83rem', color: '#94a3b8' }}>
+              <div style={{ padding: '0.6rem 0.85rem', borderRadius: '2px 12px 12px 12px', background: '#eceeff', border: '2px solid #2236ff', fontSize: '0.83rem', color: '#5a5d70' }}>
                 Thinking{dots}
               </div>
             </div>
@@ -185,7 +185,7 @@ function LexChat() {
         {msgs.length === 1 && (
           <div style={{ padding: '0 0.85rem 0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
             {SUGGESTIONS.map(s => (
-              <button key={s} onClick={() => send(s)} style={{ all: 'unset', cursor: 'pointer', fontSize: '0.71rem', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '0.28rem 0.65rem', background: '#f8fafc', transition: 'all 0.15s', fontFamily: 'inherit' }}
+              <button key={s} onClick={() => send(s)} style={{ all: 'unset', cursor: 'pointer', fontSize: '0.71rem', color: '#475569', border: '2px solid #2236ff', borderRadius: '999px', padding: '0.28rem 0.65rem', background: '#eceeff', transition: 'all 0.15s', fontFamily: 'inherit', boxShadow: '3px 3px 0 #0d0e1c' }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                 {s}
@@ -195,10 +195,10 @@ function LexChat() {
         )}
 
         {/* Input */}
-        <div style={{ padding: '0.65rem 0.85rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '0.45rem', flexShrink: 0 }}>
+        <div style={{ padding: '0.65rem 0.85rem', borderTop: '1px solid #2236ff', display: 'flex', gap: '0.45rem', flexShrink: 0 }}>
           <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
             placeholder="Ask about this license..."
-            style={{ flex: 1, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.55rem 0.8rem', color: '#0f172a', fontSize: '0.83rem', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+            style={{ flex: 1, background: '#eceeff', border: '2px solid #2236ff', borderRadius: '8px', padding: '0.55rem 0.8rem', color: '#0f172a', fontSize: '0.83rem', outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
             onFocus={e => e.target.style.borderColor = '#94a3b8'}
             onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
           <button onClick={() => send()} disabled={!input.trim() || loading}
@@ -221,7 +221,7 @@ function Clause({ code, children }) {
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ display: 'flex', gap: '1.1rem', padding: '0.55rem 0.75rem', borderRadius: '6px', background: hov ? '#f9fafb' : 'transparent', transition: 'background 0.15s', cursor: 'default', margin: '0 -0.75rem' }}>
-      <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#9ca3af', flexShrink: 0, paddingTop: '0.25rem', minWidth: '3.25rem' }}>{code}</span>
+      <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#5a5d70', flexShrink: 0, paddingTop: '0.25rem', minWidth: '3.25rem' }}>{code}</span>
       <span style={{ ...SM, margin: 0 }}>{children}</span>
     </div>
   );
@@ -230,12 +230,12 @@ function Clause({ code, children }) {
 /* ── Definition list ── */
 function DefList({ items }) {
   return (
-    <dl style={{ margin: '0.75rem 0 0', display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+    <dl style={{ margin: '0.75rem 0 0', display: 'flex', flexDirection: 'column', gap: 0, border: '2px solid #0d0e1c', borderRadius: '8px', overflow: 'hidden' }}>
       {items.map(([term, def], i) => (
         <div key={term} style={{ display: 'flex', borderBottom: i < items.length - 1 ? '1px solid #f3f4f6' : 'none' }}
           onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-          <dt style={{ width: '9.5rem', flexShrink: 0, padding: '0.75rem 1rem', borderRight: '1px solid #f3f4f6', fontFamily: 'monospace', fontSize: '0.75rem', color: '#4b5563', fontWeight: 600 }}>"{term}"</dt>
+          <dt style={{ width: '9.5rem', flexShrink: 0, padding: '0.75rem 1rem', borderRight: '1px solid #d9dbe8', fontFamily: 'monospace', fontSize: '0.75rem', color: '#4b5563', fontWeight: 600 }}>"{term}"</dt>
           <dd style={{ flex: 1, padding: '0.75rem 1rem', ...SM, margin: 0 }}>{def}</dd>
         </div>
       ))}
@@ -251,7 +251,7 @@ function RestrictList({ items }) {
         <li key={i} style={{ display: 'flex', gap: '0.85rem', padding: '0.45rem 0.75rem', borderRadius: '6px', alignItems: 'flex-start' }}
           onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-          <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#9ca3af', flexShrink: 0, paddingTop: '0.25rem' }}>({String.fromCharCode(97 + i)})</span>
+          <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#5a5d70', flexShrink: 0, paddingTop: '0.25rem' }}>({String.fromCharCode(97 + i)})</span>
           <span style={{ ...SM, margin: 0 }}>{t}</span>
         </li>
       ))}
@@ -262,9 +262,9 @@ function RestrictList({ items }) {
 /* ── Callout box ── */
 function Callout({ type = 'note', children }) {
   const styles = {
-    note:    { bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
-    warning: { bg: '#fef2f2', border: '#fca5a5', text: '#7f1d1d' },
-    info:    { bg: '#f0f9ff', border: '#7dd3fc', text: '#0c4a6e' },
+    note:    { bg: '#fff6c2', border: '#fcd34d', text: '#92400e' },
+    warning: { bg: '#ffe1de', border: '#fca5a5', text: '#7f1d1d' },
+    info:    { bg: '#eceeff', border: '#7dd3fc', text: '#0c4a6e' },
   };
   const s = styles[type];
   return (
@@ -278,7 +278,7 @@ function Callout({ type = 'note', children }) {
 function SubHeading({ code, title }) {
   return (
     <h4 style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '1rem', fontWeight: 700, color: '#111827', margin: '2rem 0 0.6rem', display: 'flex', alignItems: 'baseline', gap: '0.65rem' }}>
-      {code && <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#9ca3af', fontWeight: 400 }}>{code}</span>}
+      {code && <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#5a5d70', fontWeight: 400 }}>{code}</span>}
       {title}
     </h4>
   );
@@ -287,8 +287,8 @@ function SubHeading({ code, title }) {
 /* ── Part divider heading ── */
 function PartHead({ id, partLabel, title, subtitle }) {
   return (
-    <div id={id} style={{ scrollMarginTop: '72px', borderBottom: '1px solid #e5e7eb', paddingBottom: '1.25rem', marginBottom: '1.75rem' }}>
-      <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.4rem' }}>{partLabel}</p>
+    <div id={id} style={{ scrollMarginTop: '72px', borderBottom: '1px solid #d9dbe8', paddingBottom: '1.25rem', marginBottom: '1.75rem' }}>
+      <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.4rem' }}>{partLabel}</p>
       <h2 style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: 'clamp(1.25rem, 2.5vw, 1.65rem)', fontWeight: 700, color: '#111827', margin: '0 0 0.5rem', lineHeight: 1.25 }}>{title}</h2>
       {subtitle && <p style={{ ...SM, color: '#6b7280', margin: 0 }}>{subtitle}</p>}
     </div>
@@ -299,18 +299,18 @@ function PartHead({ id, partLabel, title, subtitle }) {
 function ComponentCard({ letter, title, accent, description, points, proprietary }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderLeft: `3px solid ${accent}`, borderRadius: '8px', marginBottom: '1rem', overflow: 'hidden' }}>
+    <div style={{ border: '2px solid #0d0e1c', borderLeft: `3px solid ${accent}`, borderRadius: '8px', marginBottom: '1rem', overflow: 'hidden' }}>
       <button onClick={() => setOpen(o => !o)} style={{ all: 'unset', display: 'flex', width: '100%', alignItems: 'center', gap: '0.85rem', padding: '0.9rem 1.1rem', cursor: 'pointer', background: open ? '#fafafa' : '#fff', transition: 'background 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
         onMouseLeave={e => e.currentTarget.style.background = open ? '#fafafa' : '#fff'}>
-        <span style={{ width: '1.75rem', height: '1.75rem', borderRadius: '5px', background: accent, color: '#fff', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{letter}</span>
+        <span style={{ width: '1.75rem', height: '1.75rem', borderRadius: '5px', background: accent, color: '#0d0e1c', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{letter}</span>
         <span style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '0.95rem', fontWeight: 700, color: '#111827', flex: 1, textAlign: 'left' }}>{title}</span>
         <svg width="14" height="14" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s', flexShrink: 0 }}><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div style={{ maxHeight: open ? '2400px' : 0, overflow: 'hidden', transition: 'max-height 0.4s cubic-bezier(0.16,1,0.3,1)' }}>
-        <div style={{ padding: '0 1.1rem 1.1rem', borderTop: '1px solid #f3f4f6' }}>
+        <div style={{ padding: '0 1.1rem 1.1rem', borderTop: '1px solid #d9dbe8' }}>
           <p style={{ ...SM, marginTop: '0.85rem' }}>{description}</p>
-          <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '1rem 0 0.4rem' }}>Encompasses</p>
+          <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '1rem 0 0.4rem' }}>Encompasses</p>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             {points.map((pt, i) => (
               <li key={i} style={{ display: 'flex', gap: '0.6rem', ...SM, margin: 0 }}>
@@ -319,7 +319,7 @@ function ComponentCard({ letter, title, accent, description, points, proprietary
               </li>
             ))}
           </ul>
-          <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '1rem 0 0.4rem' }}>Why It's Proprietary</p>
+          <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '1rem 0 0.4rem' }}>Why It's Proprietary</p>
           <p style={{ ...SM, margin: 0, color: '#4b5563' }}>{proprietary}</p>
         </div>
       </div>
@@ -333,8 +333,8 @@ function PermSummary() {
   const no  = ['Deploying any component on any infrastructure', 'Copying, cloning, or forking any component', 'Distributing any component to any third party', 'Creating any Derivative Work from any component', 'Using any component for Commercial Use', 'Removing copyright notices or "Powered by PlanIt" attributions', 'Using the PlanIt name or logo without consent', 'Reverse engineering any security or cryptographic mechanism', 'Using source code in ML or AI training datasets', 'Conducting penetration testing of the Hosted Service'];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.1rem', marginTop: '0.75rem' }}>
-      {[{ label: 'Permitted without permission', icon: '✓', items: yes, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
-        { label: 'Requires written permission', icon: '✕', items: no,  color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' }].map(({ label, icon, items, color, bg, border }) => (
+      {[{ label: 'Permitted without permission', icon: '✓', items: yes, color: '#15803d', bg: '#d6f7e8', border: '#bbf7d0' },
+        { label: 'Requires written permission', icon: '✕', items: no,  color: '#b91c1c', bg: '#ffe1de', border: '#fecaca' }].map(({ label, icon, items, color, bg, border }) => (
         <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '1rem 1.1rem' }}>
           <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', fontWeight: 700, color, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 0.75rem' }}>{label}</p>
           {items.map((t, i) => (
@@ -351,14 +351,14 @@ function PermSummary() {
 /* ── Full component license block ── */
 function CompLicense({ id, partLabel, title, accent, coverage, defs, grantLines, restrictItems, specialTitle, specialClauses, closingNote, extraNotes }) {
   return (
-    <section id={id} style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+    <section id={id} style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #d9dbe8' }}>
       <Reveal>
         <PartHead id={id} partLabel={partLabel} title={`${title} — License Agreement`} subtitle={coverage} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
           {[['Version', 'v2.0 — January 2026'], ['Copyright', '© 2026 Aakshat Hariharan'], ['Status', 'Proprietary · All Rights Reserved']].map(([k, v]) => (
-            <div key={k} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.65rem 0.85rem' }}>
-              <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
+            <div key={k} style={{ background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '7px', padding: '0.65rem 0.85rem' }}>
+              <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
               <p style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 500, margin: 0 }}>{v}</p>
             </div>
           ))}
@@ -372,7 +372,7 @@ function CompLicense({ id, partLabel, title, accent, coverage, defs, grantLines,
         <DefList items={defs} />
 
         <SubHeading code="§ 2" title="Grant of Limited License" />
-        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.85rem 1.1rem' }}>
+        <div style={{ background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '8px', padding: '0.85rem 1.1rem', boxShadow: '4px 4px 0 #0d0e1c' }}>
           {grantLines.map((l, i) => <p key={i} style={{ ...SM, margin: i < grantLines.length - 1 ? '0 0 0.55rem' : 0 }}>{l}</p>)}
         </div>
 
@@ -394,8 +394,8 @@ function CompLicense({ id, partLabel, title, accent, coverage, defs, grantLines,
         <p style={P}>{closingNote}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.6rem', marginTop: '0.5rem' }}>
           {[['Warranty', 'Provided "AS IS" without warranty of any kind. All warranties disclaimed to the maximum extent permitted by law.'], ['Liability Cap', "The Author's total liability shall not exceed USD $100.00 under any circumstances."], ['Indemnification', 'You agree to indemnify and hold harmless the Author from any claims arising from Your breach.'], ['Termination', 'Effective from first access. Breach causes immediate termination. You must cease all use and delete all copies.'], ['Injunctive Relief', 'The Author is entitled to seek injunctive relief without bond for any unauthorized use.'], ['Governing Law', "Governed by the laws of the jurisdiction of the Author's residence."]].map(([t, d]) => (
-            <div key={t} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.75rem 0.9rem' }}>
-              <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>{t}</p>
+            <div key={t} style={{ background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '7px', padding: '0.75rem 0.9rem' }}>
+              <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.3rem' }}>{t}</p>
               <p style={{ ...SM, margin: 0 }}>{d}</p>
             </div>
           ))}
@@ -422,7 +422,7 @@ export default function License() {
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             </button>
             <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
+              <div className="bg-white p-2 rounded-xl">
                 <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
               <h1 className="text-lg font-semibold text-neutral-900">License Agreement</h1>
@@ -432,13 +432,13 @@ export default function License() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-ink p-8 md:p-14">
           <main>
 
           {/* ── Overview ── */}
-          <section id="overview" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="overview" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #d9dbe8' }}>
             <Reveal>
-              <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.75rem' }}>Master License Agreement</p>
+              <p style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.75rem' }}>Master License Agreement</p>
               <h1 style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 700, color: '#111827', lineHeight: 1.2, margin: '0 0 0.75rem' }}>
                 PlanIt Platform — Consolidated Intellectual Property Declaration
               </h1>
@@ -448,8 +448,8 @@ export default function License() {
 
               <div className="meta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.6rem', marginBottom: '1.5rem' }}>
                 {[['Version', 'v2.0'], ['Date', 'January 2026'], ['Author', 'Aakshat Hariharan'], ['Contact', 'planit.userhelp@gmail.com']].map(([k, v]) => (
-                  <div key={k} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.65rem 0.8rem' }}>
-                    <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
+                  <div key={k} style={{ background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '7px', padding: '0.65rem 0.8rem' }}>
+                    <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
                     <p style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 500, margin: 0, wordBreak: 'break-word' }}>{v}</p>
                   </div>
                 ))}
@@ -462,8 +462,8 @@ export default function License() {
               <p style={P}>This document serves three purposes:</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                 {[['FIRST', 'It explains in plain terms what each component of the PlanIt platform is, what it does, and why it is protected.'], ['SECOND', 'It sets out the overarching licensing terms that apply across all components of the platform as a unified whole.'], ['THIRD', 'It reproduces in full each individual component license agreement, so the complete legal terms for every part of the platform are accessible in a single place.']].map(([label, text]) => (
-                  <div key={label} style={{ display: 'flex', gap: '0.85rem', padding: '0.65rem 0.85rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '7px' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', color: '#9ca3af', flexShrink: 0, paddingTop: '0.15rem', minWidth: '3rem' }}>{label}</span>
+                  <div key={label} style={{ display: 'flex', gap: '0.85rem', padding: '0.65rem 0.85rem', background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '7px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', color: '#5a5d70', flexShrink: 0, paddingTop: '0.15rem', minWidth: '3rem' }}>{label}</span>
                     <span style={{ ...SM, margin: 0 }}>{text}</span>
                   </div>
                 ))}
@@ -472,7 +472,7 @@ export default function License() {
           </section>
 
           {/* ── Part One: Platform Overview ── */}
-          <section id="part-one" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="part-one" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #d9dbe8' }}>
             <Reveal>
               <PartHead id="part-one" partLabel="Part One" title="The PlanIt Platform — An Overview"
                 subtitle="The PlanIt platform is not a single application. It is a multi-service distributed system comprising four distinct software components, each separately developed, separately deployed, and separately owned by the Author. This section explains each component before the formal legal terms begin." />
@@ -504,7 +504,7 @@ export default function License() {
           </section>
 
           {/* ── Part Two: Master Terms ── */}
-          <section id="part-two" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
+          <section id="part-two" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #d9dbe8' }}>
             <Reveal>
               <PartHead id="part-two" partLabel="Part Two" title="Overarching Terms — Applicable to All Components"
                 subtitle="The following terms apply to the PlanIt platform as a unified whole, in addition to the individual component license terms set out in Parts Three through Six below." />
@@ -547,7 +547,7 @@ export default function License() {
 
               <div id="sec-disclaim" style={{ scrollMarginTop: '72px' }}>
                 <SubHeading code="M-6" title="Unified Disclaimers and Limitations" />
-                <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.25rem 0.5rem' }}>
+                <div style={{ background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '8px', padding: '0.25rem 0.5rem', boxShadow: '4px 4px 0 #0d0e1c' }}>
                   <Clause code="M-6.1">THE ENTIRE PLANIT PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR DISCLAIMS ALL WARRANTIES TO THE MAXIMUM EXTENT PERMITTED BY LAW.</Clause>
                   <Clause code="M-6.2">THE AUTHOR'S TOTAL LIABILITY UNDER THIS MASTER AGREEMENT AND ALL INDIVIDUAL COMPONENT LICENSES COMBINED SHALL NOT EXCEED USD $100.00.</Clause>
                   <Clause code="M-6.3">IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL, INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES ARISING FROM ANY COMPONENT OF THE PLATFORM.</Clause>
@@ -564,11 +564,11 @@ export default function License() {
               <div id="sec-contact" style={{ scrollMarginTop: '72px' }}>
                 <SubHeading code="M-8" title="Contact and Permissions" />
                 <Clause code="M-8.1">All requests for permissions beyond those granted — including commercial license inquiries, white-label partnership inquiries, academic use requests, and security vulnerability reports — must be directed to:</Clause>
-                <div style={{ display: 'flex', gap: '2rem', padding: '0.85rem 1rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', margin: '0.6rem 0', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '2rem', padding: '0.85rem 1rem', background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '8px', margin: '0.6rem 0', flexWrap: 'wrap', boxShadow: '4px 4px 0 #0d0e1c' }}>
                   {[['Email', 'planit.userhelp@gmail.com', 'mailto:planit.userhelp@gmail.com'], ['Web', 'https://planitapp.onrender.com', 'https://planitapp.onrender.com']].map(([k, v, href]) => (
                     <div key={k}>
-                      <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
-                      <a href={href} style={{ fontSize: '0.84rem', color: '#374151', fontWeight: 500, textDecoration: 'none', borderBottom: '1px solid #d1d5db' }}
+                      <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#5a5d70', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.2rem' }}>{k}</p>
+                      <a href={href} style={{ fontSize: '0.84rem', color: '#374151', fontWeight: 500, textDecoration: 'none', borderBottom: '1px solid #d9dbe8' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#111827'}
                         onMouseLeave={e => e.currentTarget.style.color = '#374151'}>{v}</a>
                     </div>
@@ -640,7 +640,7 @@ export default function License() {
 
               <SubHeading title="Violation Reporting" />
               <p style={P}>If You become aware of any violation of this Master Agreement or any individual component license — including unauthorized forks, deployments, or distributions of any PlanIt component — please report it to:</p>
-              <a href="mailto:planit.userhelp@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '0.65rem 0.9rem', textDecoration: 'none', fontSize: '0.84rem', color: '#374151', fontWeight: 500, transition: 'all 0.15s' }}
+              <a href="mailto:planit.userhelp@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#f9fafb', border: '2px solid #0d0e1c', borderRadius: '8px', padding: '0.65rem 0.9rem', textDecoration: 'none', fontSize: '0.84rem', color: '#374151', fontWeight: 500, transition: 'all 0.15s', boxShadow: '4px 4px 0 #0d0e1c' }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.borderColor = '#d1d5db'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#e5e7eb'; }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -653,19 +653,19 @@ export default function License() {
               <ol style={{ margin: '0.5rem 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 {['You have read this Master Agreement in its entirety;', 'You understand its terms;', 'You agree to be legally bound by all of its provisions;', 'You have the legal capacity and authority to enter into this Agreement;', 'If You are accessing on behalf of an organization, You have authority to bind that organization to these terms; and', 'You acknowledge that this Agreement is enforceable against You.'].map((text, i) => (
                   <li key={i} style={{ display: 'flex', gap: '0.85rem', padding: '0.45rem 0.75rem', background: '#f9fafb', borderRadius: '6px', alignItems: 'flex-start' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#9ca3af', flexShrink: 0, paddingTop: '0.22rem' }}>({i + 1})</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#5a5d70', flexShrink: 0, paddingTop: '0.22rem' }}>({i + 1})</span>
                     <span style={{ ...SM, margin: 0 }}>{text}</span>
                   </li>
                 ))}
               </ol>
 
               {/* Footer */}
-              <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
+              <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid #d9dbe8', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.84rem', fontWeight: 600, color: '#374151', margin: '0 0 0.35rem' }}>Copyright © 2026 Aakshat Hariharan. All Rights Reserved.</p>
-                <p style={{ fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.7, maxWidth: '480px', margin: '0 auto 1.25rem' }}>All four components — Frontend, Backend, Router, and Watchdog — are protected by copyright law and trade secret law. Unauthorized use, copying, deployment, or distribution is strictly prohibited.</p>
+                <p style={{ fontSize: '0.78rem', color: '#5a5d70', lineHeight: 1.7, maxWidth: '480px', margin: '0 auto 1.25rem' }}>All four components — Frontend, Backend, Router, and Watchdog — are protected by copyright law and trade secret law. Unauthorized use, copying, deployment, or distribution is strictly prohibited.</p>
                 <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }}>
                   {[['planitapp.onrender.com', 'https://planitapp.onrender.com'], ['planit.userhelp@gmail.com', 'mailto:planit.userhelp@gmail.com']].map(([label, href]) => (
-                    <a key={label} href={href} style={{ fontSize: '0.78rem', color: '#6b7280', textDecoration: 'none', borderBottom: '1px solid #e5e7eb', paddingBottom: '1px', transition: 'color 0.15s' }}
+                    <a key={label} href={href} style={{ fontSize: '0.78rem', color: '#6b7280', textDecoration: 'none', borderBottom: '1px solid #d9dbe8', paddingBottom: '1px', transition: 'color 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.color = '#374151'}
                       onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}>{label}</a>
                   ))}

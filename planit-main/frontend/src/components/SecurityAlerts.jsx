@@ -42,8 +42,8 @@ const SEVERITY_CONFIG = {
     label:  'Medium',
   },
   low: {
-    bg:     'bg-neutral-900',
-    border: 'border-neutral-700',
+    bg:     'bg-white',
+    border: 'border-ink',
     badge:  'bg-neutral-500',
     text:   'text-neutral-400',
     icon:   Info,
@@ -61,7 +61,7 @@ function AlertCard({ alert, index, onDismiss }) {
   const cfg = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.medium;
   const Icon = cfg.icon;
   return (
-    <div className={`rounded-xl border ${cfg.bg} ${cfg.border} p-4 relative`}>
+    <div className={`rounded-xl border-2 border-ink shadow ${cfg.bg} ${cfg.border} p-4 relative`}>
       <button
         onClick={() => onDismiss(index)}
         className="absolute top-3 right-3 text-neutral-500 hover:text-white transition-colors"
@@ -136,9 +136,7 @@ export default function SecurityAlerts({ alerts = [], onDismiss, onDismissAll })
       {/* ── Floating trigger badge ── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl
-          ${highestSeverity === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-neutral-800 border border-neutral-700'}
-          text-white font-bold text-sm transition-all hover:scale-105 active:scale-95`}
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl ${highestSeverity === 'critical' ? 'bg-red-600 animate-pulse border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-hl border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'} text-white font-bold text-sm transition-all hover:scale-105 active:scale-95`}
         aria-label={`${alerts.length} security alert${alerts.length !== 1 ? 's' : ''}`}
       >
         <ShieldAlert className="w-4 h-4" />
@@ -151,28 +149,27 @@ export default function SecurityAlerts({ alerts = [], onDismiss, onDismissAll })
       {open && (
         <div
           ref={panelRef}
-          className="fixed bottom-20 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] max-h-[70vh] flex flex-col
-            bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden"
+          className="fixed bottom-20 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] max-h-[70vh] flex flex-col bg-white border-2 border-ink rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 shrink-0">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-ink shrink-0">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-red-400" />
-              <span className="text-white font-bold text-sm">Security Alerts</span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${badgeCfg.badge} text-white`}>
+              <ShieldAlert className="w-5 h-5 text-red-700" />
+              <span className="text-ink font-bold text-sm">Security Alerts</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${badgeCfg.badge} text-ink`}>
                 {alerts.length}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={onDismissAll}
-                className="text-xs text-neutral-400 hover:text-white transition-colors"
+                className="text-xs text-neutral-500 hover:text-ink transition-colors"
               >
                 Clear all
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="text-neutral-500 hover:text-white transition-colors ml-2"
+                className="text-neutral-500 hover:text-ink transition-colors ml-2"
                 aria-label="Close panel"
               >
                 <X className="w-4 h-4" />
@@ -193,7 +190,7 @@ export default function SecurityAlerts({ alerts = [], onDismiss, onDismissAll })
           </div>
 
           {/* Footer note */}
-          <div className="px-5 py-3 border-t border-neutral-800 shrink-0">
+          <div className="px-5 py-3 border-t border-ink shrink-0">
             <p className="text-xs text-neutral-500">
               Alerts are live — they reflect real-time security events from your check-in system.
               Offline sync conflicts appear here after reconnection.

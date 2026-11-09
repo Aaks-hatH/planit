@@ -195,14 +195,14 @@ export default function RSVPEventDashboard() {
     return <JoinGate eventId={eventId} onJoined={handleJoined} />;
   }
   if (!event) {
-    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Event not found.</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-500 text-sm">Event not found.</div>;
   }
 
   const base = subdomain ? `/e/${subdomain}` : `/event/${paramEventId}`;
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-50">
+      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-50">
         <div className="max-w-screen-lg mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <button onClick={() => navigate('/')}
             className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
@@ -213,7 +213,7 @@ export default function RSVPEventDashboard() {
             <p className="text-[11px] font-semibold text-emerald-600">RSVP Event</p>
           </div>
           <a href={`/rsvp/${event.subdomain}`} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex-shrink-0">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 border-2 border-ink bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex-shrink-0 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             View live page <ExternalLink className="w-3 h-3" />
           </a>
           <button onClick={() => setShowTour(true)} title="Take the tour"
@@ -231,16 +231,16 @@ export default function RSVPEventDashboard() {
         {/* Builder — full-page tool, linked out to rather than embedded, see file header */}
         <button
           onClick={() => navigate(`${base}/rsvp-builder`)}
-          className="w-full flex items-center gap-4 p-5 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left"
+          className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-ink bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left font-bold"
         >
           <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
             <LayoutTemplate className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-neutral-900">RSVP Page Builder</p>
-            <p className="text-xs text-neutral-400">Drag-and-drop sections, cover graphic, and page styling</p>
+            <p className="text-xs text-neutral-500">Drag-and-drop sections, cover graphic, and page styling</p>
           </div>
-          <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
+          <ChevronRight className="w-[18px] h-[18px] text-neutral-600" />
         </button>
 
         {/* Clone this event to a new date + slug (2 uses) */}
@@ -253,8 +253,8 @@ export default function RSVPEventDashboard() {
               onClick={() => setTab('guests')}
               className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
                 tab === 'guests'
-                  ? 'border-neutral-900 text-neutral-900'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                  ? 'border-ink text-neutral-900'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-600'
               }`}
             >
               <Users className="w-3.5 h-3.5" /> Guests
@@ -263,8 +263,8 @@ export default function RSVPEventDashboard() {
               onClick={() => setTab('analytics')}
               className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
                 tab === 'analytics'
-                  ? 'border-neutral-900 text-neutral-900'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+                  ? 'border-ink text-neutral-900'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-600'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" /> Analytics

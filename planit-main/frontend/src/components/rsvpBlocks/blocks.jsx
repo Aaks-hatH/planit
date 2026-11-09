@@ -116,7 +116,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
     <>
       {eyebrow && (
         <span
-          className="inline-flex items-center gap-1.5 uppercase tracking-[0.15em] text-[10px] md:text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/25"
+          className="inline-flex items-center gap-1.5 uppercase tracking-[0.15em] text-[10px] md:text-xs font-semibold px-3 py-1.5 rounded-full border-2 border-ink"
           style={{ background: `${accent}33`, color: '#fff' }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
@@ -129,12 +129,12 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
       {(dateStr || location) && (
         <div className={`flex flex-wrap gap-2 mt-1 ${leftAlign ? 'justify-start' : 'justify-center'}`}>
           {dateStr && (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-lav border-2 border-ink ${fonts.body}`}>
               <CalendarGlyph />{dateStr}
             </span>
           )}
           {location && (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-lav border-2 border-ink ${fonts.body}`}>
               <PinGlyph />{location}
             </span>
           )}
@@ -151,7 +151,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
   return (
     <section className={`w-full ${spacingClass(spacing)} px-4 md:px-10`}>
       <div
-        className={`relative max-w-5xl mx-auto overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl ${hasAnyImage ? 'aspect-[4/5] md:aspect-[16/9]' : 'aspect-[4/5] md:aspect-[21/9]'}`}
+        className={`relative max-w-5xl mx-auto overflow-hidden rounded-xl md:rounded-[2.5rem] shadow-2xl ${hasAnyImage ? 'aspect-[4/5] md:aspect-[16/9]' : 'aspect-[4/5] md:aspect-[21/9]'}`}
         // Always keep a real background behind the image, on every device.
         // 'contain' letterboxes (visible bars) and a zoom below 100% on
         // 'cover' can reveal the container edges — without this those gaps
@@ -169,7 +169,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
                   alt=""
                   aria-hidden="true"
                   loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50"
+                  className="absolute inset-0 w-full h-full object-cover scale-125 opacity-50"
                 />
               )}
               <img
@@ -195,7 +195,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
                   alt=""
                   aria-hidden="true"
                   loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50"
+                  className="absolute inset-0 w-full h-full object-cover scale-125 opacity-50"
                 />
               )}
               <img
@@ -215,8 +215,8 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
         )}
         {!hasAnyImage && (
           <>
-            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-60" style={{ background: '#ffd166' }} />
-            <div className="absolute -bottom-20 -left-10 w-72 h-72 rounded-full blur-3xl opacity-50" style={{ background: accent }} />
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-60" style={{ background: '#ffd166' }} />
+            <div className="absolute -bottom-20 -left-10 w-72 h-72 rounded-full opacity-50" style={{ background: accent }} />
           </>
         )}
 
@@ -257,7 +257,7 @@ export const HostCardBlock = React.memo(function HostCardBlock({ content, layout
             {h.avatarUrl ? (
               <img src={h.avatarUrl} alt={h.name} loading="lazy" className="w-12 h-12 rounded-full object-cover" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-sm font-semibold">
+              <div className="w-12 h-12 rounded-full bg-lav flex items-center justify-center text-sm font-semibold">
                 {(h.name || '?').slice(0, 1).toUpperCase()}
               </div>
             )}
@@ -291,7 +291,7 @@ export const TagsBlock = React.memo(function TagsBlock({ content, spacing, align
     <Wrap spacing={spacing} align={align}>
       <div className="flex flex-wrap gap-2 justify-center">
         {tags.map((t, i) => (
-          <span key={i} className="px-3 py-1 rounded-full text-xs font-medium border" style={{ borderColor: accent, color: accent }}>{t}</span>
+          <span key={i} className="px-3 py-1 rounded-full text-xs font-medium border-2 border-ink" style={{ borderColor: accent, color: accent }}>{t}</span>
         ))}
       </div>
     </Wrap>
@@ -349,7 +349,7 @@ export const SpeakerLineupBlock = React.memo(function SpeakerLineupBlock({ conte
             {s.photoUrl ? (
               <img src={s.photoUrl} alt={s.name} loading="lazy" className="w-20 h-20 rounded-full object-cover" />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-white/10" />
+              <div className="w-20 h-20 rounded-full bg-lav" />
             )}
             <div className={`${fonts.heading} text-sm`}>{s.name}</div>
             <div className="text-xs opacity-60">{[s.title, s.org].filter(Boolean).join(' · ')}</div>
@@ -456,7 +456,7 @@ export const FaqBlock = React.memo(function FaqBlock({ content, spacing, align, 
   if (!items.length) return null;
   return (
     <Wrap spacing={spacing} align={align}>
-      <div className="flex flex-col divide-y divide-white/10 text-left">
+      <div className="flex flex-col divide-y divide-neutral-200 text-left">
         {items.map((it, i) => (
           <div key={i} className="py-4">
             <button

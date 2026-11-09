@@ -21,7 +21,7 @@ function Toggle({ label, description, checked, onChange, disabled }) {
         {description && <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{description}</p>}
       </div>
       <button type="button" onClick={() => onChange(!checked)}
-        className={`relative flex-shrink-0 w-10 h-5.5 rounded-full transition-all duration-200 ${checked ? 'bg-indigo-600' : 'bg-neutral-200'}`}
+        className={`relative flex-shrink-0 w-10 h-5.5 rounded-lg transition-all duration-200 ${checked ? 'bg-indigo-600' : 'bg-neutral-200'}`}
         style={{ height: 22, minWidth: 40 }}>
         <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow-sm transition-all duration-200 ${checked ? 'translate-x-[18px]' : ''}`}
           style={{ width: 18, height: 18 }} />
@@ -34,16 +34,16 @@ function Toggle({ label, description, checked, onChange, disabled }) {
 function Section({ title, icon: Icon, children, defaultOpen = false, accent }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-neutral-200 overflow-hidden">
+    <div className="rounded-xl border-2 border-ink overflow-hidden shadow">
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors text-left">
+        className="w-full flex items-center justify-between px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors text-left border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         <div className="flex items-center gap-2.5">
           {Icon && <Icon className="w-4 h-4 text-neutral-500" />}
           <span className="text-sm font-semibold text-neutral-700">{title}</span>
         </div>
-        {open ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+        {open ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
       </button>
-      {open && <div className="px-4 pb-4 pt-2 divide-y divide-neutral-100 space-y-0">{children}</div>}
+      {open && <div className="px-4 pb-4 pt-2 divide-y divide-neutral-200 space-y-0">{children}</div>}
     </div>
   );
 }
@@ -59,7 +59,7 @@ function Field({ label, description, children }) {
   );
 }
 
-const inputCls = "w-full px-3 py-2 rounded-lg text-sm border border-neutral-200 focus:border-indigo-400 focus:outline-none transition-colors bg-white text-neutral-900";
+const inputCls = "w-full px-3 py-2 rounded-lg text-sm border-2 border-ink focus:border-indigo-400 focus:outline-none transition-colors bg-white text-neutral-900";
 const textareaCls = `${inputCls} resize-none`;
 
 /* ─── Image upload field ──────────────────────────────────────────────────── */
@@ -94,9 +94,9 @@ function AppearanceImageField({ eventId, purpose, previewClassName, value, onCha
   return (
     <div className="flex items-center gap-3">
       {value ? (
-        <img src={value} alt="" className={previewClassName || "w-16 h-16 rounded-lg object-cover border border-neutral-200"} />
+        <img src={value} alt="" className={previewClassName || "w-16 h-16 rounded-lg object-cover border-2 border-ink"} />
       ) : (
-        <div className={`${previewClassName || "w-16 h-16"} rounded-lg border border-dashed border-neutral-300 flex items-center justify-center text-neutral-300`}>
+        <div className={`${previewClassName || "w-16 h-16"} rounded-lg border-2 border-dashed border-ink flex items-center justify-center text-neutral-300`}>
           <Star className="w-4 h-4" />
         </div>
       )}
@@ -139,20 +139,20 @@ function QuestionEditor({ question, onChange, onDelete }) {
   };
 
   return (
-    <div className="border border-neutral-200 rounded-xl overflow-hidden">
+    <div className="border-2 border-ink rounded-xl overflow-hidden shadow">
       <div className="flex items-center gap-2 px-3 py-2.5 bg-neutral-50">
-        <GripVertical className="w-4 h-4 text-neutral-300 flex-shrink-0 cursor-grab" />
+        <GripVertical className="w-4 h-4 text-neutral-600 flex-shrink-0 cursor-grab" />
         <input value={question.label} onChange={e => onChange({ ...question, label: e.target.value })}
-          placeholder="Question label" className="flex-1 text-sm font-medium bg-transparent border-none outline-none text-neutral-800" />
+          placeholder="Question label" className="flex-1 text-sm font-medium bg-transparent border-none outline-none text-neutral-800 border-2 border-ink focus:ring-[3px] focus:ring-ac rounded-lg" />
         <select value={question.type} onChange={e => onChange({ ...question, type: e.target.value })}
-          className="text-xs border border-neutral-200 rounded-lg px-2 py-1 bg-white text-neutral-600">
+          className="text-xs border-2 border-ink rounded-lg px-2 py-1 bg-white text-neutral-600 focus:ring-[3px] focus:ring-ac focus:outline-none">
           {QUESTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
         <button type="button" onClick={() => setExpanded(o => !o)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-200 transition-colors">
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
         <button type="button" onClick={onDelete} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors">
-          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+          <Trash2 className="w-3.5 h-3.5 text-red-700" />
         </button>
       </div>
       {expanded && (
@@ -180,7 +180,7 @@ function QuestionEditor({ question, onChange, onDelete }) {
                 {(question.options || []).map((o, i) => (
                   <div key={i} className="flex gap-1.5">
                     <input value={o} onChange={e => updateOption(i, e.target.value)}
-                      placeholder={`Option ${i + 1}`} className={`flex-1 ${inputCls}`} />
+                      placeholder={`Option ${i + 1}`} className={`flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg ${inputCls}`} />
                     <button type="button" onClick={() => removeOption(i)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors flex-shrink-0">
                       <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </button>
@@ -339,14 +339,14 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
     <div className="space-y-4">
 
       {/* RSVP link & enable */}
-      <div className="p-4 rounded-xl border border-neutral-200 bg-neutral-50 space-y-3">
+      <div className="p-4 rounded-xl border-2 border-ink bg-neutral-50 space-y-3 shadow">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-bold text-neutral-800">RSVP Page</p>
             <p className="text-xs text-neutral-500 mt-0.5">When enabled, the shared link leads directly to the RSVP form.</p>
           </div>
           <button type="button" onClick={() => set('enabled', !settings.enabled)}
-            className={`relative flex-shrink-0 rounded-full transition-all duration-200 ${settings.enabled ? 'bg-indigo-600' : 'bg-neutral-300'}`}
+            className={`relative flex-shrink-0 rounded-lg transition-all duration-200 ${settings.enabled ? 'bg-indigo-600' : 'bg-neutral-300'}`}
             style={{ width: 48, height: 26 }}>
             <span className={`absolute top-1 bg-white rounded-full shadow transition-all duration-200 ${settings.enabled ? 'left-6' : 'left-1'}`}
               style={{ width: 18, height: 18 }} />
@@ -354,12 +354,12 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
         </div>
 
         {settings.enabled && rsvpUrl && (
-          <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 bg-white border-2 border-ink rounded-lg px-3 py-2 shadow">
             <span className="text-xs text-neutral-500 flex-1 truncate">{rsvpUrl}</span>
             <button type="button" onClick={copyUrl} className="flex-shrink-0 text-indigo-600 hover:text-indigo-700">
               <Copy className="w-3.5 h-3.5" />
             </button>
-            <a href={rsvpUrl} target="_blank" rel="noreferrer" className="flex-shrink-0 text-neutral-400 hover:text-neutral-600">
+            <a href={rsvpUrl} target="_blank" rel="noreferrer" className="flex-shrink-0 text-neutral-500 hover:text-neutral-600">
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -370,7 +370,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       {dirty && (
         <div className="sticky top-0 z-10 flex justify-end">
           <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg border-2 border-ink"
             style={{ opacity: saving ? 0.7 : 1 }}>
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save Changes'}
@@ -382,7 +382,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
         {TABS.map(tab => (
           <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'}`}>
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700 border-2 border-blue-600 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'}`}>
             <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
           </button>
@@ -397,9 +397,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               <div className="grid grid-cols-3 gap-2">
                 {[['open', 'Open', 'Anyone with the link'], ['password', 'Password', 'Requires a password'], ['closed', 'Closed', 'Not accepting RSVPs']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('accessMode', val)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${settings.accessMode === val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                    className={`p-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${settings.accessMode === val ? 'border-indigo-500 bg-indigo-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-300'}`}>
                     <p className="text-xs font-bold text-neutral-800">{label}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{sub}</p>
                   </button>
                 ))}
               </div>
@@ -416,9 +416,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               <div className="grid grid-cols-2 gap-2">
                 {[['auto_confirm', 'Auto-Confirm', 'RSVPs are confirmed instantly'], ['approval', 'Require Approval', 'You review each RSVP manually']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('confirmationMode', val)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${settings.confirmationMode === val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                    className={`p-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${settings.confirmationMode === val ? 'border-indigo-500 bg-indigo-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-300'}`}>
                     <p className="text-xs font-bold text-neutral-800">{label}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{sub}</p>
                   </button>
                 ))}
               </div>
@@ -484,9 +484,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             <Field label="Accent Color" description="Primary button and highlight color.">
               <div className="flex gap-2 items-center">
                 <input type="color" value={settings.accentColor || '#6366f1'} onChange={e => set('accentColor', e.target.value)}
-                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer bg-white p-0.5" />
+                  className="w-10 h-9 rounded-lg border-2 border-ink cursor-pointer bg-white p-0.5" />
                 <input type="text" value={settings.accentColor || '#6366f1'} onChange={e => set('accentColor', e.target.value)}
-                  placeholder="#6366f1" className={`flex-1 ${inputCls}`} />
+                  placeholder="#6366f1" className={`flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg ${inputCls}`} />
               </div>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#0ea5e9', '#f97316'].map(c => (
@@ -511,9 +511,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               <div className="grid grid-cols-2 gap-2">
                 {[['dark', 'Dark', 'Deep dark background'], ['light', 'Light', 'Clean white background'], ['gradient', 'Gradient', 'Dark with color accent gradient'], ['frosted', 'Frosted', 'Frosted glass dark']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('backgroundStyle', val)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${settings.backgroundStyle === val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                    className={`p-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${settings.backgroundStyle === val ? 'border-indigo-500 bg-indigo-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-300'}`}>
                     <p className="text-xs font-bold text-neutral-800">{label}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{sub}</p>
                   </button>
                 ))}
               </div>
@@ -522,9 +522,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               <div className="grid grid-cols-2 gap-2">
                 {[['modern', 'Modern', 'Clean sans-serif'], ['classic', 'Classic', 'Serif typography'], ['elegant', 'Elegant', 'Light, spaced lettering'], ['bold', 'Bold', 'Heavy, impactful']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('fontStyle', val)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${settings.fontStyle === val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                    className={`p-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${settings.fontStyle === val ? 'border-indigo-500 bg-indigo-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-300'}`}>
                     <p className="text-xs font-bold text-neutral-800">{label}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{sub}</p>
                   </button>
                 ))}
               </div>
@@ -540,8 +540,8 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             <Field label="Banner color">
               <div className="flex gap-2 items-center">
                 <input type="color" value={settings.bannerColor || '#f59e0b'} onChange={e => set('bannerColor', e.target.value)}
-                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer bg-white p-0.5" />
-                <input type="text" value={settings.bannerColor || '#f59e0b'} onChange={e => set('bannerColor', e.target.value)} className={`flex-1 ${inputCls}`} />
+                  className="w-10 h-9 rounded-lg border-2 border-ink cursor-pointer bg-white p-0.5" />
+                <input type="text" value={settings.bannerColor || '#f59e0b'} onChange={e => set('bannerColor', e.target.value)} className={`flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg ${inputCls}`} />
               </div>
             </Field>
           </Section>
@@ -616,7 +616,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       {/* ── CUSTOM QUESTIONS ── */}
       {activeTab === 'questions' && (
         <div className="space-y-4">
-          <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+          <div className="p-3 rounded-xl bg-indigo-50 border-2 border-blue-600">
             <p className="text-xs text-indigo-700 leading-relaxed">
               Add custom questions to collect any information you need from guests — meal preferences, shirt sizes, workshop selections, and more.
             </p>
@@ -632,7 +632,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
           ))}
 
           <button type="button" onClick={addQuestion}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-neutral-300 text-sm font-semibold text-neutral-500 hover:border-indigo-400 hover:text-indigo-600 transition-all">
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-neutral-300 text-sm font-semibold text-neutral-500 hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Plus className="w-4 h-4" /> Add Question
           </button>
         </div>
@@ -674,7 +674,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               {gmailStatusLoading ? (
                 <div className="flex items-center gap-2 text-xs text-neutral-400 py-2"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking connection…</div>
               ) : gmailStatus?.connected ? (
-                <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-emerald-50 border-2 border-emerald-600">
                   <div className="flex items-center gap-2 min-w-0">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                     <div className="min-w-0">
@@ -688,7 +688,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
                 </div>
               ) : (
                 <button type="button" onClick={connectGmail} disabled={gmailConnecting || !ROUTER_URL}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-colors disabled:opacity-50">
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border-2 border-ink hover:border-neutral-300 hover:bg-neutral-50 transition-colors disabled:opacity-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   {gmailConnecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                   {gmailConnecting ? 'Waiting for Google…' : 'Connect Gmail'}
                 </button>
@@ -740,7 +740,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               checked={settings.enableHoneypot !== false} onChange={v => set('enableHoneypot', v)} />
           </Section>
 
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+          <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-600 space-y-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <p className="text-xs font-semibold text-amber-700">Security Recommendations</p>
@@ -759,7 +759,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       {dirty && (
         <div className="pt-2">
           <button onClick={save} disabled={saving}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             style={{ opacity: saving ? 0.7 : 1 }}>
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save Changes'}

@@ -116,13 +116,13 @@ export default function Support() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-lav text-ink">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <Heart className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Heart className="w-4 h-4 text-ink" />
             </div>
             <span className="text-lg font-bold text-neutral-900">PlanIt</span>
           </a>
@@ -135,8 +135,8 @@ export default function Support() {
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Hero */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-4">
-            <Heart className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-lav text-ink">
+            <Heart className="w-8 h-8 text-ink" />
           </div>
           <h1 className="text-4xl font-bold text-neutral-900 mb-4">
             Support PlanIt Development
@@ -153,8 +153,8 @@ export default function Support() {
             onClick={() => setActiveTab('support')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'support'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                ? 'bg-hl text-ink shadow-lg border-2 border-ink rounded-lg font-bold'
+                : 'bg-white text-neutral-600 hover:bg-neutral-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
             }`}
           >
             <Coffee className="w-5 h-5 inline mr-2" />
@@ -164,8 +164,8 @@ export default function Support() {
             onClick={() => setActiveTab('feature')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'feature'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                ? 'bg-hl text-ink shadow-lg border-2 border-ink rounded-lg font-bold'
+                : 'bg-white text-neutral-600 hover:bg-neutral-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
             }`}
           >
             <Sparkles className="w-5 h-5 inline mr-2" />
@@ -195,9 +195,9 @@ export default function Support() {
                       key={preset.amount}
                       type="button"
                       onClick={() => setSupportForm({ ...supportForm, amount: preset.amount })}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      className={`p-3 rounded-lg border-2 text-sm font-bold transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
                         supportForm.amount === preset.amount
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
+                          ? 'border-ink bg-hl text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                           : 'border-neutral-200 hover:border-neutral-300'
                       }`}
                     >
@@ -209,7 +209,7 @@ export default function Support() {
                 
                 {/* Custom amount */}
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 w-5 h-5 text-neutral-400" />
+                  <DollarSign className="absolute left-3 top-3 w-5 h-5 text-neutral-500" />
                   <input
                     type="number"
                     min="3"
@@ -225,7 +225,7 @@ export default function Support() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-red-700">*</span>
                 </label>
                 <input
                   type="email"
@@ -280,7 +280,7 @@ export default function Support() {
               >
                 {loading ? (
                   <>
-                    <span className="spinner w-5 h-5 border-2 border-white/30 border-t-white" />
+                    <span className="spinner w-5 h-5 border-2 border-ink border-t-white" />
                     Processing...
                   </>
                 ) : (
@@ -309,7 +309,7 @@ export default function Support() {
               {/* Feature Description */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Feature Description <span className="text-red-500">*</span>
+                  Feature Description <span className="text-red-700">*</span>
                 </label>
                 <textarea
                   required
@@ -328,7 +328,7 @@ export default function Support() {
               {/* Priority Level */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-3">
-                  Priority Level <span className="text-red-500">*</span>
+                  Priority Level <span className="text-red-700">*</span>
                 </label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                   {featureAmounts.map((preset) => (
@@ -336,9 +336,9 @@ export default function Support() {
                       key={preset.amount}
                       type="button"
                       onClick={() => setFeatureForm({ ...featureForm, amount: preset.amount })}
-                      className={`p-3 rounded-lg border-2 text-xs font-medium transition-all ${
+                      className={`p-3 rounded-lg border-2 text-xs font-bold transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
                         featureForm.amount === preset.amount
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
+                          ? 'border-ink bg-hl text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                           : 'border-neutral-200 hover:border-neutral-300'
                       }`}
                     >
@@ -355,7 +355,7 @@ export default function Support() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Email <span className="text-red-500">*</span>
+                  Email <span className="text-red-700">*</span>
                 </label>
                 <input
                   type="email"
@@ -392,7 +392,7 @@ export default function Support() {
               >
                 {loading ? (
                   <>
-                    <span className="spinner w-5 h-5 border-2 border-white/30 border-t-white" />
+                    <span className="spinner w-5 h-5 border-2 border-ink border-t-white" />
                     Processing...
                   </>
                 ) : (
@@ -439,7 +439,7 @@ export default function Support() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-neutral-300 mt-10">
+        <p className="text-center text-xs text-neutral-600 mt-10">
           Payments are made in Bitcoin and go directly to PlanIt. Prices are in USD and converted at the current rate when you check out.
         </p>
       </main>

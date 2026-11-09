@@ -97,8 +97,8 @@ function useIntegrity(inv, amountBtc) {
 
 /* Shared style tokens */
 const linkCls = 'font-medium text-[#635bff] transition-colors hover:text-[#4338ca]';
-const primaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1d1d1f] px-6 text-[15px] font-medium text-white transition hover:bg-black active:scale-[0.99] disabled:opacity-60';
-const secondaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#e8e8ed] bg-white px-6 text-[15px] font-medium text-[#1d1d1f] transition hover:bg-[#fafafa] active:scale-[0.99] disabled:opacity-60';
+const primaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 text-[15px] font-medium text-ink transition hover:bg-white active:scale-[0.99] disabled:opacity-60';
+const secondaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink bg-white px-6 text-[15px] font-medium text-[#1d1d1f] transition hover:bg-[#fafafa] active:scale-[0.99] disabled:opacity-60';
 
 /* Page */
 export default function Pay() {
@@ -243,7 +243,7 @@ export default function Pay() {
               key={pid}
               type="button"
               onClick={() => setSheet(pid)}
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-[#e8e8ed] bg-white px-4 text-[14px] font-medium text-[#1d1d1f] transition hover:border-[#d2d2d7] hover:bg-[#fafafa] active:scale-[0.98]"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border-2 border-ink bg-white px-4 text-[14px] font-bold text-[#1d1d1f] transition hover:border-ink hover:bg-[#fafafa] active:scale-[0.98] shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
             >
               <Icon className="h-4 w-4 text-[#6e6e73]" strokeWidth={1.75} />
               {label}
@@ -281,12 +281,12 @@ const SHEET_TITLES = {
 const PAY_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
   .pay-root {
-    font-family: 'Geist', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
-  .pay-mono { font-family: 'Geist Mono', 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pay-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   .pay-root :focus-visible { outline: 2px solid #635bff; outline-offset: 2px; }
   .pay-root :focus:not(:focus-visible) { outline: none; }
   .pay-root button, .pay-root a { -webkit-tap-highlight-color: transparent; }
@@ -329,7 +329,7 @@ function Shell({ children, testnet, network, offline }) {
       <header className="pay-no-print">
         <div className="mx-auto flex h-16 max-w-[1040px] items-center justify-between px-5 sm:px-8">
           <Link to="/" className="inline-flex items-center gap-2.5" aria-label="PlanIt home">
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-[#1d1d1f] text-white"><Sparkles className="h-3.5 w-3.5" /></span>
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-white text-ink"><Sparkles className="h-3.5 w-3.5" /></span>
             <span className="text-[15px] font-semibold tracking-[-0.01em]">PlanIt</span>
           </Link>
           {testnet && (
@@ -405,7 +405,7 @@ function Sheet({ title, onClose, children }) {
   return (
     <div className="pay-no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <div
-        className={`absolute inset-0 bg-black/[0.18] backdrop-blur-[3px] ${leaving ? 'pay-fade-out' : 'pay-fade-in'}`}
+        className={`absolute inset-0 bg-black/[0.18] ${leaving ? 'pay-fade-out' : 'pay-fade-in'}`}
         onClick={close}
         aria-hidden="true"
       />
@@ -415,7 +415,7 @@ function Sheet({ title, onClose, children }) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] outline-none sm:max-w-[520px] sm:rounded-[24px] ${leaving ? 'pay-sheet-out' : 'pay-sheet-in'}`}
+        className={`relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white outline-none sm:max-w-[520px] sm:rounded-[24px] ${leaving ? 'pay-sheet-out' : 'pay-sheet-in'}`}
       >
         <div className="flex items-center justify-between px-7 pb-3 pt-7">
           <h2 className="text-[20px] font-semibold tracking-[-0.02em]">{title}</h2>
@@ -452,7 +452,7 @@ function Segmented({ value, onChange, options, label, tabs, full }) {
             aria-selected={tabs ? on : undefined}
             aria-pressed={tabs ? undefined : on}
             onClick={() => onChange(id)}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition-all ${full ? 'flex-1' : ''} ${on ? 'bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.04)]' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition-all ${full ? 'flex-1' : ''} ${on ? 'bg-white text-[#1d1d1f] border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
           >
             {Icon && <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />}
             {text}
@@ -547,7 +547,7 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
   // Fail closed: if anything looks off, hide every payment detail.
   if (!integrity.ok) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-[14px] leading-6 text-red-900" role="alert">
+      <div className="rounded-2xl border-2 border-red-600 bg-red-50 px-6 py-6 text-[14px] leading-6 text-red-900" role="alert">
         <div className="flex items-center gap-2 text-[16px] font-semibold"><ShieldAlert className="h-5 w-5 text-red-600" /> Do not pay yet</div>
         <p className="mt-2">Something on this page looks off, so we hid the payment details to keep you safe.</p>
         <ul className="mt-3 list-disc space-y-1 pl-5">
@@ -567,23 +567,23 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
         </div>
       )}
 
-      <div className="overflow-hidden rounded-[22px] border border-[#e8e8ed] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-12px_rgba(16,24,40,0.08)]">
+      <div className="overflow-hidden rounded-[22px] border-2 border-ink bg-white">
         {/* QR */}
         <div className="flex justify-center px-6 pb-8 pt-10">
-          <div className="relative rounded-2xl border border-[#f0f0f3] p-2">
+          <div className="relative rounded-2xl border-2 border-ink p-2 shadow">
             {qr
               ? <img src={qr} alt="Bitcoin payment QR code" width={184} height={184} className="block h-[184px] w-[184px] rounded-xl" />
               : <div className="grid h-[184px] w-[184px] place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#8e8e93]" /></div>}
             {detected && (
-              <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/85 backdrop-blur-[2px]">
-                <CheckCircle2 className="h-11 w-11 text-emerald-500" strokeWidth={1.5} />
+              <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white">
+                <CheckCircle2 className="h-11 w-11 text-emerald-700" strokeWidth={1.5} />
               </div>
             )}
           </div>
         </div>
 
         {/* Amount */}
-        <div className="border-t border-[#f0f0f3] px-6 py-6">
+        <div className="border-t border-ink px-6 py-6">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[13px] font-medium text-[#6e6e73]">Send exactly</span>
             <Segmented
@@ -611,7 +611,7 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
         </div>
 
         {/* Address */}
-        <div className="border-t border-[#f0f0f3] px-6 py-6">
+        <div className="border-t border-ink px-6 py-6">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[13px] font-medium text-[#6e6e73]">Bitcoin address</span>
             <button type="button" onClick={() => copy('addr', a)} aria-label="Copy address" className="group">
@@ -633,7 +633,7 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
 
         {/* Status */}
         {detected ? (
-          <div className="border-t border-[#f0f0f3] px-6 py-6">
+          <div className="border-t border-ink px-6 py-6">
             <div className="flex items-center justify-between gap-3 text-[14px]">
               <span className="inline-flex items-center gap-2 font-medium text-emerald-700" aria-live="polite">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" /> Payment detected
@@ -655,7 +655,7 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
             )}
           </div>
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-[#f0f0f3] px-6 py-5 text-[14px]">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-ink px-6 py-5 text-[14px]">
             <span className="inline-flex items-center gap-2.5" aria-live="polite">
               <span className="relative flex h-2 w-2">
                 <span className="pay-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60" />
@@ -717,7 +717,7 @@ function ConfirmedCard({ inv, meta, next, copy, copied }) {
         </button>
       </div>
 
-      <dl className="mt-14 divide-y divide-[#f0f0f3] border-y border-[#f0f0f3] text-left">
+      <dl className="mt-14 divide-y divide-[#f0f0f3] border-y border-ink text-left">
         <Row k="Receipt for" v={`${meta.title}${inv.label ? `, ${inv.label}` : ''}`} />
         <Row k="Amount" v={`${money(inv.usd)} USD`} />
         <Row k="Bitcoin paid" v={`${inv.btc} BTC`} mono />
@@ -761,7 +761,7 @@ function ExpiredCard({ busy, requote, error, inv }) {
         </button>
       </div>
       {error && <p className="mt-4 text-[13px] text-red-600" role="alert">{error}</p>}
-      <p className="mx-auto mt-12 max-w-[360px] border-t border-[#f0f0f3] pt-6 text-[13px] leading-5 text-[#6e6e73]">
+      <p className="mx-auto mt-12 max-w-[360px] border-t border-ink pt-6 text-[13px] leading-5 text-[#6e6e73]">
         Already sent a payment to the old address? Do not send it again. It will be flagged for a person to review automatically. Keep invoice ID{' '}
         <span className="pay-mono text-[#1d1d1f]">{inv.id.slice(0, 8)}</span>.
       </p>
@@ -779,7 +779,7 @@ function ReviewCard({ inv, copy, copied }) {
         A payment arrived that does not exactly match this order. For example, it came after the quote expired, or it was a partial amount. A person will review it.{' '}
         <strong className="font-medium text-[#1d1d1f]">Please do not send it again.</strong>
       </p>
-      <dl className="mt-10 divide-y divide-[#f0f0f3] border-y border-[#f0f0f3] text-left">
+      <dl className="mt-10 divide-y divide-[#f0f0f3] border-y border-ink text-left">
         <Row k="Invoice ID" v={inv.id} mono small action={<CopyBtn onClick={() => copy('id', inv.id)} done={copied === 'id'} />} />
         <Row k="Received so far" v={`${fmtSats(inv.seenSats)} sats`} mono />
         <Row k="Order total" v={`${fmtSats(inv.sats)} sats`} mono />
@@ -799,7 +799,7 @@ function ReviewCard({ inv, copy, copied }) {
 function RejectedCard({ inv }) {
   return (
     <div className="pt-4 text-center">
-      <IconBadge><XCircle className="h-5 w-5 text-red-500" strokeWidth={1.75} /></IconBadge>
+      <IconBadge><XCircle className="h-5 w-5 text-red-700" strokeWidth={1.75} /></IconBadge>
       <h1 className="mt-7 text-[26px] font-semibold tracking-[-0.03em]">Payment not accepted</h1>
       <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-6 text-[#6e6e73]">
         This payment could not be accepted for this order. Please email{' '}
@@ -891,7 +891,7 @@ function SecuritySheet({ integrity, active }) {
       </ul>
 
       {active && integrity?.checks?.length > 0 && (
-        <div className="mt-10 border-t border-[#f0f0f3] pt-8">
+        <div className="mt-10 border-t border-ink pt-8">
           <h3 className="text-[15px] font-medium">Checks on this page</h3>
           <ul className="mt-4 space-y-3">
             {integrity.checks.map((c) => (
@@ -927,7 +927,7 @@ function FaqSheet() {
   const [open, setOpen] = useState(-1);
   return (
     <div>
-      <div className="divide-y divide-[#f0f0f3] border-y border-[#f0f0f3]">
+      <div className="divide-y divide-[#f0f0f3] border-y border-ink">
         {FAQ_ITEMS.map((it, i) => {
           const on = open === i;
           return (

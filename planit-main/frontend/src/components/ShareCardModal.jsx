@@ -63,25 +63,25 @@ export default function ShareCardModal({ open, onClose, eventTitle, dateLabel, l
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
-      style={{ backdropFilter: 'blur(6px)' }}
+      className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-6"
+      style={{  }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm bg-neutral-950 border border-neutral-800 rounded-3xl p-6"
+        className="w-full max-w-sm bg-white border-2 border-ink rounded-3xl p-6 shadow-md transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white">Share your invite</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors">
+          <h3 className="text-lg font-bold text-ink">Share your invite</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-ink hover:bg-lav transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="relative rounded-2xl overflow-hidden bg-neutral-900 mb-5" style={{ aspectRatio: '4 / 5' }}>
+        <div className="relative rounded-2xl overflow-hidden bg-white mb-5" style={{ aspectRatio: '4 / 5' }}>
           {!ready && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-ink border-t-neutral-400 rounded-full animate-spin" />
             </div>
           )}
           <canvas ref={canvasRef} className="w-full h-full object-contain" style={{ opacity: ready ? 1 : 0 }} />
@@ -91,23 +91,23 @@ export default function ShareCardModal({ open, onClose, eventTitle, dateLabel, l
           <button
             onClick={handleDownload}
             disabled={!ready}
-            className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-neutral-200 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700 transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-ink bg-white hover:bg-white border-2 border-ink transition-all disabled:opacity-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             <Download className="w-4 h-4" /> Save image
           </button>
           <button
             onClick={handleNativeShare}
             disabled={!ready}
-            className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white bg-indigo-600 hover:bg-indigo-500 transition-all disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             <Share2 className="w-4 h-4" /> Share
           </button>
         </div>
         <button
           onClick={handleCopyLink}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-neutral-500 hover:text-ink transition-colors"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? 'Link copied' : 'Or just copy the link'}
         </button>
       </div>

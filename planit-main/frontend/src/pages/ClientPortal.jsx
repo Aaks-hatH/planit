@@ -44,8 +44,8 @@ const IcoAlert    = () => <Icon d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 
 // ─── Shared UI primitives ──────────────────────────────────────────────────────
 function Card({ children, className = '' }) {
   return (
-    <div className={`bg-white rounded-xl border border-neutral-200 ${className}`}
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+    <div className={`bg-white rounded-xl border-2 border-ink ${className}`}
+      style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
       {children}
     </div>
   );
@@ -77,7 +77,7 @@ function Input({ value, onChange, placeholder, type = 'text', disabled, maxLengt
     <input
       type={type} value={value} onChange={onChange} placeholder={placeholder}
       disabled={disabled} maxLength={maxLength}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all disabled:opacity-50"
+      className="w-full px-3 py-2 text-sm rounded-lg border-2 border-ink bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all disabled:opacity-50 focus:ring-[3px] focus:ring-ac"
       onFocus={e => { e.target.style.borderColor = '#3b82f6'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
       onBlur={e => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; e.target.style.boxShadow = 'none'; }}
     />
@@ -89,7 +89,7 @@ function Textarea({ value, onChange, placeholder, rows = 3, maxLength }) {
     <textarea
       value={value} onChange={onChange} placeholder={placeholder}
       rows={rows} maxLength={maxLength}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-none"
+      className="w-full px-3 py-2 text-sm rounded-lg border-2 border-ink bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-none focus:ring-[3px] focus:ring-ac"
       onFocus={e => { e.target.style.borderColor = '#3b82f6'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
       onBlur={e => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; e.target.style.boxShadow = 'none'; }}
     />
@@ -112,7 +112,7 @@ function Toggle({ value, onChange, label, disabled }) {
         <div style={{
           position: 'absolute', top: 3, left: value ? 21 : 3,
           width: 16, height: 16, borderRadius: '50%', background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          boxShadow: '4px 4px 0 #0d0e1c',
           transition: 'left 0.2s',
         }} />
       </div>
@@ -126,10 +126,10 @@ function SaveButton({ onClick, saving, saved }) {
     <button
       onClick={onClick} disabled={saving}
       className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-all disabled:opacity-60"
-      style={{ background: saved ? '#22c55e' : 'linear-gradient(135deg,#3b82f6,#6366f1)', minWidth: 100 }}
+      style={{ background: saved ? '#0c8a5b' : '#2236ff', minWidth: 100 }}
     >
       {saving ? (
-        <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Saving...</>
+        <><span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" />Saving...</>
       ) : saved ? (
         <><IcoCheck />Saved</>
       ) : 'Save changes'}
@@ -145,7 +145,7 @@ function Toast({ msg, type }) {
       position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
       padding: '12px 20px', borderRadius: 10, background: colors[type] || '#111',
       color: '#fff', fontSize: '0.875rem', fontWeight: 500,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+      boxShadow: '4px 4px 0 #0d0e1c',
       animation: 'fadeIn 0.2s ease-out',
     }}>
       {msg}
@@ -205,14 +205,14 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
           <Field label="Primary color">
             <div className="flex items-center gap-2">
               <input type="color" value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)}
-                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+                className="w-10 h-9 rounded-lg border-2 border-ink cursor-pointer p-0.5 bg-neutral-50" />
               <Input value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)} placeholder="#2563eb" maxLength={9} />
             </div>
           </Field>
           <Field label="Accent color">
             <div className="flex items-center gap-2">
               <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)}
-                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+                className="w-10 h-9 rounded-lg border-2 border-ink cursor-pointer p-0.5 bg-neutral-50" />
               <Input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} placeholder="#1d4ed8" maxLength={9} />
             </div>
           </Field>
@@ -221,7 +221,7 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
         <Field label="Font family">
           <select
             value={form.fontFamily} onChange={e => set('fontFamily', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none"
+            className="w-full px-3 py-2 text-sm rounded-lg border-2 border-ink bg-neutral-50 text-neutral-900 outline-none focus:ring-[3px] focus:ring-ac"
           >
             {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
@@ -374,7 +374,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
             <select
               value={form.home.tableServiceEventId}
               onChange={e => set('home', 'tableServiceEventId', e.target.value)}
-              className="w-full px-3 py-2.5 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none focus:ring-2 focus:ring-blue-100"
+              className="w-full px-3 py-2.5 text-sm rounded-lg border-2 border-ink bg-neutral-50 text-neutral-900 outline-none focus:ring-[3px] focus:ring-blue-100 focus:ring-ac"
             >
               <option value="">Show the events grid (no featured destination)</option>
               {form.home.tableServiceEventId && !tenantEvents.some(event => event.subdomain === form.home.tableServiceEventId) && (
@@ -390,13 +390,13 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
             {!eventsLoading && tenantEvents.length === 0 && <p className="text-xs text-amber-700 mt-1">No tenant events yet. Create one from the branded homepage or admin dashboard first.</p>}
           </Field>
           {form.home.tableServiceEventId && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border-2 border-blue-600 text-xs text-blue-700">
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                   Guests visiting your home page will be sent to the linked event’s full guest experience: restaurants open their reservation flow, while standard/RSVP events open the event space.
             </div>
           )}
           {!form.home.tableServiceEventId && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-500">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-neutral-50 border-2 border-ink text-xs text-neutral-500 shadow">
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
               Leave blank to keep the default events grid on your home page.
             </div>
@@ -443,7 +443,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
         {(tab === 'home' || tab === 'reservation') && (
           <div>
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Live Preview</p>
-            <div className="rounded-xl border border-neutral-200 overflow-hidden text-sm"
+            <div className="rounded-xl border-2 border-ink overflow-hidden text-sm shadow"
               style={{ fontFamily: `'${branding?.fontFamily || 'Inter'}', sans-serif` }}>
               <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-neutral-100">
                 {branding?.logoUrl
@@ -485,8 +485,8 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
                 </div>
               )}
               <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-neutral-100">
-                <span className="text-xs text-neutral-400">{branding?.companyName || 'Your Business'}</span>
-                {!branding?.hidePoweredBy && <span className="text-xs text-neutral-300">Powered by PlanIt</span>}
+                <span className="text-xs text-neutral-500">{branding?.companyName || 'Your Business'}</span>
+                {!branding?.hidePoweredBy && <span className="text-xs text-neutral-600">Powered by PlanIt</span>}
               </div>
             </div>
           </div>
@@ -547,7 +547,7 @@ function FeaturesSection({ data, tier, token, onUpdate, toast }) {
               <div>
                 <p className="text-sm font-medium text-neutral-800 flex items-center gap-2">
                   {label}
-                  {locked && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">Pro+</span>}
+                  {locked && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border-2 border-amber-600 font-medium">Pro+</span>}
                 </p>
                 <p className="text-xs text-neutral-500 mt-0.5">{hint}</p>
               </div>
@@ -631,7 +631,7 @@ function SecuritySection({ token, toast }) {
             <button
               onClick={changePassword} disabled={saving || !form.current || !form.next || !form.confirm}
               className="px-4 py-2 text-sm font-medium rounded-lg text-white disabled:opacity-50 transition-all"
-              style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}
+              style={{ background: '#2236ff' }}
             >
               {saving ? 'Saving...' : 'Update password'}
             </button>
@@ -642,7 +642,7 @@ function SecuritySection({ token, toast }) {
       {audit && (
         <Card>
           <SectionHeader title="Login history" subtitle="Last 20 sign-in attempts" />
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-neutral-200">
             {(audit.recentLogins || []).length === 0 && (
               <p className="px-6 py-4 text-sm text-neutral-400">No login history.</p>
             )}
@@ -722,8 +722,8 @@ function LoginScreen({ wl, onLogin }) {
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4"
       style={{ fontFamily: `'${wl?.branding?.fontFamily || 'Inter'}', system-ui, sans-serif` }}>
       <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+        <div className="bg-white rounded-2xl border-2 border-ink overflow-hidden shadow"
+          style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
 
           {/* Header */}
           <div className="px-8 pt-8 pb-6 border-b border-neutral-100 text-center">
@@ -743,7 +743,7 @@ function LoginScreen({ wl, onLogin }) {
           {/* Form */}
           <form onSubmit={submit} className="px-8 py-6 space-y-4">
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
+              <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-600 rounded-lg text-xs text-red-700">
                 <IcoAlert size={14} stroke="#ef4444" />
                 {error}
               </div>
@@ -758,26 +758,26 @@ function LoginScreen({ wl, onLogin }) {
                   required
                   autoFocus
                   placeholder="Enter your portal password"
-                  className="w-full px-3 py-2.5 pr-10 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none transition-all"
+                  className="w-full px-3 py-2.5 pr-10 text-sm rounded-lg border-2 border-ink bg-neutral-50 text-neutral-900 outline-none transition-all focus:ring-[3px] focus:ring-ac"
                   onFocus={e => { e.target.style.borderColor = primary; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 3px ${primary}20`; }}
                   onBlur={e => { e.target.style.borderColor = '#e5e5e5'; e.target.style.background = '#fafafa'; e.target.style.boxShadow = 'none'; }}
                 />
                 <button type="button" onClick={() => setShow(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                   {show ? <IcoEyeOff /> : <IcoEye />}
                 </button>
               </div>
             </Field>
 
             <button type="submit" disabled={loading || locked || !password}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-ink transition-all disabled:opacity-50"
               style={{ background: `linear-gradient(135deg, ${primary}, ${primary}cc)` }}>
-              {loading ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Signing in...</> : 'Sign in'}
+              {loading ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" />Signing in...</> : 'Sign in'}
             </button>
           </form>
         </div>
 
-        <p className="text-center mt-5 text-xs text-neutral-400">
+        <p className="text-center mt-5 text-xs text-neutral-500">
           Forgot your password? Contact your PlanIt account manager.
         </p>
       </div>
@@ -864,7 +864,7 @@ export default function ClientPortal() {
 
   // Not a WL domain
   if (!resolved) return null;
-  if (!isWL) return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-400">Not a white-label domain.</div>;
+  if (!isWL) return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-500">Not a white-label domain.</div>;
   if (resolved && isWL && wl && !wl.portalEnabled) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-center px-6 font-sans">
       {wl.branding?.logoUrl
@@ -894,16 +894,16 @@ export default function ClientPortal() {
     <div className="min-h-screen flex" style={{ background: '#f5f5f5', fontFamily: `'${data.branding?.fontFamily || 'Inter'}', system-ui, sans-serif` }}>
 
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-52 flex-shrink-0" style={{ background: '#0a0a0a', borderRight: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, height: '100vh' }}>
+      <aside className="hidden md:flex flex-col w-52 flex-shrink-0" style={{ background: '#ffffff', borderRight: '1px solid #d9dbe8', position: 'sticky', top: 0, height: '100vh' }}>
         {/* Logo */}
-        <div className="h-14 flex items-center gap-3 px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="h-14 flex items-center gap-3 px-4" style={{ borderBottom: '1px solid #d9dbe8' }}>
           {data.branding?.logoUrl
             ? <img src={data.branding.logoUrl} alt={company} className="h-7 object-contain" />
             : <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: data.branding?.primaryColor || '#3b82f6' }}>
                 <IcoPalette size={14} stroke="#fff" />
               </div>
           }
-          <span className="text-sm font-semibold text-white truncate">{company}</span>
+          <span className="text-sm font-semibold text-ink truncate">{company}</span>
         </div>
 
         {/* Tier badge */}
@@ -918,7 +918,7 @@ export default function ClientPortal() {
         <nav className="flex-1 px-2 py-1 space-y-0.5">
           {NAV.map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setSection(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-white/10 text-white' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:bg-lav hover:text-neutral-600'}`}>
               <Icon size={15} />
               {label}
             </button>
@@ -926,12 +926,12 @@ export default function ClientPortal() {
         </nav>
 
         {/* Session info + logout */}
-        <div className="p-3 space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="p-3 space-y-1" style={{ borderTop: '1px solid #d9dbe8' }}>
           {timeLeft && (
             <p className="text-xs text-neutral-600 px-1">Session: {timeLeft}</p>
           )}
           <button onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-neutral-600 hover:bg-white/5 hover:text-neutral-400 transition-all">
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-neutral-600 hover:bg-lav hover:text-neutral-500 transition-all">
             <IcoLogout size={13} />
             Sign out
           </button>
@@ -941,7 +941,7 @@ export default function ClientPortal() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-14 flex items-center px-4 sm:px-6 gap-4 bg-white" style={{ borderBottom: '1px solid #e5e5e5' }}>
+        <header className="h-14 flex items-center px-4 sm:px-6 gap-4 bg-white" style={{ borderBottom: '1px solid #d9dbe8' }}>
           <div>
             <span className="text-sm font-semibold text-neutral-900">
               {NAV.find(n => n.id === section)?.label}
@@ -949,9 +949,9 @@ export default function ClientPortal() {
           </div>
           <div className="flex-1" />
           {client?.status === 'trial' && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">Trial</span>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border-2 border-amber-600 font-medium">Trial</span>
           )}
-          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-700 transition-colors md:hidden">
+          <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 transition-colors md:hidden">
             <IcoLogout size={14} /> Sign out
           </button>
         </header>
@@ -959,7 +959,7 @@ export default function ClientPortal() {
         <nav aria-label="Dashboard sections" className="md:hidden flex gap-2 overflow-x-auto px-3 py-2 bg-white border-b border-neutral-200">
           {NAV.map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setSection(id)}
-              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${section === id ? 'text-white' : 'text-neutral-600 bg-neutral-100'}`}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${section === id ? 'text-ink' : 'text-neutral-600 bg-neutral-100 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
               style={section === id ? { background: data.branding?.primaryColor || '#2563eb' } : {}}>
               <Icon size={13} />{label}
             </button>
@@ -991,7 +991,7 @@ export default function ClientPortal() {
                     <p className="text-xs font-semibold text-neutral-500 uppercase" style={{ letterSpacing: '0.06em', fontSize: '0.67rem' }}>Billing</p>
                     <p className="text-sm font-medium text-neutral-800 mt-0.5 capitalize">{client.billing.billingStatus || 'Unknown'}</p>
                     {client.billing.nextBillingDate && (
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <p className="text-xs text-neutral-500 mt-0.5">
                         Next billing: {new Date(client.billing.nextBillingDate).toLocaleDateString()}
                       </p>
                     )}
@@ -1004,7 +1004,7 @@ export default function ClientPortal() {
                   <div className="text-right">
                     <p className="text-lg font-bold text-neutral-900">
                       ${((client.billing.monthlyAmount || 0) / 100).toFixed(0)}
-                      <span className="text-xs font-normal text-neutral-400">/mo</span>
+                      <span className="text-xs font-normal text-neutral-500">/mo</span>
                     </p>
                   </div>
                 </div>
@@ -1016,10 +1016,10 @@ export default function ClientPortal() {
 
       {/* Mobile bottom tab bar — same NAV array as the desktop sidebar so it can't drift out of sync */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
-        style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        style={{ background: '#ffffff', borderTop: '1px solid #d9dbe8', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {NAV.map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setSection(id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${section === id ? 'text-white' : 'text-neutral-500'}`}>
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${section === id ? 'text-ink' : 'text-neutral-500'}`}>
             <Icon size={17} />
             <span className="truncate px-1 leading-tight text-center">{label}</span>
           </button>

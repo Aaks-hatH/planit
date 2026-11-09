@@ -120,21 +120,21 @@ export default function DeletionWarningBanner({ eventId }) {
   const severityConfig = {
     critical: {
       bg: 'bg-red-600',
-      text: 'text-white',
+      text: 'text-ink',
       title: ' CRITICAL: Event data will be deleted TODAY!',
       message: 'All your data (messages, files, check-ins) will be permanently deleted at 2 AM. Download now!',
       allowDismiss: false,
     },
     urgent: {
       bg: 'bg-red-500',
-      text: 'text-white',
+      text: 'text-ink',
       title: `⚠️ URGENT: Event data will be deleted in ${daysUntilDeletion} day${daysUntilDeletion !== 1 ? 's' : ''}!`,
       message: 'All event data will be permanently deleted soon. Download your backup now to keep your data.',
       allowDismiss: false,
     },
     warning: {
       bg: 'bg-orange-500',
-      text: 'text-white',
+      text: 'text-ink',
       title: `⚠️ Event data will be deleted in ${daysUntilDeletion} days`,
       message: 'Events are automatically deleted 7 days after they occur. Download your data to keep it forever.',
       allowDismiss: true,
@@ -189,7 +189,7 @@ export default function DeletionWarningBanner({ eventId }) {
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="px-6 py-3 bg-white text-neutral-900 font-bold rounded-xl hover:bg-neutral-100 transition-all shadow-lg disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-3 bg-white text-neutral-900 font-bold rounded-xl hover:bg-neutral-100 transition-all shadow-lg disabled:opacity-50 flex items-center gap-2 border-2 border-ink"
             >
               {downloading ? (
                 <>
@@ -214,7 +214,7 @@ export default function DeletionWarningBanner({ eventId }) {
           {config.allowDismiss && (
             <button
               onClick={handleDismiss}
-              className="flex-shrink-0 p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="flex-shrink-0 p-2 hover:bg-lav rounded-lg transition-colors"
               title="Dismiss (will show again tomorrow)"
             >
               <X className="w-5 h-5" />

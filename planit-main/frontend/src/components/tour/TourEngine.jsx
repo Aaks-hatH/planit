@@ -88,7 +88,7 @@ export default function TourEngine({ steps, onClose, accent = '#6366f1', dark = 
   const dockText = dark ? 'text-white' : 'text-neutral-900';
   const dockSub = dark ? 'text-neutral-400' : 'text-neutral-500';
   const dockBg = dark ? '#15151d' : '#ffffff';
-  const dockBorder = dark ? 'border-white/10' : 'border-neutral-200';
+  const dockBorder = dark ? 'border-ink' : 'border-neutral-200';
 
   return (
     <div className="fixed inset-0 z-[300]" aria-modal="true" role="dialog">
@@ -100,10 +100,10 @@ export default function TourEngine({ steps, onClose, accent = '#6366f1', dark = 
       {/* Dim + cutout */}
       {hasRect ? (
         <>
-          <div className="fixed left-0 right-0 top-0 transition-all duration-300 pointer-events-auto" style={{ height: Math.max(0, rect.top - PAD), background: 'rgba(0,0,0,0.72)' }} onClick={onClose} />
-          <div className="fixed left-0 right-0 bottom-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.bottom + PAD, background: 'rgba(0,0,0,0.72)' }} onClick={onClose} />
-          <div className="fixed top-0 bottom-0 left-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.top - PAD, height: rect.height + PAD * 2, width: Math.max(0, rect.left - PAD), background: 'rgba(0,0,0,0.72)' }} onClick={onClose} />
-          <div className="fixed top-0 bottom-0 right-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.top - PAD, height: rect.height + PAD * 2, left: rect.right + PAD, background: 'rgba(0,0,0,0.72)' }} onClick={onClose} />
+          <div className="fixed left-0 right-0 top-0 transition-all duration-300 pointer-events-auto" style={{ height: Math.max(0, rect.top - PAD), background: '#ffffff' }} onClick={onClose} />
+          <div className="fixed left-0 right-0 bottom-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.bottom + PAD, background: '#ffffff' }} onClick={onClose} />
+          <div className="fixed top-0 bottom-0 left-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.top - PAD, height: rect.height + PAD * 2, width: Math.max(0, rect.left - PAD), background: '#ffffff' }} onClick={onClose} />
+          <div className="fixed top-0 bottom-0 right-0 transition-all duration-300 pointer-events-auto" style={{ top: rect.top - PAD, height: rect.height + PAD * 2, left: rect.right + PAD, background: '#ffffff' }} onClick={onClose} />
           <div
             className="fixed rounded-xl pointer-events-none transition-all duration-300 tour-ring"
             style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
@@ -111,19 +111,19 @@ export default function TourEngine({ steps, onClose, accent = '#6366f1', dark = 
           {/* step-number badge pinned to the highlighted target */}
           <div
             className="fixed flex items-center justify-center rounded-full text-[11px] font-black text-white transition-all duration-300 pointer-events-none"
-            style={{ top: rect.top - PAD - 12, left: rect.left - PAD - 12, width: 24, height: 24, background: accent, boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }}
+            style={{ top: rect.top - PAD - 12, left: rect.left - PAD - 12, width: 24, height: 24, background: accent, boxShadow: '4px 4px 0 #0d0e1c' }}
           >
             {i + 1}
           </div>
         </>
       ) : (
-        <div className="fixed inset-0 pointer-events-auto" style={{ background: 'rgba(0,0,0,0.72)' }} onClick={onClose} />
+        <div className="fixed inset-0 pointer-events-auto" style={{ background: '#ffffff' }} onClick={onClose} />
       )}
 
       {/* Close */}
       <button
         onClick={onClose}
-        className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[310] w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[310] w-9 h-9 rounded-full bg-ink/60 hover:bg-ink/60 text-white flex items-center justify-center transition-colors"
         title="Close tour"
       >
         <X className="w-4 h-4" />
@@ -132,11 +132,11 @@ export default function TourEngine({ steps, onClose, accent = '#6366f1', dark = 
       {/* Bottom dock */}
       <div className="fixed left-0 right-0 bottom-0 z-[310] flex justify-center px-3 pb-3 sm:pb-6 pointer-events-none">
         <div
-          className={`pointer-events-auto w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${dockBorder}`}
+          className={`pointer-events-auto w-full max-w-lg rounded-2xl border-2 shadow-2xl overflow-hidden border-ink ${dockBorder}`}
           style={{ background: dockBg }}
         >
           {/* progress */}
-          <div className="h-1 w-full bg-black/10 dark:bg-white/10 flex">
+          <div className="h-1 w-full bg-lav dark:bg-lav flex">
             {steps.map((_, idx) => (
               <div key={idx} className="flex-1 h-full mx-[1px] first:ml-0 last:mr-0 rounded-full overflow-hidden bg-neutral-500/20">
                 <div className="h-full rounded-full transition-all duration-300" style={{ width: idx <= i ? '100%' : '0%', background: accent }} />
@@ -164,7 +164,7 @@ export default function TourEngine({ steps, onClose, accent = '#6366f1', dark = 
                 {i > 0 && (
                   <button
                     onClick={back}
-                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors ${dark ? 'border-white/15 text-neutral-300 hover:bg-white/10' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-100'}`}
+                    className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-colors border-ink ${dark ? 'border-ink text-neutral-300 hover:bg-lav' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-100'}`}
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>

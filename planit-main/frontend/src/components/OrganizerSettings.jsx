@@ -25,8 +25,8 @@ function Toggle({ label, description, checked, onChange, disabled }) {
  type="button"
  onClick={() => !disabled && onChange(!checked)}
  disabled={disabled}
- className={`relative flex-shrink-0 w-10 h-5.5 rounded-full transition-colors duration-200 focus:outline-none ${
- checked ? 'bg-neutral-900' : 'bg-neutral-200'
+ className={`relative flex-shrink-0 w-10 h-5.5 rounded-lg transition-colors duration-200 focus:outline-none ${
+ checked ? 'bg-white' : 'bg-neutral-200'
  }`}
  style={{ height: '22px', width: '40px' }}
  >
@@ -45,19 +45,19 @@ function Toggle({ label, description, checked, onChange, disabled }) {
 function Section({ title, icon: Icon, children, defaultOpen = true }) {
  const [open, setOpen] = useState(defaultOpen);
  return (
- <div className="border border-neutral-200 rounded-xl overflow-hidden">
+ <div className="border-2 border-ink rounded-xl overflow-hidden shadow">
  <button
  type="button"
  onClick={() => setOpen(o => !o)}
- className="flex items-center justify-between w-full px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors"
+ className="flex items-center justify-between w-full px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
  >
  <div className="flex items-center gap-2.5">
  <Icon className="w-4 h-4 text-neutral-500" />
  <span className="text-sm font-semibold text-neutral-700">{title}</span>
  </div>
- {open ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+ {open ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
  </button>
- {open && <div className="px-4 divide-y divide-neutral-100">{children}</div>}
+ {open && <div className="px-4 divide-y divide-neutral-200">{children}</div>}
  </div>
  );
 }
@@ -284,7 +284,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  return (
  <div
- className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+ className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4"
  onClick={onClose}
  >
  <div
@@ -325,11 +325,11 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  onClick={() => { setActiveTab(tab.id); if (tab.id === 'approvals') loadApprovalQueue(); }}
  className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
  active
- ? 'bg-neutral-900 text-white shadow-sm'
+ ? 'bg-hl text-ink shadow-sm border-2 border-ink rounded-lg font-bold'
  : 'text-neutral-600 hover:bg-neutral-100'
  }`}
  >
- <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-white' : 'text-neutral-400'}`} />
+ <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-ink' : 'text-neutral-500'}`} />
  <span className="flex-1 text-left truncate">{tab.label}</span>
  {tab.badge > 0 && (
  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black bg-red-500 text-white rounded-full flex-shrink-0">
@@ -350,14 +350,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Event Title</label>
  <input
- type="text" className="input text-sm" value={title}
+ type="text" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={title}
  onChange={e => setTitle(e.target.value)} placeholder="Event title"
  />
  </div>
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
  <textarea
- className="input text-sm resize-none" rows={3} value={description}
+ className="input text-sm resize-none border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" rows={3} value={description}
  onChange={e => setDescription(e.target.value)} placeholder="Event description (optional)"
  />
  </div>
@@ -365,14 +365,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Date & Time</label>
  <input
- type="datetime-local" className="input text-sm" value={date}
+ type="datetime-local" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={date}
  onChange={e => setDate(e.target.value)}
  />
  </div>
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Max Participants</label>
  <input
- type="number" className="input text-sm" min={1} max={10000}
+ type="number" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" min={1} max={10000}
  value={maxParticipants} onChange={e => setMaxParticipants(e.target.value)}
  />
  </div>
@@ -380,14 +380,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Location</label>
  <input
- type="text" className="input text-sm" value={location}
+ type="text" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={location}
  onChange={e => setLocation(e.target.value)} placeholder="Location (optional)"
  />
  </div>
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Event Status</label>
  <select
- className="input text-sm" value={status}
+ className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={status}
  onChange={e => setStatus(e.target.value)}
  >
  <option value="active">Active — event is live</option>
@@ -401,8 +401,8 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {/* ── Features tab ── */}
  {activeTab === 'features' && (
  <div className="space-y-4">
- <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
- <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+ <div className="p-3 bg-blue-50 border-2 border-blue-600 rounded-xl flex items-start gap-2">
+ <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
  <p className="text-xs text-blue-700">
  Disabling a feature hides it from all participants immediately. Existing data is preserved.
  </p>
@@ -450,12 +450,12 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  />
  </Section>
 
- <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+ <div className="p-3 bg-neutral-50 border-2 border-ink rounded-xl shadow">
  <p className="text-xs font-medium text-neutral-700 mb-1">Current participant count</p>
  <p className="text-sm text-neutral-900">
  {event?.participants?.length || 0} / {maxParticipants} participants
  </p>
- <p className="text-xs text-neutral-400 mt-1">
+ <p className="text-xs text-neutral-500 mt-1">
  Change max participants in the General tab
  </p>
  </div>
@@ -467,7 +467,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {activeTab === 'approvals' && (
   <div className="space-y-4">
    {!requireApproval ? (
-    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+    <div className="p-4 bg-amber-50 border-2 border-amber-600 rounded-xl text-sm text-amber-800">
      <p className="font-semibold mb-1">Join approval is currently off</p>
      <p className="text-xs">Enable "Require Join Approval" in the Features tab to use this feature.</p>
     </div>
@@ -475,38 +475,38 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
     <>
      <div className="flex items-center justify-between">
       <p className="text-sm font-semibold text-neutral-700">Pending join requests</p>
-      <button onClick={loadApprovalQueue} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
+      <button onClick={loadApprovalQueue} className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-600 transition-colors">
        <RefreshCw className="w-3.5 h-3.5" /> Refresh
       </button>
      </div>
      {queueLoading ? (
-      <div className="flex items-center justify-center py-8 text-neutral-400 text-sm">Loading…</div>
+      <div className="flex items-center justify-center py-8 text-neutral-500 text-sm">Loading…</div>
      ) : approvalQueue.length === 0 ? (
-      <div className="text-center py-10 text-neutral-400 text-sm">
-       <p className="text-neutral-300 mb-1">No pending requests</p>
+      <div className="text-center py-10 text-neutral-500 text-sm">
+       <p className="text-neutral-600 mb-1">No pending requests</p>
        <p className="text-xs">New requests will appear here automatically</p>
       </div>
      ) : (
       <div className="space-y-2">
        {approvalQueue.map(req => (
-        <div key={req.username} className="flex items-center gap-3 p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+        <div key={req.username} className="flex items-center gap-3 p-3.5 bg-neutral-50 border-2 border-ink rounded-xl shadow">
          <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-sm font-bold text-neutral-600 flex-shrink-0">
           {req.username.charAt(0).toUpperCase()}
          </div>
          <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-neutral-900 truncate">{req.username}</p>
           {req.message && <p className="text-xs text-neutral-500 mt-0.5 truncate">"{req.message}"</p>}
-          <p className="text-[10px] text-neutral-400 mt-0.5">
+          <p className="text-[10px] text-neutral-500 mt-0.5">
            {new Date(req.requestedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </p>
          </div>
          <div className="flex gap-2 flex-shrink-0">
           <button onClick={() => handleReject(req.username)} disabled={queueActionId === req.username}
-           className="px-2.5 py-1.5 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-40">
+           className="px-2.5 py-1.5 text-xs font-semibold text-neutral-500 border-2 border-ink rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-40 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
            Reject
           </button>
           <button onClick={() => handleApprove(req.username)} disabled={queueActionId === req.username}
-           className="px-2.5 py-1.5 text-xs font-semibold text-white bg-neutral-900 rounded-lg hover:bg-black transition-all disabled:opacity-40">
+           className="px-2.5 py-1.5 text-xs font-semibold text-ink bg-hl rounded-lg hover:bg-hl transition-all disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
            {queueActionId === req.username ? '…' : 'Approve'}
           </button>
          </div>
@@ -547,17 +547,17 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className={!rsvpEnabled ? 'opacity-50 pointer-events-none' : ''}>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
  RSVP Deadline
- <span className="font-normal text-neutral-400 ml-1">(optional)</span>
+ <span className="font-normal text-neutral-500 ml-1">(optional)</span>
  </label>
  <input
- type="datetime-local" className="input text-sm" value={rsvpDeadline}
+ type="datetime-local" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={rsvpDeadline}
  onChange={e => setRsvpDeadline(e.target.value)}
  />
- <p className="text-xs text-neutral-400 mt-1">
+ <p className="text-xs text-neutral-500 mt-1">
  After this date, RSVP changes are locked. Guests will see a countdown on their invite page.
  </p>
  {rsvpDeadline && new Date(rsvpDeadline) < new Date() && (
- <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+ <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-700 bg-amber-50 border-2 border-amber-600 rounded-lg px-3 py-2">
  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
  This deadline is in the past — RSVPs are already locked.
  </div>
@@ -567,21 +567,21 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className={!rsvpEnabled ? 'opacity-50 pointer-events-none' : ''}>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
  Custom message for guests
- <span className="font-normal text-neutral-400 ml-1">(optional)</span>
+ <span className="font-normal text-neutral-500 ml-1">(optional)</span>
  </label>
  <textarea
- className="input text-sm resize-none" rows={3}
+ className="input text-sm resize-none border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" rows={3}
  value={rsvpMessage}
  onChange={e => setRsvpMessage(e.target.value.slice(0, 500))}
  placeholder="e.g. Please RSVP by Friday so we can finalise catering numbers."
  />
- <p className="text-xs text-neutral-400 mt-1">
+ <p className="text-xs text-neutral-500 mt-1">
  {rsvpMessage.length}/500 — shown on the guest invite page above the RSVP buttons.
  </p>
  </div>
 
  {/* RSVP summary */}
- <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-xl">
+ <div className="p-4 bg-neutral-50 border-2 border-ink rounded-xl shadow">
  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Current RSVP status</p>
  <div className="flex gap-5">
  <div className="text-center">
@@ -593,11 +593,11 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <p className="text-xs text-neutral-500">Maybe</p>
  </div>
  <div className="text-center">
- <p className="text-xl font-bold text-neutral-400">{event?.rsvpSummary?.no || 0}</p>
+ <p className="text-xl font-bold text-neutral-500">{event?.rsvpSummary?.no || 0}</p>
  <p className="text-xs text-neutral-500">Not going</p>
  </div>
  <div className="text-center">
- <p className="text-xl font-bold text-neutral-300">
+ <p className="text-xl font-bold text-neutral-600">
  {(event?.participants?.length || 0) -
  ((event?.rsvpSummary?.yes || 0) + (event?.rsvpSummary?.maybe || 0) + (event?.rsvpSummary?.no || 0))}
  </p>
@@ -611,7 +611,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {/* ── RSVP Page tab ── */}
  {activeTab === 'rsvp-page' && (
    <div className="space-y-4">
-     <div className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col gap-4">
+     <div className="p-5 bg-indigo-50 border-2 border-blue-600 rounded-2xl flex flex-col gap-4">
        <div className="flex items-start gap-3">
          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -629,7 +629,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
          href={event?.subdomain ? `/e/${event.subdomain}/rsvp-builder` : `/event/${event?._id || event?.id}/rsvp-builder`}
          target="_blank"
          rel="noreferrer"
-         className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+         className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
        >
          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -637,7 +637,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
          Open RSVP Page Builder
        </a>
      </div>
-     <div className="p-4 bg-white border border-neutral-200 rounded-xl space-y-2">
+     <div className="p-4 bg-white border-2 border-ink rounded-xl space-y-2 shadow">
        <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide">What you can customize in the builder</p>
        <div className="grid grid-cols-2 gap-1.5">
          {['Colors & accent color','Fonts & typography','Cover image + logo','Background image','Custom welcome text','RSVP button labels','Form fields to collect','Custom questions','Capacity & waitlist','RSVP deadline','Email notifications','Access & password','Confirmation screen','Add-to-calendar','Spam protection','Branding options'].map(item => (
@@ -670,14 +670,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* Preview */}
  {coverImage && (
- <div className="relative mb-3 rounded-xl overflow-hidden border border-neutral-200 h-32">
+ <div className="relative mb-3 rounded-xl overflow-hidden border-2 border-ink h-32">
  <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
  <button
  type="button"
  onClick={() => setCoverImage(null)}
- className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+ className="absolute top-2 right-2 w-6 h-6 bg-lav hover:bg-lav rounded-full flex items-center justify-center transition-colors"
  >
- <X className="w-3 h-3 text-white" />
+ <X className="w-3 h-3 text-ink" />
  </button>
  </div>
  )}
@@ -713,14 +713,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  type="button"
  onClick={() => coverInputRef.current?.click()}
  disabled={uploadingCover}
- className="flex items-center gap-2 w-full justify-center py-2.5 text-sm text-neutral-600 border border-dashed border-neutral-300 rounded-xl hover:border-neutral-400 hover:text-neutral-800 transition-colors"
+ className="flex items-center gap-2 w-full justify-center py-2.5 text-sm text-neutral-600 border-2 border-dashed border-ink rounded-xl hover:border-neutral-400 hover:text-neutral-800 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
  >
  {uploadingCover
  ? <><span className="spinner w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-600" />Uploading…</>
  : <><Upload className="w-3.5 h-3.5" />{coverImage ? 'Replace cover image' : 'Upload cover image'}</>
  }
  </button>
- <p className="text-xs text-neutral-400 mt-1.5">
+ <p className="text-xs text-neutral-500 mt-1.5">
  Shown on the Discover page and as a banner in your event. Max 5MB, JPG/PNG/WebP.
  </p>
  </div>
@@ -748,13 +748,13 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <button
  type="button"
  onClick={() => setThemeColor(null)}
- className="text-xs text-neutral-400 hover:text-neutral-600 ml-1"
+ className="text-xs text-neutral-500 hover:text-neutral-600 ml-1"
  >
  Clear
  </button>
  )}
  </div>
- <p className="text-xs text-neutral-400 mt-1.5">
+ <p className="text-xs text-neutral-500 mt-1.5">
  Accent color shown on your event card in Discover.
  </p>
  </div>
@@ -762,17 +762,17 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {/* Tags */}
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-2 flex items-center gap-1.5">
- <Tag className="w-3.5 h-3.5" /> Tags <span className="font-normal text-neutral-400">(up to 5)</span>
+ <Tag className="w-3.5 h-3.5" /> Tags <span className="font-normal text-neutral-500">(up to 5)</span>
  </label>
 
  <div className="flex flex-wrap gap-2 mb-2">
  {tags.map(tag => (
- <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded-full text-xs font-medium text-neutral-700">
+ <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-neutral-100 border-2 border-ink rounded-full text-xs font-medium text-neutral-700">
  {tag}
  <button
  type="button"
  onClick={() => setTags(t => t.filter(x => x !== tag))}
- className="text-neutral-400 hover:text-neutral-700 transition-colors"
+ className="text-neutral-500 hover:text-neutral-700 transition-colors"
  >
  <X className="w-3 h-3" />
  </button>
@@ -784,7 +784,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className="flex gap-2">
  <input
  type="text"
- className="input text-sm flex-1"
+ className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
  placeholder="Add a tag (e.g. Conference, Networking)"
  value={tagInput}
  onChange={e => setTagInput(e.target.value.slice(0, 30))}
@@ -816,7 +816,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  key={suggestion}
  type="button"
  onClick={() => { if (tags.length < 5) setTags(prev => [...prev, suggestion]); }}
- className="px-2 py-0.5 text-xs text-neutral-500 border border-neutral-200 rounded-full hover:bg-neutral-100 transition-colors"
+ className="px-2 py-0.5 text-xs text-neutral-500 border-2 border-ink rounded-lg hover:bg-neutral-100 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
  >
  + {suggestion}
  </button>
@@ -832,7 +832,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
           {/* ── Clone event ── */}
           {!event?.isTableServiceMode && !event?.isClone && (
-            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="border-2 border-ink rounded-xl overflow-hidden shadow">
               <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
                 <RefreshCw className="w-4 h-4 text-neutral-500" />
                 <span className="text-sm font-semibold text-neutral-700">Recurring / Clone Event</span>
@@ -845,11 +845,11 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
           )}
 
           {/* ── Webhooks ── */}
- <div className="border border-neutral-200 rounded-xl overflow-hidden">
+ <div className="border-2 border-ink rounded-xl overflow-hidden shadow">
  <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
  <Webhook className="w-4 h-4 text-neutral-500" />
  <span className="text-sm font-semibold text-neutral-700">Webhooks</span>
- <span className="ml-auto text-xs text-neutral-400">{webhooks.length}/5 used</span>
+ <span className="ml-auto text-xs text-neutral-500">{webhooks.length}/5 used</span>
  </div>
  <div className="px-4 py-4 space-y-4">
  <p className="text-xs text-neutral-500">PlanIt will POST a JSON payload to your URL when selected events occur.</p>
@@ -863,14 +863,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  key={svc.id}
  type="button"
  onClick={() => setNewWh(p => ({ ...p, url: svc.hint }))}
- className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all hover:scale-[1.02] ${svc.color}`}
+ className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-xs font-bold transition-all hover:scale-[1.02] border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${svc.color}`}
  >
  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${svc.dotColor}`} />
  <span>{svc.name}</span>
  </button>
  ))}
  </div>
- <p className="text-xs text-neutral-400 mt-1.5">Click a service to see the URL format, or paste your URL directly below.</p>
+ <p className="text-xs text-neutral-500 mt-1.5">Click a service to see the URL format, or paste your URL directly below.</p>
  </div>
 
  {/* ── Existing webhooks ── */}
@@ -882,14 +882,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {webhooks.map(wh => {
  const svc = detectService(wh.url);
  return (
- <div key={wh._id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg">
+ <div key={wh._id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-neutral-50 border-2 border-ink rounded-lg shadow">
  <div className="min-w-0 flex items-center gap-2">
  <div className="min-w-0">
  <div className="flex items-center gap-1.5">
- {svc && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${svc.color}`}>{svc.name}</span>}
+ {svc && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border-2 border-ink ${svc.color}`}>{svc.name}</span>}
  <p className="text-xs text-neutral-500 truncate">{wh.url}</p>
  </div>
- <p className="text-xs text-neutral-400 mt-0.5">{wh.events.map(e => WEBHOOK_EVENT_TYPES.find(t => t.id === e)?.label || e).join(', ')}</p>
+ <p className="text-xs text-neutral-500 mt-0.5">{wh.events.map(e => WEBHOOK_EVENT_TYPES.find(t => t.id === e)?.label || e).join(', ')}</p>
  </div>
  </div>
  <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -898,7 +898,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  await eventAPI.updateWebhook(eventId, wh._id, { active: !wh.active });
  setWebhooks(prev => prev.map(w => w._id === wh._id ? { ...w, active: !w.active } : w));
  }}
- className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-colors ${wh.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}
+ className={`text-xs px-2 py-0.5 rounded-lg font-bold border-2 transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${wh.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-500 border-neutral-200 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
  >{wh.active ? 'Active' : 'Paused'}</button>
  <button
  onClick={async () => {
@@ -906,7 +906,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  setWebhooks(prev => prev.filter(w => w._id !== wh._id));
  toast.success('Webhook removed');
  }}
- className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
+ className="p-1 text-neutral-500 hover:text-red-700 transition-colors"
  ><Trash2 className="w-3.5 h-3.5" /></button>
  </div>
  </div>
@@ -917,7 +917,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* ── Add webhook form ── */}
  {webhooks.length < 5 && (
- <div className="border border-dashed border-neutral-300 rounded-xl p-4 space-y-3">
+ <div className="border-2 border-dashed border-ink rounded-xl p-4 space-y-3 shadow">
  <p className="text-xs font-semibold text-neutral-600">Add Webhook</p>
 
  {/* URL input with live detection badge */}
@@ -925,13 +925,13 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className="relative">
  <input
  type="url"
- className="input text-sm pr-28"
+ className="input text-sm pr-28 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
  placeholder="https://hooks.slack.com/…"
  value={newWh.url}
  onChange={e => setNewWh(p => ({ ...p, url: e.target.value }))}
  />
  {detectedService && (
- <span className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${detectedService.color}`}>
+ <span className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border-2 border-ink ${detectedService.color}`}>
  {detectedService.name} detected
  </span>
  )}
@@ -939,19 +939,19 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* Service-specific guidance */}
  {detectedService && (
- <div className={`rounded-lg border px-3 py-2.5 space-y-1 ${detectedService.color}`}>
+ <div className={`rounded-lg border-2 px-3 py-2.5 space-y-1 border-ink shadow ${detectedService.color}`}>
  <p className="text-xs font-semibold flex items-center gap-1">
  How to get your {detectedService.name} URL
  </p>
  <p className="text-xs opacity-80">{detectedService.guide}</p>
  {detectedService.warning && (
- <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+ <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50 border-2 border-amber-600 rounded-md px-2 py-1.5">
  <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0 mt-0.5" />
  <p className="text-xs text-amber-700">{detectedService.warning}</p>
  </div>
  )}
  {detectedService.nativeSupport && (
- <div className="flex items-start gap-1.5 mt-1.5 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1.5">
+ <div className="flex items-start gap-1.5 mt-1.5 bg-emerald-50 border-2 border-emerald-600 rounded-md px-2 py-1.5">
  <CheckCircle className="w-3 h-3 text-emerald-600 flex-shrink-0 mt-0.5" />
  <p className="text-xs text-emerald-700">{detectedService.nativeSupport}</p>
  </div>
@@ -960,7 +960,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  )}
 
  {!detectedService && newWh.url && (
- <p className="text-xs text-neutral-400">Custom endpoint — make sure it accepts POST requests with JSON.</p>
+ <p className="text-xs text-neutral-500">Custom endpoint — make sure it accepts POST requests with JSON.</p>
  )}
  </div>
 
@@ -985,7 +985,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {/* Signing secret */}
  <input
  type="text"
- className="input text-sm"
+ className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
  placeholder="Signing secret (optional — used to verify payloads)"
  value={newWh.secret}
  onChange={e => setNewWh(p => ({ ...p, secret: e.target.value }))}
@@ -1006,7 +1006,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  }}
  className="btn btn-primary text-sm gap-1.5 w-full"
  >
- {addingWh ? <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Adding…</> : <><Plus className="w-3.5 h-3.5" />Add Webhook</>}
+ {addingWh ? <><span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" />Adding…</> : <><Plus className="w-3.5 h-3.5" />Add Webhook</>}
  </button>
  </div>
  )}
@@ -1030,7 +1030,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  className="btn btn-primary text-sm gap-1.5"
  >
  {saving ? (
- <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Saving...</>
+ <><span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" />Saving...</>
  ) : (
  <><Save className="w-3.5 h-3.5" />Save Changes</>
  )}

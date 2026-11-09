@@ -49,21 +49,21 @@ export default function StandardTour({ onClose }) {
   return (
     <div className="fixed inset-0 z-[290] bg-neutral-50 overflow-y-auto">
       {/* Header */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-10">
+      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-10">
         <div className="max-w-screen-lg mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <div data-tour="hdr-title" className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-black">S</span>
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+              <span className="text-ink text-xs font-black">S</span>
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-neutral-900 truncate leading-tight">Sam\u2019s Birthday Weekend</p>
-              <p className="text-[11px] text-neutral-400 truncate">planit.app/e/sams-birthday</p>
+              <p className="text-[11px] text-neutral-500 truncate">planit.app/e/sams-birthday</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <div data-tour="hdr-online" className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-emerald-700 cursor-pointer"
-              style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.15)' }}>
+              style={{ background: '#d6f7e8', border: '2px solid #0a7149' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               6 online
             </div>
@@ -84,13 +84,13 @@ export default function StandardTour({ onClose }) {
       </header>
 
       <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
           {/* Tabs */}
           <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide" style={{ background: '#fafafa' }}>
             {TABS.map(({ id, label, icon: Icon, count }) => (
               <div key={id} data-tour={`tab-${id}`}
                 className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 flex-shrink-0 cursor-pointer ${
-                  id === 'chat' ? 'text-neutral-900 border-neutral-900 bg-white' : 'text-neutral-500 border-transparent hover:text-neutral-800'
+                  id === 'chat' ? 'text-neutral-900 border-ink bg-white' : 'text-neutral-500 border-transparent hover:text-neutral-800'
                 }`}>
                 <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>{label}</span>

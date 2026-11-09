@@ -155,20 +155,20 @@ export default function AdminPayments({ isDemo = false }) {
           <label className="flex items-center gap-1.5 text-xs text-neutral-500 cursor-pointer select-none">
             <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="rounded" /> Auto-refresh
           </label>
-          <button onClick={sendTest} disabled={testing} className="inline-flex items-center gap-1.5 border border-neutral-200 hover:bg-neutral-50 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-700 disabled:opacity-60">
+          <button onClick={sendTest} disabled={testing} className="inline-flex items-center gap-1.5 border-2 border-ink hover:bg-neutral-50 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-700 disabled:opacity-60 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />} Send test alert
           </button>
-          <button onClick={() => load()} className="inline-flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl px-3 py-2 text-xs font-semibold">
+          <button onClick={() => load()} className="inline-flex items-center gap-1.5 bg-hl hover:bg-hl text-ink rounded-xl px-3 py-2 text-xs font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
       </div>
 
-      {err && <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 flex gap-2"><AlertTriangle className="w-4 h-4 mt-0.5" /> {err}</div>}
+      {err && <div className="rounded-xl bg-red-50 border-2 border-red-600 text-red-700 text-sm px-4 py-3 flex gap-2"><AlertTriangle className="w-4 h-4 mt-0.5" /> {err}</div>}
 
       {/* Not configured */}
       {health && health.configured === false && !isDemo && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-4">
+        <div className="rounded-xl bg-red-50 border-2 border-red-600 px-4 py-4">
           <div className="flex items-center gap-2 text-sm font-bold text-red-800"><ShieldAlert className="w-4 h-4" /> Payments are NOT active on this backend</div>
           <p className="text-sm text-red-700 mt-1">{health.configError || 'BTC_XPUB / BTC_NETWORK are not set.'}</p>
           <p className="text-xs text-red-600 mt-2">Set <code>BTC_XPUB</code>, <code>BTC_NETWORK</code> and <code>PAYMENTS_ENC_KEY</code> on the <strong>router</strong>, then restart the backends. See docs/PAYMENTS.md.</p>
@@ -177,7 +177,7 @@ export default function AdminPayments({ isDemo = false }) {
 
       {/* Action needed banners */}
       {(reviewCount > 0 || unfulfilled > 0) && (
-        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-xl bg-amber-50 border-2 border-amber-600 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-amber-900 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600" />
             {reviewCount > 0 && <span><strong>{reviewCount}</strong> payment{reviewCount > 1 ? 's' : ''} need{reviewCount === 1 ? 's' : ''} your review.</span>}
@@ -199,7 +199,7 @@ export default function AdminPayments({ isDemo = false }) {
         <div className="flex flex-wrap gap-2">
           {Object.entries(stats.byPurpose).map(([k, v]) => (
             <button key={k} onClick={() => setPurpose(purpose === k ? '' : k)}
-              className={`text-xs rounded-full border px-3 py-1.5 transition-colors ${purpose === k ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'}`}>
+              className={`text-xs rounded-lg border-2 px-3 py-1.5 transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${purpose === k ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
               {PURPOSES[k] || k}: <strong>{usd(v.usdCents)}</strong> <span className="opacity-60">· {v.n}</span>
             </button>
           ))}
@@ -214,13 +214,13 @@ export default function AdminPayments({ isDemo = false }) {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search invoice ID, address or business…"
-            className="w-full border border-neutral-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10" />
+            className="w-full border-2 border-ink rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-[3px] focus:ring-ink focus:ring-ac bg-white" />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white">
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="border-2 border-ink rounded-xl px-3 py-2 text-xs bg-white focus:ring-[3px] focus:ring-ac focus:outline-none">
           <option value="">All statuses</option>
           {Object.keys(STATUS_STYLE).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={purpose} onChange={(e) => setPurpose(e.target.value)} className="border border-neutral-200 rounded-xl px-3 py-2 text-xs bg-white">
+        <select value={purpose} onChange={(e) => setPurpose(e.target.value)} className="border-2 border-ink rounded-xl px-3 py-2 text-xs bg-white focus:ring-[3px] focus:ring-ac focus:outline-none">
           <option value="">All types</option>
           {Object.entries(PURPOSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
@@ -228,11 +228,11 @@ export default function AdminPayments({ isDemo = false }) {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+      <div className="bg-white border-2 border-ink rounded-2xl overflow-hidden shadow">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-400 border-b border-neutral-100 bg-neutral-50/60">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-100 bg-neutral-50/60">
                 <th className="px-4 py-2.5 font-semibold">Created</th>
                 <th className="px-4 py-2.5 font-semibold">Type</th>
                 <th className="px-4 py-2.5 font-semibold text-right">Amount</th>
@@ -243,17 +243,17 @@ export default function AdminPayments({ isDemo = false }) {
               </tr>
             </thead>
             <tbody>
-              {loading && !data && <tr><td colSpan={7} className="py-12 text-center text-neutral-400"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>}
-              {data?.items?.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-neutral-400">No payments match.</td></tr>}
+              {loading && !data && <tr><td colSpan={7} className="py-12 text-center text-neutral-500"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>}
+              {data?.items?.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-neutral-500">No payments match.</td></tr>}
               {data?.items?.map((i) => (
                 <tr key={i.id} onClick={() => setSelected(i)} className="border-b border-neutral-50 hover:bg-neutral-50 cursor-pointer">
-                  <td className="px-4 py-3 whitespace-nowrap"><div className="text-neutral-800">{dt(i.createdAt)}</div><div className="text-[10px] text-neutral-400">{ago(i.createdAt)}</div></td>
-                  <td className="px-4 py-3"><div className="font-medium text-neutral-800">{PURPOSES[i.purpose] || i.purpose}</div>{i.label && <div className="text-[10px] text-neutral-400 truncate max-w-[180px]">{i.label}</div>}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap"><div className="font-semibold text-neutral-900">{usd(i.usdCents)}</div><div className="text-[10px] font-mono text-neutral-400">{i.btc} BTC</div></td>
+                  <td className="px-4 py-3 whitespace-nowrap"><div className="text-neutral-800">{dt(i.createdAt)}</div><div className="text-[10px] text-neutral-500">{ago(i.createdAt)}</div></td>
+                  <td className="px-4 py-3"><div className="font-medium text-neutral-800">{PURPOSES[i.purpose] || i.purpose}</div>{i.label && <div className="text-[10px] text-neutral-500 truncate max-w-[180px]">{i.label}</div>}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap"><div className="font-semibold text-neutral-900">{usd(i.usdCents)}</div><div className="text-[10px] font-mono text-neutral-500">{i.btc} BTC</div></td>
                   <td className="px-4 py-3"><span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_STYLE[i.status] || STATUS_STYLE.pending}`}>{i.status}</span></td>
                   <td className="px-4 py-3 text-neutral-600">{i.confirmations}/{i.requiredConf}</td>
-                  <td className="px-4 py-3">{i.status !== 'confirmed' ? <span className="text-neutral-300">—</span> : i.fulfillState === 'done' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <span className="text-amber-600 font-semibold">{i.fulfillState === 'running' ? 'running' : 'pending'}</span>}</td>
-                  <td className="px-4 py-3 text-right"><Eye className="w-4 h-4 text-neutral-400 inline" /></td>
+                  <td className="px-4 py-3">{i.status !== 'confirmed' ? <span className="text-neutral-600">—</span> : i.fulfillState === 'done' ? <CheckCircle className="w-4 h-4 text-emerald-700" /> : <span className="text-amber-600 font-semibold">{i.fulfillState === 'running' ? 'running' : 'pending'}</span>}</td>
+                  <td className="px-4 py-3 text-right"><Eye className="w-4 h-4 text-neutral-500 inline" /></td>
                 </tr>
               ))}
             </tbody>
@@ -282,11 +282,11 @@ function Stat({ icon: Icon, label, value, sub, tone = 'neutral', onClick }) {
   };
   const Tag = onClick ? 'button' : 'div';
   return (
-    <Tag onClick={onClick} className={`text-left bg-white border border-neutral-200 rounded-2xl p-4 ${onClick ? 'hover:border-neutral-400 transition-colors' : ''}`}>
+    <Tag onClick={onClick} className={`text-left bg-white border-2 border-ink rounded-2xl p-4 ${onClick ? 'hover:border-neutral-400 transition-colors' : ''}`}>
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${tones[tone]}`}><Icon className="w-4 h-4" /></div>
       <div className="text-xl font-bold text-neutral-900">{value}</div>
       <div className="text-[11px] font-medium text-neutral-500 mt-0.5">{label}</div>
-      <div className="text-[10px] text-neutral-400">{sub}</div>
+      <div className="text-[10px] text-neutral-500">{sub}</div>
     </Tag>
   );
 }
@@ -295,7 +295,7 @@ function Pill({ ok, warn, label, detail }) {
   const cls = ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : warn ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-red-50 border-red-200 text-red-800';
   const Icon = ok ? CheckCircle : warn ? AlertTriangle : XCircle;
   return (
-    <div className={`flex items-start gap-2 border rounded-xl px-3 py-2 ${cls}`}>
+    <div className={`flex items-start gap-2 border-2 rounded-xl px-3 py-2 border-ink shadow ${cls}`}>
       <Icon className="w-4 h-4 mt-0.5 shrink-0" />
       <div className="min-w-0"><div className="text-xs font-semibold">{label}</div>{detail && <div className="text-[10px] opacity-80 break-words">{detail}</div>}</div>
     </div>
@@ -316,7 +316,7 @@ function HealthStrip({ h }) {
   }, [h]);
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-2xl">
+    <div className="bg-white border-2 border-ink rounded-2xl">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 text-left">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
           {problems.length === 0 ? <ShieldCheck className="w-4 h-4 text-emerald-600" /> : <ShieldAlert className="w-4 h-4 text-amber-600" />}
@@ -325,7 +325,7 @@ function HealthStrip({ h }) {
             {problems.length === 0 ? 'all good' : `${problems.length} to check`}
           </span>
         </span>
-        <span className="text-[11px] text-neutral-400">{open ? 'hide' : 'details'}</span>
+        <span className="text-[11px] text-neutral-500">{open ? 'hide' : 'details'}</span>
       </button>
       {(open || problems.length > 0) && (
         <div className="px-4 pb-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -385,12 +385,12 @@ function InvoiceDrawer({ invoice, isDemo, onClose, onChanged }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Invoice detail">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/60" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-neutral-100 px-5 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-neutral-100 px-5 py-4 flex items-center justify-between z-10">
           <div>
             <div className="text-sm font-bold text-neutral-900">{PURPOSES[inv.purpose] || inv.purpose} · {usd(inv.usdCents)}</div>
-            <div className="text-[11px] text-neutral-400 font-mono">{inv.id.slice(0, 12)}…</div>
+            <div className="text-[11px] text-neutral-500 font-mono">{inv.id.slice(0, 12)}…</div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100" aria-label="Close"><X className="w-4 h-4" /></button>
         </div>
@@ -399,17 +399,17 @@ function InvoiceDrawer({ invoice, isDemo, onClose, onChanged }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${STATUS_STYLE[inv.status]}`}>{inv.status}</span>
             {inv.status === 'confirmed' && <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${inv.fulfillState === 'done' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>fulfilment: {inv.fulfillState}{inv.fulfillTries ? ` (${inv.fulfillTries} tries)` : ''}</span>}
-            <span className="text-[11px] text-neutral-400">{inv.network}</span>
+            <span className="text-[11px] text-neutral-500">{inv.network}</span>
           </div>
 
           {inv.status === 'review' && (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+            <div className="rounded-xl bg-amber-50 border-2 border-amber-600 p-3 text-xs text-amber-900">
               <strong>Needs a decision.</strong> Received <strong>{(inv.seenSats || 0).toLocaleString()}</strong> of <strong>{(inv.sats || 0).toLocaleString()}</strong> sats.
               Open the address in the explorer and check your wallet before accepting.
             </div>
           )}
 
-          <dl className="text-xs divide-y divide-neutral-100 border border-neutral-100 rounded-xl">
+          <dl className="text-xs divide-y divide-neutral-200 border-2 border-ink rounded-xl">
             <D k="Amount" v={`${usd(inv.usdCents)} · ${inv.btc} BTC`} />
             <D k="Rate locked" v={inv.rateUsd ? `$${Number(inv.rateUsd).toLocaleString()} / BTC` : '—'} />
             <D k="Seen / confirmed" v={`${(inv.seenSats || 0).toLocaleString()} / ${(inv.confirmedSats || 0).toLocaleString()} sats`} />
@@ -420,9 +420,9 @@ function InvoiceDrawer({ invoice, isDemo, onClose, onChanged }) {
             <D k="Quote expires" v={dt(inv.expiresAt)} />
             {inv.paidAt && <D k="Paid" v={dt(inv.paidAt)} />}
             <D k="Last chain check" v={inv.lastCheckedAt ? ago(inv.lastCheckedAt) : '—'} />
-            <D k="Address" v={inv.address} mono action={<><Ic onClick={() => copy(inv.address, 'Address')}><Copy className="w-3.5 h-3.5" /></Ic>{inv.addressUrl && <a href={inv.addressUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-neutral-400 hover:text-neutral-800"><ExternalLink className="w-3.5 h-3.5" /></a>}</>} />
+            <D k="Address" v={inv.address} mono action={<><Ic onClick={() => copy(inv.address, 'Address')}><Copy className="w-3.5 h-3.5" /></Ic>{inv.addressUrl && <a href={inv.addressUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-neutral-500 hover:text-neutral-800"><ExternalLink className="w-3.5 h-3.5" /></a>}</>} />
             {(inv.txids || []).map((t, n) => (
-              <D key={t} k={n === 0 ? 'Transaction' : `Tx ${n + 1}`} v={t} mono action={<><Ic onClick={() => copy(t, 'TXID')}><Copy className="w-3.5 h-3.5" /></Ic>{n === 0 && inv.txUrl && <a href={inv.txUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-neutral-400 hover:text-neutral-800"><ExternalLink className="w-3.5 h-3.5" /></a>}</>} />
+              <D key={t} k={n === 0 ? 'Transaction' : `Tx ${n + 1}`} v={t} mono action={<><Ic onClick={() => copy(t, 'TXID')}><Copy className="w-3.5 h-3.5" /></Ic>{n === 0 && inv.txUrl && <a href={inv.txUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-neutral-500 hover:text-neutral-800"><ExternalLink className="w-3.5 h-3.5" /></a>}</>} />
             ))}
             <D k="Pay link" v={payLink} mono action={<Ic onClick={() => copy(payLink, 'Pay link')}><Copy className="w-3.5 h-3.5" /></Ic>} />
           </dl>
@@ -436,19 +436,19 @@ function InvoiceDrawer({ invoice, isDemo, onClose, onChanged }) {
               {inv.status === 'confirmed' && inv.fulfillState !== 'done' && (
                 <Btn onClick={retry} busy={busy === 'retry'} icon={Send} tone="amber">Retry fulfilment</Btn>
               )}
-              <a href={payLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 border border-neutral-200 hover:bg-neutral-50 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-700"><ExternalLink className="w-3.5 h-3.5" /> Open pay page</a>
+              <a href={payLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 border-2 border-ink hover:bg-neutral-50 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-700 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><ExternalLink className="w-3.5 h-3.5" /> Open pay page</a>
             </div>
 
             {canResolve && (
-              <div className="rounded-xl border border-neutral-200 p-3 space-y-2">
+              <div className="rounded-xl border-2 border-ink p-3 space-y-2 shadow">
                 <div className="text-xs font-semibold text-neutral-800">Manual resolution</div>
                 <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 150))} placeholder="Note (e.g. “confirmed in Proton, txid abc…”)"
-                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900/10" />
+                  className="w-full border-2 border-ink rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-[3px] focus:ring-ink focus:ring-ac bg-white" />
                 <div className="flex gap-2">
                   <Btn onClick={() => resolve('accept')} busy={busy === 'accept'} icon={CheckCircle} tone="green">Accept payment</Btn>
                   <Btn onClick={() => resolve('reject')} busy={busy === 'reject'} icon={XCircle} tone="red">Reject</Btn>
                 </div>
-                <p className="text-[10px] text-neutral-400">Accept marks it paid and runs fulfilment exactly once. Verify the money in your wallet first.</p>
+                <p className="text-[10px] text-neutral-500">Accept marks it paid and runs fulfilment exactly once. Verify the money in your wallet first.</p>
               </div>
             )}
           </div>
@@ -456,14 +456,14 @@ function InvoiceDrawer({ invoice, isDemo, onClose, onChanged }) {
           {/* Timeline */}
           <div>
             <div className="text-xs font-semibold text-neutral-800 mb-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Timeline</div>
-            {(inv.events || []).length === 0 ? <p className="text-xs text-neutral-400">No events.</p> : (
+            {(inv.events || []).length === 0 ? <p className="text-xs text-neutral-500">No events.</p> : (
               <ol className="relative border-l border-neutral-200 ml-1.5 space-y-3">
                 {[...inv.events].reverse().map((e, i) => (
                   <li key={i} className="pl-4 relative">
                     <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-neutral-300" />
                     <div className="text-xs font-semibold text-neutral-800">{e.type.replace(/_/g, ' ')}</div>
                     {e.detail && <div className="text-[11px] text-neutral-500 break-words">{e.detail}</div>}
-                    <div className="text-[10px] text-neutral-400">{dt(e.at)}</div>
+                    <div className="text-[10px] text-neutral-500">{dt(e.at)}</div>
                   </li>
                 ))}
               </ol>
@@ -484,8 +484,8 @@ const D = ({ k, v, mono, action }) => (
 const Ic = ({ children, onClick }) => <button onClick={onClick} className="p-1 text-neutral-400 hover:text-neutral-800">{children}</button>;
 function Btn({ children, onClick, busy, icon: Icon, tone = 'dark' }) {
   const tones = {
-    dark: 'bg-neutral-900 hover:bg-neutral-800 text-white', amber: 'bg-amber-500 hover:bg-amber-600 text-white',
-    green: 'bg-emerald-600 hover:bg-emerald-700 text-white', red: 'border border-red-200 text-red-700 hover:bg-red-50',
+    dark: 'bg-white hover:bg-lav text-white', amber: 'bg-amber-500 hover:bg-amber-600 text-white',
+    green: 'bg-emerald-600 hover:bg-emerald-700 text-white', red: 'border-2 border-red-600 text-red-700 hover:bg-red-50',
   };
   return (
     <button onClick={onClick} disabled={!!busy} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-60 ${tones[tone]}`}>

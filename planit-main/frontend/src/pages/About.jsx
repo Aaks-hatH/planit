@@ -28,8 +28,8 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
   return (
     <div className="mb-10">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0 shadow-sm">
-          <Icon className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-white border-2 border-ink flex items-center justify-center flex-shrink-0 shadow-sm">
+          <Icon className="w-5 h-5 text-ink" />
         </div>
         <h2 className="text-2xl font-black text-neutral-900">{title}</h2>
       </div>
@@ -54,7 +54,7 @@ function FeatureRow({ icon: Icon, title, description }) {
 
 function Callout({ children, accent = false }) {
   return (
-    <div className={`my-6 p-5 rounded-2xl border text-sm leading-relaxed ${accent ? 'bg-neutral-900 border-neutral-700 text-neutral-200' : 'bg-neutral-50 border-neutral-200 text-neutral-500'}`}>
+    <div className={`my-6 p-5 rounded-2xl border-2 text-sm leading-relaxed border-ink shadow-md ${accent ? 'bg-white border-ink text-ink' : 'bg-neutral-50 border-neutral-200 text-neutral-500'}`}>
       {children}
     </div>
   );
@@ -75,7 +75,7 @@ function Badge({ children, color = 'neutral' }) {
     blue: 'bg-blue-50 text-blue-700 border-blue-200',
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colors[color]}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border-2 border-ink ${colors[color]}`}>
       {children}
     </span>
   );
@@ -195,11 +195,11 @@ export default function About() {
     <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
       <style>{`
         html { scroll-behavior: smooth; }
-        body { background: #f8f8f6; }
+        body { background: #ffffff; }
       `}</style>
 
       {/* Sticky nav */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -209,7 +209,7 @@ export default function About() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            <span className="text-neutral-300">|</span>
+            <span className="text-neutral-600">|</span>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-neutral-600" />
               <span className="text-sm font-bold text-neutral-900">About PlanIt</span>
@@ -228,7 +228,7 @@ export default function About() {
           <div className="sticky top-24">
             {navGroups.map(group => (
               <div key={group.label} className="mb-5">
-                <p className="text-xs font-bold text-neutral-300 uppercase tracking-widest mb-2">{group.label}</p>
+                <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">{group.label}</p>
                 <nav className="space-y-0.5">
                   {group.items.map(item => (
                     <a
@@ -237,7 +237,7 @@ export default function About() {
                       className={`block text-sm py-1.5 leading-snug transition-colors ${
                         activeSection === item.href.slice(1)
                           ? 'text-neutral-900 font-semibold'
-                          : 'text-neutral-400 hover:text-neutral-700'
+                          : 'text-neutral-500 hover:text-neutral-700'
                       }`}
                     >
                       {item.label}
@@ -254,12 +254,12 @@ export default function About() {
 
           {/* Hero */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            
+            
+            
             className="mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 rounded-full text-xs font-semibold text-neutral-300 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-semibold text-neutral-600 mb-6">
               <Sparkles className="w-3.5 h-3.5" />
               Every feature, explained in full
             </div>
@@ -298,7 +298,7 @@ export default function About() {
             <p className="text-neutral-500 leading-relaxed mb-4">
               The fleet is auto-scaling. The router monitors request rate per backend and activates additional backends from a standby pool when load exceeds a configurable threshold. When load drops, it scales back down. The scaling logic uses predictive smoothing to anticipate demand rather than reacting to it — avoiding thrashing the fleet up and down on short bursts.
             </p>
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden my-6 shadow">
               <TechDetail label="Routing algorithm" value="Least-connections with health weighting. The router favours backends with fewer active connections and deprioritises backends that are in a cold-start window (first 90 seconds after restart), have high memory usage, or have a degraded database connection." />
               <TechDetail label="Sticky routing" value="Requests to the same event room are routed to the same backend instance using consistent hashing on the event ID. This ensures that all WebSocket connections and HTTP requests for a live event land on the same server, keeping the real-time room state coherent." />
               <TechDetail label="Circuit breakers" value="Each backend has an independent circuit breaker. After a configurable number of consecutive errors, the router trips the circuit and stops sending traffic to that backend while continuing to probe it for recovery. When the backend starts responding cleanly again, the circuit closes automatically." />
@@ -311,7 +311,7 @@ export default function About() {
             <p className="text-neutral-500 leading-relaxed mb-4">
               The watchdog is a separate Node.js service with no user-facing function. Its entire job is to ping every monitored target on a regular interval, detect failures, create incidents, and send alerts. It is deployed on a completely separate instance from everything it monitors — if the main backend fleet crashes, the watchdog continues running and reporting.
             </p>
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden my-6 shadow">
               <TechDetail label="Ping interval" value="Every 60 seconds per target, staggered 2 seconds apart to avoid simultaneous load. Every result — latency in milliseconds, up or down — is written to a MongoDB UptimeCheck collection that drives the 15-day history bars on the status page." />
               <TechDetail label="Failure threshold" value="Three consecutive failures trips the circuit per target, creates an incident in the database, and fires an urgent push notification. Recovery is detected automatically and resolves the incident with total downtime duration." />
               <TechDetail label="Persistent reminders" value="While a target is down, reminder alerts fire every 10 consecutive failures so a long outage is never silently missed." />
@@ -1092,7 +1092,7 @@ export default function About() {
               title="Real-time sync across all staff devices"
               description="Changes to the seating map — new objects, moved tables, updated assignments — are broadcast to every connected session via seating_map_updated and seating_assignments_updated socket events. A staff member at a second entrance sees the same live layout as the organizer editing it at the registration desk. There is no polling, no manual refresh required."
             />
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden my-6 shadow">
               <TechDetail label="Editor mode" value="Organizers see the full drag-and-drop editor with table palette, guest assignment panel, and save controls. Saving dispatches a PUT to /events/:id/seating with the full canvas state." />
               <TechDetail label="Display mode" value="Non-organizer sessions (staff on Enterprise events, or anyone with the map open on a standard event) see a read-only display of the seating map with real-time fill indicators per table. No editing controls are shown." />
               <TechDetail label="Focus API" value="Internal seatingFocusId state allows any part of the app to request the map to open and center on a specific table — used by the 'Show on Map' button on the admit success screen (Enterprise) and the 'Show table' shortcut on assigned guests in the guest list." />
@@ -1128,7 +1128,7 @@ export default function About() {
               title="One accent color, everywhere"
               description="Each RSVP page has a single accent color that flows through every block — buttons, dividers, tag chips, timeline markers, and the generated cover — with an optional per-section override for anyone who wants one block to stand out. The goal is a page that reads as one designed composition, not a form with each field styled independently."
             />
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden my-6 shadow">
               <TechDetail label="Shared renderer" value="RSVPPageRenderer.jsx is the single implementation of every block's rendering logic, imported by both the builder's live preview and the public-facing page. There is no second copy to keep in sync." />
               <TechDetail label="Performance" value="Only block types actually present in a page's section list are ever mounted. Each block is independently memoized, so editing one section doesn't re-render the rest. Sections below the first screen defer mounting until they're near the viewport." />
               <TechDetail label="Public bundle" value="The public RSVP page never loads the drag-and-drop builder's editing dependencies — those are isolated to the organizer-facing builder page and code-split out of the guest-facing bundle." />
@@ -1174,7 +1174,7 @@ export default function About() {
               title="Data persistence — never auto-deleted"
               description="Unlike event-mode data which is deleted seven days after the event date, all Table Service data persists indefinitely. The floor layout, table states, reservation history, and settings are exempt from the automatic cleanup job. This is enforced at the API layer — saving Table Service settings sets keepForever: true on the venue record. Your seating map and configuration will still be there the next morning, next week, and next year."
             />
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden my-6 shadow">
               <TechDetail label="URL" value="/e/your-venue/floor or /event/:id/floor" />
               <TechDetail label="Floor layout" value="Reuses the same SeatingMap SVG editor from Enterprise mode. Tables, zones, stage, bar, sofa, and VIP object types all work. Layouts are shared with the seating map on the event record." />
               <TechDetail label="Wait time calculation" value="Finds all tables with capacity ≥ party size, checks their occupiedAt timestamp against avgDiningMinutes, returns the minimum remaining time plus cleaningBufferMinutes." />
@@ -1231,7 +1231,7 @@ export default function About() {
             <p className="text-neutral-500 leading-relaxed mb-6">
               Rate limits are enforced at the server level using express-rate-limit middleware. Each limit is scoped to a specific endpoint category, uses a rolling time window, and returns a standardized 429 response with a Retry-After header when exceeded. Limits are keyed by IP address using the x-forwarded-for header where available.
             </p>
-            <div className="border border-neutral-200 rounded-2xl overflow-hidden">
+            <div className="border-2 border-ink rounded-2xl overflow-hidden shadow">
               <TechDetail label="General API" value="Up to 10,000 requests per 15-minute window per IP. This is intentionally generous — it covers all general workspace API calls (loading tasks, polls, notes, etc.) without being restrictive for normal use." />
               <TechDetail label="Authentication" value="Up to 20 failed authentication attempts per 15 minutes per IP. Successful attempts are not counted against the limit. After 20 failures, the IP is blocked from further attempts for the remainder of the window. This is the primary protection against password brute-force attacks on event access." />
               <TechDetail label="Event creation" value="Up to 10 new events per hour per IP. This prevents the platform from being used to create large numbers of throwaway events programmatically." />
@@ -1613,52 +1613,52 @@ export default function About() {
           </Section>
 
           {/* ─── ABOUT THE CREATOR ───────────────────────────────── */}
-          <section id="creator" className="py-20 border-b border-neutral-200" style={{ background: 'linear-gradient(180deg, #f8f8f6 0%, #ffffff 100%)' }}>
+          <section id="creator" className="py-20 border-b border-neutral-200" style={{ background: '#ffffff' }}>
             <div className="max-w-4xl mx-auto px-6">
 
               {/* Section label */}
               <div className="flex items-center gap-3 mb-10">
-                <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0">
-                  <Heart className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-white border-2 border-ink flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-5 h-5 text-ink" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">The person behind it</p>
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">The person behind it</p>
                   <h2 className="text-2xl font-black text-neutral-900 leading-none">About the creator</h2>
                 </div>
               </div>
 
               {/* Hero card */}
-              <div className="relative rounded-3xl overflow-hidden border border-neutral-200 bg-neutral-900 mb-8"
-                style={{ boxShadow: '0 20px 60px -10px rgba(0,0,0,0.3)' }}>
+              <div className="relative rounded-3xl overflow-hidden border-2 border-ink bg-white mb-8 shadow"
+                style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
 
                 {/* Animated gradient banner */}
                 <div className="relative h-44 overflow-hidden"
-                  style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 35%, #16213e 65%, #0f3460 100%)' }}>
+                  style={{ background: '#ffffff' }}>
                   {/* Animated grid */}
                   <div className="absolute inset-0" style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px)'
+                    backgroundImage: 'none'
                   }} />
                   {/* Glowing orbs */}
-                  <div className="absolute top-6 right-12 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)' }} />
-                  <div className="absolute bottom-0 left-1/3 w-48 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)' }} />
+                  <div className="absolute top-6 right-12 w-32 h-32 rounded-full" style={{ background: '#eceeff' }} />
+                  <div className="absolute bottom-0 left-1/3 w-48 h-24 rounded-full" style={{ background: '#eceeff' }} />
                   {/* Floating tech labels */}
                   <div className="absolute top-5 right-6 flex flex-wrap gap-1.5 max-w-52">
                     {['React', 'Node.js', 'MongoDB', 'Socket.IO'].map(t => (
-                      <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-bold border border-white/10 text-white/40" style={{ background: 'rgba(255,255,255,0.04)' }}>{t}</span>
+                      <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-bold border-2 border-ink text-neutral-500" style={{ background: '#ffffff' }}>{t}</span>
                     ))}
                   </div>
                   {/* Name watermark */}
                   <div className="absolute bottom-5 right-6 text-right">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20">Est. 20--</p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-500">Est. 20--</p>
                   </div>
                   {/* Avatar */}
                   <div className="absolute bottom-0 left-8 translate-y-1/2">
-                    <div className="w-24 h-24 rounded-2xl border-4 border-neutral-900 flex items-center justify-center shadow-2xl overflow-hidden"
-                      style={{ background: 'linear-gradient(135deg, #1e1e3f 0%, #0a0a1a 100%)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-                      <span className="text-3xl font-black text-white select-none" style={{ letterSpacing: '-0.02em' }}>AH</span>
+                    <div className="w-24 h-24 rounded-2xl border-4 border-ink flex items-center justify-center shadow-2xl overflow-hidden"
+                      style={{ background: '#ffffff', boxShadow: '4px 4px 0 #0d0e1c' }}>
+                      <span className="text-3xl font-black text-ink select-none" style={{ letterSpacing: '-0.02em' }}>AH</span>
                     </div>
                     {/* Online indicator */}
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-neutral-900 flex items-center justify-center">
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-ink flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                   </div>
@@ -1670,11 +1670,11 @@ export default function About() {
                   {/* Name + title + badges */}
                   <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
                     <div>
-                      <h3 className="text-3xl font-black text-white mb-1 tracking-tight">Aakshat Hariharan</h3>
+                      <h3 className="text-3xl font-black text-ink mb-1 tracking-tight">Aakshat Hariharan</h3>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-neutral-400 text-sm font-medium">New Jersey, United States</span>
+                        <span className="text-neutral-500 text-sm font-medium">New Jersey, United States</span>
                         <span className="text-neutral-700">·</span>
-                        <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Building in public</span>
+                        <span className="text-emerald-700 text-xs font-bold uppercase tracking-wider">Building in public</span>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -1684,29 +1684,29 @@ export default function About() {
                         { label: 'Security',    color: 'bg-amber-950 text-amber-300 border-amber-800' },
                         { label: 'Pentesting',  color: 'bg-red-950 text-red-300 border-red-800' },
                       ].map(b => (
-                        <span key={b.label} className={`px-3 py-1 rounded-full text-xs font-bold border ${b.color}`}>{b.label}</span>
+                        <span key={b.label} className={`px-3 py-1 rounded-full text-xs font-bold border-2 border-ink ${b.color}`}>{b.label}</span>
                       ))}
                     </div>
                   </div>
 
                   {/* Quote / mission statement */}
-                  <div className="relative mb-8 pl-5 border-l-2 border-indigo-500/50">
-                    <p className="text-neutral-300 text-base leading-relaxed italic">
+                  <div className="relative mb-8 pl-5 border-l-2 border-blue-700">
+                    <p className="text-neutral-600 text-base leading-relaxed italic">
                       "No degree. No bootcamp. Just a problem worth solving and enough stubbornness to see it through."
                     </p>
                   </div>
 
                   {/* Bio paragraphs */}
                   <div className="space-y-4 mb-8">
-                    <p className="text-neutral-400 leading-relaxed text-sm">
+                    <p className="text-neutral-500 leading-relaxed text-sm">
                       PlanIt started as a solution to a real frustration: organising an event across group chats, spreadsheets, and scattered apps is exhausting. What began as a simple workspace grew into a full-stack distributed system — a multi-backend fleet with auto-scaling, a dedicated load-balancing router, a watchdog monitoring service, mesh authentication between services, a real-time check-in platform with multi-layer anti-fraud middleware, and a live status page.
                     </p>
-                    <p className="text-neutral-400 leading-relaxed text-sm">
+                    <p className="text-neutral-500 leading-relaxed text-sm">
                       Beyond web development, the work extends into cybersecurity — pentesting, security analysis, and vulnerability research. That background shapes how PlanIt is built: rate limiting is layered, passwords are hashed correctly, API responses are cryptographically signed, and internal service communication uses HMAC authentication with replay protection. Security is not an afterthought here.
                     </p>
                   </div>
 
-                  <div className="border-t border-neutral-800 mb-8" />
+                  <div className="border-t border-ink mb-8" />
 
                   {/* Stats row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -1716,9 +1716,9 @@ export default function About() {
                       { value: '100%',     label: 'Self-taught', icon: <Star className="w-3.5 h-3.5" /> },
                       { value: '∞',        label: 'Problems left to solve', icon: <Sparkles className="w-3.5 h-3.5" /> },
                     ].map(s => (
-                      <div key={s.label} className="p-4 rounded-2xl border border-neutral-800 text-center" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <div key={s.label} className="p-4 rounded-2xl border-2 border-ink text-center shadow" style={{ background: '#ffffff' }}>
                         <div className="flex items-center justify-center gap-1.5 text-neutral-500 mb-1.5">{s.icon}</div>
-                        <p className="text-xl font-black text-white mb-0.5">{s.value}</p>
+                        <p className="text-xl font-black text-ink mb-0.5">{s.value}</p>
                         <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-medium leading-tight">{s.label}</p>
                       </div>
                     ))}
@@ -1744,7 +1744,7 @@ export default function About() {
                         { name: 'Network Security',    color: '#e2e8f022', border: '#e2e8f040', text: '#cbd5e1' },
                       ].map(t => (
                         <span key={t.name}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg border"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg border-2 border-ink"
                           style={{ background: t.color, borderColor: t.border, color: t.text }}>{t.name}</span>
                       ))}
                     </div>
@@ -1759,35 +1759,35 @@ export default function About() {
                         { icon: <Shield className="w-4 h-4" />, title: 'Security work', desc: 'Deeper into pentesting, CTFs, and eventually professional security research.', color: '#ef4444' },
                         { icon: <Zap className="w-4 h-4" />, title: 'Ship more', desc: 'More projects. More problems worth solving. Less waiting until it\'s perfect.', color: '#f59e0b' },
                       ].map(g => (
-                        <div key={g.title} className="p-4 bg-neutral-800/50 border border-neutral-700 rounded-2xl group hover:border-neutral-600 transition-colors">
+                        <div key={g.title} className="p-4 bg-lav border-2 border-ink rounded-2xl group hover:border-ink transition-colors shadow">
                           <div className="mb-2" style={{ color: g.color }}>{g.icon}</div>
-                          <p className="text-sm font-bold text-white mb-1">{g.title}</p>
-                          <p className="text-xs text-neutral-400 leading-relaxed">{g.desc}</p>
+                          <p className="text-sm font-bold text-ink mb-1">{g.title}</p>
+                          <p className="text-xs text-neutral-500 leading-relaxed">{g.desc}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Links */}
-                  <div className="border-t border-neutral-800 pt-6">
+                  <div className="border-t border-ink pt-6">
                     <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Find me</p>
                     <div className="flex flex-wrap gap-3">
                       <a href="https://github.com/Aaks-hatH" target="_blank" rel="noopener noreferrer"
-                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-hl hover:bg-hl border-2 border-ink hover:border-neutral-500 rounded-xl transition-all text-sm text-ink font-bold shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <svg className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                         GitHub
                       </a>
                       <a href="mailto:hariharanaakshat@gmail.com"
-                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-hl hover:bg-hl border-2 border-ink hover:border-neutral-500 rounded-xl transition-all text-sm text-ink font-bold shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <svg className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                         </svg>
                         Email
                       </a>
                       <a href="https://aaks-hath.pages.dev" target="_blank" rel="noopener noreferrer"
-                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-hl hover:bg-hl border-2 border-ink hover:border-neutral-500 rounded-xl transition-all text-sm text-ink font-bold shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <Globe className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" />
                         Personal site
                       </a>
@@ -1800,7 +1800,7 @@ export default function About() {
               {/* Bottom tagline */}
               <div className="flex items-center gap-4 px-2">
                 <div className="flex-1 h-px bg-neutral-200" />
-                <p className="text-xs text-neutral-400 text-center font-medium">Built solo · Self-taught · New Jersey</p>
+                <p className="text-xs text-neutral-500 text-center font-medium">Built solo · Self-taught · New Jersey</p>
                 <div className="flex-1 h-px bg-neutral-200" />
               </div>
 
@@ -1809,7 +1809,7 @@ export default function About() {
 
                     {/* Footer */}
           <div className="pt-12 pb-8 flex items-center justify-between border-t border-neutral-200 mt-4">
-            <p className="text-sm text-neutral-400">© 2026 PlanIt. All rights reserved.</p>
+            <p className="text-sm text-neutral-500">© 2026 PlanIt. All rights reserved.</p>
             <a href="/" className="text-sm font-bold text-neutral-900 hover:text-neutral-600 transition-colors flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
               Back to PlanIt

@@ -99,7 +99,7 @@ export default function WLHome() {
     <div style={{ minHeight: '100vh', fontFamily: `'${font}', system-ui, sans-serif`, background: '#fafafa', color: '#111' }}>
 
       {/* Nav */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e5e5', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #d9dbe8', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', gap: 16 }}>
           {logo
             ? <img src={logo} alt={company} style={{ height: 32, objectFit: 'contain' }} />
@@ -110,7 +110,7 @@ export default function WLHome() {
           <span style={{ fontWeight: 700, fontSize: '1rem', color: '#111', letterSpacing: '-0.02em' }}>{company}</span>
           <div style={{ flex: 1 }} />
           <button onClick={() => navigate('/?new=1')}
-            style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', background: primary, border: 0, cursor: 'pointer', padding: '8px 14px', borderRadius: 9 }}>
+            style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0d0e1c', background: primary, border: 0, cursor: 'pointer', padding: '8px 14px', borderRadius: 9 }}>
             Create event
           </button>
           {wl?.portalEnabled && (
@@ -128,13 +128,13 @@ export default function WLHome() {
       <section style={{
         position: 'relative',
         background: heroImg ? 'transparent' : `linear-gradient(135deg, ${primary}15 0%, ${accent}08 100%)`,
-        borderBottom: '1px solid #e5e5e5',
+        borderBottom: '1px solid #d9dbe8',
         overflow: 'hidden',
       }}>
         {heroImg && (
           <>
             <img src={heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: '#ffffff' }} />
           </>
         )}
         <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', padding: '72px 24px 64px', textAlign: 'center' }}>
@@ -161,7 +161,7 @@ export default function WLHome() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '14px 28px', borderRadius: 12,
-              background: primary, color: '#fff',
+              background: primary, color: '#0d0e1c',
               fontWeight: 700, fontSize: '0.95rem',
               textDecoration: 'none',
               boxShadow: `0 4px 20px ${primary}55`,
@@ -183,7 +183,7 @@ export default function WLHome() {
           </h2>
           {showSearch && (
             <div style={{ position: 'relative' }}>
-              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#5a5d70' }} />
               <input
                 type="text"
                 value={search}
@@ -191,9 +191,9 @@ export default function WLHome() {
                 placeholder="Search events..."
                 style={{
                   paddingLeft: 36, paddingRight: 14, paddingTop: 9, paddingBottom: 9,
-                  borderRadius: 10, border: '1.5px solid #e5e5e5', fontSize: '0.875rem',
+                  borderRadius: 10, border: '2px solid #0d0e1c', fontSize: '0.875rem',
                   outline: 'none', background: '#fff', width: 220,
-                  transition: 'border-color 0.15s',
+                  transition: 'border-color 0.15s', boxShadow: '4px 4px 0 #0d0e1c',
                 }}
                 onFocus={e => e.target.style.borderColor = primary}
                 onBlur={e => e.target.style.borderColor = '#e5e5e5'}
@@ -205,7 +205,7 @@ export default function WLHome() {
         {loading && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
             {[1,2,3].map(i => (
-              <div key={i} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e5e5', overflow: 'hidden', animation: 'pulse 1.5s ease-in-out infinite' }}>
+              <div key={i} style={{ background: '#fff', borderRadius: 8, border: '2px solid #0d0e1c', overflow: 'hidden', animation: 'pulse 1.5s ease-in-out infinite' }}>
                 <div style={{ height: 160, background: '#f5f5f5' }} />
                 <div style={{ padding: 20 }}>
                   <div style={{ height: 18, background: '#f0f0f0', borderRadius: 6, marginBottom: 10, width: '70%' }} />
@@ -217,7 +217,7 @@ export default function WLHome() {
         )}
 
         {isEmpty && (
-          <div style={{ textAlign: 'center', padding: '72px 24px', color: '#999' }}>
+          <div style={{ textAlign: 'center', padding: '72px 24px', color: '#5a5d70' }}>
             <Calendar size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
             <p style={{ fontSize: '0.9rem' }}>
               {pages.events?.emptyStateText || 'No upcoming events right now. Check back soon.'}
@@ -236,7 +236,7 @@ export default function WLHome() {
 
       {/* Contact bar */}
       {(contact.email || contact.phone || contact.address) && (
-        <section style={{ background: '#fff', borderTop: '1px solid #e5e5e5', padding: '28px 24px' }}>
+        <section style={{ background: '#fff', borderTop: '1px solid #d9dbe8', padding: '28px 24px' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center', fontSize: '0.875rem', color: '#555' }}>
             {contact.email && (
               <a href={`mailto:${contact.email}`} style={{ color: primary, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -261,12 +261,12 @@ export default function WLHome() {
       )}
 
       {/* Footer */}
-      <footer style={{ background: '#fff', borderTop: '1px solid #e5e5e5', padding: '20px 24px' }}>
+      <footer style={{ background: '#fff', borderTop: '1px solid #d9dbe8', padding: '20px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: '0.8rem', color: '#bbb' }}>{company}</span>
+          <span style={{ fontSize: '0.8rem', color: '#5a5d70' }}>{company}</span>
           {!branding.hidePoweredBy && (
             <a href="https://planitapp.onrender.com" target="_blank" rel="noreferrer"
-              style={{ fontSize: '0.75rem', color: '#ccc', textDecoration: 'none' }}>
+              style={{ fontSize: '0.75rem', color: '#5a5d70', textDecoration: 'none' }}>
               Powered by PlanIt
             </a>
           )}
@@ -289,11 +289,11 @@ function EventCard({ event, primary, accent, navigate }) {
     <div
       onClick={() => navigate(event.isTableServiceMode ? `/e/${event.subdomain}/reserve` : `/e/${event.subdomain}`)}
       style={{
-        background: '#fff', borderRadius: 16,
-        border: '1.5px solid #e5e5e5',
+        background: '#fff', borderRadius: 8,
+        border: '2px solid #0d0e1c',
         overflow: 'hidden', cursor: 'pointer',
         transition: 'transform 0.15s, box-shadow 0.15s',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        boxShadow: '4px 4px 0 #0d0e1c',
       }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${primary}20`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
@@ -305,12 +305,12 @@ function EventCard({ event, primary, accent, navigate }) {
           : <Calendar size={32} style={{ color: primary, opacity: 0.4 }} />
         }
         {isSoon && (
-          <span style={{ position: 'absolute', top: 10, right: 10, background: primary, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>
+          <span style={{ position: 'absolute', top: 10, right: 10, background: primary, color: '#0d0e1c', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 12 }}>
             {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d away`}
           </span>
         )}
         {isPast && (
-          <span style={{ position: 'absolute', top: 10, right: 10, background: '#6b7280', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>
+          <span style={{ position: 'absolute', top: 10, right: 10, background: '#ffffff', color: '#0d0e1c', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 12 }}>
             Past
           </span>
         )}

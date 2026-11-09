@@ -70,31 +70,31 @@ function PrivyNotesMockup() {
   return (
     <div style={{
       width:'100%', height:'100%', minHeight: 260,
-      background:'#0C0C0F',
+      background:'#ffffff',
       borderRadius:10, overflow:'hidden', display:'flex', flexDirection:'column',
       fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif", fontSize:9,
     }}>
       {/* accent line */}
-      <div style={{height:2,background:'linear-gradient(90deg,#34d399,#10b981,#059669)'}}/>
+      <div style={{height:2,background:'#0c8a5b'}}/>
 
       {/* header */}
       <div style={{
         padding:'7px 10px',display:'flex',alignItems:'center',
-        justifyContent:'space-between',borderBottom:'1px solid #1a1a22',
+        justifyContent:'space-between',borderBottom:'1px solid #d9dbe8',
       }}>
         <div style={{display:'flex',alignItems:'center',gap:5}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2">
             <path d="M12 3L4 7v6c0 5.25 3.5 9.75 8 11 4.5-1.25 8-5.75 8-11V7L12 3z"/>
           </svg>
-          <span style={{fontWeight:700,color:'#ebebf5',letterSpacing:'-0.03em',fontSize:10}}>
-            Privy<span style={{color:'#34d399'}}>Notes</span>
+          <span style={{fontWeight:700,color:'#2236ff',letterSpacing:'-0.03em',fontSize:10}}>
+            Privy<span style={{color:'#0a7149'}}>Notes</span>
           </span>
         </div>
         <div style={{
           display:'flex',alignItems:'center',gap:3,
           padding:'2px 5px',borderRadius:3,
-          background:'rgba(52,211,153,.08)',border:'1px solid rgba(52,211,153,.18)',
-          color:'#34d399',fontSize:7,fontWeight:600,
+          background:'#d6f7e8',border:'2px solid #0a7149',
+          color:'#0a7149',fontSize:7,fontWeight:600,
         }}>
           <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="11" width="18" height="11" rx="2"/>
@@ -108,15 +108,15 @@ function PrivyNotesMockup() {
       <div style={{flex:1,display:'flex',overflow:'hidden'}}>
         {/* sidebar */}
         <div style={{
-          width:80,borderRight:'1px solid #1a1a22',
+          width:80,borderRight:'1px solid #d9dbe8',
           display:'flex',flexDirection:'column',padding:'6px 0',
-          background:'#0e0e14',
+          background:'#ffffff',
         }}>
           <div style={{padding:'0 6px',marginBottom:4}}>
             <div style={{
               padding:'3px 6px',borderRadius:4,
-              background:'rgba(52,211,153,.08)',border:'1px solid rgba(52,211,153,.15)',
-              fontSize:8,fontWeight:600,color:'#34d399',
+              background:'#d6f7e8',border:'2px solid #0a7149',
+              fontSize:8,fontWeight:600,color:'#0a7149',
               display:'flex',alignItems:'center',gap:3,
             }}>
               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -152,7 +152,7 @@ function PrivyNotesMockup() {
         {/* editor */}
         <div style={{flex:1,padding:'8px 10px',display:'flex',flexDirection:'column',overflow:'hidden'}}>
           <div style={{
-            color:'#e0e0f0',fontSize:11,fontWeight:700,
+            color:'#2236ff',fontSize:11,fontWeight:700,
             letterSpacing:'-0.02em',marginBottom:6,lineHeight:1.2,
           }}>Event budget</div>
 
@@ -160,7 +160,7 @@ function PrivyNotesMockup() {
           <div style={{
             display:'inline-flex',alignItems:'center',gap:4,
             padding:'2px 5px',borderRadius:3,
-            background:'rgba(52,211,153,.06)',border:'1px solid rgba(52,211,153,.12)',
+            background:'#d6f7e8',border:'2px solid #0a7149',
             fontSize:7,color:'#22a06b',fontWeight:600,marginBottom:8,
             alignSelf:'flex-start',
           }}>
@@ -189,9 +189,9 @@ function PrivyNotesMockup() {
           <div style={{
             display:'inline-flex',alignItems:'center',gap:2,marginTop:2,
           }}>
-            <div style={{height:7,width:20,background:'#3a3a5a',borderRadius:2}}/>
+            <div style={{height:7,width:20,background:'#ffffff',borderRadius:2}}/>
             <div style={{
-              width:1,height:9,background:'#34d399',
+              width:1,height:9,background:'#0c8a5b',
               animation:'_xpb_cursor 1.1s ease-in-out infinite',
             }}/>
           </div>
@@ -200,7 +200,7 @@ function PrivyNotesMockup() {
 
       {/* footer */}
       <div style={{
-        padding:'4px 10px',borderTop:'1px solid #14141e',
+        padding:'4px 10px',borderTop:'1px solid #d9dbe8',
         display:'flex',alignItems:'center',gap:4,
       }}>
         <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#22a06b" strokeWidth="2">
@@ -248,8 +248,8 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
         onClick={() => dismiss()}
         style={{
           position:'fixed',inset:0,zIndex:9998,
-          background:'rgba(5,5,15,.7)',
-          backdropFilter:'blur(12px)',
+          background:'#ffffff',
+          
           animation:'_xpb_backdrop .2s ease forwards',
         }}
       />
@@ -262,13 +262,13 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
           zIndex:9999,
           width:'min(700px,95vw)',
           background:'#ffffff',
-          border:'1px solid #e8e8ed',
-          borderRadius:18,
-          boxShadow:'0 32px 90px rgba(0,0,0,.18),0 2px 8px rgba(0,0,0,.08)',
+          border:'2px solid #0d0e1c',
+          borderRadius:12,
+          boxShadow:'4px 4px 0 #0d0e1c',
           overflow:'hidden',
           display:'flex',
           animation: closing ? '_xpb_out .26s ease forwards' : '_xpb_in .38s cubic-bezier(.16,1,.3,1) forwards',
-          fontFamily:"'DM Sans',system-ui,sans-serif",
+          fontFamily:"'Hanken Grotesk',system-ui,sans-serif",
         }}
       >
         {/* LEFT: copy */}
@@ -276,14 +276,14 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
           width:'52%',flexShrink:0,
           padding:'26px 22px 24px 26px',
           display:'flex',flexDirection:'column',
-          borderRight:'1px solid #f0f0f4',
+          borderRight:'1px solid #d9dbe8',
         }}>
           {/* kicker + close */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
             <div style={{
               display:'flex',alignItems:'center',gap:5,
-              padding:'3px 8px 3px 5px',borderRadius:99,
-              background:'#f0fdf8',border:'1px solid rgba(16,185,129,.2)',
+              padding:'3px 8px 3px 5px',borderRadius:12,
+              background:'#d6f7e8',border:'2px solid #0a7149', boxShadow: '4px 4px 0 #0d0e1c',
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                 <path d="M12 3L4 7v6c0 5.25 3.5 9.75 8 11 4.5-1.25 8-5.75 8-11V7L12 3z"/>
@@ -296,9 +296,9 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
               onClick={() => dismiss()} aria-label="Close"
               style={{
                 width:26,height:26,borderRadius:7,
-                border:'1px solid #e5e7eb',background:'#f9fafb',
+                border:'2px solid #0d0e1c',background:'#f9fafb',
                 display:'flex',alignItems:'center',justifyContent:'center',
-                cursor:'pointer',color:'#c0c0cc',transition:'all .13s',
+                cursor:'pointer',color:'#5a5d70',transition:'all .13s',
               }}
               onMouseEnter={e=>{e.currentTarget.style.background='#f3f4f6';e.currentTarget.style.color='#6b7280';}}
               onMouseLeave={e=>{e.currentTarget.style.background='#f9fafb';e.currentTarget.style.color='#c0c0cc';}}
@@ -313,7 +313,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
           <div style={{marginBottom:12}}>
             {ad.headline.map((line, i) => (
               <div key={i} style={{
-                fontFamily:"'Instrument Serif',Georgia,serif",
+                fontFamily:"'Unbounded',Georgia,serif",
                 fontSize:24,fontWeight:400,lineHeight:1.18,
                 color: i === ad.headline.length - 1 ? '#10b981' : '#0a0a14',
                 fontStyle: i === ad.headline.length - 1 ? 'italic' : 'normal',
@@ -334,7 +334,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
               <div key={f} style={{display:'flex',alignItems:'center',gap:8}}>
                 <div style={{
                   width:13,height:13,borderRadius:4,flexShrink:0,
-                  background:'#f0fdf8',border:'1px solid rgba(16,185,129,.25)',
+                  background:'#d6f7e8',border:'2px solid #0a7149',
                   display:'flex',alignItems:'center',justifyContent:'center',
                 }}>
                   <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
@@ -355,9 +355,9 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
               display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,
               padding:'9px 14px',borderRadius:9,
               background: ctaHover
-                ? 'linear-gradient(135deg,#059669,#047857)'
-                : 'linear-gradient(135deg,#10b981,#059669)',
-              color:'#fff',fontSize:12,fontWeight:600,
+                ? '#0a7149'
+                : '#0c8a5b',
+              color:'#0d0e1c',fontSize:12,fontWeight:600,
               textDecoration:'none',
               boxShadow: ctaHover ? '0 6px 22px rgba(16,185,129,.45)' : '0 3px 12px rgba(16,185,129,.28)',
               transform: ctaHover ? 'translateY(-1px)' : 'translateY(0)',
@@ -377,7 +377,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
             onClick={() => dismiss(true)}
             style={{
               background:'none',border:'none',cursor:'pointer',
-              fontSize:10,color:'#d1d5db',fontFamily:'inherit',
+              fontSize:10,color:'#5a5d70',fontFamily:'inherit',
               letterSpacing:'.01em',transition:'color .13s',
               textAlign:'left',
             }}
@@ -391,7 +391,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
         {/* RIGHT: mockup */}
         <div style={{
           flex:1,
-          background:'linear-gradient(160deg,#f8f8fc,#f2f2f8)',
+          background:'#eceeff',
           padding:'18px 14px',
           display:'flex',flexDirection:'column',
           position:'relative',overflow:'hidden',
@@ -401,17 +401,17 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
             position:'absolute',inset:0,
             backgroundImage:'radial-gradient(circle,#c8c8dc 1px,transparent 1px)',
             backgroundSize:'18px 18px',
-            opacity:.3,pointerEvents:'none',
+            opacity:.3,pointerEvents:'none', display: 'none',
           }}/>
           {/* ambient glow */}
           <div style={{
             position:'absolute',bottom:-30,right:-30,
             width:120,height:120,borderRadius:'50%',
-            background:'rgba(16,185,129,.12)',filter:'blur(40px)',pointerEvents:'none',
+            background:'rgba(16,185,129,.12)',filter:'blur(40px)',pointerEvents:'none', display: 'none',
           }}/>
 
           <div style={{
-            fontSize:8,fontWeight:700,color:'#c0c0d0',
+            fontSize:8,fontWeight:700,color:'#5a5d70',
             letterSpacing:'.1em',textTransform:'uppercase',marginBottom:10,
             position:'relative',
           }}>Preview</div>
@@ -420,8 +420,8 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
             flex:1,
             animation:'_xpb_float 4.5s ease-in-out infinite',
             borderRadius:10,
-            border:'1px solid rgba(0,0,0,.08)',
-            boxShadow:'0 20px 60px rgba(0,0,0,.14),0 4px 16px rgba(0,0,0,.08)',
+            border:'2px solid #0d0e1c',
+            boxShadow:'4px 4px 0 #0d0e1c',
             overflow:'hidden',
             position:'relative',
           }}>

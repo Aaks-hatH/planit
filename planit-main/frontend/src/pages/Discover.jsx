@@ -40,12 +40,12 @@ function SlugFinder() {
 
   return (
     <div
-      className="p-6 rounded-2xl border border-neutral-800 mt-8"
-      style={{ background: 'rgba(255,255,255,0.02)' }}
+      className="p-6 rounded-2xl border-2 border-ink mt-8 shadow-md"
+      style={{ background: '#ffffff' }}
     >
       <div className="flex items-center gap-2 mb-3">
         <Lock className="w-4 h-4 text-neutral-500" />
-        <span className="text-sm font-bold text-white">Find a private event</span>
+        <span className="text-sm font-bold text-ink">Find a private event</span>
       </div>
       <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
         If you have an event link or slug, paste it below to go directly — no browsing needed.
@@ -59,13 +59,13 @@ function SlugFinder() {
             onChange={e => setValue(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleGo()}
             placeholder="Paste link or type a slug…"
-            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
+            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-ink placeholder-neutral-400 border-2 border-ink focus:border-ink focus:outline-none transition-colors focus:ring-[3px] focus:ring-ac bg-white"
+            style={{ background: '#ffffff' }}
           />
         </div>
         <button
           onClick={handleGo}
-          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all"
+          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           Go <CornerDownRight className="w-3.5 h-3.5" />
         </button>
@@ -96,12 +96,12 @@ function capPct(count, max) { return max ? Math.min(100, Math.round((count / max
 function isSoon(d) { const diff = new Date(d) - Date.now(); return diff > 0 && diff < 172800000; }
 
 const ACCENTS = [
-  { from: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.35)', chip: 'bg-indigo-950/60 border-indigo-700/40 text-indigo-300', bar: '#6366f1' },
-  { from: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)',  chip: 'bg-emerald-950/60 border-emerald-700/40 text-emerald-300', bar: '#10b981' },
-  { from: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.28)', chip: 'bg-amber-950/60 border-amber-700/40 text-amber-300', bar: '#f59e0b' },
-  { from: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.28)', chip: 'bg-pink-950/60 border-pink-700/40 text-pink-300', bar: '#ec4899' },
-  { from: 'rgba(14,165,233,0.15)', border: 'rgba(14,165,233,0.28)', chip: 'bg-sky-950/60 border-sky-700/40 text-sky-300', bar: '#0ea5e9' },
-  { from: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.28)', chip: 'bg-purple-950/60 border-purple-700/40 text-purple-300', bar: '#a855f7' },
+  { from: 'rgba(99,102,241,0.18)', border: 'rgba(99,102,241,0.35)', chip: 'bg-blue-50 border-blue-700 text-blue-700', bar: '#6366f1' },
+  { from: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)',  chip: 'bg-emerald-50 border-emerald-700 text-emerald-700', bar: '#10b981' },
+  { from: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.28)', chip: 'bg-amber-50 border-amber-700 text-amber-700', bar: '#f59e0b' },
+  { from: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.28)', chip: 'bg-pink-50 border-pink-700 text-pink-700', bar: '#ec4899' },
+  { from: 'rgba(14,165,233,0.15)', border: 'rgba(14,165,233,0.28)', chip: 'bg-blue-50 border-blue-700 text-blue-700', bar: '#0ea5e9' },
+  { from: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.28)', chip: 'bg-blue-50 border-blue-700 text-blue-700', bar: '#a855f7' },
 ];
 
 function accentFor(ev, i) {
@@ -111,13 +111,13 @@ function accentFor(ev, i) {
 
 function Skeleton() {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 overflow-hidden">
-      <div className="h-28 bg-neutral-800/60 animate-pulse" />
+    <div className="rounded-2xl border-2 border-ink bg-white overflow-hidden shadow">
+      <div className="h-28 bg-white animate-pulse" />
       <div className="p-5 space-y-3">
-        <div className="h-3 w-20 bg-neutral-800 rounded-full animate-pulse" />
-        <div className="h-4 w-3/4 bg-neutral-800 rounded-full animate-pulse" />
-        <div className="h-3 w-full bg-neutral-800/60 rounded-full animate-pulse" />
-        <div className="h-1.5 w-full bg-neutral-800 rounded-full animate-pulse mt-4" />
+        <div className="h-3 w-20 bg-lav rounded-full animate-pulse" />
+        <div className="h-4 w-3/4 bg-lav rounded-full animate-pulse" />
+        <div className="h-3 w-full bg-white rounded-full animate-pulse" />
+        <div className="h-1.5 w-full bg-lav rounded-full animate-pulse mt-4" />
       </div>
     </div>
   );
@@ -132,32 +132,32 @@ function SharePopover({ ev, onClose }) {
 
   return (
     <div
-      className="absolute bottom-full right-0 mb-2 w-60 rounded-2xl border border-neutral-700 shadow-2xl overflow-hidden z-30"
-      style={{ background: '#0f0f17' }}
+      className="absolute bottom-full right-0 mb-2 w-60 rounded-2xl border-2 border-ink shadow-2xl overflow-hidden z-30"
+      style={{ background: '#ffffff' }}
       onClick={e => e.stopPropagation()}
     >
-      <div className="px-3 py-2.5 border-b border-neutral-800 flex items-center justify-between">
-        <span className="text-xs font-semibold text-neutral-300">Share event</span>
-        <button onClick={onClose} className="text-neutral-600 hover:text-neutral-400"><X className="w-3.5 h-3.5" /></button>
+      <div className="px-3 py-2.5 border-b border-ink flex items-center justify-between">
+        <span className="text-xs font-semibold text-neutral-600">Share event</span>
+        <button onClick={onClose} className="text-neutral-600 hover:text-neutral-500"><X className="w-3.5 h-3.5" /></button>
       </div>
       <div className="p-3 space-y-1.5">
-        <button onClick={copy} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors text-left">
-          <div className="w-7 h-7 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+        <button onClick={copy} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-lav hover:bg-lav transition-colors text-left border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
+          <div className="w-7 h-7 rounded-lg bg-lav flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
           </div>
-          <span className="text-xs font-medium text-neutral-200">{copied ? 'Copied!' : 'Copy link'}</span>
+          <span className="text-xs font-medium text-ink">{copied ? 'Copied!' : 'Copy link'}</span>
         </button>
-        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors">
-          <div className="w-7 h-7 rounded-lg bg-neutral-700 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-neutral-300" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-lav hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
+          <div className="w-7 h-7 rounded-lg bg-lav flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-neutral-600" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           </div>
-          <span className="text-xs font-medium text-neutral-200">Share on X</span>
+          <span className="text-xs font-medium text-ink">Share on X</span>
         </a>
-        <a href={snapchatUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-yellow-950/40 border border-yellow-800/30 hover:bg-yellow-900/40 transition-colors">
-          <div className="w-7 h-7 rounded-lg bg-yellow-900/50 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12.166 2c.742 0 3.292.204 4.502 2.835.388.83.295 2.232.23 3.219l-.004.063-.008.147c.229-.04.48-.107.67-.197a.98.98 0 0 1 .42-.093c.208 0 .404.053.564.148.337.197.52.53.52.917 0 .515-.352.942-.95 1.154l-.186.059c-.301.086-.752.215-.87.562-.063.182-.037.382.078.576l.007.013c.547 1.08 1.655 2.295 3.545 2.622.091.016.163.082.173.17a.214.214 0 0 1-.128.214c-.357.143-1.062.258-1.936.34-.065.008-.115.057-.122.12-.017.145-.028.297-.028.455l.006.157.003.04c.01.089-.053.17-.145.184l-.23.018c-.354 0-.747-.109-1.197-.33-.542-.266-1.098-.405-1.652-.405-.225 0-.448.024-.666.073-.358.08-.69.266-.998.557-.606.573-1.245.863-1.9.863-.654 0-1.293-.29-1.9-.863-.308-.29-.64-.477-.998-.557a3.573 3.573 0 0 0-.666-.073c-.554 0-1.11.139-1.652.405-.45.221-.843.33-1.197.33l-.23-.018a.176.176 0 0 1-.145-.184l.003-.04.006-.157c0-.158-.011-.31-.028-.455-.007-.063-.057-.112-.122-.12-.874-.082-1.579-.197-1.936-.34a.214.214 0 0 1-.128-.214.183.183 0 0 1 .173-.17c1.89-.327 2.998-1.542 3.545-2.622l.007-.013c.115-.194.14-.394.078-.576-.118-.347-.569-.476-.87-.562l-.186-.059c-.598-.212-.95-.639-.95-1.154 0-.387.183-.72.52-.917.16-.095.356-.148.564-.148a.98.98 0 0 1 .42.093c.197.093.454.16.69.198l-.012-.21c-.065-.987-.158-2.388.23-3.218C8.874 2.204 11.424 2 12.166 2z"/></svg>
+        <a href={snapchatUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-50 border-2 border-amber-700 hover:bg-amber-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
+          <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-amber-700" viewBox="0 0 24 24" fill="currentColor"><path d="M12.166 2c.742 0 3.292.204 4.502 2.835.388.83.295 2.232.23 3.219l-.004.063-.008.147c.229-.04.48-.107.67-.197a.98.98 0 0 1 .42-.093c.208 0 .404.053.564.148.337.197.52.53.52.917 0 .515-.352.942-.95 1.154l-.186.059c-.301.086-.752.215-.87.562-.063.182-.037.382.078.576l.007.013c.547 1.08 1.655 2.295 3.545 2.622.091.016.163.082.173.17a.214.214 0 0 1-.128.214c-.357.143-1.062.258-1.936.34-.065.008-.115.057-.122.12-.017.145-.028.297-.028.455l.006.157.003.04c.01.089-.053.17-.145.184l-.23.018c-.354 0-.747-.109-1.197-.33-.542-.266-1.098-.405-1.652-.405-.225 0-.448.024-.666.073-.358.08-.69.266-.998.557-.606.573-1.245.863-1.9.863-.654 0-1.293-.29-1.9-.863-.308-.29-.64-.477-.998-.557a3.573 3.573 0 0 0-.666-.073c-.554 0-1.11.139-1.652.405-.45.221-.843.33-1.197.33l-.23-.018a.176.176 0 0 1-.145-.184l.003-.04.006-.157c0-.158-.011-.31-.028-.455-.007-.063-.057-.112-.122-.12-.874-.082-1.579-.197-1.936-.34a.214.214 0 0 1-.128-.214.183.183 0 0 1 .173-.17c1.89-.327 2.998-1.542 3.545-2.622l.007-.013c.115-.194.14-.394.078-.576-.118-.347-.569-.476-.87-.562l-.186-.059c-.598-.212-.95-.639-.95-1.154 0-.387.183-.72.52-.917.16-.095.356-.148.564-.148a.98.98 0 0 1 .42.093c.197.093.454.16.69.198l-.012-.21c-.065-.987-.158-2.388.23-3.218C8.874 2.204 11.424 2 12.166 2z"/></svg>
           </div>
-          <span className="text-xs font-medium text-yellow-400">Snapchat</span>
+          <span className="text-xs font-medium text-amber-700">Snapchat</span>
         </a>
       </div>
     </div>
@@ -180,10 +180,10 @@ function EventCard({ ev, index, onClick }) {
   }, [showShare]);
 
   const chipStyle = ac.hex ? { borderColor: `${ac.hex}40`, color: ac.hex, background: `${ac.hex}15` } : {};
-  const chipClass = ac.chip ? `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ac.chip}` : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border';
+  const chipClass = ac.chip ? `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border-2 border-ink ${ac.chip}` : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border-2 border-ink';
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/50 overflow-hidden transition-all duration-300 hover:scale-[1.015] hover:border-neutral-600 hover:shadow-2xl hover:shadow-black/60">
+    <div className="group relative flex flex-col rounded-2xl border-2 border-ink bg-lav overflow-hidden transition-all duration-300 hover:scale-[1.015] hover:border-ink hover:shadow-2xl">
       <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
         style={{ background: `linear-gradient(90deg, transparent, ${ac.border}, transparent)` }} />
 
@@ -192,7 +192,7 @@ function EventCard({ ev, index, onClick }) {
         {ev.coverImage ? (
           <>
             <img src={ev.coverImage} alt={ev.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 30%, rgba(9,9,18,0.65) 100%)' }} />
+            <div className="absolute inset-0" style={{ background: '#ffffff' }} />
           </>
         ) : (
           <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${ac.from.replace(/[\d.]+\)$/, '0.45)')}, transparent)` }} />
@@ -200,20 +200,20 @@ function EventCard({ ev, index, onClick }) {
 
         <div className="absolute top-2.5 left-2.5 flex gap-1.5">
           {isSoon(ev.date) && !full && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 border border-amber-700/50 text-amber-300 backdrop-blur-sm">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 border border-amber-700 text-amber-700">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Soon
             </span>
           )}
           {full && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-950/80 border border-red-700/50 text-red-300 backdrop-blur-sm">Full</span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 border border-red-700 text-red-700">Full</span>
           )}
         </div>
 
         <div className="absolute top-2.5 right-2.5" ref={shareRef}>
           <button
             onClick={e => { e.stopPropagation(); setShowShare(s => !s); }}
-            className="w-7 h-7 rounded-lg bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/70 transition-colors"
-          ><Share2 className="w-3.5 h-3.5 text-white" /></button>
+            className="w-7 h-7 rounded-lg bg-lav border-2 border-ink flex items-center justify-center hover:bg-lav transition-colors"
+          ><Share2 className="w-3.5 h-3.5 text-ink" /></button>
           {showShare && <SharePopover ev={ev} onClose={() => setShowShare(false)} />}
         </div>
       </div>
@@ -227,7 +227,7 @@ function EventCard({ ev, index, onClick }) {
           {cd && <span className="text-xs text-neutral-600 flex items-center gap-1 flex-shrink-0"><Clock className="w-3 h-3" />{cd}</span>}
         </div>
 
-        <h2 className="text-sm font-bold text-white mb-2 leading-snug line-clamp-2 group-hover:text-neutral-100 transition-colors">{ev.title}</h2>
+        <h2 className="text-sm font-bold text-ink mb-2 leading-snug line-clamp-2 group-hover:text-ink transition-colors">{ev.title}</h2>
 
         {ev.description
           ? <p className="text-xs text-neutral-500 mb-3 line-clamp-2 leading-relaxed flex-1">{ev.description}</p>
@@ -237,7 +237,7 @@ function EventCard({ ev, index, onClick }) {
         {ev.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {ev.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="px-2 py-0.5 rounded-full text-xs border border-neutral-700/60 text-neutral-500 bg-neutral-800/40">{tag}</span>
+              <span key={tag} className="px-2 py-0.5 rounded-full text-xs border-2 border-ink text-neutral-500 bg-lav">{tag}</span>
             ))}
           </div>
         )}
@@ -258,13 +258,13 @@ function EventCard({ ev, index, onClick }) {
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{ev.participantCount} joined</span>
             <span>{ev.maxParticipants} max</span>
           </div>
-          <div className="h-1 bg-neutral-800 rounded-full overflow-hidden">
+          <div className="h-1 bg-lav rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all duration-700"
               style={{ width: `${pct}%`, background: pct >= 90 ? '#ef4444' : pct >= 60 ? '#f59e0b' : (ac.bar) }} />
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 group-hover:text-white transition-colors">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 group-hover:text-ink transition-colors">
           {full ? 'View event' : 'Join event'}
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
         </div>
@@ -327,7 +327,7 @@ export default function Discover() {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#06060c' }}>
+    <div className="min-h-screen text-ink relative" style={{ background: '#ffffff' }}>
       <StarBackground fixed starCount={140} />
 
       <style>{`
@@ -341,7 +341,7 @@ export default function Discover() {
         .animate-shake { animation: shake 0.45s ease-in-out; }
       `}</style>
 
-      <header className="sticky top-0 z-50 border-b border-neutral-800/60" style={{ background: 'rgba(6,6,12,0.96)', backdropFilter: 'blur(12px)' }}>
+      <header className="sticky top-0 z-50 border-b border-ink" style={{ background: '#ffffff',  }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-4">
           <div className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" onClick={() => navigate('/')}>
             {logo
@@ -349,12 +349,12 @@ export default function Discover() {
               : (
                 <>
                   <div className="relative">
-                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-neutral-300" />
+                    <div className="w-9 h-9 rounded-2xl bg-lav border-2 border-ink flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-neutral-600" />
                     </div>
-                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
+                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-ink animate-pulse" />}
                   </div>
-                  <span className="text-lg font-bold text-white">{company}</span>
+                  <span className="text-lg font-bold text-ink">{company}</span>
                 </>
               )
             }
@@ -363,21 +363,21 @@ export default function Discover() {
           <div className="relative flex-1 max-w-md mx-auto">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
             <input
-              className="w-full h-10 pl-10 pr-10 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
-              style={{ background: 'rgba(255,255,255,0.04)' }}
+              className="w-full h-10 pl-10 pr-10 rounded-xl text-sm text-ink placeholder-neutral-400 border-2 border-ink focus:border-ink focus:outline-none transition-colors focus:ring-[3px] focus:ring-ac bg-white"
+              style={{ background: '#ffffff' }}
               placeholder="Search events, locations…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
           {!isWL && (
-            <button onClick={() => navigate('/')} className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all">
+            <button onClick={() => navigate('/')} className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               <Zap className="w-4 h-4" /><span className="hidden sm:inline">Create event</span>
             </button>
           )}
@@ -386,13 +386,13 @@ export default function Discover() {
 
       <main className="relative max-w-6xl mx-auto px-6 py-12" style={{ zIndex: 2 }}>
         <div className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 text-xs font-medium text-neutral-500 mb-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 border-ink text-xs font-medium text-neutral-500 mb-6" style={{ background: '#ffffff' }}>
             <Sparkles className="w-3.5 h-3.5" />{isWL ? company : "Open to everyone"}
           </div>
-          <h1 className="font-display text-5xl md:text-6xl font-black text-white tracking-tight mb-4">{headline}</h1>
+          <h1 className="font-display text-5xl md:text-6xl font-black text-ink tracking-tight mb-4">{headline}</h1>
           <p className="text-lg text-neutral-500 max-w-md mx-auto">{subline}</p>
           {!loading && total > 0 && (
-            <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border border-neutral-800 text-sm text-neutral-500" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border-2 border-ink text-sm text-neutral-500" style={{ background: '#ffffff' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               {total} event{total !== 1 ? 's' : ''} available
             </div>
@@ -408,7 +408,7 @@ export default function Discover() {
                 <button
                   key={tag}
                   onClick={() => setActiveTag(tag === 'All' ? null : (activeTag === tag ? null : tag))}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${active ? 'bg-white text-neutral-900 border-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${active ? 'bg-white text-neutral-900 border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-ink text-neutral-500 hover:border-neutral-500 hover:text-neutral-600'}`}
                 >{tag}</button>
               );
             })}
@@ -419,13 +419,13 @@ export default function Discover() {
           <div className="flex items-center gap-2 mb-5 flex-wrap">
             <span className="text-xs text-neutral-500">Showing</span>
             {search && (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-neutral-800 border border-neutral-700 text-neutral-300">
-                "{search}" <button onClick={() => setSearch('')} className="text-neutral-500 hover:text-neutral-300 ml-0.5"><X className="w-3 h-3" /></button>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-lav border-2 border-ink text-neutral-600">
+                "{search}" <button onClick={() => setSearch('')} className="text-neutral-500 hover:text-neutral-600 ml-0.5"><X className="w-3 h-3" /></button>
               </span>
             )}
             {activeTag && (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-neutral-800 border border-neutral-700 text-neutral-300">
-                {activeTag} <button onClick={() => setActiveTag(null)} className="text-neutral-500 hover:text-neutral-300 ml-0.5"><X className="w-3 h-3" /></button>
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-lav border-2 border-ink text-neutral-600">
+                {activeTag} <button onClick={() => setActiveTag(null)} className="text-neutral-500 hover:text-neutral-600 ml-0.5"><X className="w-3 h-3" /></button>
               </span>
             )}
             <span className="text-xs text-neutral-600">— {filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
@@ -438,19 +438,19 @@ export default function Discover() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 text-center">
-            <div className="w-16 h-16 rounded-2xl border border-neutral-800 bg-neutral-900/60 flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-2xl border-2 border-ink bg-white flex items-center justify-center mb-5">
               <Compass className="w-8 h-8 text-neutral-600" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">{search || activeTag ? 'No events found' : 'Nothing here yet'}</h3>
+            <h3 className="text-lg font-semibold text-ink mb-2">{search || activeTag ? 'No events found' : 'Nothing here yet'}</h3>
             <p className="text-sm text-neutral-500 max-w-xs mb-6">
               {search ? `No events match "${search}".` : activeTag ? `No events tagged "${activeTag}".` : 'No public events right now. Be the first!'}
             </p>
             {(search || activeTag) ? (
-              <button onClick={() => { setSearch(''); setActiveTag(null); }} className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-neutral-300 border border-neutral-700 rounded-xl hover:border-neutral-500 hover:text-white transition-all" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <button onClick={() => { setSearch(''); setActiveTag(null); }} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-neutral-600 border-2 border-ink rounded-xl hover:border-neutral-500 hover:text-ink transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" style={{ background: '#ffffff' }}>
                 <X className="w-3.5 h-3.5" />Clear filters
               </button>
             ) : (
-              <button onClick={() => navigate('/')} className="flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all">
+              <button onClick={() => navigate('/')} className="flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 Create an event <ArrowRight className="w-4 h-4" />
               </button>
             )}
@@ -468,8 +468,8 @@ export default function Discover() {
         {totalPages > 1 && !loading && !isWL && (
           <div className="flex items-center justify-center gap-3 mt-14">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-neutral-400 border border-neutral-800 rounded-xl hover:border-neutral-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              style={{ background: 'rgba(255,255,255,0.03)' }}>
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-neutral-500 border-2 border-ink rounded-xl hover:border-ink hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff' }}>
               <ChevronLeft className="w-4 h-4" />Previous
             </button>
             <div className="flex items-center gap-1">
@@ -478,12 +478,12 @@ export default function Discover() {
                 .reduce((acc, p, idx, arr) => { if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…'); acc.push(p); return acc; }, [])
                 .map((p, i) => p === '…'
                   ? <span key={`d${i}`} className="w-8 text-center text-neutral-600 text-sm">…</span>
-                  : <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 rounded-xl text-sm font-medium transition-all ${page === p ? 'bg-white text-neutral-900 font-bold' : 'text-neutral-500 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700'}`}>{p}</button>
+                  : <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 rounded-xl text-sm font-medium transition-all ${page === p ? 'bg-white text-neutral-900 font-bold' : 'text-neutral-500 hover:text-ink hover:bg-lav border border-transparent hover:border-ink'}`}>{p}</button>
                 )}
             </div>
             <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-neutral-400 border border-neutral-800 rounded-xl hover:border-neutral-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              style={{ background: 'rgba(255,255,255,0.03)' }}>
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-neutral-500 border-2 border-ink rounded-xl hover:border-ink hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff' }}>
               Next <ChevronRight className="w-4 h-4" />
             </button>
           </div>

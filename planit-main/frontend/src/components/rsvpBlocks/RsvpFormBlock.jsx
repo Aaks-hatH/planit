@@ -36,7 +36,7 @@ import { spacingClass, alignClass } from './theme';
 function ResponseButton({ active, onClick, icon, label, activeColor, isLight, disabled, note }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl border-2 text-sm font-semibold transition-all"
+      className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-xl border-2 text-sm font-semibold transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
       style={{
         borderColor: active ? activeColor : (isLight ? '#e5e7eb' : 'rgba(255,255,255,0.12)'),
         background: active ? `${activeColor}18` : 'transparent',
@@ -118,8 +118,8 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
 
   const textMuted = isLight ? 'text-gray-500' : 'text-white/50';
   const textMain = isLight ? 'text-gray-900' : 'text-white';
-  const cardBg = isLight ? 'bg-white border border-gray-200' : 'bg-white/[0.04] border border-white/10';
-  const inputCls = `w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all ${isLight ? 'bg-white border-gray-200 focus:border-gray-400 text-gray-900' : 'bg-white/[0.06] border-white/10 focus:border-white/30 text-white placeholder-white/30'}`;
+  const cardBg = isLight ? 'bg-white border-2 border-ink' : 'bg-white/[0.04] border-2 border-ink';
+  const inputCls = `w-full px-4 py-3 rounded-xl text-sm border-2 outline-none transition-all border-ink ${isLight ? 'bg-white border-gray-200 focus:border-gray-400 text-gray-900' : 'bg-white/[0.06] border-ink focus:border-ink text-ink placeholder-white/30'}`;
 
   const [response, setResponse] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -257,9 +257,9 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
     return (
       <div className={`w-full px-6 md:px-10 ${spacingClass(spacing)} flex flex-col ${alignClass(align)}`}>
         <div className="w-full max-w-lg mx-auto flex items-center gap-3 p-4 rounded-2xl" style={{ background: '#ef444422', border: '1px solid #ef444444' }}>
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <AlertTriangle className="w-5 h-5 text-red-700 flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-red-400">RSVP deadline has passed</p>
+            <p className="text-sm font-semibold text-red-700">RSVP deadline has passed</p>
             <p className="text-xs text-red-400/70 mt-0.5">{flatSettings.deadlineMessage || 'This event is no longer accepting RSVPs.'}</p>
           </div>
         </div>
@@ -272,8 +272,8 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
       <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto space-y-5">
         {isFull && flatSettings.enableWaitlist === false && (
           <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: '#f59e0b22', border: '1px solid #f59e0b44' }}>
-            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
-            <p className="text-sm text-amber-400">This event has reached capacity.</p>
+            <AlertTriangle className="w-5 h-5 text-amber-700 flex-shrink-0" />
+            <p className="text-sm text-amber-700">This event has reached capacity.</p>
           </div>
         )}
 
@@ -355,9 +355,9 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
             {expandedSection === 'plusones' && (
               <div className="px-5 pb-5 space-y-4">
                 <div className="flex items-center gap-4">
-                  <button type="button" onClick={removePlusOne} disabled={plusOnes <= 0} className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all disabled:opacity-30" style={{ borderColor: 'rgba(255,255,255,0.12)' }}><Minus className="w-4 h-4" /></button>
+                  <button type="button" onClick={removePlusOne} disabled={plusOnes <= 0} className="w-9 h-9 rounded-xl flex items-center justify-center border-2 transition-all disabled:opacity-30 border-ink" style={{ borderColor: 'rgba(255,255,255,0.12)' }}><Minus className="w-4 h-4" /></button>
                   <span className={`text-lg font-bold w-8 text-center ${textMain}`}>{plusOnes}</span>
-                  <button type="button" onClick={addPlusOne} disabled={plusOnes >= (flatSettings.maxPlusOnes || 5)} className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all disabled:opacity-30" style={{ borderColor: 'rgba(255,255,255,0.12)', background: `${accent}22` }}><Plus className="w-4 h-4" style={{ color: accent }} /></button>
+                  <button type="button" onClick={addPlusOne} disabled={plusOnes >= (flatSettings.maxPlusOnes || 5)} className="w-9 h-9 rounded-xl flex items-center justify-center border-2 transition-all disabled:opacity-30 border-ink" style={{ borderColor: 'rgba(255,255,255,0.12)', background: `${accent}22` }}><Plus className="w-4 h-4" style={{ color: accent }} /></button>
                   <span className={`text-xs ${textMuted}`}>of {flatSettings.maxPlusOnes || 5} max</span>
                 </div>
                 {flatSettings.requirePlusOneNames && plusOneDetails.map((po, i) => (
@@ -446,7 +446,7 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
         )}
 
         {abuseStatus && (
-          <div className={`rounded-2xl p-4 ${isLight ? 'bg-indigo-50 border border-indigo-100 text-indigo-900' : 'bg-indigo-500/10 border border-indigo-400/20 text-indigo-100'}`}>
+          <div className={`rounded-2xl p-4 ${isLight ? 'bg-indigo-50 border-2 border-blue-600 text-indigo-900' : 'bg-blue-50 border border-blue-700 text-indigo-100'}`}>
             <p className="text-sm font-bold mb-1">{abuseStatus.title}</p>
             <p className="text-sm opacity-80">{abuseStatus.message}</p>
           </div>
@@ -463,7 +463,7 @@ export default function RsvpFormBlock({ pageData, slug, unlockedPw, accent, font
 
         {response && (
           <button type="submit" disabled={submitting} className="w-full py-4 rounded-2xl text-sm font-bold transition-all hover:opacity-90 flex items-center justify-center gap-2" style={{ background: accent, color: '#fff', opacity: submitting ? 0.7 : 1 }}>
-            {submitting ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>) : (<>Submit RSVP <ArrowRight className="w-4 h-4" /></>)}
+            {submitting ? (<><div className="w-4 h-4 border-2 border-ink border-t-white rounded-full animate-spin" /> Submitting...</>) : (<>Submit RSVP <ArrowRight className="w-4 h-4" /></>)}
           </button>
         )}
 

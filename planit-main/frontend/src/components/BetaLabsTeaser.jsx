@@ -93,7 +93,7 @@ export default function BetaLabsTeaser() {
         onClick={() => { dismissTeaserForever(id); navigate(cfg.to); }}
         onMouseEnter={() => setExpanded(true)}
         onTouchStart={() => setExpanded(true)}
-        className="group relative flex items-center gap-2.5 rounded-full border bg-[#0a0714]/95 backdrop-blur-sm pl-3 pr-4 py-2.5 text-left transition-colors"
+        className="group relative flex items-center gap-2.5 rounded-lg border-2 bg-white pl-3 pr-4 py-2.5 text-left transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
         style={{ borderColor: `${tint}40`, boxShadow: `0 8px 30px ${tint}2e` }}
       >
         <span className="relative flex items-center justify-center w-7 h-7 rounded-full shrink-0" style={{ background: `${tint}26` }}>
@@ -105,18 +105,18 @@ export default function BetaLabsTeaser() {
             <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest" style={{ color: tint }}>
               <Sparkles className="w-2.5 h-2.5" />New &middot; Labs
             </span>
-            <span className="text-white text-[13px] font-semibold leading-tight mt-0.5">{cfg.title}</span>
+            <span className="text-ink text-[13px] font-semibold leading-tight mt-0.5">{cfg.title}</span>
             <span className="text-neutral-500 text-[11px] leading-snug mt-0.5">{cfg.sub}</span>
           </span>
         ) : (
-          <span className="text-white text-[13px] font-semibold whitespace-nowrap">{cfg.short}</span>
+          <span className="text-ink text-[13px] font-semibold whitespace-nowrap">{cfg.short}</span>
         )}
 
         <span
           onClick={(e) => { e.stopPropagation(); retire(); }}
           role="button"
           aria-label="Dismiss permanently"
-          className="ml-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-300 hover:bg-white/5"
+          className="ml-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-600 hover:bg-lav"
         >
           <X className="w-3 h-3" />
         </span>

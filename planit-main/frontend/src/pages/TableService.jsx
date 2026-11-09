@@ -27,20 +27,20 @@ import FeatureTour from '../components/tour/FeatureTour';
 const uid = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
 const STATUS_META = {
-  available:   { label: 'Available',   color: '#22c55e', bg: 'bg-emerald-950/60', border: 'border-emerald-500/40', text: 'text-emerald-400', ring: '#22c55e' },
-  occupied:    { label: 'Occupied',    color: '#ef4444', bg: 'bg-rose-950/60',    border: 'border-rose-500/40',    text: 'text-rose-400',    ring: '#ef4444' },
-  reserved:    { label: 'Reserved',    color: '#f59e0b', bg: 'bg-amber-950/60',   border: 'border-amber-500/40',   text: 'text-amber-400',   ring: '#f59e0b' },
-  cleaning:    { label: 'Cleaning',    color: '#8b5cf6', bg: 'bg-violet-950/60',  border: 'border-violet-500/40',  text: 'text-violet-400',  ring: '#8b5cf6' },
-  unavailable: { label: 'Unavailable', color: '#525252', bg: 'bg-neutral-900',    border: 'border-neutral-700',    text: 'text-neutral-500', ring: '#525252' },
+  available:   { label: 'Available',   color: '#0a7149', bg: 'bg-emerald-50', border: 'border-emerald-700', text: 'text-emerald-700', ring: '#22c55e' },
+  occupied:    { label: 'Occupied',    color: '#ef4444', bg: 'bg-red-50',    border: 'border-red-700',    text: 'text-red-700',    ring: '#ef4444' },
+  reserved:    { label: 'Reserved',    color: '#6e5400', bg: 'bg-amber-50',   border: 'border-amber-700',   text: 'text-amber-700',   ring: '#f59e0b' },
+  cleaning:    { label: 'Cleaning',    color: '#8b5cf6', bg: 'bg-blue-50',  border: 'border-blue-700',  text: 'text-blue-700',  ring: '#8b5cf6' },
+  unavailable: { label: 'Unavailable', color: '#525252', bg: 'bg-white',    border: 'border-ink',    text: 'text-neutral-500', ring: '#525252' },
 };
 
 const ALERT_LABELS = {
-  'call':            { label: 'Needs assistance',       color: '#f59e0b', border: '#f59e0b40', bg: '#2d1c0060' },
-  'order':           { label: 'Ready to order',         color: '#22c55e', border: '#22c55e40', bg: '#05231260' },
-  'quick:water':     { label: 'Water refill requested', color: '#38bdf8', border: '#38bdf840', bg: '#08233660' },
-  'quick:napkins':   { label: 'Napkins requested',      color: '#a78bfa', border: '#a78bfa40', bg: '#1e123660' },
-  'quick:menu':      { label: 'Requesting menu',        color: '#fb923c', border: '#fb923c40', bg: '#2d150060' },
-  'quick:dessert':   { label: 'Dessert menu requested', color: '#f472b6', border: '#f472b640', bg: '#2d103060' },
+  'call':            { label: 'Needs assistance',       color: '#6e5400', border: '#f59e0b40', bg: '#ffffff' },
+  'order':           { label: 'Ready to order',         color: '#0a7149', border: '#22c55e40', bg: '#ffffff' },
+  'quick:water':     { label: 'Water refill requested', color: '#2236ff', border: '#38bdf840', bg: '#ffffff' },
+  'quick:napkins':   { label: 'Napkins requested',      color: '#2236ff', border: '#a78bfa40', bg: '#ffffff' },
+  'quick:menu':      { label: 'Requesting menu',        color: '#6e5400', border: '#fb923c40', bg: '#ffffff' },
+  'quick:dessert':   { label: 'Dessert menu requested', color: '#a82a74', border: '#f472b640', bg: '#ffffff' },
 };
 
 function AlertPopup({ alert, onGotIt, onDismiss }) {
@@ -50,9 +50,9 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
   const timeStr = timeAgo < 60 ? `${timeAgo}s ago` : `${Math.floor(timeAgo / 60)}m ago`;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden"
-        style={{ background: '#111', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}>
+      style={{ background: '#ffffff',  }}>
+      <div className="w-full max-w-sm rounded-2xl border-2 shadow-2xl overflow-hidden border-ink"
+        style={{ background: '#ffffff', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}>
         <div style={{ height: 4, background: meta.color }} />
         <div className="p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -62,25 +62,25 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
             </div>
             <div>
               <div className="text-xs font-bold uppercase tracking-widest" style={{ color: meta.color }}>Table Alert</div>
-              <div className="text-lg font-black text-white mt-0.5">{meta.label}</div>
+              <div className="text-lg font-black text-ink mt-0.5">{meta.label}</div>
             </div>
             <span className="ml-auto text-xs text-neutral-600 font-medium flex-shrink-0">{timeStr}</span>
           </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-5">
+          <div className="rounded-xl border-2 border-ink bg-white divide-y divide-neutral-200 mb-5">
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Table</span>
-              <span className="font-black text-white text-base">{alert.tableLabel}</span>
+              <span className="font-black text-ink text-base">{alert.tableLabel}</span>
             </div>
             {alert.partyName && (
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party</span>
-                <span className="font-semibold text-white">{alert.partyName}</span>
+                <span className="font-semibold text-ink">{alert.partyName}</span>
               </div>
             )}
             {alert.partySize > 0 && (
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Guests</span>
-                <span className="font-semibold text-white">{alert.partySize}</span>
+                <span className="font-semibold text-ink">{alert.partySize}</span>
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-3">
@@ -96,7 +96,7 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
               Got it — On my way
             </button>
             <button onClick={onDismiss}
-              className="px-4 py-3 rounded-xl font-bold text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all">
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-white hover:bg-lav text-neutral-500 hover:text-ink transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               Snooze
             </button>
           </div>
@@ -289,7 +289,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
   };
 
   return (
-    <div className="relative w-full h-full bg-neutral-950 select-none" style={{ touchAction: 'none' }}>
+    <div className="relative w-full h-full bg-white select-none" style={{ touchAction: 'none' }}>
       <svg
         ref={svgRef}
         className="w-full h-full"
@@ -313,9 +313,9 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
       {/* Zoom controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-        <button onClick={() => onZoomChange(z => Math.min(3, z + 0.2))} className="w-8 h-8 bg-neutral-800 border border-neutral-700 text-white rounded-md flex items-center justify-center text-lg font-bold hover:bg-neutral-700 transition-colors">+</button>
-        <button onClick={() => onZoomChange(1)} className="w-8 h-8 bg-neutral-800 border border-neutral-700 text-neutral-400 rounded-md flex items-center justify-center text-xs font-bold hover:bg-neutral-700 transition-colors">{Math.round(zoom * 100)}%</button>
-        <button onClick={() => onZoomChange(z => Math.max(0.3, z - 0.2))} className="w-8 h-8 bg-neutral-800 border border-neutral-700 text-white rounded-md flex items-center justify-center text-lg font-bold hover:bg-neutral-700 transition-colors">−</button>
+        <button onClick={() => onZoomChange(z => Math.min(3, z + 0.2))} className="w-8 h-8 bg-lav border-2 border-ink text-ink rounded-md flex items-center justify-center text-lg font-bold hover:bg-lav transition-colors">+</button>
+        <button onClick={() => onZoomChange(1)} className="w-8 h-8 bg-lav border-2 border-ink text-neutral-500 rounded-md flex items-center justify-center text-xs font-bold hover:bg-lav transition-colors">{Math.round(zoom * 100)}%</button>
+        <button onClick={() => onZoomChange(z => Math.max(0.3, z - 0.2))} className="w-8 h-8 bg-lav border-2 border-ink text-ink rounded-md flex items-center justify-center text-lg font-bold hover:bg-lav transition-colors">−</button>
       </div>
 
       {/* Legend */}
@@ -323,7 +323,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
         {Object.entries(STATUS_META).map(([k, v]) => (
           <div key={k} className="flex items-center gap-1.5 text-xs">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: v.color }} />
-            <span className="text-neutral-400">{v.label}</span>
+            <span className="text-neutral-500">{v.label}</span>
           </div>
         ))}
       </div>
@@ -381,30 +381,30 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
   const occupiedMs = state?.occupiedAt ? Date.now() - new Date(state.occupiedAt).getTime() : null;
 
   return (
-    <div className="flex flex-col h-full bg-neutral-900 border-t border-neutral-800">
+    <div className="flex flex-col h-full bg-white border-t border-ink">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-ink">
         <div>
-          <div className="font-bold text-white text-base">{obj.label || `Table ${obj.id.slice(-3)}`}</div>
+          <div className="font-bold text-ink text-base">{obj.label || `Table ${obj.id.slice(-3)}`}</div>
           <div className="text-xs text-neutral-500 mt-0.5">Capacity {obj.capacity} · {obj.type}</div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border-2 border-ink ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
+          <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><X className="w-4 h-4" /></button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* Timing (occupied) */}
         {state?.status === 'occupied' && occupiedMs !== null && (
-          <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border ${remaining !== null && remaining <= 10 ? 'bg-rose-950/30 border-rose-800/40' : 'bg-neutral-800/60 border-neutral-700'}`}>
+          <div className={`grid grid-cols-2 gap-3 p-4 rounded-xl border-2 border-ink shadow ${remaining !== null && remaining <= 10 ? 'bg-red-50 border-red-700' : 'bg-white border-ink'}`}>
             <div>
               <div className="text-xs text-neutral-500 mb-1">Seated for</div>
-              <div className="text-xl font-black text-white">{fmtDuration(occupiedMs)}</div>
+              <div className="text-xl font-black text-ink">{fmtDuration(occupiedMs)}</div>
             </div>
             <div>
               <div className="text-xs text-neutral-500 mb-1">Est. remaining</div>
-              <div className={`text-xl font-black ${remaining !== null && remaining <= 10 ? 'text-rose-400' : 'text-white'}`}>
+              <div className={`text-xl font-black ${remaining !== null && remaining <= 10 ? 'text-red-700' : 'text-ink'}`}>
                 {remaining !== null ? (remaining <= 0 ? 'Overdue' : `~${remaining}m`) : '—'}
               </div>
             </div>
@@ -414,34 +414,34 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
         {/* Party details */}
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Party Name</label>
+            <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wider">Party Name</label>
             <input
               type="text"
               value={localState.partyName}
               onChange={e => setLocalState(p => ({ ...p, partyName: e.target.value }))}
               placeholder="Smith party..."
-              className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+              className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2.5 outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Guests</label>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wider">Guests</label>
               <input
                 type="number"
                 min="1"
                 max={obj.capacity}
                 value={localState.partySize}
                 onChange={e => setLocalState(p => ({ ...p, partySize: parseInt(e.target.value) || 1 }))}
-                className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+                className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2.5 outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Server</label>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wider">Server</label>
               {servers && servers.length > 0 ? (
                 <select
                   value={localState.serverName}
                   onChange={e => setLocalState(p => ({ ...p, serverName: e.target.value }))}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+                  className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2.5 outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac"
                 >
                   <option value="">-- Unassigned --</option>
                   {servers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
@@ -452,25 +452,25 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
                   value={localState.serverName}
                   onChange={e => setLocalState(p => ({ ...p, serverName: e.target.value }))}
                   placeholder="Server name"
-                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+                  className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2.5 outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac"
                 />
               )}
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Notes</label>
+            <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wider">Notes</label>
             <textarea
               value={localState.notes}
               onChange={e => setLocalState(p => ({ ...p, notes: e.target.value }))}
               placeholder="Allergies, special requests..."
               rows={2}
-              className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors resize-none"
+              className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2.5 outline-none focus:border-ink transition-colors resize-none focus:ring-[3px] focus:ring-ac"
             />
           </div>
           <button
             onClick={handleSaveDetails}
             disabled={saving}
-            className="w-full py-2.5 bg-neutral-700 hover:bg-neutral-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-white hover:bg-lav text-ink text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save details
@@ -479,7 +479,7 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
 
         {/* Status actions */}
         <div>
-          <div className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wider">Change Status</div>
+          <div className="text-xs font-semibold text-neutral-500 mb-3 uppercase tracking-wider">Change Status</div>
           <div className="grid grid-cols-2 gap-2">
             {[
               { status: 'occupied',    label: 'Seat Party',      icon: Users },
@@ -495,7 +495,7 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
                   key={status}
                   onClick={() => handleStatusChange(status)}
                   disabled={saving || isCurrent}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all ${isCurrent ? `${m.bg} ${m.border} ${m.text} opacity-100` : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${isCurrent ? `${m.bg} ${m.border} ${m.text} opacity-100` : 'bg-white border-ink text-neutral-500 hover:bg-lav hover:text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {label}
@@ -507,34 +507,34 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
 
         {/* Reset Table */}
         <div>
-          <div className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wider">Reset Table</div>
+          <div className="text-xs font-semibold text-neutral-500 mb-3 uppercase tracking-wider">Reset Table</div>
           {!showResetConfirm ? (
             <button
               onClick={() => setShowResetConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
-              style={{ background: '#1a0000', borderColor: '#ef444450', color: '#ef4444' }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff', borderColor: '#ef444450', color: '#ef4444' }}
             >
               <RotateCcw className="w-4 h-4" />
               Reset Table for Next Party
             </button>
           ) : (
-            <div className="p-3 rounded-xl border space-y-2.5" style={{ background: '#1a050505', borderColor: '#ef444440' }}>
-              <div className="flex items-start gap-2 text-xs text-rose-300">
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-400" />
+            <div className="p-3 rounded-xl border-2 space-y-2.5 border-ink shadow" style={{ background: '#ffffff', borderColor: '#ef444440' }}>
+              <div className="flex items-start gap-2 text-xs text-red-700">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-red-700" />
                 <span>This clears <strong className="text-rose-200">all orders, bill info, and party details</strong> and marks the table Available. This cannot be undone.</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setShowResetConfirm(false)}
-                  className="py-2 text-xs font-semibold rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-all"
+                  className="py-2 text-xs font-semibold rounded-lg bg-white border-2 border-ink text-neutral-500 hover:bg-lav hover:text-ink transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={resetTable}
                   disabled={resetting}
-                  className="py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
-                  style={{ background: '#7f1d1d', borderColor: '#ef4444', color: '#fca5a5' }}
+                  className="py-2 text-xs font-semibold rounded-lg border-2 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                  style={{ background: '#ffffff', borderColor: '#ef4444', color: '#a82020' }}
                 >
                   {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                   {resetting ? 'Resetting…' : 'Yes, Reset'}
@@ -545,23 +545,23 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
         </div>
 
         {/* Guest tablet section */}
-        <div className="border-t border-neutral-800 pt-4 space-y-3">
-          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Guest Tablet</div>
+        <div className="border-t border-ink pt-4 space-y-3">
+          <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Guest Tablet</div>
 
           {/* Active alert */}
           {state?.guestAlert && (() => {
             const am = ALERT_LABELS[state.guestAlert] || ALERT_LABELS['call'];
             return (
-              <div className="flex items-center justify-between p-3 rounded-xl border"
+              <div className="flex items-center justify-between p-3 rounded-xl border-2 border-ink shadow"
                 style={{ background: am.bg, borderColor: am.border }}>
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 flex-shrink-0" style={{ color: am.color }} />
-                  <span className="text-sm font-bold text-white">{am.label}</span>
+                  <span className="text-sm font-bold text-ink">{am.label}</span>
                 </div>
                 <button
                   onClick={() => onUpdate(obj.id, { guestAlert: null })}
                   disabled={saving}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold border border-neutral-700 disabled:opacity-40"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-lav hover:bg-lav text-neutral-600 font-semibold border-2 border-ink disabled:opacity-40 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   Clear
                 </button>
@@ -582,7 +582,7 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
                   key={screen}
                   onClick={() => onUpdate(obj.id, { guestScreen: screen })}
                   disabled={saving || state?.guestScreen === screen}
-                  className={`px-2 py-2 rounded-lg text-xs font-semibold border transition-all ${state?.guestScreen === screen ? 'bg-neutral-700 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white disabled:opacity-40'}`}
+                  className={`px-2 py-2 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${state?.guestScreen === screen ? 'bg-hl border-ink text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:bg-lav hover:text-ink disabled:opacity-40 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                 >
                   {label}
                 </button>
@@ -592,16 +592,16 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
 
           {/* Dietary */}
           {(state?.guestDietary?.length > 0 || state?.guestDietaryNotes) && (
-            <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/30">
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Guest Dietary</div>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-700">
+              <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">Guest Dietary</div>
               {state.guestDietary?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
                   {state.guestDietary.map(d => (
-                    <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">{d}</span>
+                    <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-50 border border-amber-700 text-amber-700">{d}</span>
                   ))}
                 </div>
               )}
-              {state.guestDietaryNotes && <div className="text-xs text-neutral-400">{state.guestDietaryNotes}</div>}
+              {state.guestDietaryNotes && <div className="text-xs text-neutral-500">{state.guestDietaryNotes}</div>}
             </div>
           )}
 
@@ -610,22 +610,22 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId 
             const r = state.guestRating;
             const avg = ((r.food + r.service + r.atmosphere) / 3).toFixed(1);
             return (
-              <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700">
+              <div className="p-3 rounded-xl bg-white border-2 border-ink shadow">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Guest Rating</div>
-                  <div className="text-sm font-black text-amber-400">{avg} / 5</div>
+                  <div className="text-sm font-black text-amber-700">{avg} / 5</div>
                 </div>
                 {['food', 'service', 'atmosphere'].map(k => (
                   <div key={k} className="flex justify-between items-center mb-1">
-                    <span className="text-xs text-neutral-400 capitalize">{k}</span>
+                    <span className="text-xs text-neutral-500 capitalize">{k}</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }, (_, i) => (
-                        <Star key={i} className={`w-3 h-3 ${i < r[k] ? 'text-amber-400 fill-amber-400' : 'text-neutral-700'}`} />
+                        <Star key={i} className={`w-3 h-3 ${i < r[k] ? 'text-amber-700 fill-amber-400' : 'text-neutral-700'}`} />
                       ))}
                     </div>
                   </div>
                 ))}
-                {r.comment && <div className="text-xs text-neutral-400 italic mt-2 pt-2 border-t border-neutral-700">"{r.comment}"</div>}
+                {r.comment && <div className="text-xs text-neutral-500 italic mt-2 pt-2 border-t border-ink">"{r.comment}"</div>}
               </div>
             );
           })()}
@@ -672,42 +672,42 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-700 shadow-2xl overflow-hidden"
-        style={{ background: '#111' }}>
+      style={{ background: '#ffffff',  }}>
+      <div className="w-full max-w-sm rounded-2xl border-2 border-ink shadow-2xl overflow-hidden"
+        style={{ background: '#ffffff' }}>
         {/* Header bar */}
-        <div style={{ height: 3, background: '#22c55e' }} />
+        <div style={{ height: 3, background: '#0c8a5b' }} />
         <div className="p-5">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-              <ArrowRight className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-700 flex items-center justify-center flex-shrink-0">
+              <ArrowRight className="w-5 h-5 text-emerald-700" />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Seat Next Party</p>
-              <p className="text-lg font-black text-white">{party.partyName}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Seat Next Party</p>
+              <p className="text-lg font-black text-ink">{party.partyName}</p>
             </div>
-            <button onClick={onClose} className="ml-auto p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white transition-colors">
+            <button onClick={onClose} className="ml-auto p-1.5 hover:bg-lav rounded-lg text-neutral-600 hover:text-ink transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Party info */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-4">
+          <div className="rounded-xl border-2 border-ink bg-white divide-y divide-neutral-200 mb-4">
             <div className="flex items-center justify-between px-4 py-2.5">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party size</span>
-              <span className="font-bold text-white flex items-center gap-1.5">
+              <span className="font-bold text-ink flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-neutral-500" />{party.partySize} guests
               </span>
             </div>
             {party.phone && (
               <div className="flex items-center justify-between px-4 py-2.5">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Phone</span>
-                <span className="font-semibold text-white text-sm">{party.phone}</span>
+                <span className="font-semibold text-ink text-sm">{party.phone}</span>
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-2.5">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Waiting</span>
-              <span className="font-semibold text-neutral-300 text-sm">
+              <span className="font-semibold text-neutral-600 text-sm">
                 {fmtDuration(Date.now() - new Date(party.addedAt).getTime())}
               </span>
             </div>
@@ -719,7 +719,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
               Available Tables ({suitableTables.length})
             </p>
             {suitableTables.length === 0 ? (
-              <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 px-4 py-3 text-sm text-rose-300 text-center">
+              <div className="rounded-xl border border-red-700 bg-red-50 px-4 py-3 text-sm text-red-700 text-center">
                 No available or cleaning table fits {party.partySize} guests right now
               </div>
             ) : (
@@ -728,7 +728,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
                   <button
                     key={t.id}
                     onClick={() => setSelectedTableId(t.id)}
-                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border text-left"
+                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border-2 text-left border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     style={{
                       background: selectedTableId === t.id ? '#22c55e20' : '#1a1a1a',
                       borderColor: selectedTableId === t.id ? '#22c55e' : t.state.status === 'cleaning' ? '#f59e0b50' : '#333',
@@ -739,7 +739,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
                     <span className="ml-1.5 text-xs opacity-70">({t.capacity})</span>
                     {t.state.status === 'cleaning' && (
                       <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: '#f59e0b20', color: '#f59e0b' }}>
+                        style={{ background: '#fff6c2', color: '#6e5400' }}>
                         cleaning
                       </span>
                     )}
@@ -756,7 +756,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedServer('')}
-                  className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                  className="px-3 py-2 rounded-xl text-sm font-bold transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                   style={{
                     background: selectedServer === '' ? '#f97316' + '20' : '#1a1a1a',
                     borderColor: selectedServer === '' ? '#f97316' : '#333',
@@ -769,7 +769,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
                   <button
                     key={s.id}
                     onClick={() => setSelectedServer(s.name)}
-                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     style={{
                       background: selectedServer === s.name ? '#f97316' + '20' : '#1a1a1a',
                       borderColor: selectedServer === s.name ? '#f97316' : '#333',
@@ -786,14 +786,14 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
           {/* Confirm */}
           <div className="flex gap-3">
             <button onClick={onClose}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all">
+              className="flex-1 py-3 rounded-xl text-sm font-semibold bg-white hover:bg-lav text-neutral-500 hover:text-ink transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               Cancel
             </button>
             <button
               onClick={handleConfirm}
               disabled={!selectedTableId || confirming}
               className="flex-1 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40"
-              style={{ background: '#22c55e', color: '#000' }}
+              style={{ background: '#0c8a5b', color: '#000' }}
             >
               {confirming
                 ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -836,13 +836,13 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+      <div className="flex items-center justify-between p-4 border-b border-ink">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-neutral-400" />
-          <span className="font-semibold text-white text-sm">Waitlist</span>
-          {waitlist.length > 0 && <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-full">{waitlist.length}</span>}
+          <Users className="w-4 h-4 text-neutral-500" />
+          <span className="font-semibold text-ink text-sm">Waitlist</span>
+          {waitlist.length > 0 && <span className="px-2 py-0.5 bg-amber-50 border border-amber-700 text-amber-700 text-xs font-bold rounded-full">{waitlist.length}</span>}
         </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 transition-colors">
+        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-3.5 h-3.5" />Add party
         </button>
       </div>
@@ -851,7 +851,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
         <button
           onClick={() => onSeatNext(nextParty)}
           disabled={!nextCanSeatNow}
-          className="mx-3 mt-3 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed border"
+          className="mx-3 mt-3 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           style={{
             background: nextCanSeatNow ? '#22c55e15' : 'transparent',
             borderColor: nextCanSeatNow ? '#22c55e60' : '#333',
@@ -870,24 +870,24 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
       )}
 
       {showAdd && (
-        <div className="p-4 border-b border-neutral-800 bg-neutral-950/50 space-y-3">
+        <div className="p-4 border-b border-ink bg-lav space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-neutral-500 mb-1">Party Name *</label>
               <input type="text" value={form.partyName} onChange={e => setForm(p => ({ ...p, partyName: e.target.value }))}
-                placeholder="Smith party" className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+                placeholder="Smith party" className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
             </div>
             <div>
               <label className="block text-xs text-neutral-500 mb-1">Party Size *</label>
               <input type="number" min="1" max="50" value={form.partySize} onChange={e => setForm(p => ({ ...p, partySize: parseInt(e.target.value) || 1 }))}
-                className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+                className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
             </div>
           </div>
           <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-            placeholder="Phone (optional)" className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+            placeholder="Phone (optional)" className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
           <div className="flex gap-2">
-            <button onClick={() => setShowAdd(false)} className="flex-1 py-2 bg-neutral-800 text-neutral-400 rounded-lg text-xs font-semibold hover:bg-neutral-700">Cancel</button>
-            <button onClick={handleAdd} disabled={adding} className="flex-1 py-2 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 flex items-center justify-center gap-1">
+            <button onClick={() => setShowAdd(false)} className="flex-1 py-2 bg-lav text-neutral-500 rounded-lg text-xs font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+            <button onClick={handleAdd} disabled={adding} className="flex-1 py-2 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 flex items-center justify-center gap-1 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add to list'}
             </button>
           </div>
@@ -901,23 +901,23 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
             <p className="text-sm">No one waiting</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-800">
+          <div className="divide-y divide-neutral-200">
             {waitlist.map((party, idx) => {
               const asgn     = assignmentMap[party.id];
               const minsWait = asgn ? asgn.minsWait : null;
               const canNow   = asgn?.canSeatNow === true;
               const noTable  = asgn?.tableId === null && minsWait === null;
-              const waitColor = canNow ? 'text-emerald-400' : noTable ? 'text-neutral-600' : minsWait != null && minsWait <= 15 ? 'text-amber-400' : 'text-rose-400';
+              const waitColor = canNow ? 'text-emerald-700' : noTable ? 'text-neutral-600' : minsWait != null && minsWait <= 15 ? 'text-amber-700' : 'text-red-700';
 
               return (
-                <div key={party.id} className="p-4 hover:bg-neutral-800/30 transition-colors">
+                <div key={party.id} className="p-4 hover:bg-lav transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xs font-bold text-neutral-300 flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-lav border-2 border-ink flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
                         {idx + 1}
                       </div>
                       <div>
-                        <div className="font-semibold text-white text-sm">{party.partyName}</div>
+                        <div className="font-semibold text-ink text-sm">{party.partyName}</div>
                         <div className="text-xs text-neutral-500 flex items-center gap-2 mt-0.5">
                           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{party.partySize}</span>
                           {party.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{party.phone}</span>}
@@ -927,13 +927,13 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {party.status === 'waiting' && (
-                        <button onClick={() => onUpdate(party.id, 'notified')} title="Mark notified" className="p-1.5 hover:bg-amber-500/20 text-neutral-500 hover:text-amber-400 rounded-lg transition-colors"><Bell className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => onUpdate(party.id, 'notified')} title="Mark notified" className="p-1.5 hover:bg-amber-50 text-neutral-500 hover:text-amber-700 rounded-lg transition-colors"><Bell className="w-3.5 h-3.5" /></button>
                       )}
                       {party.status === 'notified' && (
-                        <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 bg-amber-500/10 rounded-full border border-amber-500/20">Notified</span>
+                        <span className="text-xs text-amber-700 font-semibold px-2 py-0.5 bg-amber-50 rounded-full border border-amber-700">Notified</span>
                       )}
-                      <button onClick={() => onSeatNext(party)} title="Seat party" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => onRemove(party.id)} title="Remove" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onSeatNext(party)} title="Seat party" className="p-1.5 hover:bg-emerald-50 text-neutral-500 hover:text-emerald-700 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onRemove(party.id)} title="Remove" className="p-1.5 hover:bg-red-50 text-neutral-500 hover:text-red-700 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <div className={`mt-2 ml-10 flex items-center gap-1.5 text-xs font-semibold ${waitColor}`}>
@@ -994,29 +994,29 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white border-2 border-ink rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-ink flex-shrink-0">
           <div>
-            <div className="font-bold text-white">Seat Party</div>
+            <div className="font-bold text-ink">Seat Party</div>
             <div className="text-xs text-neutral-500 mt-0.5">{reservation.partyName} · Party of {reservation.partySize}</div>
           </div>
           <div className="flex items-center gap-3">
             {/* Step pills */}
             <div className="flex items-center gap-1.5">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 1 ? 'bg-emerald-600 text-white' : 'bg-neutral-700 text-neutral-400'}`}>1</div>
-              <div className="w-4 h-px bg-neutral-700" />
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 2 ? 'bg-emerald-600 text-white' : 'bg-neutral-700 text-neutral-400'}`}>2</div>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 1 ? 'bg-emerald-600 text-white' : 'bg-lav text-neutral-500'}`}>1</div>
+              <div className="w-4 h-px bg-lav" />
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 2 ? 'bg-emerald-600 text-white' : 'bg-lav text-neutral-500'}`}>2</div>
             </div>
-            <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+            <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink"><X className="w-4 h-4" /></button>
           </div>
         </div>
 
         {/* Reservation summary strip */}
         <div className="px-5 pt-4 pb-2 flex-shrink-0">
-          <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-white border-2 border-ink rounded-xl p-3 grid grid-cols-2 gap-2 text-xs shadow">
             {[
               ['Name', reservation.partyName],
               ['Party', `${reservation.partySize} guests`],
@@ -1024,7 +1024,7 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
               ...(reservation.phone ? [['Phone', reservation.phone]] : []),
               ...(reservation.specialRequests ? [['Requests', reservation.specialRequests]] : []),
             ].map(([l, v]) => (
-              <div key={l}><span className="text-neutral-500">{l}: </span><span className="text-white font-semibold">{v}</span></div>
+              <div key={l}><span className="text-neutral-500">{l}: </span><span className="text-ink font-semibold">{v}</span></div>
             ))}
           </div>
         </div>
@@ -1047,16 +1047,16 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
                       <button
                         key={t.id}
                         onClick={() => setSelectedTableId(t.id)}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-emerald-950/40 border-emerald-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${isSelected ? 'bg-emerald-50 border-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                       >
                         <div>
-                          <div className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</div>
-                          <div className="text-xs text-neutral-400 mt-0.5">Seats {t.capacity} · {t.type}</div>
+                          <div className="font-bold text-ink text-sm">{t.label || `Table ${t.id.slice(-3)}`}</div>
+                          <div className="text-xs text-neutral-500 mt-0.5">Seats {t.capacity} · {t.type}</div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {fit === 0 && <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">Perfect fit</span>}
-                          {fit > 0  && <span className="text-xs font-semibold text-neutral-400">{fit} extra seat{fit > 1 ? 's' : ''}</span>}
-                          {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                          {fit === 0 && <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-700 px-2 py-0.5 rounded-full">Perfect fit</span>}
+                          {fit > 0  && <span className="text-xs font-semibold text-neutral-500">{fit} extra seat{fit > 1 ? 's' : ''}</span>}
+                          {isSelected && <Check className="w-4 h-4 text-emerald-700" />}
                         </div>
                       </button>
                     );
@@ -1073,9 +1073,9 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
             <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3 mt-2">Assign a server <span className="font-normal text-neutral-600 normal-case">(optional)</span></div>
 
             {/* Seating at summary */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-950/30 border border-emerald-700/30 rounded-xl mb-4 text-xs">
-              <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              <span className="text-emerald-300 font-semibold">Seating at {selected?.label || `Table ${selectedTableId?.slice(-3)}`}</span>
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-700 rounded-xl mb-4 text-xs">
+              <Check className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+              <span className="text-emerald-700 font-semibold">Seating at {selected?.label || `Table ${selectedTableId?.slice(-3)}`}</span>
             </div>
 
             {servers.length > 0 ? (
@@ -1083,24 +1083,24 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
                 {/* None option */}
                 <button
                   onClick={() => setSelectedServer('')}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${selectedServer === '' ? 'bg-neutral-700/60 border-neutral-500' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${selectedServer === '' ? 'bg-white border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                 >
-                  <span className="text-sm text-neutral-400 font-medium">No server assigned</span>
-                  {selectedServer === '' && <Check className="w-4 h-4 text-neutral-400" />}
+                  <span className="text-sm text-neutral-500 font-medium">No server assigned</span>
+                  {selectedServer === '' && <Check className="w-4 h-4 text-neutral-500" />}
                 </button>
                 {servers.map(s => (
                   <button
                     key={s.id}
                     onClick={() => setSelectedServer(s.name)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${selectedServer === s.name ? 'bg-blue-950/40 border-blue-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${selectedServer === s.name ? 'bg-blue-50 border-blue-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-neutral-700 border border-neutral-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-lav border-2 border-ink flex items-center justify-center text-xs font-bold text-ink flex-shrink-0">
                         {s.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-white text-sm">{s.name}</span>
+                      <span className="font-semibold text-ink text-sm">{s.name}</span>
                     </div>
-                    {selectedServer === s.name && <Check className="w-4 h-4 text-blue-400" />}
+                    {selectedServer === s.name && <Check className="w-4 h-4 text-blue-700" />}
                   </button>
                 ))}
               </div>
@@ -1114,24 +1114,24 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
         )}
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-neutral-800 flex gap-3 flex-shrink-0">
+        <div className="px-5 py-4 border-t border-ink flex gap-3 flex-shrink-0">
           {step === 1 ? (
             <>
-              <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
+              <button onClick={onClose} className="flex-1 py-2.5 bg-lav text-neutral-500 rounded-xl text-sm font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
               <button
                 onClick={() => setStep(2)}
                 disabled={!selectedTableId}
-                className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 Next: Assign Server →
               </button>
             </>
           ) : (
             <>
-              <button onClick={() => setStep(1)} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">← Back</button>
+              <button onClick={() => setStep(1)} className="flex-1 py-2.5 bg-lav text-neutral-500 rounded-xl text-sm font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">← Back</button>
               <button
                 onClick={handleConfirm}
-                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <Users className="w-4 h-4" />
                 Confirm Seating
@@ -1268,40 +1268,40 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
   const res = scanResult;
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-white/10 flex-shrink-0">
-        <button onClick={onClose} className="text-white flex items-center gap-2 hover:opacity-80 text-sm font-medium">
+      <div className="flex items-center justify-between px-4 py-3 bg-lav border-b border-ink flex-shrink-0">
+        <button onClick={onClose} className="text-ink flex items-center gap-2 hover:opacity-80 text-sm font-medium">
           <ArrowLeft className="w-4 h-4" />Back
         </button>
-        <span className="text-white text-sm font-semibold">SCAN GUEST QR</span>
+        <span className="text-ink text-sm font-semibold">SCAN GUEST QR</span>
         <div className="w-16" />
       </div>
 
       {/* Body */}
-      <div className="flex-1 relative flex items-center justify-center bg-black overflow-auto">
+      <div className="flex-1 relative flex items-center justify-center bg-white overflow-auto">
 
         {/* Camera error or result overlay */}
         {res ? (
-          <div className="text-center text-white p-8 max-w-sm w-full mx-auto">
+          <div className="text-center text-ink p-8 max-w-sm w-full mx-auto">
             {res.isCameraError ? (
               <>
-                <CameraOff className="w-16 h-16 mx-auto mb-4 text-rose-400" />
+                <CameraOff className="w-16 h-16 mx-auto mb-4 text-red-700" />
                 <p className="text-lg font-bold mb-2">Camera Error</p>
-                <p className="text-sm text-neutral-300 mb-8">{res.message}</p>
+                <p className="text-sm text-neutral-600 mb-8">{res.message}</p>
                 <div className="flex flex-col gap-3">
-                  <button onClick={handleRetry} className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200">Retry Camera</button>
-                  <button onClick={onClose} className="px-6 py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600">Close</button>
+                  <button onClick={handleRetry} className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry Camera</button>
+                  <button onClick={onClose} className="px-6 py-3 bg-white text-ink rounded-xl font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Close</button>
                 </div>
               </>
             ) : res.ok ? (
               <>
-                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8 text-emerald-400" />
+                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-emerald-700" />
                 </div>
                 <p className="text-xl font-black mb-1">Valid Reservation</p>
-                <p className="text-xs text-emerald-400 mb-6">QR code verified</p>
-                <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 mb-6 text-left space-y-2">
+                <p className="text-xs text-emerald-700 mb-6">QR code verified</p>
+                <div className="bg-white border-2 border-ink rounded-2xl p-4 mb-6 text-left space-y-2 shadow">
                   {[
                     ['Name',       res.reservation.partyName],
                     ['Party size', res.reservation.partySize],
@@ -1309,14 +1309,14 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
                     ...(res.reservation.notes ? [['Notes', res.reservation.notes]] : []),
                   ].map(([label, val]) => (
                     <div key={label} className="flex justify-between text-sm">
-                      <span className="text-neutral-400">{label}</span>
-                      <span className="text-white font-semibold text-right max-w-[60%]">{val}</span>
+                      <span className="text-neutral-500">{label}</span>
+                      <span className="text-ink font-semibold text-right max-w-[60%]">{val}</span>
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setShowSeatModal(true)} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700">Choose Table</button>
-                  <button onClick={onClose} className="py-3 bg-neutral-800 text-white rounded-xl font-semibold hover:bg-neutral-700">Close</button>
+                  <button onClick={() => setShowSeatModal(true)} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Choose Table</button>
+                  <button onClick={onClose} className="py-3 bg-hl text-ink rounded-xl font-semibold hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Close</button>
                 </div>
                 {showSeatModal && (
                   <SeatTableModal
@@ -1331,14 +1331,14 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
               </>
             ) : (
               <>
-                <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <XCircle className="w-8 h-8 text-rose-400" />
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <XCircle className="w-8 h-8 text-red-700" />
                 </div>
                 <p className="text-xl font-black mb-1">Invalid QR Code</p>
-                <p className="text-sm text-rose-400 mb-8">{res.message}</p>
+                <p className="text-sm text-red-700 mb-8">{res.message}</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={handleRetry} className="py-3 bg-neutral-800 text-white rounded-xl font-semibold hover:bg-neutral-700">Scan Again</button>
-                  <button onClick={onClose} className="py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600">Close</button>
+                  <button onClick={handleRetry} className="py-3 bg-hl text-ink rounded-xl font-semibold hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Scan Again</button>
+                  <button onClick={onClose} className="py-3 bg-white text-ink rounded-xl font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Close</button>
                 </div>
               </>
             )}
@@ -1346,16 +1346,16 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
         ) : (
           <div className="w-full max-w-md px-4">
             {verifying ? (
-              <div className="text-center text-white py-12">
-                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-400" />
-                <p className="text-sm text-neutral-300">Verifying reservation…</p>
+              <div className="text-center text-ink py-12">
+                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-amber-700" />
+                <p className="text-sm text-neutral-600">Verifying reservation…</p>
               </div>
             ) : (
               <>
                 {/* QR reader div — html5-qrcode mounts video here. DO NOT REMOVE. */}
                 <div id="ts-qr-reader" className="rounded-2xl overflow-hidden shadow-2xl" />
-                <p className="text-white text-center mt-6 text-sm">Position QR code within the frame</p>
-                <p className="text-neutral-400 text-center mt-2 text-xs">Scanning automatically when detected</p>
+                <p className="text-ink text-center mt-6 text-sm">Position QR code within the frame</p>
+                <p className="text-neutral-500 text-center mt-2 text-xs">Scanning automatically when detected</p>
               </>
             )}
           </div>
@@ -1370,17 +1370,17 @@ function TabletUrlRow({ label, url }) {
   const [showQr, setShowQr]   = useState(false);
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
   return (
-    <div className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
+    <div className="rounded-xl bg-white border-2 border-ink overflow-hidden shadow">
       <div className="px-3 py-2.5 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold text-neutral-400 mb-1">{label}</div>
+          <div className="text-xs font-semibold text-neutral-500 mb-1">{label}</div>
           <div className="text-[10px] text-neutral-500 font-mono break-all leading-relaxed">{url}</div>
         </div>
         <div className="flex-shrink-0 flex items-center gap-1.5 ml-1 mt-0.5">
           <button
             onClick={() => setShowQr(q => !q)}
             title="Show QR code"
-            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${showQr ? 'bg-orange-950/50 border-orange-500/40 text-orange-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${showQr ? 'bg-amber-50 border-amber-700 text-amber-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:text-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
           >
             <QrCode className="w-3 h-3" />
           </button>
@@ -1391,16 +1391,16 @@ function TabletUrlRow({ label, url }) {
                 setTimeout(() => setCopied(false), 2000);
               });
             }}
-            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${copied ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${copied ? 'bg-emerald-50 border-emerald-700 text-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:text-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
           >
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
       </div>
       {showQr && (
-        <div className="px-3 pb-3 flex items-center gap-3 border-t border-neutral-800 pt-2.5">
-          <img src={qrSrc} alt={`QR for ${label}`} className="w-[72px] h-[72px] rounded-lg border border-neutral-700 flex-shrink-0" />
-          <p className="text-[10px] text-neutral-600 leading-relaxed">Scan to open the guest tablet for <span className="text-neutral-400 font-semibold">{label}</span>. Mount this at the table or print it for self-service.</p>
+        <div className="px-3 pb-3 flex items-center gap-3 border-t border-ink pt-2.5">
+          <img src={qrSrc} alt={`QR for ${label}`} className="w-[72px] h-[72px] rounded-lg border-2 border-ink flex-shrink-0" />
+          <p className="text-[10px] text-neutral-600 leading-relaxed">Scan to open the guest tablet for <span className="text-neutral-500 font-semibold">{label}</span>. Mount this at the table or print it for self-service.</p>
         </div>
       )}
     </div>
@@ -1442,11 +1442,11 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, obje
     if (!showQR) return null;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(showQR.qrToken)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
     return (
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setShowQR(null)}>
-        <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-xs w-full" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={() => setShowQR(null)}>
+        <div className="bg-white border-2 border-ink rounded-2xl p-6 max-w-xs w-full shadow-md transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg" onClick={e => e.stopPropagation()}>
           <div className="text-center mb-4">
-            <div className="font-bold text-white text-lg">{showQR.partyName}</div>
-            <div className="text-sm text-neutral-400">{fmtDateTime(showQR.dateTime)} · Party of {showQR.partySize}</div>
+            <div className="font-bold text-ink text-lg">{showQR.partyName}</div>
+            <div className="text-sm text-neutral-500">{fmtDateTime(showQR.dateTime)} · Party of {showQR.partySize}</div>
           </div>
           <div className="flex justify-center mb-4">
             <img src={qrUrl} alt="Reservation QR" className="rounded-xl" width="200" height="200" />
@@ -1455,21 +1455,21 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, obje
             Valid until {fmtDateTime(showQR.qrExpiresAt)}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => { setSeatTarget(showQR); setShowQR(null); }} className="py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">Choose Table</button>
-            <button onClick={() => { onUpdate(showQR.id, 'no_show'); setShowQR(null); }} className="py-2 bg-neutral-800 text-neutral-400 rounded-lg text-xs font-semibold hover:bg-neutral-700">No Show</button>
+            <button onClick={() => { setSeatTarget(showQR); setShowQR(null); }} className="py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Choose Table</button>
+            <button onClick={() => { onUpdate(showQR.id, 'no_show'); setShowQR(null); }} className="py-2 bg-lav text-neutral-500 rounded-lg text-xs font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">No Show</button>
           </div>
-          <button onClick={() => setShowQR(null)} className="w-full mt-2 py-2 text-neutral-600 text-xs hover:text-neutral-400">Close</button>
+          <button onClick={() => setShowQR(null)} className="w-full mt-2 py-2 text-neutral-600 text-xs hover:text-neutral-500">Close</button>
         </div>
       </div>
     );
   };
 
   const ReservationRow = ({ r, isPending = false }) => (
-    <div className={`flex items-center justify-between p-3 hover:bg-neutral-800/40 rounded-xl transition-colors gap-3 ${isPending ? 'border border-amber-500/20 bg-amber-950/10 mb-1' : ''}`}>
+    <div className={`flex items-center justify-between p-3 hover:bg-lav rounded-xl transition-colors gap-3 ${isPending ? 'border border-amber-700 bg-amber-50 mb-1' : ''}`}>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <div className="font-semibold text-white text-sm truncate">{r.partyName}</div>
-          {isPending && <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full flex-shrink-0">PENDING</span>}
+          <div className="font-semibold text-ink text-sm truncate">{r.partyName}</div>
+          {isPending && <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 border border-amber-700 text-amber-700 rounded-full flex-shrink-0">PENDING</span>}
         </div>
         <div className="text-xs text-neutral-500 flex items-center gap-2 mt-0.5">
           <span><Clock className="w-3 h-3 inline mr-0.5" />{fmtTime(r.dateTime)}</span>
@@ -1480,14 +1480,14 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, obje
       <div className="flex items-center gap-1 flex-shrink-0">
         {isPending ? (
           <>
-            <button onClick={() => onUpdate(r.id, 'confirmed')} title="Approve" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
-            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Decline" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'confirmed')} title="Approve" className="p-1.5 hover:bg-emerald-50 text-neutral-500 hover:text-emerald-700 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Decline" className="p-1.5 hover:bg-red-50 text-neutral-500 hover:text-red-700 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
           </>
         ) : (
           <>
-            <button onClick={() => setShowQR(r)} title="Show QR" className="p-1.5 hover:bg-neutral-700 text-neutral-500 hover:text-white rounded-lg transition-colors"><QrCode className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setSeatTarget(r)} title="Seat party" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
-            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Cancel" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setShowQR(r)} title="Show QR" className="p-1.5 hover:bg-lav text-neutral-500 hover:text-ink rounded-lg transition-colors"><QrCode className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setSeatTarget(r)} title="Seat party" className="p-1.5 hover:bg-emerald-50 text-neutral-500 hover:text-emerald-700 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Cancel" className="p-1.5 hover:bg-red-50 text-neutral-500 hover:text-red-700 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
           </>
         )}
       </div>
@@ -1510,45 +1510,45 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, obje
           onClose={() => setSeatTarget(null)}
         />
       )}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+      <div className="flex items-center justify-between p-4 border-b border-ink">
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-neutral-400" />
-          <span className="font-semibold text-white text-sm">Reservations</span>
-          {upcomingToday.length > 0 && <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-bold rounded-full">{upcomingToday.length} today</span>}
+          <Calendar className="w-4 h-4 text-neutral-500" />
+          <span className="font-semibold text-ink text-sm">Reservations</span>
+          {upcomingToday.length > 0 && <span className="px-2 py-0.5 bg-blue-50 border border-blue-700 text-blue-700 text-xs font-bold rounded-full">{upcomingToday.length} today</span>}
         </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 transition-colors">
+        <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-3.5 h-3.5" />New
         </button>
       </div>
 
       {showAdd && (
-        <div className="p-4 border-b border-neutral-800 bg-neutral-950/50 space-y-3">
+        <div className="p-4 border-b border-ink bg-lav space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-neutral-500 mb-1">Party Name *</label>
               <input type="text" value={form.partyName} onChange={e => setForm(p => ({ ...p, partyName: e.target.value }))}
-                placeholder="Smith party" className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+                placeholder="Smith party" className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
             </div>
             <div>
               <label className="block text-xs text-neutral-500 mb-1">Size *</label>
               <input type="number" min="1" value={form.partySize} onChange={e => setForm(p => ({ ...p, partySize: parseInt(e.target.value) || 1 }))}
-                className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+                className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
             </div>
           </div>
           <div>
             <label className="block text-xs text-neutral-500 mb-1">Date & Time *</label>
             <input type="datetime-local" value={form.dateTime} onChange={e => setForm(p => ({ ...p, dateTime: e.target.value }))}
-              className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+              className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-              placeholder="Phone" className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+              placeholder="Phone" className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
             <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-              placeholder="Email" className="w-full bg-neutral-800 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 outline-none focus:border-neutral-500" />
+              placeholder="Email" className="w-full bg-lav border-2 border-ink text-ink text-xs rounded-lg px-3 py-2 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac" />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowAdd(false)} className="flex-1 py-2 bg-neutral-800 text-neutral-400 rounded-lg text-xs font-semibold hover:bg-neutral-700">Cancel</button>
-            <button onClick={handleAdd} disabled={adding} className="flex-1 py-2 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 flex items-center justify-center gap-1">
+            <button onClick={() => setShowAdd(false)} className="flex-1 py-2 bg-lav text-neutral-500 rounded-lg text-xs font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+            <button onClick={handleAdd} disabled={adding} className="flex-1 py-2 bg-white text-neutral-900 rounded-lg text-xs font-bold hover:bg-neutral-100 flex items-center justify-center gap-1 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <><QrCode className="w-3 h-3" />Create + QR</>}
             </button>
           </div>
@@ -1559,8 +1559,8 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, obje
         {pending.length > 0 && (
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2 px-1">
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pending Approval</div>
-              <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-bold rounded-full">{pending.length}</span>
+              <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending Approval</div>
+              <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-700 text-amber-700 text-[10px] font-bold rounded-full">{pending.length}</span>
             </div>
             {pending.map(r => <ReservationRow key={r.id} r={r} isPending />)}
           </div>
@@ -1597,7 +1597,7 @@ function Toggle({ checked, onChange }) {
   return (
     <label className="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
-      <div className="w-9 h-5 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+      <div className="w-9 h-5 bg-lav peer-focus:outline-none rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
     </label>
   );
 }
@@ -1696,7 +1696,7 @@ function MenuEditor({ eventId }) {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <div className="text-sm font-bold text-white">Orderable Menu</div>
+          <div className="text-sm font-bold text-ink">Orderable Menu</div>
           <p className="text-xs text-neutral-500 mt-0.5">Items here appear on guest tablets and the server order panel. Prices in dollars.</p>
         </div>
         {saving && <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />}
@@ -1708,12 +1708,12 @@ function MenuEditor({ eventId }) {
           <div key={c.id} className="flex items-center gap-1">
             <button
               onClick={() => { setActiveCat(i); setEditingItem(null); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${i === activeCat ? 'bg-orange-500 border-orange-500 text-black' : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-neutral-500'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${i === activeCat ? 'bg-orange-500 border-orange-500 text-black border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink text-neutral-600 hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
             >
               {c.name} <span className="opacity-60 font-normal">({c.items.length})</span>
             </button>
             {i === activeCat && (
-              <button onClick={() => deleteCategory(c.id)} className="p-1 hover:bg-rose-500/20 text-neutral-600 hover:text-rose-400 rounded transition-colors">
+              <button onClick={() => deleteCategory(c.id)} className="p-1 hover:bg-red-50 text-neutral-600 hover:text-red-700 rounded transition-colors">
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -1728,13 +1728,13 @@ function MenuEditor({ eventId }) {
               onChange={e => setCatName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addCategory(); if (e.key === 'Escape') setAddingCat(false); }}
               placeholder="Category name"
-              className="bg-neutral-800 border border-orange-500/60 text-white text-xs rounded-lg px-2 py-1.5 outline-none w-36"
+              className="bg-lav border-2 border-amber-700 text-ink text-xs rounded-lg px-2 py-1.5 outline-none w-36 border-ink focus:ring-[3px] focus:ring-ac"
             />
-            <button onClick={addCategory} className="px-2 py-1.5 bg-orange-500 text-black text-xs font-bold rounded-lg">Add</button>
-            <button onClick={() => setAddingCat(false)} className="px-2 py-1.5 bg-neutral-800 text-neutral-400 text-xs rounded-lg">Cancel</button>
+            <button onClick={addCategory} className="px-2 py-1.5 bg-orange-500 text-black text-xs font-bold rounded-lg border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Add</button>
+            <button onClick={() => setAddingCat(false)} className="px-2 py-1.5 bg-lav text-neutral-500 text-xs rounded-lg border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
           </div>
         ) : (
-          <button onClick={() => setAddingCat(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border border-dashed border-neutral-600 text-neutral-500 hover:border-neutral-400 hover:text-neutral-300 transition-all">
+          <button onClick={() => setAddingCat(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border-2 border-dashed border-ink text-neutral-500 hover:border-neutral-400 hover:text-neutral-600 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Plus className="w-3 h-3" /> Add Category
           </button>
         )}
@@ -1751,30 +1751,30 @@ function MenuEditor({ eventId }) {
             )}
             {cat.items.sort((a,b) => a.ord - b.ord).map(item => (
               <div key={item.id}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${item.available === false ? 'opacity-40 border-neutral-800 bg-neutral-900/40' : 'border-neutral-700 bg-neutral-800/40'}`}>
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all border-ink shadow ${item.available === false ? 'opacity-40 border-ink bg-lav' : 'border-ink bg-lav'}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-bold text-white">{item.name}</span>
+                    <span className="text-sm font-bold text-ink">{item.name}</span>
                     <span className="text-xs text-neutral-500">{item.courseType}</span>
                     {item.dietary?.map(d => (
-                      <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-amber-400">{d}</span>
+                      <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 border border-amber-700 text-amber-700">{d}</span>
                     ))}
                     {item.available === false && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-500">86'd</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-lav border-2 border-ink text-neutral-500">86'd</span>
                     )}
                   </div>
                   {item.desc && <p className="text-xs text-neutral-500 mt-0.5 truncate">{item.desc}</p>}
                 </div>
-                <span className="text-sm font-bold text-white flex-shrink-0">${(item.priceCents/100).toFixed(2)}</span>
+                <span className="text-sm font-bold text-ink flex-shrink-0">${(item.priceCents/100).toFixed(2)}</span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button onClick={() => toggleAvailable(item.id)} title={item.available === false ? 'Mark available' : "86 item (mark unavailable)"}
-                    className={`p-1.5 rounded-lg transition-colors text-xs font-bold ${item.available === false ? 'bg-emerald-950/40 text-emerald-500 hover:bg-emerald-950/60' : 'text-neutral-500 hover:bg-amber-500/20 hover:text-amber-400'}`}>
+                    className={`p-1.5 rounded-lg transition-colors text-xs font-bold ${item.available === false ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:bg-amber-50 hover:text-amber-700'}`}>
                     {item.available === false ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                   </button>
-                  <button onClick={() => setEditingItem(item)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-700 hover:text-white transition-colors">
+                  <button onClick={() => setEditingItem(item)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-lav hover:text-ink transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
-                  <button onClick={() => deleteItem(item.id)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-rose-500/20 hover:text-rose-400 transition-colors">
+                  <button onClick={() => deleteItem(item.id)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-red-50 hover:text-red-700 transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1782,7 +1782,7 @@ function MenuEditor({ eventId }) {
             ))}
           </div>
           <button onClick={() => setEditingItem({ id: crypto.randomUUID(), name: '', desc: '', priceCents: 0, dietary: [], available: true, ord: cat.items.length, courseType: 'main' })}
-            className="w-full py-2.5 rounded-xl border border-dashed border-neutral-600 text-neutral-400 hover:border-orange-500/60 hover:text-orange-400 text-sm font-semibold transition-all flex items-center justify-center gap-2">
+            className="w-full py-2.5 rounded-xl border-2 border-dashed border-ink text-neutral-500 hover:border-amber-700 hover:text-amber-700 text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Plus className="w-4 h-4" /> Add Item to {cat.name}
           </button>
         </>
@@ -1816,63 +1816,63 @@ function ItemEditModal({ item, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-neutral-700 overflow-hidden"
-        style={{ background: '#111' }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-          <span className="text-sm font-bold text-white">{item.name ? `Edit: ${item.name}` : 'New Item'}</span>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white"><X className="w-4 h-4" /></button>
+      style={{ background: '#ffffff',  }}>
+      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border-2 border-ink overflow-hidden"
+        style={{ background: '#ffffff' }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink">
+          <span className="text-sm font-bold text-ink">{item.name ? `Edit: ${item.name}` : 'New Item'}</span>
+          <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-600 hover:text-ink"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: '70dvh' }}>
           <div>
-            <label className="block text-xs text-neutral-400 mb-1">Name *</label>
+            <label className="block text-xs text-neutral-500 mb-1">Name *</label>
             <input autoFocus type="text" maxLength={100} value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+              className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
           </div>
           <div>
-            <label className="block text-xs text-neutral-400 mb-1">Description</label>
+            <label className="block text-xs text-neutral-500 mb-1">Description</label>
             <textarea rows={2} maxLength={300} value={form.desc}
               onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
-              className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60 resize-none" />
+              className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 resize-none focus:ring-[3px] focus:ring-ac" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-neutral-400 mb-1">Price ($)</label>
+              <label className="block text-xs text-neutral-500 mb-1">Price ($)</label>
               <input type="number" min="0" step="0.01" value={form.priceStr}
                 onChange={e => setForm(p => ({ ...p, priceStr: e.target.value }))}
-                className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
             </div>
             <div>
-              <label className="block text-xs text-neutral-400 mb-1">Course</label>
+              <label className="block text-xs text-neutral-500 mb-1">Course</label>
               <select value={form.courseType} onChange={e => setForm(p => ({ ...p, courseType: e.target.value }))}
-                className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60">
+                className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac">
                 {COURSE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs text-neutral-400 mb-2">Dietary Tags</label>
+            <label className="block text-xs text-neutral-500 mb-2">Dietary Tags</label>
             <div className="flex flex-wrap gap-2">
               {DIETARY_OPTIONS_MENU.map(d => (
                 <button key={d.code} onClick={() => toggleDietary(d.code)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${form.dietary.includes(d.code) ? 'bg-amber-950/60 border-amber-600/60 text-amber-400' : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-500'}`}>
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${form.dietary.includes(d.code) ? 'bg-amber-50 border-amber-700 text-amber-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink text-neutral-500 hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                   {d.label}
                 </button>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-3 pt-1">
-            <span className="text-xs text-neutral-400">Available</span>
+            <span className="text-xs text-neutral-500">Available</span>
             <button onClick={() => setForm(p => ({ ...p, available: !p.available }))}
-              className={`relative w-10 h-5 rounded-full transition-colors ${form.available ? 'bg-emerald-600' : 'bg-neutral-700'}`}>
+              className={`relative w-10 h-5 rounded-lg transition-colors ${form.available ? 'bg-emerald-600' : 'bg-lav'}`}>
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.available ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </button>
           </div>
         </div>
-        <div className="flex gap-3 p-4 border-t border-neutral-800">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
-          <button onClick={handleSave} className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100">Save Item</button>
+        <div className="flex gap-3 p-4 border-t border-ink">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-lav text-neutral-500 rounded-xl text-sm font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+          <button onClick={handleSave} className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Save Item</button>
         </div>
       </div>
     </div>
@@ -1970,8 +1970,8 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   const setRB = (k, v) => setRForm(p => ({ ...p, [k]: v }));
   const setDay = (day, field, val) => setRForm(p => ({ ...p, operatingDays: { ...(p.operatingDays || {}), [day]: { ...(p.operatingDays?.[day] || {}), [field]: val } } }));
 
-  const inputCls = 'w-full bg-neutral-800 border border-neutral-700 text-white rounded-xl px-3 py-2.5 outline-none focus:border-orange-500/70 text-sm transition-colors';
-  const labelCls = 'block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5';
+  const inputCls = 'w-full bg-lav border-2 border-ink text-ink rounded-xl px-3 py-2.5 outline-none focus:border-amber-700 text-sm transition-colors';
+  const labelCls = 'block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5';
 
   const handleSave = async () => {
     setSaving(true);
@@ -2005,7 +2005,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 
   const SectionHead = ({ title, desc }) => (
     <div className="mb-4">
-      <div className="text-sm font-bold text-white">{title}</div>
+      <div className="text-sm font-bold text-ink">{title}</div>
       {desc && <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>}
     </div>
   );
@@ -2061,23 +2061,23 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   const reserveUrl = subdomain ? `${window.location.origin}/e/${subdomain}/reserve` : '';
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-3" onClick={onClose}>
+      <div className="bg-white border-2 border-ink rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-ink flex-shrink-0">
           <div>
-            <h2 className="text-base font-bold text-white">Settings</h2>
+            <h2 className="text-base font-bold text-ink">Settings</h2>
             <p className="text-xs text-neutral-500 mt-0.5">Floor operations & public reservation page</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink"><X className="w-4 h-4" /></button>
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-neutral-800 flex-shrink-0 px-4 overflow-x-auto">
+        <div className="flex border-b border-ink flex-shrink-0 px-4 overflow-x-auto">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`py-3 px-3 text-xs font-bold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${tab === t.id ? 'text-white border-orange-500' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}>
+              className={`py-3 px-3 text-xs font-bold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${tab === t.id ? 'text-ink border-orange-500' : 'text-neutral-500 border-transparent hover:text-neutral-600'}`}>
               {t.label}
             </button>
           ))}
@@ -2120,9 +2120,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               {serverList.length === 0 ? (
                 <div className="text-center py-8 text-neutral-600 text-sm">No servers added yet.</div>
               ) : serverList.map(s => (
-                <div key={s.id} className="flex items-center justify-between bg-neutral-800/60 border border-neutral-700 rounded-xl px-4 py-2.5">
-                  <span className="text-white text-sm font-semibold">{s.name}</span>
-                  <button onClick={() => handleRemoveServer(s.id)} className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+                <div key={s.id} className="flex items-center justify-between bg-white border-2 border-ink rounded-xl px-4 py-2.5 shadow">
+                  <span className="text-ink text-sm font-semibold">{s.name}</span>
+                  <button onClick={() => handleRemoveServer(s.id)} className="p-1.5 hover:bg-red-50 text-neutral-500 hover:text-red-700 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
             </div>
@@ -2133,9 +2133,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 onChange={e => setNewServerName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddServer()}
                 placeholder="Server name"
-                className={inputCls + ' flex-1'}
+                className={inputCls + 'flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}
               />
-              <button onClick={handleAddServer} className="px-4 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 flex items-center gap-1.5 flex-shrink-0">
+              <button onClick={handleAddServer} className="px-4 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 flex items-center gap-1.5 flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <Plus className="w-4 h-4" />Add
               </button>
             </div>
@@ -2147,24 +2147,24 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(serverUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`
                 : null;
               return (
-                <div className="mt-3 p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl">
+                <div className="mt-3 p-3 bg-lav border-2 border-ink rounded-xl shadow">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-2">Server View URL</p>
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-neutral-400 font-mono break-all leading-relaxed mb-2">{serverUrl}</p>
+                      <p className="text-xs text-neutral-500 font-mono break-all leading-relaxed mb-2">{serverUrl}</p>
                       <div className="flex items-center gap-2">
                         <button onClick={() => { navigator.clipboard.writeText(serverUrl); toast.success('Copied!'); }}
-                          className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                          className="text-xs px-2.5 py-1 bg-white hover:bg-lav border-2 border-ink text-neutral-500 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                           <Copy className="w-3 h-3" />Copy
                         </button>
                         <a href={serverUrl} target="_blank" rel="noopener noreferrer"
-                          className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                          className="text-xs px-2.5 py-1 bg-white hover:bg-lav border-2 border-ink text-neutral-500 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                           <ExternalLink className="w-3 h-3" />Open
                         </a>
                       </div>
                     </div>
                     {serverQr && (
-                      <img src={serverQr} alt="Server view QR" className="w-[60px] h-[60px] rounded-lg border border-neutral-700 flex-shrink-0" />
+                      <img src={serverQr} alt="Server view QR" className="w-[60px] h-[60px] rounded-lg border-2 border-ink flex-shrink-0" />
                     )}
                   </div>
                 </div>
@@ -2179,38 +2179,38 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Tax Rate (%)</label>
+                  <label className="block text-xs text-neutral-500 mb-1">Tax Rate (%)</label>
                   <input type="number" min="0" max="30" step="0.001"
                     value={form.taxRate ?? 8.875}
                     onChange={e => setForm(p => ({ ...p, taxRate: parseFloat(e.target.value) || 0 }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                    className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
                   <p className="text-xs text-neutral-600 mt-1">e.g. 8.875 for NYC</p>
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Auto-Gratuity (%)</label>
+                  <label className="block text-xs text-neutral-500 mb-1">Auto-Gratuity (%)</label>
                   <input type="number" min="0" max="50" step="1"
                     value={form.autoGratuityPct ?? 18}
                     onChange={e => setForm(p => ({ ...p, autoGratuityPct: parseInt(e.target.value) || 0 }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                    className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">Apply Auto-Gratuity for Parties of This Size or Larger</label>
+                <label className="block text-xs text-neutral-500 mb-1">Apply Auto-Gratuity for Parties of This Size or Larger</label>
                 <input type="number" min="1" max="99"
                   value={form.autoGratuityMinParty ?? 6}
                   onChange={e => setForm(p => ({ ...p, autoGratuityMinParty: parseInt(e.target.value) || 6 }))}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                  className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
               </div>
               <div>
-                <label className="block text-xs text-neutral-400 mb-1">Payment Note (shown on bill breakdown to server)</label>
+                <label className="block text-xs text-neutral-500 mb-1">Payment Note (shown on bill breakdown to server)</label>
                 <input type="text" maxLength={200}
                   value={form.paymentNote ?? ''}
                   placeholder="e.g. Use Clover terminal at table"
                   onChange={e => setForm(p => ({ ...p, paymentNote: e.target.value }))}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                  className="w-full bg-lav border-2 border-ink text-ink text-sm rounded-lg px-3 py-2 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
               </div>
             </div>
-            <button onClick={() => onSave(form)} className="mt-6 w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors">Save Billing Settings</button>
+            <button onClick={() => onSave(form)} className="mt-6 w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Save Billing Settings</button>
           </>)}
 
           {/* ── ORDERABLE MENU TAB ── */}
@@ -2219,10 +2219,10 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
           {/* ── RESERVE PAGE TAB ── */}
           {tab === 'reserve' && (<>
             {/* Master toggle + link */}
-            <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4">
+            <div className="bg-white border-2 border-ink rounded-xl p-4 shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-bold text-white">Accept Online Reservations</div>
+                  <div className="text-sm font-bold text-ink">Accept Online Reservations</div>
                   <div className="text-xs text-neutral-500 mt-0.5">Turn this on to let guests book via your public page</div>
                 </div>
                 <Toggle checked={rForm.acceptingReservations} onChange={e => setRB('acceptingReservations', e.target.checked)} />
@@ -2230,23 +2230,23 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               {reserveUrl && (() => {
                 const reserveQr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(reserveUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
                 return (
-                  <div className="mt-3 p-3 bg-neutral-900 rounded-xl border border-neutral-700">
+                  <div className="mt-3 p-3 bg-white rounded-xl border-2 border-ink shadow">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-1.5">Reservation Page URL</p>
-                        <p className="text-xs text-neutral-400 font-mono break-all leading-relaxed">{reserveUrl}</p>
+                        <p className="text-xs text-neutral-500 font-mono break-all leading-relaxed">{reserveUrl}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <button onClick={() => { navigator.clipboard.writeText(reserveUrl); toast.success('Copied!'); }}
-                            className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                            className="text-xs px-2.5 py-1 bg-white hover:bg-lav border-2 border-ink text-neutral-500 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                             <Copy className="w-3 h-3" />Copy
                           </button>
                           <a href={reserveUrl} target="_blank" rel="noopener noreferrer"
-                            className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                            className="text-xs px-2.5 py-1 bg-white hover:bg-lav border-2 border-ink text-neutral-500 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                             <ExternalLink className="w-3 h-3" />Open
                           </a>
                         </div>
                       </div>
-                      <img src={reserveQr} alt="Reserve page QR" className="w-[72px] h-[72px] rounded-xl border border-neutral-700 flex-shrink-0" />
+                      <img src={reserveQr} alt="Reserve page QR" className="w-[72px] h-[72px] rounded-xl border-2 border-ink flex-shrink-0" />
                     </div>
                   </div>
                 );
@@ -2260,9 +2260,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 { id: 'auto_confirm', label: 'Instant Confirmation', desc: 'Reservation is confirmed immediately on submission.' },
                 { id: 'manual',       label: 'Manual Approval',     desc: 'Reservation is pending until you approve it in the dashboard.' },
               ].map(opt => (
-                <label key={opt.id} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all mb-2 ${rForm.confirmationMode === opt.id ? 'bg-orange-950/30 border-orange-600/50' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-600'}`}>
+                <label key={opt.id} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all mb-2 border-ink shadow ${rForm.confirmationMode === opt.id ? 'bg-amber-50 border-amber-700' : 'bg-lav border-ink hover:border-ink'}`}>
                   <input type="radio" name="confirmMode" value={opt.id} checked={rForm.confirmationMode === opt.id} onChange={() => setRB('confirmationMode', opt.id)} className="mt-0.5 accent-orange-500" />
-                  <div><div className="text-sm font-semibold text-white">{opt.label}</div>
+                  <div><div className="text-sm font-semibold text-ink">{opt.label}</div>
                     <div className="text-xs text-neutral-500 mt-0.5">{opt.desc}</div></div>
                 </label>
               ))}
@@ -2275,7 +2275,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={labelCls}>Brand Color</label>
                     <div className="flex items-center gap-2">
-                      <input type="color" value={rForm.accentColor} onChange={e => setRB('accentColor', e.target.value)} className="h-10 w-14 rounded-lg border border-neutral-700 bg-neutral-800 cursor-pointer" />
+                      <input type="color" value={rForm.accentColor} onChange={e => setRB('accentColor', e.target.value)} className="h-10 w-14 rounded-lg border-2 border-ink bg-lav cursor-pointer" />
                       <input type="text" value={rForm.accentColor} onChange={setR('accentColor')} className={inputCls} placeholder="#f97316" />
                     </div>
                   </div>
@@ -2295,9 +2295,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 </div>
                 <div><label className={labelCls}>Tagline</label>
                   <input type="text" value={rForm.headerTagline} onChange={setR('headerTagline')} placeholder="Fine dining in the heart of the city..." className={inputCls} /></div>
-                <div className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
+                <div className="flex items-center justify-between p-3 bg-lav rounded-xl border-2 border-ink shadow">
                   <div>
-                    <div className="text-sm font-semibold text-white">Announcement Banner</div>
+                    <div className="text-sm font-semibold text-ink">Announcement Banner</div>
                     <div className="text-xs text-neutral-500">Show a coloured banner at the top of the page</div>
                   </div>
                   <Toggle checked={rForm.announcementBannerEnabled} onChange={e => setRB('announcementBannerEnabled', e.target.checked)} />
@@ -2307,11 +2307,11 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                     <div className="col-span-2"><label className={labelCls}>Banner Text</label>
                       <input type="text" value={rForm.announcementBanner} onChange={setR('announcementBanner')} placeholder="Closed Christmas Eve & Christmas Day" className={inputCls} /></div>
                     <div><label className={labelCls}>Banner Color</label>
-                      <input type="color" value={rForm.announcementBannerColor} onChange={e => setRB('announcementBannerColor', e.target.value)} className="h-10 w-full rounded-xl border border-neutral-700 bg-neutral-800 cursor-pointer" /></div>
+                      <input type="color" value={rForm.announcementBannerColor} onChange={e => setRB('announcementBannerColor', e.target.value)} className="h-10 w-full rounded-xl border-2 border-ink bg-lav cursor-pointer" /></div>
                   </div>
                 )}
-                <div className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
-                  <div><div className="text-sm font-semibold text-white">Show "Powered by PlanIt"</div></div>
+                <div className="flex items-center justify-between p-3 bg-lav rounded-xl border-2 border-ink shadow">
+                  <div><div className="text-sm font-semibold text-ink">Show "Powered by PlanIt"</div></div>
                   <Toggle checked={rForm.showPoweredBy} onChange={e => setRB('showPoweredBy', e.target.checked)} />
                 </div>
               </div>
@@ -2324,17 +2324,17 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 {DAY_KEYS_ORDERED.map(day => {
                   const dc = rForm.operatingDays?.[day] || {};
                   return (
-                    <div key={day} className="flex items-center gap-3 p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl">
-                      <div className="w-20 text-xs font-bold text-neutral-400">{DAY_LABELS[day]}</div>
+                    <div key={day} className="flex items-center gap-3 p-3 bg-lav border-2 border-ink rounded-xl shadow">
+                      <div className="w-20 text-xs font-bold text-neutral-500">{DAY_LABELS[day]}</div>
                       <Toggle checked={dc.open !== false} onChange={e => setDay(day, 'open', e.target.checked)} />
                       {dc.open !== false && (<>
                         <input type="time" value={dc.openTime || ''} onChange={e => setDay(day, 'openTime', e.target.value)}
-                          className="flex-1 bg-neutral-900 border border-neutral-700 text-white text-xs rounded-lg px-2 py-1.5 outline-none focus:border-orange-500/70" />
+                          className="flex-1 bg-white border-2 border-ink text-ink text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
                         <span className="text-neutral-600 text-xs">–</span>
                         <input type="time" value={dc.closeTime || ''} onChange={e => setDay(day, 'closeTime', e.target.value)}
-                          className="flex-1 bg-neutral-900 border border-neutral-700 text-white text-xs rounded-lg px-2 py-1.5 outline-none focus:border-orange-500/70" />
+                          className="flex-1 bg-white border-2 border-ink text-ink text-xs rounded-lg px-2 py-1.5 outline-none focus:border-amber-700 focus:ring-[3px] focus:ring-ac" />
                       </>)}
-                      {dc.open === false && <span className="text-xs text-rose-400 font-semibold">Closed</span>}
+                      {dc.open === false && <span className="text-xs text-red-700 font-semibold">Closed</span>}
                     </div>
                   );
                 })}
@@ -2402,7 +2402,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 <input type="url" value={rForm.googleMapsUrl} onChange={setR('googleMapsUrl')} placeholder="https://maps.google.com/..." className={inputCls} /></div>
             </div>
 
-            <div className="border-t border-neutral-800 pt-5">
+            <div className="border-t border-ink pt-5">
               <SectionHead title="Cancellation Policy & Legal" />
               <div className="space-y-3">
                 <div><label className={labelCls}>Cancellation Policy Text</label>
@@ -2413,9 +2413,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                   <div><label className={labelCls}>Privacy URL</label>
                     <input type="url" value={rForm.privacyUrl} onChange={setR('privacyUrl')} placeholder="https://..." className={inputCls} /></div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
+                <div className="flex items-center justify-between p-3 bg-lav rounded-xl border-2 border-ink shadow">
                   <div>
-                    <div className="text-sm font-semibold text-white">Require Deposit</div>
+                    <div className="text-sm font-semibold text-ink">Require Deposit</div>
                     <div className="text-xs text-neutral-500">Show a deposit notice on the booking form</div>
                   </div>
                   <Toggle checked={rForm.depositRequired} onChange={e => setRB('depositRequired', e.target.checked)} />
@@ -2431,18 +2431,18 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               </div>
             </div>
 
-            <div className="border-t border-neutral-800 pt-5">
+            <div className="border-t border-ink pt-5">
               <SectionHead title="Confirmation Message" desc="Shown on the booking confirmation screen after a guest books." />
               <textarea value={rForm.confirmationMessage} onChange={setR('confirmationMessage')} rows={3}
                 placeholder="We look forward to seeing you! Please arrive 5 minutes early."
                 className={inputCls + ' resize-none'} />
             </div>
 
-            <div className="border-t border-neutral-800 pt-5">
+            <div className="border-t border-ink pt-5">
               <SectionHead title='FAQ' desc='JSON array: [{"question":"Q?","answer":"A."}]. Leave empty for none.' />
               <textarea value={rForm.faqItemsRaw} onChange={setR('faqItemsRaw')} rows={6}
                 placeholder={JSON.stringify([{ question: "Can I bring my own cake?", answer: "Yes, a plating fee of $5 applies." }], null, 2)}
-                className={inputCls + ' resize-y font-mono text-xs'} />
+                className={inputCls + 'resize-y font-mono text-xs border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'} />
             </div>
           </>)}
 
@@ -2502,8 +2502,8 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 { key: 'allowDietaryNeeds',    label: 'Show Dietary Needs Field' },
                 { key: 'allowOccasionSelect',  label: 'Show Occasion Dropdown' },
               ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
-                  <span className="text-sm font-semibold text-white">{label}</span>
+                <div key={key} className="flex items-center justify-between p-3 bg-lav rounded-xl border-2 border-ink shadow">
+                  <span className="text-sm font-semibold text-ink">{label}</span>
                   <Toggle checked={rForm[key]} onChange={e => setRB(key, e.target.checked)} />
                 </div>
               ))}
@@ -2521,8 +2521,8 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 { key: 'showAvailabilityStatus', label: 'Show Slot Status (Available / Limited / Full)' },
                 { key: 'showTableCount',         label: 'Show Exact Available Table Count' },
               ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
-                  <span className="text-sm font-semibold text-white">{label}</span>
+                <div key={key} className="flex items-center justify-between p-3 bg-lav rounded-xl border-2 border-ink shadow">
+                  <span className="text-sm font-semibold text-ink">{label}</span>
                   <Toggle checked={rForm[key]} onChange={e => setRB(key, e.target.checked)} />
                 </div>
               ))}
@@ -2531,12 +2531,12 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 
           {tab === 'staff' && (<>
             {/* Staff login URL */}
-            <div className="p-3 bg-neutral-800/60 border border-neutral-700 rounded-xl mb-2">
-              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">Staff Login URL</p>
+            <div className="p-3 bg-white border-2 border-ink rounded-xl mb-2 shadow">
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Staff Login URL</p>
               <div className="flex items-center gap-2">
-                <code className="text-xs text-orange-300 flex-1 truncate">{loginUrl}</code>
+                <code className="text-xs text-amber-700 flex-1 truncate">{loginUrl}</code>
                 <button onClick={() => { navigator.clipboard.writeText(loginUrl); toast.success('Copied!'); }}
-                  className="text-xs px-2 py-1 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-lg font-semibold flex-shrink-0">Copy</button>
+                  className="text-xs px-2 py-1 bg-lav hover:bg-neutral-600 text-neutral-600 rounded-lg font-semibold flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Copy</button>
               </div>
               <p className="text-xs text-neutral-600 mt-1.5">Share this link with staff. They log in with their username and PIN.</p>
             </div>
@@ -2550,9 +2550,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             ) : (
               <div className="space-y-1.5 mb-4">
                 {staffList.map(s => (
-                  <div key={s.username} className="flex items-center justify-between p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl">
+                  <div key={s.username} className="flex items-center justify-between p-3 bg-lav border-2 border-ink rounded-xl shadow">
                     <div>
-                      <p className="text-sm font-semibold text-white">{s.username}</p>
+                      <p className="text-sm font-semibold text-ink">{s.username}</p>
                       <p className="text-xs text-neutral-500">
                         {s.lastSeenAt ? `Last seen ${new Date(s.lastSeenAt).toLocaleDateString()}` : 'Never logged in'}
                       </p>
@@ -2560,7 +2560,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                     <button
                       onClick={() => handleDeleteStaff(s.username)}
                       disabled={staffDeleting === s.username}
-                      className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors disabled:opacity-50"
+                      className="p-1.5 hover:bg-red-50 text-neutral-500 hover:text-red-700 rounded-lg transition-colors disabled:opacity-50"
                     >
                       {staffDeleting === s.username
                         ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -2572,7 +2572,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             )}
 
             {/* Add new staff */}
-            <div className="border-t border-neutral-800 pt-4">
+            <div className="border-t border-ink pt-4">
               <SectionHead title="Add Staff Account" />
               <div className="space-y-3">
                 <div>
@@ -2595,12 +2595,12 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                   </div>
                 </div>
                 {staffFormErr && (
-                  <p className="text-xs text-rose-400 flex items-center gap-1.5">
+                  <p className="text-xs text-red-700 flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{staffFormErr}
                   </p>
                 )}
                 <button onClick={handleAddStaff} disabled={staffAdding}
-                  className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-50 flex items-center justify-center gap-2">
+                  className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-50 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   {staffAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" />Add Staff Account</>}
                 </button>
               </div>
@@ -2616,27 +2616,27 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 : `${window.location.origin}/event/${eventId}/wait`;
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(boardUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
               return (
-                <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4 mb-4">
-                  <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">Wait Board URL</p>
+                <div className="bg-white border-2 border-ink rounded-xl p-4 mb-4 shadow">
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Wait Board URL</p>
                   <div className="flex gap-4 items-start">
                     <div className="flex-1 min-w-0">
-                      <div className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 mb-2">
-                        <code className="text-xs text-orange-300 break-all leading-relaxed">{boardUrl}</code>
+                      <div className="bg-white border-2 border-ink rounded-lg px-3 py-2 mb-2 shadow">
+                        <code className="text-xs text-amber-700 break-all leading-relaxed">{boardUrl}</code>
                       </div>
                       <div className="flex items-center gap-2 mb-3">
                         <button onClick={() => { navigator.clipboard.writeText(boardUrl); toast.success('Copied!'); }}
-                          className="text-xs px-2.5 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1.5">
+                          className="text-xs px-2.5 py-1.5 bg-white hover:bg-lav text-neutral-600 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                           <Copy className="w-3 h-3" />Copy URL
                         </button>
                         <a href={boardUrl} target="_blank" rel="noopener noreferrer"
-                          className="text-xs px-2.5 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1.5">
+                          className="text-xs px-2.5 py-1.5 bg-white hover:bg-lav text-neutral-600 hover:text-ink rounded-lg font-semibold transition-all flex items-center gap-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                           <ExternalLink className="w-3 h-3" />Open
                         </a>
                       </div>
                       <p className="text-xs text-neutral-600 leading-relaxed">Post this QR at your entrance. Guests scan it to see live wait times and join the waitlist from their phone — no account needed.</p>
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
-                      <img src={qrUrl} alt="QR code" className="w-[88px] h-[88px] rounded-xl border border-neutral-700" />
+                      <img src={qrUrl} alt="QR code" className="w-[88px] h-[88px] rounded-xl border-2 border-ink" />
                       <span className="text-[9px] text-neutral-600 font-semibold uppercase tracking-wider">Scan to join</span>
                     </div>
                   </div>
@@ -2645,25 +2645,25 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             })()}
 
             {/* Toggle: Enable public board */}
-            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-neutral-800/60 border border-neutral-700 rounded-xl">
+            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-white border-2 border-ink rounded-xl shadow">
               <div>
-                <p className="text-sm font-semibold text-white">Enable Public Wait Board</p>
+                <p className="text-sm font-semibold text-ink">Enable Public Wait Board</p>
                 <p className="text-xs text-neutral-500 mt-0.5">Guests can view live wait times and join the waitlist at the URL above.</p>
               </div>
               <button onClick={() => setRB('publicWaitBoardEnabled', !rForm.publicWaitBoardEnabled)}
-                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${rForm.publicWaitBoardEnabled ? 'bg-orange-500' : 'bg-neutral-700'}`}>
+                className={`w-11 h-6 rounded-lg transition-colors flex-shrink-0 relative mt-0.5 ${rForm.publicWaitBoardEnabled ? 'bg-orange-500' : 'bg-lav'}`}>
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${rForm.publicWaitBoardEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </button>
             </div>
 
             {/* Toggle: Walk-in Only Mode */}
-            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-neutral-800/60 border border-amber-500/20 rounded-xl">
+            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-white border border-amber-700 rounded-xl">
               <div>
-                <p className="text-sm font-semibold text-white">Walk-In Only Mode</p>
+                <p className="text-sm font-semibold text-ink">Walk-In Only Mode</p>
                 <p className="text-xs text-neutral-500 mt-0.5">Disables the online reservation system. The /reserve page will redirect guests to the wait board instead. Best for busy restaurants that don't take advance bookings.</p>
               </div>
               <button onClick={() => setRB('walkInOnlyMode', !rForm.walkInOnlyMode)}
-                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${rForm.walkInOnlyMode ? 'bg-amber-500' : 'bg-neutral-700'}`}>
+                className={`w-11 h-6 rounded-lg transition-colors flex-shrink-0 relative mt-0.5 ${rForm.walkInOnlyMode ? 'bg-amber-500' : 'bg-lav'}`}>
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${rForm.walkInOnlyMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </button>
             </div>
@@ -2687,7 +2687,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
 
             {rForm.walkInOnlyMode && (
-              <div className="mt-4 p-3 rounded-xl border border-amber-500/30 bg-amber-900/20 text-xs text-amber-300 leading-relaxed">
+              <div className="mt-4 p-3 rounded-xl border border-amber-700 bg-amber-50 text-xs text-amber-700 leading-relaxed">
                 Walk-In Only Mode is on. Guests who visit your reservation page will be redirected to the live wait board. Existing reservations are unaffected.
               </div>
             )}
@@ -2710,33 +2710,33 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               {menus.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {[...new Set(menus.map(m => m.c).filter(Boolean))].map(cat => (
-                    <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 border border-orange-500/30 text-orange-300 uppercase tracking-wider">{cat}</span>
+                    <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 border border-amber-700 text-amber-700 uppercase tracking-wider">{cat}</span>
                   ))}
                 </div>
               )}
 
               <div className="space-y-3">
                 {menus.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-neutral-700 p-8 text-center">
-                    <p className="text-sm font-bold text-neutral-400 mb-1">No menus yet</p>
+                  <div className="rounded-xl border-2 border-dashed border-ink p-8 text-center shadow-md">
+                    <p className="text-sm font-bold text-neutral-500 mb-1">No menus yet</p>
                     <p className="text-xs text-neutral-600">Add menus below — links, PDFs, or inline descriptions. All appear on the public reservation page and guest tablet.</p>
                   </div>
                 )}
                 {menus.map((m, i) => (
-                  <div key={i} className="rounded-xl border border-neutral-700 bg-neutral-800/60 overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-700/60"
+                  <div key={i} className="rounded-xl border-2 border-ink bg-white overflow-hidden shadow">
+                    <div className="flex items-center gap-2 px-3 py-2 border-b border-ink"
                       style={{ background: m.clr ? m.clr + '14' : undefined }}>
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: m.clr || '#f97316' }} />
-                      <span className="flex-1 text-xs font-bold text-white truncate">{m.n || 'Untitled'}</span>
-                      {m.c && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 uppercase tracking-wider">{m.c}</span>}
+                      <span className="flex-1 text-xs font-bold text-ink truncate">{m.n || 'Untitled'}</span>
+                      {m.c && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 uppercase tracking-wider">{m.c}</span>}
                       <span className="text-[9px] font-semibold text-neutral-600 uppercase mr-1">{TYPE_LABELS[m.t]}</span>
-                      <button onClick={() => moveUp(i)} disabled={i===0} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700 text-neutral-500 hover:text-white disabled:opacity-20">
+                      <button onClick={() => moveUp(i)} disabled={i===0} className="w-5 h-5 flex items-center justify-center rounded hover:bg-lav text-neutral-500 hover:text-ink disabled:opacity-20">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/></svg>
                       </button>
-                      <button onClick={() => moveDown(i)} disabled={i===menus.length-1} className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700 text-neutral-500 hover:text-white disabled:opacity-20">
+                      <button onClick={() => moveDown(i)} disabled={i===menus.length-1} className="w-5 h-5 flex items-center justify-center rounded hover:bg-lav text-neutral-500 hover:text-ink disabled:opacity-20">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                       </button>
-                      <button onClick={() => delMenu(i)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-rose-950/40 text-neutral-600 hover:text-rose-400">
+                      <button onClick={() => delMenu(i)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-neutral-600 hover:text-red-700">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -2764,7 +2764,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                           <input value={m.u} onChange={e => upd(i,'u',e.target.value)}
                             placeholder={m.t === 'p' ? 'https://yoursite.com/menu.pdf' : 'https://yoursite.com/menu'}
                             className={inputCls} maxLength={500} />
-                          {m.u && <a href={m.u} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400 hover:underline mt-1 inline-block">Test link</a>}
+                          {m.u && <a href={m.u} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-700 hover:underline mt-1 inline-block">Test link</a>}
                         </div>
                       )}
                       <div className="col-span-2">
@@ -2779,10 +2779,10 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                         <label className={labelCls}>Accent Colour</label>
                         <div className="flex items-center gap-2">
                           <input type="color" value={m.clr || '#f97316'} onChange={e => upd(i,'clr',e.target.value)}
-                            className="w-8 h-8 rounded-lg border border-neutral-600 bg-neutral-800 cursor-pointer flex-shrink-0" />
+                            className="w-8 h-8 rounded-lg border-2 border-ink bg-lav cursor-pointer flex-shrink-0" />
                           <input value={m.clr} onChange={e => upd(i,'clr',e.target.value)}
-                            placeholder="#f97316" className={inputCls + ' font-mono text-xs'} maxLength={7} />
-                          {m.clr && <button onClick={() => upd(i,'clr','')} className="text-xs text-neutral-600 hover:text-neutral-400 whitespace-nowrap">Clear</button>}
+                            placeholder="#f97316" className={inputCls + 'font-mono text-xs border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'} maxLength={7} />
+                          {m.clr && <button onClick={() => upd(i,'clr','')} className="text-xs text-neutral-600 hover:text-neutral-500 whitespace-nowrap">Clear</button>}
                         </div>
                       </div>
                     </div>
@@ -2791,12 +2791,12 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               </div>
 
               <button onClick={addMenu}
-                className="w-full mt-3 py-3 rounded-xl border-2 border-dashed border-neutral-700 hover:border-orange-500/50 text-sm font-bold text-neutral-500 hover:text-orange-400 transition-all flex items-center justify-center gap-2">
+                className="w-full mt-3 py-3 rounded-xl border-2 border-dashed border-ink hover:border-amber-700 text-sm font-bold text-neutral-500 hover:text-amber-700 transition-all flex items-center justify-center gap-2 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Add Menu
               </button>
 
-              <div className="mt-4 p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 text-xs text-neutral-500 leading-relaxed">
+              <div className="mt-4 p-3 rounded-xl bg-white border-2 border-ink text-xs text-neutral-500 leading-relaxed shadow">
                 Menus appear on the public reservation page, the live wait board, and the guest tablet. Links and PDFs open in a new tab. Description-only menus expand inline. Data is stored with compact keys to minimise database size.
               </div>
             </>);
@@ -2805,9 +2805,9 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-neutral-800 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 flex items-center justify-center gap-2">
+        <div className="px-5 py-4 border-t border-ink flex gap-3 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-lav text-neutral-500 rounded-xl text-sm font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" />Save All Settings</>}
           </button>
         </div>
@@ -3140,9 +3140,9 @@ export default function TableService() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-neutral-950 flex items-center justify-center">
+      <div className="h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-neutral-500 mx-auto mb-4" />
           <p className="text-neutral-500 text-sm">Loading floor plan...</p>
         </div>
       </div>
@@ -3154,15 +3154,15 @@ export default function TableService() {
     const isNotFound   = floorData._notFound;
     const title        = floorData._forbiddenTitle;
     return (
-      <div className="h-screen bg-neutral-950 flex items-center justify-center p-6">
+      <div className="h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <div className="w-16 h-16 bg-white border-2 border-ink rounded-2xl flex items-center justify-center mx-auto mb-5">
             <Lock className="w-7 h-7 text-neutral-500" />
           </div>
-          <h2 className="text-white font-bold text-xl mb-2">
+          <h2 className="text-ink font-bold text-xl mb-2">
             {isNotFound ? 'Event Not Found' : isEnterprise ? 'Enterprise Event' : 'Floor Plan Unavailable'}
           </h2>
-          {title && <p className="text-neutral-400 text-sm mb-1 font-medium">{title}</p>}
+          {title && <p className="text-neutral-500 text-sm mb-1 font-medium">{title}</p>}
           <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
             {isNotFound
               ? 'No event was found with this ID. Check the URL or contact your manager.'
@@ -3174,31 +3174,31 @@ export default function TableService() {
             {isEnterprise && (eid || subdomain) && (
               <button
                 onClick={() => navigate(eid ? `/event/${eid}/checkin` : `/e/${subdomain}/checkin`)}
-                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors"
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 Go to Check-In Dashboard →
               </button>
             )}
             <button
               onClick={() => navigate('/')}
-              className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700 transition-colors"
+              className="w-full py-2.5 bg-lav text-neutral-600 rounded-xl text-sm font-semibold hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Return Home
             </button>
           </div>
-          <div className="mt-6 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-left">
+          <div className="mt-6 p-3 bg-white border-2 border-ink rounded-xl text-left shadow">
             <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wide mb-2">Access Requirements</p>
             <ul className="text-xs text-neutral-500 space-y-1">
               <li>• Event must have Table Service mode enabled</li>
               <li>• Valid organizer or staff token required</li>
-              <li>• Enterprise events → use <code className="text-neutral-400">/checkin</code> instead</li>
+              <li>• Enterprise events → use <code className="text-neutral-500">/checkin</code> instead</li>
             </ul>
           </div>
         </div>
       </div>
     );
   }  return (
-    <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white text-ink overflow-hidden">
 
       {/* Alert popup */}
       <AlertPopup
@@ -3213,14 +3213,14 @@ export default function TableService() {
       />
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
+      <header className="flex-shrink-0 h-14 border-b border-ink bg-white flex items-center px-4 gap-4">
         {/* Logo + name */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
             <Utensils className="w-4 h-4 text-neutral-900" />
           </div>
           <div className="min-w-0">
-            <span className="font-bold text-white text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
+            <span className="font-bold text-ink text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
             <span className="hidden sm:inline text-neutral-600 text-xs ml-2">Table Service</span>
           </div>
         </div>
@@ -3228,13 +3228,13 @@ export default function TableService() {
         {/* Stats pills */}
         <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-hide">
           {Object.entries(tableCounts).map(([k, v]) => (
-            <div key={k} className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${STATUS_META[k]?.bg} ${STATUS_META[k]?.border} ${STATUS_META[k]?.text}`}>
+            <div key={k} className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 text-xs font-semibold border-ink ${STATUS_META[k]?.bg} ${STATUS_META[k]?.border} ${STATUS_META[k]?.text}`}>
               <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: STATUS_META[k]?.color }} />
               {v} {STATUS_META[k]?.label}
             </div>
           ))}
           {floorData.waitlist?.length > 0 && (
-            <div className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-950/30 text-amber-400 text-xs font-semibold">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-700 bg-amber-50 text-amber-700 text-xs font-semibold">
               <Users className="w-3 h-3" />
               {floorData.waitlist.length} waiting
             </div>
@@ -3247,22 +3247,22 @@ export default function TableService() {
           {tableStates.filter(s => s.guestAlert).length > 0 && (
             <button
               onClick={() => setSideTab('alerts')}
-              className="relative p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+              className="relative p-2 hover:bg-lav rounded-lg transition-colors"
             >
-              <Bell className="w-4 h-4 text-amber-400" />
+              <Bell className="w-4 h-4 text-amber-700" />
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
                 {tableStates.filter(s => s.guestAlert).length}
               </span>
             </button>
           )}
-          <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
-          <button onClick={() => setShowTour(true)} title="Take the tour" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><Sparkles className="w-4 h-4" /></button>
+          <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => setShowTour(true)} title="Take the tour" className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><Sparkles className="w-4 h-4" /></button>
           {isTableService && (subdomain || eid) && (
             <a
               href={subdomain ? `/e/${subdomain}/server` : `/event/${eid}/server`}
               target="_blank" rel="noopener noreferrer"
               title="Server View"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Users className="w-3.5 h-3.5" />Servers
             </a>
@@ -3272,21 +3272,21 @@ export default function TableService() {
               href={subdomain ? `/e/${subdomain}/kitchen` : `/event/${eid}/kitchen`}
               target="_blank" rel="noopener noreferrer"
               title="Kitchen Display"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Utensils className="w-3.5 h-3.5" />Kitchen
             </a>
           )}
-          <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded-lg text-xs font-semibold hover:bg-orange-500/30 transition-colors">
+          <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border-2 border-amber-700 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <ScanLine className="w-3.5 h-3.5" />Scan QR
           </button>
-          <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors">
+          <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <LayoutGrid className="w-3.5 h-3.5" />Edit Layout
           </button>
-          <button onClick={() => setShowFloorEditor(true)} className="sm:hidden p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors" title="Edit Layout">
+          <button onClick={() => setShowFloorEditor(true)} className="sm:hidden p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors" title="Edit Layout">
             <LayoutGrid className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
+          <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors"><Settings className="w-4 h-4" /></button>
         </div>
       </header>
 
@@ -3300,9 +3300,9 @@ export default function TableService() {
               <div className="h-full flex items-center justify-center text-center p-8">
                 <div>
                   <LayoutGrid className="w-12 h-12 text-neutral-700 mx-auto mb-4" />
-                  <h3 className="text-white font-bold text-lg mb-2">No floor layout yet</h3>
+                  <h3 className="text-ink font-bold text-lg mb-2">No floor layout yet</h3>
                   <p className="text-neutral-500 text-sm mb-6">Set up your restaurant floor plan to start managing tables.</p>
-                  <button onClick={() => setShowFloorEditor(true)} className="px-5 py-3 bg-white text-neutral-900 rounded-xl font-bold text-sm hover:bg-neutral-100 transition-colors">
+                  <button onClick={() => setShowFloorEditor(true)} className="px-5 py-3 bg-white text-neutral-900 rounded-xl font-bold text-sm hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     Set Up Floor Plan
                   </button>
                 </div>
@@ -3323,7 +3323,7 @@ export default function TableService() {
 
           {/* Table detail panel */}
           {selectedObj && (
-            <div className="flex-shrink-0 border-t border-neutral-800" style={{ height: '45%', minHeight: 280 }}>
+            <div className="flex-shrink-0 border-t border-ink" style={{ height: '45%', minHeight: 280 }}>
               <TablePanel
                 obj={selectedObj}
                 state={selectedState}
@@ -3338,9 +3338,9 @@ export default function TableService() {
         </div>
 
         {/* Right sidebar */}
-        <div className="w-80 xl:w-96 flex-shrink-0 border-l border-neutral-800 flex flex-col bg-neutral-900/50">
+        <div className="w-80 xl:w-96 flex-shrink-0 border-l border-ink flex flex-col bg-lav">
           {/* Tabs — table-service only */}
-          <div className="flex border-b border-neutral-800 flex-shrink-0">
+          <div className="flex border-b border-ink flex-shrink-0">
             {[
               ...(isTableService ? [
                 { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
@@ -3352,10 +3352,10 @@ export default function TableService() {
               <button
                 key={id}
                 onClick={() => setSideTab(id)}
-                className={`flex-1 py-3 text-xs font-semibold transition-all border-b-2 ${sideTab === id ? 'text-white border-white' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}
+                className={`flex-1 py-3 text-xs font-semibold transition-all border-b-2 ${sideTab === id ? 'text-ink border-ink' : 'text-neutral-500 border-transparent hover:text-neutral-600'}`}
               >
                 {label}
-                {badge > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-neutral-700 rounded-full text-[10px] font-bold">{badge}</span>}
+                {badge > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-lav rounded-full text-[10px] font-bold">{badge}</span>}
               </button>
             ))}
           </div>
@@ -3408,15 +3408,15 @@ export default function TableService() {
                             <div
                               key={s.tableId}
                               onClick={() => setSelectedTableId(prev => prev === s.tableId ? null : s.tableId)}
-                              className="px-3 py-3 mb-2 rounded-xl border cursor-pointer hover:opacity-90 transition-all"
+                              className="px-3 py-3 mb-2 rounded-xl border-2 cursor-pointer hover:opacity-90 transition-all border-ink shadow transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg"
                               style={{ background: am.bg, borderColor: am.border }}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <div className="text-sm font-black text-white">{obj?.label || s.tableId}</div>
+                                  <div className="text-sm font-black text-ink">{obj?.label || s.tableId}</div>
                                   <div className="text-xs font-semibold mt-0.5" style={{ color: am.color }}>{am.label}</div>
-                                  {s.partyName && <div className="text-xs text-neutral-400 mt-1">Party: {s.partyName}{s.partySize > 0 ? ` · ${s.partySize} guests` : ''}</div>}
-                                  {s.serverName && <div className="text-xs mt-0.5" style={{ color: '#f97316' }}>Server: {s.serverName}</div>}
+                                  {s.partyName && <div className="text-xs text-neutral-500 mt-1">Party: {s.partyName}{s.partySize > 0 ? ` · ${s.partySize} guests` : ''}</div>}
+                                  {s.serverName && <div className="text-xs mt-0.5" style={{ color: '#6e5400' }}>Server: {s.serverName}</div>}
                                 </div>
                                 <button
                                   onClick={async (e) => {
@@ -3424,7 +3424,7 @@ export default function TableService() {
                                     try { await handleTableUpdate(s.tableId, { guestAlert: null }); }
                                     catch (_) {}
                                   }}
-                                  className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 font-semibold border border-neutral-700"
+                                  className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-white hover:bg-lav text-neutral-600 font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                                 >
                                   Clear
                                 </button>
@@ -3443,16 +3443,16 @@ export default function TableService() {
                         ) : dietaryStates.map(s => {
                           const obj = objects.find(o => o.id === s.tableId);
                           return (
-                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border border-neutral-700 bg-neutral-800/40">
-                              <div className="text-sm font-bold text-white mb-1.5">{obj?.label || s.tableId}</div>
+                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border-2 border-ink bg-lav shadow">
+                              <div className="text-sm font-bold text-ink mb-1.5">{obj?.label || s.tableId}</div>
                               {s.guestDietary?.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-1">
                                   {s.guestDietary.map(d => (
-                                    <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-semibold">{d}</span>
+                                    <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-700 text-amber-700 font-semibold">{d}</span>
                                   ))}
                                 </div>
                               )}
-                              {s.guestDietaryNotes && <div className="text-xs text-neutral-400">{s.guestDietaryNotes}</div>}
+                              {s.guestDietaryNotes && <div className="text-xs text-neutral-500">{s.guestDietaryNotes}</div>}
                             </div>
                           );
                         })}
@@ -3469,17 +3469,17 @@ export default function TableService() {
                           const r = s.guestRating;
                           const avg = ((r.food + r.service + r.atmosphere) / 3).toFixed(1);
                           return (
-                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border border-neutral-700 bg-neutral-800/40">
+                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border-2 border-ink bg-lav shadow">
                               <div className="flex justify-between items-center mb-1">
-                                <div className="text-sm font-bold text-white">{obj?.label || s.tableId}</div>
-                                <div className="text-sm font-black text-amber-400">{avg} / 5</div>
+                                <div className="text-sm font-bold text-ink">{obj?.label || s.tableId}</div>
+                                <div className="text-sm font-black text-amber-700">{avg} / 5</div>
                               </div>
                               <div className="text-xs text-neutral-500 space-y-0.5">
-                                <div className="flex justify-between"><span>Food</span><span className="text-neutral-300">{r.food}/5</span></div>
-                                <div className="flex justify-between"><span>Service</span><span className="text-neutral-300">{r.service}/5</span></div>
-                                <div className="flex justify-between"><span>Atmosphere</span><span className="text-neutral-300">{r.atmosphere}/5</span></div>
+                                <div className="flex justify-between"><span>Food</span><span className="text-neutral-600">{r.food}/5</span></div>
+                                <div className="flex justify-between"><span>Service</span><span className="text-neutral-600">{r.service}/5</span></div>
+                                <div className="flex justify-between"><span>Atmosphere</span><span className="text-neutral-600">{r.atmosphere}/5</span></div>
                               </div>
-                              {r.comment && <div className="text-xs text-neutral-400 italic mt-1.5 pt-1.5 border-t border-neutral-700">"{r.comment}"</div>}
+                              {r.comment && <div className="text-xs text-neutral-500 italic mt-1.5 pt-1.5 border-t border-ink">"{r.comment}"</div>}
                             </div>
                           );
                         })}
@@ -3512,43 +3512,43 @@ export default function TableService() {
                 <div>
                   <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Floor Summary</div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-neutral-800 rounded-xl p-4">
-                      <div className="text-2xl font-black text-white">{tableCounts.available}</div>
-                      <div className="text-xs text-emerald-400 font-semibold mt-1">Available</div>
+                    <div className="bg-lav rounded-xl p-4">
+                      <div className="text-2xl font-black text-ink">{tableCounts.available}</div>
+                      <div className="text-xs text-emerald-700 font-semibold mt-1">Available</div>
                     </div>
-                    <div className="bg-neutral-800 rounded-xl p-4">
-                      <div className="text-2xl font-black text-white">{tableCounts.occupied}</div>
-                      <div className="text-xs text-rose-400 font-semibold mt-1">Occupied</div>
+                    <div className="bg-lav rounded-xl p-4">
+                      <div className="text-2xl font-black text-ink">{tableCounts.occupied}</div>
+                      <div className="text-xs text-red-700 font-semibold mt-1">Occupied</div>
                     </div>
-                    <div className="bg-neutral-800 rounded-xl p-4">
-                      <div className="text-2xl font-black text-white">{tableCounts.reserved}</div>
-                      <div className="text-xs text-amber-400 font-semibold mt-1">Reserved</div>
+                    <div className="bg-lav rounded-xl p-4">
+                      <div className="text-2xl font-black text-ink">{tableCounts.reserved}</div>
+                      <div className="text-xs text-amber-700 font-semibold mt-1">Reserved</div>
                     </div>
-                    <div className="bg-neutral-800 rounded-xl p-4">
-                      <div className="text-2xl font-black text-white">{tableCounts.cleaning}</div>
-                      <div className="text-xs text-violet-400 font-semibold mt-1">Cleaning</div>
+                    <div className="bg-lav rounded-xl p-4">
+                      <div className="text-2xl font-black text-ink">{tableCounts.cleaning}</div>
+                      <div className="text-xs text-blue-700 font-semibold mt-1">Cleaning</div>
                     </div>
                   </div>
                 </div>
-                <div className="bg-neutral-800 rounded-xl p-4">
+                <div className="bg-lav rounded-xl p-4">
                   <div className="text-xs font-bold text-neutral-500 mb-3">Occupancy</div>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-lav rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${tables.length ? (tableCounts.occupied / tables.length) * 100 : 0}%` }} />
                     </div>
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-sm font-bold text-ink">
                       {tables.length ? Math.round((tableCounts.occupied / tables.length) * 100) : 0}%
                     </span>
                   </div>
                   <div className="text-xs text-neutral-600 mt-2">{tableCounts.occupied} of {tables.length} tables occupied</div>
                 </div>
                 {settings.welcomeMessage && (
-                  <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4">
+                  <div className="bg-white border-2 border-ink rounded-xl p-4 shadow">
                     <div className="text-xs font-bold text-neutral-500 mb-2">Tonight's Note</div>
-                    <p className="text-sm text-neutral-300 italic leading-relaxed">{settings.welcomeMessage}</p>
+                    <p className="text-sm text-neutral-600 italic leading-relaxed">{settings.welcomeMessage}</p>
                   </div>
                 )}
-                <div className="bg-neutral-800/60 rounded-xl p-4 space-y-2">
+                <div className="bg-white rounded-xl p-4 space-y-2">
                   <div className="text-xs font-bold text-neutral-500 mb-2">Configuration</div>
                   {[
                     { label: 'Avg dining time', value: `${settings.avgDiningMinutes || 75} min` },
@@ -3557,7 +3557,7 @@ export default function TableService() {
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-center text-xs">
                       <span className="text-neutral-500">{label}</span>
-                      <span className="text-neutral-300 font-semibold">{value}</span>
+                      <span className="text-neutral-600 font-semibold">{value}</span>
                     </div>
                   ))}
                 </div>

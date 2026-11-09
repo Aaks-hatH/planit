@@ -23,7 +23,7 @@ function Callout({ variant = 'info', children }) {
   const icons = { info: Info, warning: AlertTriangle, tip: Star };
   const Icon = icons[variant];
   return (
-    <div className={`flex gap-3 p-4 rounded-xl border my-5 text-sm leading-relaxed ${styles[variant]}`}>
+    <div className={`flex gap-3 p-4 rounded-xl border-2 my-5 text-sm leading-relaxed border-ink shadow ${styles[variant]}`}>
       <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -38,13 +38,13 @@ function CopyBox({ value, label }) {
     setTimeout(() => setCopied(false), 2000);
   }
   return (
-    <div className="flex items-center gap-2 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 my-3">
+    <div className="flex items-center gap-2 bg-neutral-50 border-2 border-ink rounded-xl px-4 py-3 my-3 shadow">
       <code className="flex-1 text-xs text-neutral-700 font-mono break-all">{value}</code>
       <button
         onClick={copy}
         className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition-colors flex-shrink-0"
       >
-        {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
         {copied ? 'Copied' : 'Copy'}
       </button>
     </div>
@@ -54,7 +54,7 @@ function CopyBox({ value, label }) {
 function Step({ n, title, children }) {
   return (
     <div className="flex gap-4 mb-7">
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-neutral-900 text-white text-sm font-black flex items-center justify-center mt-0.5">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white text-ink text-sm font-black flex items-center justify-center mt-0.5">
         {n}
       </div>
       <div className="flex-1 min-w-0">
@@ -70,15 +70,15 @@ function FAQ({ items }) {
   return (
     <div className="space-y-2 mt-4">
       {items.map((item, i) => (
-        <div key={i} className="border border-neutral-200 rounded-xl overflow-hidden">
+        <div key={i} className="border-2 border-ink rounded-xl overflow-hidden shadow">
           <button
             onClick={() => setOpen(open === i ? null : i)}
             className="w-full flex items-center justify-between p-4 text-left hover:bg-neutral-50 transition-colors"
           >
             <span className="text-sm font-semibold text-neutral-800">{item.q}</span>
             {open === i
-              ? <ChevronUp className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-              : <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+              ? <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+              : <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0" />
             }
           </button>
           {open === i && (
@@ -111,8 +111,8 @@ function FAQ({ items }) {
 function SectionHeading({ icon: Icon, children }) {
   return (
     <div className="flex items-center gap-3 mb-5 mt-10">
-      <div className="w-9 h-9 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-white" />
+      <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-ink" />
       </div>
       <h2 className="text-lg font-black text-neutral-900">{children}</h2>
     </div>
@@ -122,7 +122,7 @@ function SectionHeading({ icon: Icon, children }) {
 function ToolCard({ icon: Icon, name, description, examples }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-neutral-200 rounded-2xl overflow-hidden bg-white">
+    <div className="border-2 border-ink rounded-2xl overflow-hidden bg-white shadow">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 p-4 text-left hover:bg-neutral-50 transition-colors"
@@ -135,18 +135,18 @@ function ToolCard({ icon: Icon, name, description, examples }) {
           <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
         </div>
         {open
-          ? <ChevronUp className="w-4 h-4 text-neutral-300 flex-shrink-0" />
-          : <ChevronDown className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+          ? <ChevronUp className="w-4 h-4 text-neutral-600 flex-shrink-0" />
+          : <ChevronDown className="w-4 h-4 text-neutral-600 flex-shrink-0" />
         }
       </button>
       {open && (
         <div className="px-4 pb-4 border-t border-neutral-100 pt-3 space-y-1.5">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2">Example prompts</p>
+          <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Example prompts</p>
           {examples.map((ex, i) => (
             <div key={i} className="flex gap-2 text-xs text-neutral-600 bg-neutral-50 rounded-lg px-3 py-2">
-              <span className="text-neutral-300 flex-shrink-0">"</span>
+              <span className="text-neutral-600 flex-shrink-0">"</span>
               <span>{ex}</span>
-              <span className="text-neutral-300 flex-shrink-0">"</span>
+              <span className="text-neutral-600 flex-shrink-0">"</span>
             </div>
           ))}
         </div>
@@ -633,10 +633,10 @@ export default function ClaudeDocs() {
 
   return (
     <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
-      <style>{`html { scroll-behavior: smooth; } body { background: #f8f8f6; }`}</style>
+      <style>{`html { scroll-behavior: smooth; } body { background: #ffffff; }`}</style>
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -646,7 +646,7 @@ export default function ClaudeDocs() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            <span className="text-neutral-300">|</span>
+            <span className="text-neutral-600">|</span>
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-neutral-600" />
               <span className="text-sm font-bold text-neutral-900">Claude Integration Docs</span>
@@ -659,7 +659,7 @@ export default function ClaudeDocs() {
             >
               Help Center
             </a>
-            <span className="text-neutral-200">·</span>
+            <span className="text-ink">·</span>
             <a
               href="/status"
               className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800 transition-colors"
@@ -675,7 +675,7 @@ export default function ClaudeDocs() {
 
         {/* ── Hero ── */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 rounded-full text-xs font-semibold text-neutral-300 mb-5">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-semibold text-neutral-600 mb-5">
             <Bot className="w-3.5 h-3.5" />
             PlanIt for Claude
           </div>
@@ -691,7 +691,7 @@ export default function ClaudeDocs() {
             href={CONNECT_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white text-sm font-bold rounded-2xl hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-hl text-ink text-sm font-bold rounded-2xl hover:bg-hl transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             <Plug className="w-4 h-4" />
             Add PlanIt to Claude
@@ -712,7 +712,7 @@ export default function ClaudeDocs() {
               key={link.href}
               href={link.href}
               {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              className="flex items-center justify-center gap-1.5 px-4 py-3 bg-white border border-neutral-200 rounded-xl text-sm font-semibold text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-all text-center"
+              className="flex items-center justify-center gap-1.5 px-4 py-3 bg-white border-2 border-ink rounded-xl text-sm font-semibold text-neutral-700 hover:border-ink hover:text-neutral-900 transition-all text-center shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               {link.label}
               {link.external && <ExternalLink className="w-3 h-3 opacity-50" />}
@@ -724,7 +724,7 @@ export default function ClaudeDocs() {
         <section id="setup">
           <SectionHeading icon={Plug}>Getting started</SectionHeading>
 
-          <div className="bg-white rounded-2xl border border-neutral-200 p-8">
+          <div className="bg-white rounded-2xl border-2 border-ink p-8 shadow-md">
             <Step n={1} title="Add PlanIt to Claude">
               <p>
                 The quickest way is the pre-filled link below — it opens the custom connector form with the name and MCP URL already filled in.
@@ -758,7 +758,7 @@ export default function ClaudeDocs() {
               <p>
                 Open a new Claude conversation and say:
               </p>
-              <div className="bg-neutral-50 rounded-xl px-4 py-3 mt-1 text-xs font-mono text-neutral-700 border border-neutral-200">
+              <div className="bg-neutral-50 rounded-xl px-4 py-3 mt-1 text-xs font-mono text-neutral-700 border-2 border-ink shadow">
                 "Connect my PlanIt event"
               </div>
               <p className="mt-2 text-neutral-500">
@@ -793,7 +793,7 @@ export default function ClaudeDocs() {
               <p>
                 Return to Claude and ask for what you need. Start with a read-only check to confirm the connection is working:
               </p>
-              <div className="bg-neutral-50 rounded-xl px-4 py-3 mt-1 text-xs font-mono text-neutral-700 border border-neutral-200">
+              <div className="bg-neutral-50 rounded-xl px-4 py-3 mt-1 text-xs font-mono text-neutral-700 border-2 border-ink shadow">
                 "Give me a status summary of my event"
               </div>
               <p className="mt-2 text-neutral-500">
@@ -812,7 +812,7 @@ export default function ClaudeDocs() {
         <section id="auth">
           <SectionHeading icon={Lock}>How authentication works</SectionHeading>
 
-          <div className="bg-white rounded-2xl border border-neutral-200 p-8 space-y-5">
+          <div className="bg-white rounded-2xl border-2 border-ink p-8 space-y-5 shadow-md">
             <p className="text-sm text-neutral-600 leading-relaxed">
               The PlanIt MCP uses a custom two-step token flow to issue Claude a scoped session,
               without needing OAuth or a full account system.
@@ -839,7 +839,7 @@ export default function ClaudeDocs() {
               ].map((item, i) => (
                 <div key={i} className="flex gap-4">
                   <div className="w-20 flex-shrink-0">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{item.step}</span>
+                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{item.step}</span>
                   </div>
                   <p className="text-sm text-neutral-600 leading-relaxed">{item.detail}</p>
                 </div>
@@ -851,7 +851,7 @@ export default function ClaudeDocs() {
               The MCP server verifies a shared secret on every inbound request before processing anything.
             </Callout>
 
-            <div className="border border-neutral-100 rounded-xl p-4 bg-neutral-50">
+            <div className="border-2 border-ink rounded-xl p-4 bg-neutral-50 shadow">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3">Rate limits</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-neutral-600">
                 <div className="flex justify-between"><span>Init requests</span><span className="font-mono text-neutral-800">10 / IP / hour</span></div>
@@ -876,10 +876,10 @@ export default function ClaudeDocs() {
           <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setActiveGroup(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
                 activeGroup === null
-                  ? 'bg-neutral-900 text-white border-neutral-900'
-                  : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-900'
+                  ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                  : 'bg-white text-neutral-600 border-neutral-200 hover:border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
               }`}
             >
               All
@@ -888,10 +888,10 @@ export default function ClaudeDocs() {
               <button
                 key={g.label}
                 onClick={() => setActiveGroup(g.label === activeGroup ? null : g.label)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
                   activeGroup === g.label
-                    ? 'bg-neutral-900 text-white border-neutral-900'
-                    : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-900'
+                    ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                    : 'bg-white text-neutral-600 border-neutral-200 hover:border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                 }`}
               >
                 {g.label}
@@ -905,9 +905,9 @@ export default function ClaudeDocs() {
               .map(group => (
                 <div key={group.label}>
                   <div className="flex items-center gap-2 mb-3">
-                    <group.icon className="w-4 h-4 text-neutral-400" />
-                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">{group.label}</p>
-                    <span className="text-xs text-neutral-300">({group.tools.length} tools)</span>
+                    <group.icon className="w-4 h-4 text-neutral-500" />
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{group.label}</p>
+                    <span className="text-xs text-neutral-600">({group.tools.length} tools)</span>
                   </div>
                   <div className="space-y-2">
                     {group.tools.map(tool => (
@@ -923,9 +923,9 @@ export default function ClaudeDocs() {
         <section id="examples" className="mt-12">
           <SectionHeading icon={Star}>Example conversation</SectionHeading>
 
-          <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-ink overflow-hidden shadow">
             <div className="p-5 border-b border-neutral-100 bg-neutral-50">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Sample session</p>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Sample session</p>
             </div>
             <div className="p-5 space-y-4">
               {[
@@ -940,8 +940,8 @@ export default function ClaudeDocs() {
               ].map((msg, i) => (
                 <div key={i} className={`flex gap-3 ${msg.role === 'assistant' ? '' : 'justify-end'}`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Bot className="w-3.5 h-3.5 text-white" />
+                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Bot className="w-3.5 h-3.5 text-ink" />
                     </div>
                   )}
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line ${
@@ -966,7 +966,7 @@ export default function ClaudeDocs() {
         <section id="troubleshooting" className="mt-12">
           <SectionHeading icon={AlertTriangle}>Common issues</SectionHeading>
 
-          <div className="bg-white rounded-2xl border border-neutral-200 divide-y divide-neutral-100">
+          <div className="bg-white rounded-2xl border-2 border-ink divide-y divide-neutral-200">
             {[
               {
                 problem: 'Claude says the PlanIt connector is unavailable',
@@ -1008,17 +1008,17 @@ export default function ClaudeDocs() {
         </section>
 
         {/* ── Support footer ── */}
-        <div className="mt-12 rounded-3xl bg-neutral-900 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="mt-12 rounded-3xl bg-white p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
-            <h3 className="text-lg font-black text-white mb-1">Need help with the integration?</h3>
-            <p className="text-sm text-neutral-400">
+            <h3 className="text-lg font-black text-ink mb-1">Need help with the integration?</h3>
+            <p className="text-sm text-neutral-500">
               Email us or visit the Help Center — we respond within 48 business hours.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
             <a
               href="/help#claude-integration"
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-colors"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-lav text-ink text-sm font-bold rounded-xl hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Help Center
             </a>
@@ -1026,13 +1026,13 @@ export default function ClaudeDocs() {
               href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-colors"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-lav text-ink text-sm font-bold rounded-xl hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Anthropic Docs <ExternalLink className="w-3.5 h-3.5 opacity-70" />
             </a>
             <a
               href="mailto:planit.userhelp@gmail.com"
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Email Support
             </a>
@@ -1040,7 +1040,7 @@ export default function ClaudeDocs() {
         </div>
 
         {/* Footer nav */}
-        <div className="mt-8 flex flex-wrap gap-4 text-xs text-neutral-400 justify-center">
+        <div className="mt-8 flex flex-wrap gap-4 text-xs text-neutral-500 justify-center">
           <a href="/" className="hover:text-neutral-700 transition-colors">Home</a>
           <a href="/help" className="hover:text-neutral-700 transition-colors">Help Center</a>
           <a href="/privacy" className="hover:text-neutral-700 transition-colors">Privacy Policy</a>

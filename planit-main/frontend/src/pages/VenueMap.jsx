@@ -52,7 +52,7 @@ function Plan({ layout, selectedId, onSelect, onMove, targetId, anchorId, facing
   }, [layout.guests]);
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 100 ${H}`} className="w-full rounded-2xl border border-white/10 bg-[#0a0a18] touch-none select-none"
+    <svg ref={svgRef} viewBox={`0 0 100 ${H}`} className="w-full rounded-2xl border-2 border-ink bg-white touch-none select-none"
       onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={up}
       onClick={(e) => { if (e.target === svgRef.current) onSelect?.(null); }}>
       <defs>
@@ -102,7 +102,7 @@ function Plan({ layout, selectedId, onSelect, onMove, targetId, anchorId, facing
   );
 }
 
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#5EEAD4]';
+const inputCls = 'w-full bg-lav border-2 border-ink rounded-lg px-3 py-2.5 text-sm outline-none focus:border-ink';
 
 // ─── Editor ────────────────────────────────────────────────────────────────
 function Editor({ layout, setLayout, onPreview }) {
@@ -184,7 +184,7 @@ function Editor({ layout, setLayout, onPreview }) {
       <div className="flex flex-wrap gap-2 items-center">
         <button onClick={addTable} className="px-3 py-2 rounded-lg text-sm font-bold text-[#05050f] flex items-center gap-1.5" style={{ background: VIOLET }}><Plus className="w-4 h-4" />Table</button>
         <div className="flex">
-          <select value={newType} onChange={(e) => setNewType(e.target.value)} className="bg-white/5 border border-white/10 rounded-l-lg px-2 py-2 text-sm">
+          <select value={newType} onChange={(e) => setNewType(e.target.value)} className="bg-lav border-2 border-ink rounded-l-lg px-2 py-2 text-sm focus:ring-[3px] focus:ring-ac focus:outline-none">
             {Object.entries(LANDMARK_TYPES).map(([k, v]) => <option key={k} value={k} className="text-black">{v}</option>)}
           </select>
           <button onClick={addLandmark} className="px-3 py-2 rounded-r-lg text-sm font-bold text-[#05050f] flex items-center gap-1.5" style={{ background: AMBER }}><Plus className="w-4 h-4" />Add</button>
@@ -195,14 +195,14 @@ function Editor({ layout, setLayout, onPreview }) {
       <Plan layout={layout} selectedId={selId} onSelect={setSelId} onMove={onMove} />
 
       {sel && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-wrap gap-2 items-end">
+        <div className="rounded-xl border-2 border-ink bg-white/[0.03] p-4 flex flex-wrap gap-2 items-end shadow">
           <label className="text-xs text-neutral-500 flex-1 min-w-[8rem]">{isTable ? 'Table label' : 'Landmark name'}
             <input value={sel.label} onChange={(e) => editSel({ label: e.target.value.slice(0, 20) })} className={`${inputCls} mt-1`} /></label>
           {isTable && (
             <label className="text-xs text-neutral-500 w-24">Seats
               <input type="number" min="0" max="40" value={sel.seats} onChange={(e) => editSel({ seats: +e.target.value || 0 })} className={`${inputCls} mt-1`} /></label>
           )}
-          <button onClick={removeSel} className="p-2.5 rounded-lg border border-white/10 text-neutral-400 hover:text-rose-300" aria-label="Delete selected"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={removeSel} className="p-2.5 rounded-lg border-2 border-ink text-neutral-500 hover:text-red-700 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" aria-label="Delete selected"><Trash2 className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -210,18 +210,18 @@ function Editor({ layout, setLayout, onPreview }) {
         <h4 className="font-display font-bold mb-1">Guests</h4>
         <p className="text-xs text-neutral-500 mb-2">One per line: <span className="font-mono">Name, table label</span> ({layout.guests.length} assigned)</p>
         <textarea rows={3} value={guestText} onChange={(e) => setGuestText(e.target.value)} placeholder={'Maya Chen, 3\nDev Patel, 3'} className={inputCls} />
-        <button onClick={addGuests} className="mt-2 px-3 py-2 rounded-lg border border-white/15 text-sm text-neutral-200">Add guests</button>
+        <button onClick={addGuests} className="mt-2 px-3 py-2 rounded-lg border-2 border-ink text-sm text-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Add guests</button>
         {layout.guests.length > 0 && (
-          <button onClick={() => patch({ guests: [] })} className="mt-2 ml-2 px-3 py-2 rounded-lg text-sm text-neutral-500 hover:text-rose-300">Clear all</button>
+          <button onClick={() => patch({ guests: [] })} className="mt-2 ml-2 px-3 py-2 rounded-lg text-sm text-neutral-500 hover:text-red-700">Clear all</button>
         )}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="rounded-2xl border-2 border-ink bg-white/[0.03] p-5 shadow-md">
         <h4 className="font-display font-bold mb-1">Share with guests</h4>
         <p className="text-xs text-neutral-500 mb-3">The whole layout is packed into the link itself, so any phone that opens it can find a table. Nothing is uploaded.</p>
         <div className="flex gap-2 flex-wrap">
           <button onClick={makeLink} className="px-3 py-2 rounded-lg text-sm font-bold text-[#05050f] flex items-center gap-1.5" style={{ background: TEAL }}><Link2 className="w-4 h-4" />Create link + QR</button>
-          <button onClick={onPreview} className="px-3 py-2 rounded-lg border border-white/15 text-sm text-neutral-200 flex items-center gap-1.5"><Navigation className="w-4 h-4" />Try guest view</button>
+          <button onClick={onPreview} className="px-3 py-2 rounded-lg border-2 border-ink text-sm text-ink flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Navigation className="w-4 h-4" />Try guest view</button>
         </div>
         {link && (
           <div className="mt-4 text-center">
@@ -270,11 +270,11 @@ function GuestView({ layout, onClear }) {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Your name or a table number" className={`${inputCls} pl-9`} />
       </div>
       {matches.length > 0 && (
-        <div className="rounded-xl border border-white/10 divide-y divide-white/[0.06]">
+        <div className="rounded-xl border-2 border-ink divide-y divide-white/[0.06]">
           {matches.map((m) => {
             const t = layout.tables.find((x) => x.id === m.tableId);
             return (
-              <button key={m.key} onClick={() => { setTableId(m.tableId); setQ(''); }} className="w-full text-left px-4 py-3 flex justify-between text-sm hover:bg-white/5">
+              <button key={m.key} onClick={() => { setTableId(m.tableId); setQ(''); }} className="w-full text-left px-4 py-3 flex justify-between text-sm hover:bg-lav">
                 <span>{m.title}</span><span className="text-neutral-500">Table {t?.label}</span>
               </button>
             );
@@ -293,7 +293,7 @@ function GuestView({ layout, onClear }) {
               {layout.landmarks.length === 0 && <p className="text-sm text-neutral-500">This venue has no landmarks to anchor from.</p>}
               {layout.landmarks.map((m) => (
                 <button key={m.id} onClick={() => { setAnchorId(m.id); if (facingId === m.id) setFacingId(null); }}
-                  className={`px-3 py-1.5 rounded-full text-sm border ${m.id === anchorId ? 'bg-[#F0B429] text-[#05050f] border-transparent font-semibold' : 'border-white/15 text-neutral-300'}`}>{m.label}</button>
+                  className={`px-3 py-1.5 rounded-lg text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${m.id === anchorId ? 'bg-hl text-[#05050f] border-transparent font-semibold border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition' : 'border-ink text-neutral-600'}`}>{m.label}</button>
               ))}
             </div>
           </div>
@@ -303,13 +303,13 @@ function GuestView({ layout, onClear }) {
               <div className="flex flex-wrap gap-2">
                 {layout.landmarks.filter((m) => m.id !== anchorId).map((m) => (
                   <button key={m.id} onClick={() => setFacingId(facingId === m.id ? null : m.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm border ${m.id === facingId ? 'border-[#F0B429] text-[#F0B429]' : 'border-white/15 text-neutral-300'}`}>{m.label}</button>
+                    className={`px-3 py-1.5 rounded-lg text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${m.id === facingId ? 'border-ink text-[#F0B429]' : 'border-ink text-neutral-600'}`}>{m.label}</button>
                 ))}
               </div>
             </div>
           )}
           {text && (
-            <div className="rounded-xl border p-4 text-[15px] leading-relaxed" style={{ borderColor: 'rgba(94,234,212,0.35)', background: 'rgba(94,234,212,0.06)' }}>{text}</div>
+            <div className="rounded-xl border-2 p-4 text-[15px] leading-relaxed border-ink shadow" style={{ borderColor: 'rgba(94,234,212,0.35)', background: '#eceeff' }}>{text}</div>
           )}
         </div>
       )}
@@ -328,13 +328,13 @@ function LoadLink({ onLoaded }) {
   };
   return (
     <div className="max-w-md mx-auto">
-      <div className="rounded-xl border border-dashed border-white/15 p-6 text-center">
+      <div className="rounded-xl border-2 border-dashed border-ink p-6 text-center shadow-md">
         <MapIcon className="w-8 h-8 mx-auto mb-3 text-neutral-500" />
-        <p className="text-sm text-neutral-300 mb-1">No venue loaded on this device.</p>
+        <p className="text-sm text-neutral-600 mb-1">No venue loaded on this device.</p>
         <p className="text-xs text-neutral-500 mb-4">Open the link your host shared, or paste it here.</p>
         <div className="flex gap-2">
           <input value={v} onChange={(e) => setV(e.target.value)} placeholder="Paste venue link" className={inputCls} />
-          <button onClick={go} className="px-4 rounded-lg border border-white/15 text-sm text-neutral-200">Load</button>
+          <button onClick={go} className="px-4 rounded-lg border-2 border-ink text-sm text-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Load</button>
         </div>
       </div>
     </div>
@@ -365,9 +365,9 @@ export default function VenueMap() {
   const tabs = [{ id: 'guest', label: 'Find my table', icon: Navigation }, { id: 'host', label: 'Build a venue', icon: PencilRuler }];
 
   return (
-    <div className="min-h-screen bg-[#05050f] text-white" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
+    <div className="min-h-screen bg-white text-ink" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
+        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-500 hover:text-ink text-sm -ml-2 px-2 py-1.5 rounded-lg">
           <ArrowLeft className="w-4 h-4" />Back
         </button>
         <div className="flex items-center gap-2 font-display font-bold tracking-tight text-sm">
@@ -401,13 +401,13 @@ export default function VenueMap() {
       <>
       <div className="max-w-2xl mx-auto px-5 pt-8">
         <h1 className="font-display font-extrabold text-3xl sm:text-4xl tracking-tight mb-2">Tell it where you are.<br />It tells you where to go.</h1>
-        <p className="text-neutral-400 text-sm max-w-md mb-6">
+        <p className="text-neutral-500 text-sm max-w-md mb-6">
           No sensors, no guessing. Tap the landmark you&rsquo;re next to and get directions to your table on a plan the host drew. Runs entirely in your browser.
         </p>
-        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 mb-8">
+        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border-2 border-ink mb-8 shadow">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold ${tab === id ? 'bg-white text-black' : 'text-neutral-400'}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold ${tab === id ? 'bg-white text-black border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500'}`}>
               <Icon className="w-4 h-4" />{label}
             </button>
           ))}

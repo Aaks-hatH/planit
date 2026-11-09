@@ -152,94 +152,7 @@ const PALETTES = {
 const STAR_TINTS = ['255,255,255', '255,255,255', '199,210,254', '251,207,232', '253,230,200'];
 
 export function Aurora({ palette = 'indigo', stars = true, density = 0.00016, orbs = true, className = '' }) {
-  const canvasRef = useRef(null);
-  const [a, b, c] = PALETTES[palette] || PALETTES.indigo;
-
-  useEffect(() => {
-    if (!stars) return undefined;
-    const canvas = canvasRef.current;
-    if (!canvas) return undefined;
-    const ctx = canvas.getContext('2d');
-    const reduce = reducedMotion();
-    let list = []; let shooters = [];
-    let raf = 0; let w = 0; let h = 0; let visible = false;
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = canvas.clientWidth; h = canvas.clientHeight;
-      canvas.width = w * dpr; canvas.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.round(w * h * density);
-      list = Array.from({ length: n }, () => ({
-        x: Math.random() * w, y: Math.random() * h,
-        r: Math.random() * 1.1 + 0.2, a: Math.random() * 0.6 + 0.2,
-        tw: Math.random() * Math.PI * 2, v: Math.random() * 0.05 + 0.008,
-        tint: STAR_TINTS[Math.floor(Math.random() * STAR_TINTS.length)],
-        cross: Math.random() < 0.06,
-      }));
-    };
-
-    const tier = () => document.documentElement.getAttribute('data-perf');
-    const canAnimate = () => !reduce && visible && tier() === 'high';
-
-    const draw = (t) => {
-      ctx.clearRect(0, 0, w, h);
-      for (const s of list) {
-        const alpha = reduce ? s.a : s.a * (0.65 + 0.35 * Math.sin(t / 900 + s.tw));
-        ctx.fillStyle = `rgba(${s.tint},${alpha})`;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
-        if (s.cross && s.r > 0.7) { // a few stars get a four-point glint
-          ctx.strokeStyle = `rgba(${s.tint},${alpha * 0.5})`; ctx.lineWidth = 0.6;
-          ctx.beginPath(); ctx.moveTo(s.x - s.r * 4, s.y); ctx.lineTo(s.x + s.r * 4, s.y); ctx.moveTo(s.x, s.y - s.r * 4); ctx.lineTo(s.x, s.y + s.r * 4); ctx.stroke();
-        }
-        if (canAnimate()) { s.y += s.v; if (s.y > h) { s.y = 0; s.x = Math.random() * w; } }
-      }
-      if (canAnimate()) {
-        if (shooters.length < 2 && Math.random() < 0.003) {
-          shooters.push({ x: Math.random() * w * 0.8, y: Math.random() * h * 0.4, vx: 7 + Math.random() * 4, vy: 3 + Math.random() * 2, life: 0 });
-        }
-        shooters = shooters.filter((s) => s.life < 46);
-        for (const s of shooters) {
-          s.x += s.vx; s.y += s.vy; s.life++;
-          const f = 1 - s.life / 46;
-          const g = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 9, s.y - s.vy * 9);
-          g.addColorStop(0, `rgba(255,255,255,${0.9 * f})`); g.addColorStop(1, 'rgba(129,140,248,0)');
-          ctx.strokeStyle = g; ctx.lineWidth = 1.4;
-          ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 9, s.y - s.vy * 9); ctx.stroke();
-        }
-        raf = requestAnimationFrame(draw);
-      }
-    };
-
-    const restart = () => { cancelAnimationFrame(raf); if (canAnimate()) raf = requestAnimationFrame(draw); };
-    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; restart(); });
-    io.observe(canvas);
-    window.addEventListener('perfchange', restart);
-    const onResize = () => { resize(); restart(); if (!canAnimate()) draw(performance.now()); };
-    window.addEventListener('resize', onResize);
-    resize(); draw(0);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      io.disconnect();
-      window.removeEventListener('perfchange', restart);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [stars, density]);
-
-  return (
-    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
-      {orbs && (
-        <>
-          <div className="lq-orb lq-drift-a" style={{ left: '-12%', top: '-18%', width: '58vw', height: '58vw', background: `radial-gradient(circle, ${a} 0%, transparent 68%)`, opacity: 0.32 }} />
-          <div className="lq-orb lq-drift-b" style={{ right: '-14%', top: '8%', width: '52vw', height: '52vw', background: `radial-gradient(circle, ${b} 0%, transparent 68%)`, opacity: 0.28 }} />
-          <div className="lq-orb lq-drift-c" style={{ left: '22%', bottom: '-26%', width: '56vw', height: '44vw', background: `radial-gradient(circle, ${c} 0%, transparent 68%)`, opacity: 0.22 }} />
-        </>
-      )}
-      {stars && <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />}
-      <div className="lq-grain" />
-    </div>
-  );
+  return null;
 }
 
 /** A glowing planet limb rising from the bottom of a hero. */
@@ -250,8 +163,8 @@ export function Horizon({ className = '', height = '46%' }) {
         className="absolute left-1/2 -translate-x-1/2 rounded-full"
         style={{
           width: '170%', aspectRatio: '1', top: '38%',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(129,140,248,.26) 0%, rgba(99,102,241,.07) 28%, transparent 60%), #05050f',
-          boxShadow: '0 -1px 0 0 rgba(199,210,254,.45), 0 -26px 90px 6px rgba(99,102,241,.32), 0 -80px 200px rgba(244,114,182,.12)',
+          background: '#eceeff',
+          boxShadow: '4px 4px 0 #0d0e1c',
         }}
       />
     </div>
@@ -348,11 +261,11 @@ export function SpotlightStage({ children, radius = 260, id, className = '', min
     <section
       id={id}
       ref={sectionRef}
-      className={`relative w-full overflow-hidden bg-[#05050f] ${className}`}
+      className={`relative w-full overflow-hidden bg-white ${className}`}
       style={{ minHeight, contain: 'paint', '--spot-x': '50%', '--spot-y': '42%' }}
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{
-        backgroundImage: 'linear-gradient(180deg, rgba(5,5,15,.2) 0%, rgba(5,5,15,.42) 44%, rgba(5,5,15,.96) 100%), linear-gradient(90deg, rgba(5,5,15,.35) 0%, transparent 48%, rgba(5,5,15,.28) 100%), url("/media/planit-skyline.webp")',
+        backgroundImage: 'none',
         backgroundSize: 'cover',
         backgroundPosition: 'center 64%',
         transform: 'scale(1.015)',
@@ -361,12 +274,12 @@ export function SpotlightStage({ children, radius = 260, id, className = '', min
         background: `radial-gradient(circle ${radius}px at var(--spot-x) var(--spot-y), rgba(129,140,248,.15) 0%, rgba(99,102,241,.055) 38%, transparent 75%)`,
       }} />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30" style={{
-        backgroundImage: 'linear-gradient(rgba(199,210,254,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.045) 1px, transparent 1px)',
+        backgroundImage: 'none',
         backgroundSize: '80px 80px',
         maskImage: 'linear-gradient(to bottom, black 0%, transparent 82%)',
         WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 82%)',
       }} />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#05050f]/15 via-transparent to-[#05050f]/85" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-lav text-ink" />
       <div className="relative z-10" style={{ minHeight }}>{children}</div>
     </section>
   );

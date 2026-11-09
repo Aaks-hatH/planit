@@ -50,21 +50,21 @@ const STEPS = [
 
 export default function TableServiceTour({ onClose }) {
   return (
-    <div className="fixed inset-0 z-[290] bg-[#0a0a12] overflow-y-auto flex flex-col">
-      <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
+    <div className="fixed inset-0 z-[290] bg-ink/60 overflow-y-auto flex flex-col">
+      <header className="flex-shrink-0 h-14 border-b border-ink bg-white flex items-center px-4 gap-4">
         <div data-tour="hdr-title" className="flex items-center gap-3 min-w-0 cursor-pointer">
           <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
             <Utensils className="w-4 h-4 text-neutral-900" />
           </div>
           <div className="min-w-0">
-            <span className="font-bold text-white text-sm truncate">The Garden Bistro</span>
+            <span className="font-bold text-ink text-sm truncate">The Garden Bistro</span>
             <span className="hidden sm:inline text-neutral-600 text-xs ml-2">Table Service</span>
           </div>
         </div>
 
         <div data-tour="status-pills" className="flex items-center gap-2 flex-1 overflow-x-auto cursor-pointer">
           {Object.entries(STATUS_META).map(([k, meta]) => (
-            <div key={k} className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold text-neutral-300"
+            <div key={k} className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 text-xs font-semibold text-neutral-600 border-ink"
               style={{ borderColor: `${meta.color}40`, background: `${meta.color}15` }}>
               <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: meta.color }} />
               {TABLES.filter(t => t.status === k).length} {meta.label}
@@ -74,20 +74,20 @@ export default function TableServiceTour({ onClose }) {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="relative p-2 rounded-lg cursor-pointer">
-            <Bell className="w-4 h-4 text-amber-400" />
+            <Bell className="w-4 h-4 text-amber-700" />
             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">1</span>
           </div>
           <div className="p-2 rounded-lg text-neutral-500 cursor-pointer"><RefreshCw className="w-4 h-4" /></div>
-          <div data-tour="servers" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold cursor-pointer">
+          <div data-tour="servers" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold cursor-pointer">
             <Users className="w-3.5 h-3.5" />Servers
           </div>
-          <div data-tour="kitchen" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold cursor-pointer">
+          <div data-tour="kitchen" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold cursor-pointer">
             <Utensils className="w-3.5 h-3.5" />Kitchen
           </div>
-          <div data-tour="scan-qr" className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded-lg text-xs font-semibold cursor-pointer">
+          <div data-tour="scan-qr" className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-700 text-amber-700 rounded-lg text-xs font-semibold cursor-pointer">
             <ScanLine className="w-3.5 h-3.5" />Scan QR
           </div>
-          <div data-tour="edit-layout" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold cursor-pointer">
+          <div data-tour="edit-layout" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-lav border-2 border-ink text-neutral-600 rounded-lg text-xs font-semibold cursor-pointer">
             <LayoutGrid className="w-3.5 h-3.5" />Edit Layout
           </div>
           <div data-tour="settings" className="p-2 rounded-lg text-neutral-500 cursor-pointer"><Settings className="w-4 h-4" /></div>
@@ -101,18 +101,18 @@ export default function TableServiceTour({ onClose }) {
               <div key={t.id} {...(t.id === 1 ? { 'data-tour': 'table' } : {})}
                 className="w-24 h-24 rounded-2xl border-2 flex flex-col items-center justify-center cursor-pointer transition-transform hover:scale-105"
                 style={{ borderColor: STATUS_META[t.status].color, background: `${STATUS_META[t.status].color}18` }}>
-                <span className="text-white font-bold text-sm">{t.label}</span>
+                <span className="text-ink font-bold text-sm">{t.label}</span>
                 <span className="text-[10px] font-semibold mt-0.5" style={{ color: STATUS_META[t.status].color }}>{STATUS_META[t.status].label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="w-80 xl:w-96 flex-shrink-0 border-l border-neutral-800 flex flex-col bg-neutral-900/50">
-          <div className="flex border-b border-neutral-800 flex-shrink-0">
+        <div className="w-80 xl:w-96 flex-shrink-0 border-l border-ink flex flex-col bg-lav">
+          <div className="flex border-b border-ink flex-shrink-0">
             {SIDE_TABS.map(({ id, label, badge }) => (
               <div key={id} data-tour={id === 'summary' ? undefined : `side-${id}`}
-                className={`flex-1 py-3 text-xs font-semibold border-b-2 cursor-pointer ${id === 'waitlist' ? 'text-white border-white' : 'text-neutral-500 border-transparent'}`}>
+                className={`flex-1 py-3 text-xs font-semibold border-b-2 cursor-pointer ${id === 'waitlist' ? 'text-ink border-ink' : 'text-neutral-500 border-transparent'}`}>
                 {label}
                 {badge > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-neutral-700 rounded-full text-[10px] font-bold text-white">{badge}</span>}
               </div>
@@ -124,9 +124,9 @@ export default function TableServiceTour({ onClose }) {
               { name: 'Ortiz party of 2', wait: '~15 min' },
               { name: 'Baker party of 6', wait: '~25 min' },
             ].map((w, idx) => (
-              <div key={idx} className="px-3 py-2.5 rounded-xl bg-neutral-800/60 border border-neutral-700/50 flex items-center justify-between">
-                <span className="text-xs font-semibold text-neutral-200">{w.name}</span>
-                <span className="text-[11px] text-amber-400 font-semibold">{w.wait}</span>
+              <div key={idx} className="px-3 py-2.5 rounded-xl bg-white border-2 border-ink flex items-center justify-between shadow">
+                <span className="text-xs font-semibold text-ink">{w.name}</span>
+                <span className="text-[11px] text-amber-700 font-semibold">{w.wait}</span>
               </div>
             ))}
           </div>

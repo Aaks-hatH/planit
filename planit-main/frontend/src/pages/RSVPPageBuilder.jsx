@@ -53,7 +53,7 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
     <div
       ref={sortable.setNodeRef}
       style={style}
-      className={`rounded-xl border ${isFixed ? 'border-white/20 bg-white/[0.04]' : 'border-white/10 bg-white/[0.02]'} ${sortable.isDragging ? 'opacity-50' : ''}`}
+      className={`rounded-xl border-2 border-ink ${isFixed ? 'border-ink bg-white/[0.04]' : 'border-ink bg-white/[0.02]'} ${sortable.isDragging ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center gap-2 px-3 py-2.5">
         {!isFixed && (
@@ -65,13 +65,13 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
         <span className="text-sm font-medium flex-1">{BLOCK_LABELS[section.type] || section.type}</span>
 
         {variants.length > 1 && (
-          <div className="flex rounded-full bg-white/5 p-0.5 text-[11px]">
+          <div className="flex rounded-full bg-lav p-0.5 text-[11px]">
             {variants.map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => onChangeLayout(v)}
-                className={`px-2 py-0.5 rounded-full ${section.layout === v ? 'bg-white/15' : 'opacity-50'}`}
+                className={`px-2 py-0.5 rounded-lg ${section.layout === v ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}
               >
                 {v}
               </button>
@@ -84,14 +84,14 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
         </button>
 
         {!isFixed && (
-          <button type="button" onClick={onDelete} className="opacity-40 hover:opacity-100 hover:text-red-400">
+          <button type="button" onClick={onDelete} className="opacity-40 hover:opacity-100 hover:text-red-700">
             <Trash2 size={14} />
           </button>
         )}
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 border-t border-white/10 flex flex-col gap-4">
+        <div className="px-3 pb-3 pt-1 border-t border-ink flex flex-col gap-4">
           {!isFixed && (
             <div>
               <p className="text-[11px] uppercase tracking-wide opacity-50 mb-2">Content</p>
@@ -111,7 +111,7 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
               <label className="flex items-center gap-1.5 text-xs">
                 Spacing
                 <select
-                  className="rounded bg-white/5 border border-white/10 px-1.5 py-1"
+                  className="rounded bg-lav border-2 border-ink px-1.5 py-1 focus:ring-[3px] focus:ring-ac focus:outline-none"
                   value={section.style?.spacing || 'default'}
                   onChange={(e) => onChangeStyle({ ...section.style, spacing: e.target.value })}
                 >
@@ -123,7 +123,7 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
               <label className="flex items-center gap-1.5 text-xs">
                 Align
                 <select
-                  className="rounded bg-white/5 border border-white/10 px-1.5 py-1"
+                  className="rounded bg-lav border-2 border-ink px-1.5 py-1 focus:ring-[3px] focus:ring-ac focus:outline-none"
                   value={section.style?.alignment || 'center'}
                   onChange={(e) => onChangeStyle({ ...section.style, alignment: e.target.value })}
                 >
@@ -155,8 +155,8 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
 
 function SaveIndicator({ state }) {
   if (state === 'saving') return <span className="flex items-center gap-1.5 text-xs opacity-60"><Loader2 size={12} className="animate-spin" /> Saving…</span>;
-  if (state === 'saved') return <span className="flex items-center gap-1.5 text-xs text-emerald-400"><Check size={12} /> Saved</span>;
-  if (state === 'error') return <span className="flex items-center gap-1.5 text-xs text-red-400"><AlertCircle size={12} /> Couldn't save</span>;
+  if (state === 'saved') return <span className="flex items-center gap-1.5 text-xs text-emerald-700"><Check size={12} /> Saved</span>;
+  if (state === 'error') return <span className="flex items-center gap-1.5 text-xs text-red-700"><AlertCircle size={12} /> Couldn't save</span>;
   return <span className="text-xs opacity-30">—</span>;
 }
 
@@ -356,29 +356,29 @@ export default function RSVPPageBuilder() {
   );
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60"><Loader2 className="animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white text-neutral-500"><Loader2 className="animate-spin" /></div>;
   }
   if (!config) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60">Couldn't load this event's RSVP page.</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white text-neutral-500">Couldn't load this event's RSVP page.</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a12] text-white flex flex-col">
+    <div className="min-h-screen bg-white text-ink flex flex-col">
       {/* header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-ink">
         <button onClick={() => navigate(-1)} className="opacity-70 hover:opacity-100"><ArrowLeft size={18} /></button>
         <div className="flex-1">
           <p className="text-sm font-semibold">{event?.title || 'RSVP Page Builder'}</p>
         </div>
         <SaveIndicator state={saveState} />
-        <div className="flex rounded-full bg-white/5 p-0.5">
-          <button onClick={() => setActiveTab('design')} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === 'design' ? 'bg-white/15' : 'opacity-50 hover:opacity-80'}`}>Design</button>
-          <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === 'settings' ? 'bg-white/15' : 'opacity-50 hover:opacity-80'}`}>Settings</button>
+        <div className="flex rounded-full bg-lav p-0.5">
+          <button onClick={() => setActiveTab('design')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'design' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}>Design</button>
+          <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'settings' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}>Settings</button>
         </div>
         {activeTab === 'design' && (
-          <div className="flex rounded-full bg-white/5 p-0.5">
-            <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-full ${viewMode === 'desktop' ? 'bg-white/15' : 'opacity-50'}`}><Monitor size={14} /></button>
-            <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-full ${viewMode === 'mobile' ? 'bg-white/15' : 'opacity-50'}`}><Smartphone size={14} /></button>
+          <div className="flex rounded-full bg-lav p-0.5">
+            <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-lg ${viewMode === 'desktop' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Monitor size={14} /></button>
+            <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-lg ${viewMode === 'mobile' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Smartphone size={14} /></button>
           </div>
         )}
         <a href={`/rsvp/${event?.subdomain || eventId}`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
@@ -389,7 +389,7 @@ export default function RSVPPageBuilder() {
       {activeTab === 'design' && (
       <div className="flex flex-1 overflow-hidden">
         {/* left rail */}
-        <div className="w-[380px] shrink-0 border-r border-white/10 overflow-y-auto p-4 flex flex-col gap-3">
+        <div className="w-[380px] shrink-0 border-r border-ink overflow-y-auto p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs opacity-60">Accent</span>
             {PRESET_COLORS.map((c) => (
@@ -433,17 +433,17 @@ export default function RSVPPageBuilder() {
           <div className="relative">
             <button
               onClick={() => setAddMenuOpen((o) => !o)}
-              className="w-full flex items-center justify-center gap-1.5 text-sm py-2 rounded-lg border border-dashed border-white/20 hover:border-white/40 opacity-80 hover:opacity-100"
+              className="w-full flex items-center justify-center gap-1.5 text-sm py-2 rounded-lg border-2 border-dashed border-ink hover:border-ink opacity-80 hover:opacity-100 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
             >
               <Plus size={14} /> Add block
             </button>
             {addMenuOpen && (
-              <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-[#141420] shadow-xl">
+              <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border-2 border-ink bg-white shadow-xl">
                 {BLOCK_TYPES.map((type) => (
                   <button
                     key={type}
                     onClick={() => addSection(type)}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/5"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-lav"
                   >
                     {BLOCK_LABELS[type]}
                   </button>
@@ -477,9 +477,9 @@ export default function RSVPPageBuilder() {
         </div>
 
         {/* right: live preview */}
-        <div className="flex-1 overflow-y-auto bg-black/30 flex justify-center py-8 px-4">
+        <div className="flex-1 overflow-y-auto bg-lav flex justify-center py-8 px-4">
           <div className={viewMode === 'mobile' ? 'w-[390px]' : 'w-full max-w-4xl'} style={{ transition: 'width 200ms ease' }}>
-            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="rounded-2xl overflow-hidden border-2 border-ink shadow-2xl">
               <RSVPPageRenderer
                 config={previewConfig}
                 pageData={null}

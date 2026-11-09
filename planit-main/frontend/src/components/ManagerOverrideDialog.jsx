@@ -127,17 +127,17 @@ export default function ManagerOverrideDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-600 p-6 rounded-t-3xl">
+        <div className="p-6 rounded-t-3xl bg-lav text-ink">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                <Shield className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 rounded-full bg-lav flex items-center justify-center">
+                <Shield className="w-7 h-7 text-ink" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white">MANAGER OVERRIDE</h2>
+                <h2 className="text-2xl font-black text-ink">MANAGER OVERRIDE</h2>
                 <p className="text-yellow-100 text-sm font-semibold">
                   Security authorization required
                 </p>
@@ -146,7 +146,7 @@ export default function ManagerOverrideDialog({
             <button
               onClick={onCancel}
               disabled={loading}
-              className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white disabled:opacity-50"
+              className="p-2 hover:bg-lav rounded-xl transition-colors text-ink disabled:opacity-50"
             >
               <X className="w-6 h-6" />
             </button>
@@ -191,7 +191,7 @@ export default function ManagerOverrideDialog({
           {/* Step 1: Request Authorization */}
           {step === 'request' && (
             <div className="space-y-4">
-              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-600">
                 <div className="flex items-start gap-3">
                   <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-900">
@@ -216,7 +216,7 @@ export default function ManagerOverrideDialog({
                     setError('');
                   }}
                   placeholder="Enter manager/organizer username"
-                  className="w-full border-2 border-neutral-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500"
+                  className="w-full border-2 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
                   autoFocus
                   disabled={loading}
                 />
@@ -236,7 +236,7 @@ export default function ManagerOverrideDialog({
                       setError('');
                     }}
                     placeholder="Enter manager password"
-                    className="w-full border-2 border-neutral-300 rounded-xl px-4 py-3 pr-12 text-base focus:outline-none focus:border-blue-500"
+                    className="w-full border-2 rounded-xl px-4 py-3 pr-12 text-base focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
                     disabled={loading}
                   />
                   <button
@@ -267,7 +267,7 @@ export default function ManagerOverrideDialog({
                   }}
                   placeholder="Provide a detailed reason for this override (minimum 10 characters)&#10;&#10;Examples:&#10;- Guest ID verified, legitimate ticket holder&#10;- Technical issue with system, guest pre-approved&#10;- VIP guest, verbal approval from event director"
                   rows={5}
-                  className="w-full border-2 border-neutral-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full border-2 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 resize-none border-ink focus:ring-[3px] focus:ring-ac bg-white"
                   disabled={loading}
                 />
                 <p className="text-xs text-neutral-500 mt-1">
@@ -286,7 +286,7 @@ export default function ManagerOverrideDialog({
               <button
                 onClick={handleRequestOverride}
                 disabled={loading || !managerUsername.trim() || !managerPassword.trim() || reason.trim().length < 10}
-                className="w-full px-6 py-4 bg-yellow-500 text-yellow-950 text-lg font-black rounded-xl hover:bg-yellow-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2"
+                className="w-full px-6 py-4 bg-yellow-500 text-yellow-950 text-lg font-black rounded-xl hover:bg-yellow-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2 border-2 border-ink font-bold"
               >
                 {loading ? (
                   <>
@@ -342,7 +342,7 @@ export default function ManagerOverrideDialog({
               </div>
 
               {/* Warning */}
-              <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4">
+              <div className="bg-yellow-50 border-2 border-amber-600 rounded-xl p-4">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-yellow-900">
@@ -365,7 +365,7 @@ export default function ManagerOverrideDialog({
               <button
                 onClick={handleExecuteOverride}
                 disabled={loading}
-                className="w-full px-6 py-4 bg-emerald-600 text-white text-lg font-black rounded-xl hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2"
+                className="w-full px-6 py-4 bg-emerald-600 text-white text-lg font-black rounded-xl hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2 border-2 border-ink font-bold"
               >
                 {loading ? (
                   <>

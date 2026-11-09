@@ -69,12 +69,12 @@ export default function ConsentBanner() {
     >
       <div
         style={{
-          background: 'rgba(255,255,255,0.96)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(0,0,0,0.08)',
+          background: '#ffffff',
+          
+          
+          border: '2px solid #0d0e1c',
           borderRadius: 10,
-          boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+          boxShadow: '4px 4px 0 #0d0e1c',
           padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
@@ -92,7 +92,7 @@ export default function ConsentBanner() {
           We use cookies and platform analytics to run and improve the site.{' '}
           <a
             href="/privacy"
-            style={{ color: '#9ca3af', textDecoration: 'underline', textUnderlineOffset: 2 }}
+            style={{ color: '#5a5d70', textDecoration: 'underline', textUnderlineOffset: 2 }}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -105,16 +105,16 @@ export default function ConsentBanner() {
           <button
             onClick={() => dismiss()}
             style={{
-              background: '#111827',
-              border: '1px solid #111827',
+              background: '#ffffff',
+              border: '2px solid #2236ff',
               borderRadius: 6,
               padding: '5px 12px',
               fontSize: 11,
               fontWeight: 600,
-              color: '#fff',
+              color: '#0d0e1c',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
-              lineHeight: 1,
+              lineHeight: 1, boxShadow: '3px 3px 0 #0d0e1c',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = '#374151'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#111827'; }}

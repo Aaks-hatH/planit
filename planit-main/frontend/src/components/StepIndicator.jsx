@@ -18,7 +18,7 @@ export default function StepIndicator({ labels, index }) {
           <div
             key={i}
             className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-              i <= clamped ? 'bg-[#8B7FFF]' : 'bg-white/10'
+              i <= clamped ? 'bg-ac' : 'bg-lav'
             }`}
           />
         ))}

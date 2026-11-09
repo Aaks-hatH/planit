@@ -33,7 +33,6 @@ import {
   BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2, Copy,
   Sun, Moon,
 } from 'lucide-react';
-import '../styles/adminDark.css';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import AdminPayments from '../components/AdminPayments';
 import AdminCareers from '../components/AdminCareers';
@@ -155,7 +154,7 @@ const SOURCE_BADGE = {
   watchdog: 'bg-sky-800 text-sky-200',
 };
 function sourceBadgeClass(source) {
-  if (!source) return 'bg-neutral-800 text-neutral-400';
+  if (!source) return 'bg-lav text-neutral-400';
   return SOURCE_BADGE[source.toLowerCase()] || 'bg-amber-900 text-amber-200';
 }
 function sourceDotClass(source) {
@@ -168,12 +167,12 @@ function sourceDotClass(source) {
 
 const LogLine = ({ entry }) => {
   const colors  = { error: 'text-red-400', warn: 'text-amber-400', info: 'text-neutral-300' };
-  const bgColor = { error: 'bg-red-950/30', warn: 'bg-amber-950/20', info: '' };
+  const bgColor = { error: 'bg-red-50', warn: 'bg-amber-50', info: '' };
   const prefix  = { error: 'ERR', warn: 'WRN', info: 'INF' };
   const t    = DateTime.fromISO(entry.ts).toFormat('HH:mm:ss.SSS');
   const date = DateTime.fromISO(entry.ts).toFormat('MM/dd');
   return (
-    <div className={`flex gap-2 text-xs font-mono leading-relaxed py-0.5 hover:bg-white/5 px-2 rounded ${bgColor[entry.level] || ''}`}>
+    <div className={`flex gap-2 text-xs font-mono leading-relaxed py-0.5 hover:bg-lav px-2 rounded ${bgColor[entry.level] || ''}`}>
       <span className="text-neutral-600 flex-shrink-0 select-none tabular-nums w-28">{date} {t}</span>
       <span className={`flex-shrink-0 font-bold w-7 ${colors[entry.level] || 'text-neutral-400'}`}>{prefix[entry.level] || 'LOG'}</span>
       {entry.source && (
@@ -207,13 +206,13 @@ function BlocklistInlineForm({ event }) {
   }
 
   return (
-    <div className="col-span-full border rounded-lg p-3 bg-red-50 border-red-100 space-y-2">
+    <div className="col-span-full border-2 rounded-lg p-3 bg-red-50 border-red-600 space-y-2">
       <p className="text-xs font-semibold text-red-700">Add to Blocklist</p>
       <div className="flex gap-2 flex-wrap">
-        <select value={type} onChange={e => { setType(e.target.value); setValue(e.target.value === 'email' ? (event.organizerEmail || '') : (event.subdomain || '')); }} className="input text-xs w-28">
+        <select value={type} onChange={e => { setType(e.target.value); setValue(e.target.value === 'email' ? (event.organizerEmail || '') : (event.subdomain || '')); }} className="input text-xs w-28 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
           {['email','subdomain','ip','fingerprint'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-        <input className="input text-xs flex-1 min-w-40" value={value} onChange={e => setValue(e.target.value)} placeholder={`Enter ${type}…`} />
+        <input className="input text-xs flex-1 min-w-40 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={value} onChange={e => setValue(e.target.value)} placeholder={`Enter ${type}…`} />
         <button
           disabled={saving || !value.trim()}
           onClick={async () => {
@@ -388,7 +387,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
         }} className="btn btn-secondary text-xs gap-1">
           <ExternalLink className="w-3 h-3" /> View Live
         </button>
-        <select value={event.status} onChange={e => adminAPI.updateEventStatus(event._id, e.target.value).then(() => { setEvent({ ...event, status: e.target.value }); toast.success('Status updated'); onUpdate?.(); }).catch(() => toast.error('Failed'))} className="input py-1.5 text-sm">
+        <select value={event.status} onChange={e => adminAPI.updateEventStatus(event._id, e.target.value).then(() => { setEvent({ ...event, status: e.target.value }); toast.success('Status updated'); onUpdate?.(); }).catch(() => toast.error('Failed'))} className="input py-1.5 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
           {['active', 'completed', 'cancelled', 'draft'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={event.eventType || 'standard'} title="Event type"
@@ -397,7 +396,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             adminAPI.updateEventType(event._id, next)
               .then(() => { setEvent(ev => ({ ...ev, eventType: next, rsvpPage: { ...(ev.rsvpPage || {}), enabled: next === 'rsvpOnly' ? true : (ev.rsvpPage?.enabled && false) } })); toast.success(next === 'rsvpOnly' ? 'Converted to RSVP event' : 'Converted to standard event'); load(); })
               .catch(() => toast.error('Failed to change event type'));
-          }} className="input py-1.5 text-sm">
+          }} className="input py-1.5 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
           <option value="standard">Standard</option>
           <option value="rsvpOnly">RSVP Only</option>
         </select>
@@ -409,7 +408,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
         ) : (
           <button onClick={() => { setEditMode(true); setEditForm(event); }} className="btn btn-secondary text-sm gap-1"><Edit2 className="w-3 h-3" /> Edit</button>
         )}
-        <button onClick={() => onDelete(event._id)} className="btn btn-secondary text-sm text-red-600 hover:bg-red-50 gap-1"><Trash2 className="w-3 h-3" /></button>
+        <button onClick={() => onDelete(event._id)} className="btn btn-secondary text-sm !text-red-600 hover:!bg-red-50 gap-1"><Trash2 className="w-3 h-3" /></button>
       </div>
 
       {editMode && (
@@ -426,16 +425,16 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             ].map(({ key, label, type }) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-neutral-600 mb-1">{label}</label>
-                <input type={type} className="input text-sm" value={editForm[key] || ''} onChange={e => setEditForm({ ...editForm, [key]: type === 'number' ? parseInt(e.target.value) : e.target.value })} />
+                <input type={type} className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={editForm[key] || ''} onChange={e => setEditForm({ ...editForm, [key]: type === 'number' ? parseInt(e.target.value) : e.target.value })} />
               </div>
             ))}
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Date &amp; Time <span className="text-neutral-400 font-normal">(in the event's timezone)</span></label>
-              <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date, editForm.timezone)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value, editForm.timezone) })} />
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Date &amp; Time <span className="text-neutral-500 font-normal">(in the event's timezone)</span></label>
+              <input type="datetime-local" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={utcToLocal(editForm.date, editForm.timezone)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value, editForm.timezone) })} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Timezone <span className="text-neutral-400 font-normal">(changing this keeps the same moment in time)</span></label>
-              <select className="input text-sm" value={editForm.timezone || 'UTC'} onChange={e => setEditForm({ ...editForm, timezone: e.target.value })}>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Timezone <span className="text-neutral-500 font-normal">(changing this keeps the same moment in time)</span></label>
+              <select className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={editForm.timezone || 'UTC'} onChange={e => setEditForm({ ...editForm, timezone: e.target.value })}>
                 {getTimezoneOptions(editForm.timezone || 'UTC').map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
               </select>
             </div>
@@ -453,19 +452,19 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
               </label>
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Theme Color <span className="text-neutral-400 font-normal">(hex, e.g. #6366f1)</span></label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Theme Color <span className="text-neutral-500 font-normal">(hex, e.g. #6366f1)</span></label>
               <div className="flex items-center gap-2">
-                <input type="text" className="input text-sm flex-1" placeholder="#6366f1" value={editForm.themeColor || ''} onChange={e => setEditForm({ ...editForm, themeColor: e.target.value })} />
-                {editForm.themeColor && <div className="w-8 h-8 rounded-lg border border-neutral-200 flex-shrink-0" style={{ background: editForm.themeColor }} />}
+                <input type="text" className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="#6366f1" value={editForm.themeColor || ''} onChange={e => setEditForm({ ...editForm, themeColor: e.target.value })} />
+                {editForm.themeColor && <div className="w-8 h-8 rounded-lg border-2 border-ink flex-shrink-0" style={{ background: editForm.themeColor }} />}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Tags <span className="text-neutral-400 font-normal">(comma-separated)</span></label>
-              <input type="text" className="input text-sm" placeholder="conference, networking, tech" value={(editForm.tags || []).join(', ')} onChange={e => setEditForm({ ...editForm, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} />
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Tags <span className="text-neutral-500 font-normal">(comma-separated)</span></label>
+              <input type="text" className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="conference, networking, tech" value={(editForm.tags || []).join(', ')} onChange={e => setEditForm({ ...editForm, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-neutral-600 mb-1">Description</label>
-              <textarea className="input text-sm" rows={2} value={editForm.description || ''} onChange={e => setEditForm({ ...editForm, description: e.target.value })} />
+              <textarea className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" rows={2} value={editForm.description || ''} onChange={e => setEditForm({ ...editForm, description: e.target.value })} />
             </div>
           </div>
         </div>
@@ -483,7 +482,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
       <div className="card overflow-hidden">
         <div className="flex border-b border-neutral-200 overflow-x-auto">
           {tabs.map(({ id, label, icon: I, count }) => (
-            <button key={id} onClick={() => handleTabClick(id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tab === id ? 'border-b-2 border-neutral-900 text-neutral-900' : 'text-neutral-400 hover:text-neutral-700'}`}>
+            <button key={id} onClick={() => handleTabClick(id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tab === id ? 'border-b-2 border-ink text-neutral-900' : 'text-neutral-400 hover:text-neutral-700'}`}>
               <I className="w-3.5 h-3.5" />{label}
               {count !== undefined && <span className="text-xs bg-neutral-100 rounded-full px-1.5">{count}</span>}
             </button>
@@ -545,7 +544,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       <div className="space-y-2">
                         {event.themeColor && (
                           <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full border border-neutral-200" style={{ background: event.themeColor }} />
+                            <div className="w-5 h-5 rounded-full border-2 border-ink" style={{ background: event.themeColor }} />
                             <span className="text-xs font-mono text-neutral-500">{event.themeColor}</span>
                           </div>
                         )}
@@ -555,7 +554,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                           </div>
                         )}
                         {event.coverImage && (
-                          <div className="mt-2 rounded-lg overflow-hidden border border-neutral-200 h-20">
+                          <div className="mt-2 rounded-lg overflow-hidden border-2 border-ink h-20">
                             <img src={event.coverImage} alt="Cover" className="w-full h-full object-cover" />
                           </div>
                         )}
@@ -577,19 +576,19 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             {tab === 'messages' && (
               <div>
                 <div className="flex gap-3 mb-4">
-                  <div className="flex-1 relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search messages..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="flex-1 relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search messages..." className="input pl-10 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <button onClick={() => exportJSON('messages', messages)} className="btn btn-secondary text-sm gap-1"><Download className="w-3 h-3" /> Export</button>
                 </div>
                 <div className="space-y-1.5 max-h-[500px] overflow-y-auto">
                   {fm.length === 0 ? <p className="text-sm text-neutral-400 text-center py-12">No messages</p> : fm.map(m => (
-                    <div key={m._id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-neutral-50 group border border-neutral-100">
+                    <div key={m._id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-neutral-50 group border-2 border-ink shadow">
                       <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold flex-shrink-0">{m.username?.charAt(0).toUpperCase()}</div>
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-semibold text-neutral-900">{m.username}</span>
                         <span className="text-xs text-neutral-400 ml-2">{rel(m.createdAt)}</span>
                         <p className="text-sm text-neutral-700 mt-0.5 break-words">{m.content}</p>
                       </div>
-                      <button onClick={() => adminAPI.deleteMessage(event._id, m._id).then(() => { setMessages(p => p.filter(x => x._id !== m._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => adminAPI.deleteMessage(event._id, m._id).then(() => { setMessages(p => p.filter(x => x._id !== m._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 !text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -600,12 +599,12 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             {tab === 'participants' && (
               <div>
                 <div className="flex gap-3 mb-4">
-                  <div className="flex-1 relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search participants..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="flex-1 relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search participants..." className="input pl-10 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <button onClick={() => exportJSON('participants', participants)} className="btn btn-secondary text-sm gap-1"><Download className="w-3 h-3" /> Export</button>
                 </div>
                 <div className="space-y-2">
                   {fp.length === 0 ? <p className="text-sm text-neutral-400 text-center py-12">No participants</p> : fp.map(p => (
-                    <div key={p.username} className="flex items-center justify-between p-3 rounded-lg border border-neutral-100 hover:bg-neutral-50 group">
+                    <div key={p.username} className="flex items-center justify-between p-3 rounded-lg border-2 border-ink hover:bg-neutral-50 group shadow">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">{p.username.charAt(0).toUpperCase()}</div>
                         <div>
@@ -615,7 +614,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       </div>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100">
                         {p.hasPassword && <button onClick={() => adminAPI.resetParticipantPassword(event._id, p.username).then(() => toast.success('Reset')).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1"><ShieldOff className="w-3 h-3" /> Reset PW</button>}
-                        <button onClick={() => { if (!confirm(`Remove ${p.username}?`)) return; adminAPI.removeParticipant(event._id, p.username).then(() => { setParticipants(x => x.filter(u => u.username !== p.username)); toast.success('Removed'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><UserX className="w-3 h-3" /> Remove</button>
+                        <button onClick={() => { if (!confirm(`Remove ${p.username}?`)) return; adminAPI.removeParticipant(event._id, p.username).then(() => { setParticipants(x => x.filter(u => u.username !== p.username)); toast.success('Removed'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-1 !text-red-600"><UserX className="w-3 h-3" /> Remove</button>
                       </div>
                     </div>
                   ))}
@@ -630,10 +629,10 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                 {polls.length === 0 ? <p className="text-sm text-neutral-400 text-center py-12">No polls</p> : polls.map(poll => {
                   const total = poll.options?.reduce((s, o) => s + (o.votes?.length || 0), 0) || 0;
                   return (
-                    <div key={poll._id} className="p-4 rounded-lg border border-neutral-200 mb-3 group">
+                    <div key={poll._id} className="p-4 rounded-lg border-2 border-ink mb-3 group shadow">
                       <div className="flex justify-between mb-3">
                         <div><p className="text-sm font-medium">{poll.question}</p><p className="text-xs text-neutral-400">{rel(poll.createdAt)} · {total} votes</p></div>
-                        <button onClick={() => adminAPI.deletePoll(event._id, poll._id).then(() => { setPolls(p => p.filter(x => x._id !== poll._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 text-red-400"><Trash2 className="w-3 h-3" /></button>
+                        <button onClick={() => adminAPI.deletePoll(event._id, poll._id).then(() => { setPolls(p => p.filter(x => x._id !== poll._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 !text-red-400"><Trash2 className="w-3 h-3" /></button>
                       </div>
                       {poll.options?.map(opt => { const v = opt.votes?.length || 0; const pct = total > 0 ? Math.round((v / total) * 100) : 0; return (
                         <div key={opt.text} className="mb-1.5">
@@ -652,12 +651,12 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
               <div>
                 <div className="flex justify-between mb-4"><p className="text-sm font-semibold">{files.length} Files {files.length > 0 && `(${formatFileSize(files.reduce((s, f) => s + (f.size || 0), 0))})`}</p><button onClick={() => exportJSON('files', files)} className="btn btn-secondary text-sm gap-1"><Download className="w-3 h-3" /> Export List</button></div>
                 {files.length === 0 ? <p className="text-sm text-neutral-400 text-center py-12">No files</p> : files.map(f => (
-                  <div key={f._id} className="flex items-center gap-3 p-3 rounded-lg border border-neutral-100 hover:bg-neutral-50 group mb-1">
+                  <div key={f._id} className="flex items-center gap-3 p-3 rounded-lg border-2 border-ink hover:bg-neutral-50 group mb-1 shadow">
                     {f.mimetype?.startsWith('image/') ? <Image className="w-4 h-4 text-blue-500 flex-shrink-0" /> : <FileText className="w-4 h-4 text-neutral-400 flex-shrink-0" />}
                     <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{f.filename}</p><p className="text-xs text-neutral-400">{formatFileSize(f.size)} · {f.uploadedBy} · {rel(f.uploadedAt)}</p></div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100">
                       <a href={f.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary text-xs px-2 py-1"><Download className="w-3 h-3" /></a>
-                      <button onClick={() => adminAPI.deleteFile(event._id, f._id).then(() => { setFiles(p => p.filter(x => x._id !== f._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => adminAPI.deleteFile(event._id, f._id).then(() => { setFiles(p => p.filter(x => x._id !== f._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1 !text-red-600"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   </div>
                 ))}
@@ -669,7 +668,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
               <div>
                 <div className="flex justify-between mb-4"><p className="text-sm font-semibold">{invites.length} Invites ({invites.filter(i => i.checkedIn).length} checked in)</p><button onClick={() => exportJSON('invites', invites)} className="btn btn-secondary text-sm gap-1"><Download className="w-3 h-3" /> Export</button></div>
                 {invites.length === 0 ? <p className="text-sm text-neutral-400 text-center py-12">No invites</p> : invites.map(inv => (
-                  <div key={inv._id} className={`p-3 rounded-lg border mb-1.5 group ${inv.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'}`}>
+                  <div key={inv._id} className={`p-3 rounded-lg border-2 mb-1.5 group border-ink shadow ${inv.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'}`}>
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -677,11 +676,11 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                           <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 font-mono">{inv.inviteCode}</span>
                           {inv.checkedIn && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">In</span>}
                         </div>
-                        <p className="text-xs text-neutral-400">{inv.guestEmail} · {inv.groupSize} {inv.groupSize === 1 ? 'person' : 'people'}</p>
+                        <p className="text-xs text-neutral-500">{inv.guestEmail} · {inv.groupSize} {inv.groupSize === 1 ? 'person' : 'people'}</p>
                       </div>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100">
                         {!inv.checkedIn && <button onClick={() => adminAPI.checkInGuest(event._id, inv.inviteCode).then(() => { toast.success('Checked in'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-primary text-xs px-2 py-1">Check In</button>}
-                        <button onClick={() => adminAPI.deleteInvite(event._id, inv._id).then(() => { setInvites(p => p.filter(x => x._id !== inv._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><Trash2 className="w-3 h-3" /></button>
+                        <button onClick={() => adminAPI.deleteInvite(event._id, inv._id).then(() => { setInvites(p => p.filter(x => x._id !== inv._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1 !text-red-600"><Trash2 className="w-3 h-3" /></button>
                       </div>
                     </div>
                   </div>
@@ -753,7 +752,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   <div className="flex gap-1.5">
                     {['all', 'yes', 'maybe', 'no'].map(f => (
                       <button key={f} onClick={() => setRsvpFilter(f)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors ${rsvpFilter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${rsvpFilter === f ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                         {f === 'all' ? `All (${rsvpSubmissions.length})` : `${f} (${rsvpStats?.byResponse?.[f] ?? 0})`}
                       </button>
                     ))}
@@ -764,7 +763,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                 {frsvp.length === 0 ? (
                   <p className="text-sm text-neutral-400 text-center py-12">No RSVP submissions{rsvpFilter !== 'all' ? ` for "${rsvpFilter}"` : ''}</p>
                 ) : frsvp.map(s => (
-                  <div key={s._id} className={`p-3 rounded-lg border mb-1.5 group ${s.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'}`}>
+                  <div key={s._id} className={`p-3 rounded-lg border-2 mb-1.5 group border-ink shadow ${s.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'}`}>
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -777,11 +776,11 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                           {s.plusOnes > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">+{s.plusOnes}</span>}
                           {s.selectedTableLabel && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Seat: {s.selectedTableLabel}</span>}
                           {s.checkedIn && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">In</span>}
-                          {s.starred && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                          {s.starred && <Star className="w-3 h-3 text-amber-700 fill-amber-500" />}
                         </div>
-                        <p className="text-xs text-neutral-400 truncate">{s.email || 'no email'}{s.phone ? ` · ${s.phone}` : ''} · {rel(s.submittedAt)}</p>
+                        <p className="text-xs text-neutral-500 truncate">{s.email || 'no email'}{s.phone ? ` · ${s.phone}` : ''} · {rel(s.submittedAt)}</p>
                         {(s.dietaryRestrictions || s.accessibilityNeeds || s.guestNote) && (
-                          <p className="text-xs text-neutral-400 mt-1 truncate">
+                          <p className="text-xs text-neutral-500 mt-1 truncate">
                             {s.dietaryRestrictions && `Dietary: ${s.dietaryRestrictions}`}
                             {s.accessibilityNeeds && `${s.dietaryRestrictions ? ' · ' : ''}Access: ${s.accessibilityNeeds}`}
                             {s.guestNote && `${(s.dietaryRestrictions || s.accessibilityNeeds) ? ' · ' : ''}"${s.guestNote}"`}
@@ -798,7 +797,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         {!s.checkedIn
                           ? <button onClick={() => adminAPI.checkInRsvpSubmission(event._id, s._id).then(() => { toast.success('Checked in'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-primary text-xs px-2 py-1">Check In</button>
                           : <button onClick={() => adminAPI.undoCheckInRsvpSubmission(event._id, s._id).then(() => { toast.success('Undone'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1">Undo</button>}
-                        <button onClick={() => { if (confirm('Delete this RSVP submission?')) adminAPI.deleteRsvpSubmission(event._id, s._id).then(() => { setRsvpSubmissions(p => p.filter(x => x._id !== s._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><Trash2 className="w-3 h-3" /></button>
+                        <button onClick={() => { if (confirm('Delete this RSVP submission?')) adminAPI.deleteRsvpSubmission(event._id, s._id).then(() => { setRsvpSubmissions(p => p.filter(x => x._id !== s._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-1 !text-red-600"><Trash2 className="w-3 h-3" /></button>
                       </div>
                     </div>
                   </div>
@@ -839,7 +838,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       <span className="text-xs text-neutral-500">Sort:</span>
                       {[['firstSeen','First Seen'],['spamRiskSignal','Spam Risk'],['guestReturnCount','Return Count'],['checkedIn','Checked In']].map(([v, l]) => (
                         <button key={v} onClick={() => { setAnalyticsSort(v); loadAnalytics(v); }}
-                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${analyticsSort === v ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 hover:border-neutral-400'}`}>
+                          className={`text-xs px-3 py-1 rounded-lg border-2 transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${analyticsSort === v ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-400'}`}>
                           {l}
                         </button>
                       ))}
@@ -854,26 +853,26 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         const spamColor = spam >= 70 ? '#ef4444' : spam >= 40 ? '#f97316' : spam >= 20 ? '#eab308' : '#22c55e';
                         const isExpanded = expandedVisitor === profile.visitorId;
                         return (
-                          <div key={profile.visitorId} className={`border rounded-lg mb-2 overflow-hidden ${profile.isSuspected ? 'border-red-200 bg-red-50' : 'border-neutral-100'}`}>
+                          <div key={profile.visitorId} className={`border-2 rounded-lg mb-2 overflow-hidden border-ink shadow ${profile.isSuspected ? 'border-red-200 bg-red-50' : 'border-neutral-100'}`}>
                             <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-neutral-50 transition-colors" onClick={() => setExpandedVisitor(isExpanded ? null : profile.visitorId)}>
                               <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                 <div>
-                                  <p className="font-mono text-neutral-400 truncate">{profile.visitorId.slice(-10)}</p>
+                                  <p className="font-mono text-neutral-500 truncate">{profile.visitorId.slice(-10)}</p>
                                   <p className="font-medium truncate">{profile.pii?.name || profile.pii?.email || '—'}</p>
-                                  {profile.pii?.email && profile.pii?.name && <p className="text-neutral-400 truncate">{profile.pii.email}</p>}
+                                  {profile.pii?.email && profile.pii?.name && <p className="text-neutral-500 truncate">{profile.pii.email}</p>}
                                 </div>
                                 <div>
-                                  <p className="text-neutral-400">First: {profile.firstSeen ? new Date(profile.firstSeen).toLocaleDateString() : '—'}</p>
-                                  <p className="text-neutral-400">Last: {profile.lastSeen ? new Date(profile.lastSeen).toLocaleDateString() : '—'}</p>
+                                  <p className="text-neutral-500">First: {profile.firstSeen ? new Date(profile.firstSeen).toLocaleDateString() : '—'}</p>
+                                  <p className="text-neutral-500">Last: {profile.lastSeen ? new Date(profile.lastSeen).toLocaleDateString() : '—'}</p>
                                   <p className="text-neutral-500">{profile.sessionCount} sessions</p>
                                 </div>
                                 <div>
                                   <p className="text-neutral-500">RSVP: <span className="font-medium">{profile.rsvpStatus || '—'}</span></p>
                                   <p className="text-neutral-500">{profile.checkedIn ? '✓ Checked in' : 'Not checked in'}</p>
-                                  {profile.ipCountry && <p className="text-neutral-400">{profile.ipCountry}{profile.ipCity ? ` · ${profile.ipCity}` : ''}</p>}
+                                  {profile.ipCountry && <p className="text-neutral-500">{profile.ipCountry}{profile.ipCity ? ` · ${profile.ipCity}` : ''}</p>}
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="px-2 py-0.5 rounded-full text-white text-xs font-bold" style={{ background: spamColor }}>{spam}</span>
+                                  <span className="px-2 py-0.5 rounded-full text-ink text-xs font-bold" style={{ background: spamColor }}>{spam}</span>
                                   {profile.isSuspected && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">⚑ Suspected</span>}
                                 </div>
                               </div>
@@ -935,7 +934,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       ['Live Connections', liveConnections],
                     ].map(([k, v]) => (
                       <div key={k} className="bg-neutral-50 rounded p-2">
-                        <dt className="text-neutral-400 mb-0.5">{k}</dt>
+                        <dt className="text-neutral-500 mb-0.5">{k}</dt>
                         <dd className="text-neutral-800 truncate">{String(v)}</dd>
                       </div>
                     ))}
@@ -955,7 +954,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         {spamVerdict}
                       </span>
                       <div className="flex gap-1 mt-2 flex-wrap">
-                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">{f}</span>)}
+                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border-2 border-red-600">{f}</span>)}
                         {spamFlags.length === 0 && <span className="text-xs text-neutral-400">No flags</span>}
                       </div>
                     </div>
@@ -963,11 +962,11 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   <div className="border-t pt-3 space-y-2">
                     <p className="text-xs text-neutral-400 font-medium mb-2">Manual Override <span className="text-amber-600">(logged)</span></p>
                     <div className="flex gap-2 flex-wrap">
-                      <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24" placeholder="Score 0-100" />
-                      <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32">
+                      <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="Score 0-100" />
+                      <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                         {['clean','review','block'].map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
-                      <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm flex-1 min-w-32" placeholder="Add flag (enter to add)" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
+                      <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm flex-1 min-w-32 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="Add flag (enter to add)" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
                       <button onClick={async () => {
                         try {
                           const score = Math.max(0, Math.min(100, parseInt(spamEditScore) || 0));
@@ -993,7 +992,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         if (!e.target.value) return;
                         try { await adminAPI.updateEventStatus(event._id, e.target.value); setEvent(ev => ({ ...ev, status: e.target.value })); toast.success('Status updated'); onUpdate?.(); } catch { toast.error('Failed'); }
                         e.target.value = '';
-                      }} className="input text-sm w-full">
+                      }} className="input text-sm w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                         <option value="">Choose…</option>
                         {['active','completed','cancelled','draft'].map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -1006,7 +1005,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       </button>
                       {showLockdownInput && (
                         <div className="mt-1 flex gap-1">
-                          <input value={lockdownReason} onChange={e => setLockdownReason(e.target.value)} className="input text-xs flex-1" placeholder="Reason…" />
+                          <input value={lockdownReason} onChange={e => setLockdownReason(e.target.value)} className="input text-xs flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="Reason…" />
                           <button onClick={async () => {
                             try {
                               const next = !event.checkinSettings?.emergencyLockdown;
@@ -1056,7 +1055,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                             <td className="py-2 pr-3">{p.hasPassword ? <Lock className="w-3 h-3 text-neutral-400" /> : <span className="text-neutral-200">—</span>}</td>
                             <td className="py-2 flex gap-1">
                               <button onClick={() => adminAPI.resetParticipantPassword(event._id, p.username).then(() => toast.success('Password reset')).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-0.5">Reset Pw</button>
-                              <button onClick={() => { if (window.confirm(`Remove ${p.username}?`)) adminAPI.removeParticipant(event._id, p.username).then(() => { setParticipants(pp => pp.filter(x => x.username !== p.username)); toast.success('Removed'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-0.5 text-red-600">Remove</button>
+                              <button onClick={() => { if (window.confirm(`Remove ${p.username}?`)) adminAPI.removeParticipant(event._id, p.username).then(() => { setParticipants(pp => pp.filter(x => x.username !== p.username)); toast.success('Removed'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-0.5 !text-red-600">Remove</button>
                             </td>
                           </tr>
                         ))}
@@ -1080,7 +1079,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       </div>
                     </div>
                     {rawJsonOpen && (
-                      <pre className="bg-neutral-900 text-neutral-100 rounded-lg p-3 text-xs font-mono overflow-auto max-h-80">
+                      <pre className="bg-white text-ink rounded-lg p-3 text-xs font-mono overflow-auto max-h-80">
                         {JSON.stringify(fullEventData?.event, null, 2)}
                       </pre>
                     )}
@@ -1107,7 +1106,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   </h3>
                   <p className="text-xs text-neutral-400 mb-3">Never visible to the organizer or event participants.</p>
                   <textarea
-                    className="input text-sm w-full font-mono"
+                    className="input text-sm w-full font-mono border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     rows={5}
                     value={adminNotes}
                     onChange={e => setAdminNotes(e.target.value)}
@@ -1129,7 +1128,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       disabled={adminNotesSaving}
                       className="btn btn-primary text-sm gap-1"
                     >
-                      {adminNotesSaving ? <span className="spinner w-3 h-3 border border-white border-t-transparent" /> : <Save className="w-3 h-3" />} Save
+                      {adminNotesSaving ? <span className="spinner w-3 h-3 border-2 border-ink border-t-transparent" /> : <Save className="w-3 h-3" />} Save
                     </button>
                   </div>
                 </div>
@@ -1201,7 +1200,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         {spamVerdict}
                       </span>
                       <div className="flex gap-1 flex-wrap">
-                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">{f}</span>)}
+                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border-2 border-red-600">{f}</span>)}
                         {spamFlags.length === 0 && <span className="text-xs text-neutral-400">No active flags</span>}
                       </div>
                     </div>
@@ -1211,17 +1210,17 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                     <div className="flex gap-2 flex-wrap items-end">
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">Score (0–100)</label>
-                        <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24" placeholder="0–100" />
+                        <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="0–100" />
                       </div>
                       <div>
                         <label className="block text-xs text-neutral-400 mb-1">Verdict</label>
-                        <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32">
+                        <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                           {['clean','review','block'].map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                       </div>
                       <div className="flex-1 min-w-40">
                         <label className="block text-xs text-neutral-400 mb-1">Add flag (Enter to add)</label>
-                        <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm w-full" placeholder="e.g. duplicate_ip" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
+                        <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="e.g. duplicate_ip" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
                       </div>
                       <button onClick={async () => {
                         try {
@@ -1237,7 +1236,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         <p className="text-xs text-neutral-400 mb-1.5">Current flags — click to remove</p>
                         <div className="flex gap-1 flex-wrap">
                           {spamFlags.map((f, i) => (
-                            <button key={i} onClick={() => setSpamFlags(fs => fs.filter((_, idx) => idx !== i))} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100 hover:bg-red-100 transition-colors">
+                            <button key={i} onClick={() => setSpamFlags(fs => fs.filter((_, idx) => idx !== i))} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-lg border-2 border-red-600 hover:bg-red-100 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                               {f} ×
                             </button>
                           ))}
@@ -1262,7 +1261,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       ['Last Updated',   event.updatedAt ? new Date(event.updatedAt).toISOString() : '—'],
                     ].map(([k, v]) => (
                       <div key={k} className="bg-neutral-50 rounded-lg p-3">
-                        <dt className="text-neutral-400 mb-0.5 uppercase tracking-wide text-[10px]">{k}</dt>
+                        <dt className="text-neutral-500 mb-0.5 uppercase tracking-wide text-[10px]">{k}</dt>
                         <dd className="text-neutral-800 break-all leading-relaxed">{String(v)}</dd>
                       </div>
                     ))}
@@ -1274,7 +1273,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   <div className="card p-5">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                       <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> PII in Analytics Records
-                      <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-semibold">Sensitive</span>
+                      <span className="text-[10px] bg-rose-50 text-rose-600 border-2 border-red-600 px-1.5 py-0.5 rounded-full font-semibold">Sensitive</span>
                     </h3>
                     <p className="text-xs text-neutral-400 mb-4">Guest-level PII attached to Enterprise Mode analytics records. Platform admin only — not shared externally.</p>
                     <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -1282,18 +1281,18 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         const spam = profile.spamRiskSignal ?? 0;
                         const spamColor = spam >= 70 ? '#ef4444' : spam >= 40 ? '#f97316' : spam >= 20 ? '#eab308' : '#22c55e';
                         return (
-                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border-2 border-ink shadow">
                             <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
                               {(profile.pii?.name || profile.pii?.email || '?')[0].toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-neutral-800 truncate">{profile.pii?.name || profile.pii?.email || '—'}</p>
-                              {profile.pii?.email && profile.pii?.name && <p className="text-xs text-neutral-400 truncate">{profile.pii.email}</p>}
-                              {profile.pii?.phone && <p className="text-xs text-neutral-400">{profile.pii.phone}</p>}
+                              {profile.pii?.email && profile.pii?.name && <p className="text-xs text-neutral-500 truncate">{profile.pii.email}</p>}
+                              {profile.pii?.phone && <p className="text-xs text-neutral-500">{profile.pii.phone}</p>}
                             </div>
                             <div className="text-center flex-shrink-0">
                               <span className="text-sm font-bold" style={{ color: spamColor }}>{spam}</span>
-                              <p className="text-[10px] text-neutral-400">risk</p>
+                              <p className="text-[10px] text-neutral-500">risk</p>
                             </div>
                           </div>
                         );
@@ -1304,8 +1303,8 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
 
                 {/* Data Subject Rights */}
                 <div className="card p-5 bg-blue-50 border-blue-100">
-                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Data Subject Rights
+                  <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-700" /> Data Subject Rights
                   </h3>
                   <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
                     Fulfil GDPR/CCPA data subject requests for this event. All export operations are logged.
@@ -1327,7 +1326,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       <Download className="w-3 h-3" /> Full PII Export (JSON)
                     </button>
                   </div>
-                  <p className="text-[11px] text-neutral-400 mt-3">
+                  <p className="text-[11px] text-neutral-500 mt-3">
                     Event data auto-deletes 7 days after the event date; analytics records after 90 days. See <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
                   </p>
                 </div>
@@ -1361,7 +1360,7 @@ function UptimeSparkline({ data, editMode, onPointEdit, service, height = 80, sh
 
   if (!data || data.length === 0) return (
     <div className="flex items-center justify-center bg-neutral-50 rounded-lg" style={{ height }}>
-      <span className="text-xs text-neutral-300">No data</span>
+      <span className="text-xs text-neutral-600">No data</span>
     </div>
   );
 
@@ -1604,7 +1603,7 @@ function UptimePanel() {
   const active  = incidents.filter(i => i.status !== 'resolved').length;
 
   const uptimeColor = (pct) => pct == null ? 'text-neutral-400' : pct >= 99.5 ? 'text-emerald-600' : pct >= 95 ? 'text-amber-500' : 'text-red-500';
-  const uptimeBg    = (pct) => pct == null ? 'bg-neutral-100 text-neutral-500' : pct >= 99.5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : pct >= 95 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200';
+  const uptimeBg    = (pct) => pct == null ? 'bg-neutral-100 text-neutral-500' : pct >= 99.5 ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-600' : pct >= 95 ? 'bg-amber-50 text-amber-700 border-2 border-amber-600' : 'bg-red-50 text-red-700 border-2 border-red-600';
 
   const fmtSecs = (s) => {
     if (!s && s !== 0) return '—';
@@ -1715,7 +1714,7 @@ function UptimePanel() {
             {active > 0 ? <span className="text-red-500 font-medium">{active} active incident{active !== 1 ? 's' : ''}</span> : <span className="text-emerald-600 font-medium">All clear</span>}
             <span>·</span><span>{pending} pending report{pending !== 1 ? 's' : ''}</span>
             {liveProcessUptime != null && (
-              <span className="text-xs text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span className="text-xs text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border-2 border-emerald-600">
                 ⬆ {fmtSecs(liveProcessUptime)}
               </span>
             )}
@@ -1724,11 +1723,11 @@ function UptimePanel() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5"/> Status Page</a>
-          <button onClick={() => { setOvService(serverNames[0] || 'general'); setShowOverride(true); }} className="btn btn-secondary gap-1 text-sm text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+          <button onClick={() => { setOvService(serverNames[0] || 'general'); setShowOverride(true); }} className="btn btn-secondary gap-1 text-sm !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50">
             <Gauge className="w-3.5 h-3.5"/> Fix Downtime
           </button>
-          <button onClick={handleNuclear} disabled={nucLoading} className="btn gap-1 text-sm bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600">
-            {nucLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white"/> : <Zap className="w-3.5 h-3.5"/>}
+          <button onClick={handleNuclear} disabled={nucLoading} className="btn gap-1 text-sm !bg-emerald-600 hover:!bg-emerald-700 !text-white !border-emerald-600">
+            {nucLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white"/> : <Zap className="w-3.5 h-3.5"/>}
             Fix All Downtime
           </button>
           <button onClick={() => { setCreateForm({ title:'', description:'', severity:'minor', initialMessage:'', reportIds:[] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm">
@@ -1745,7 +1744,7 @@ function UptimePanel() {
           { label: 'Servers Monitored',   value: serverNames.length,        col: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
           { label: 'Services Monitored',  value: ALL_SERVICES_FLAT.length,  col: 'text-violet-600', bg: 'bg-violet-50 border-violet-200' },
         ].map(({ label, value, col, bg }) => (
-          <div key={label} className={`rounded-xl border p-3 ${bg}`}>
+          <div key={label} className={`rounded-xl border-2 p-3 border-ink shadow ${bg}`}>
             <p className="text-xs text-neutral-500 mb-0.5">{label}</p>
             <p className={`text-2xl font-bold tabular-nums ${col}`}>{value}</p>
           </div>
@@ -1755,7 +1754,7 @@ function UptimePanel() {
       {/* ── Tabs ───────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
         {[['servers','Live Graphs',null],['reports','Reports',pending],['incidents','Incidents',active]].map(([id, l, c]) => (
-          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${tab === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${tab === id ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>
             {l}{c > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>}
           </button>
         ))}
@@ -1770,7 +1769,7 @@ function UptimePanel() {
           <div className="w-44 flex-shrink-0 space-y-0.5">
             {catFilters.map(f => (
               <button key={f.id} onClick={() => setGraphSection(f.id)}
-                className={`w-full text-left text-xs px-2.5 py-2 rounded-lg font-medium transition-all ${graphSection === f.id ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:bg-neutral-100'}`}>
+                className={`w-full text-left text-xs px-2.5 py-2 rounded-lg font-medium transition-all ${graphSection === f.id ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:bg-neutral-100'}`}>
                 {f.label}
               </button>
             ))}
@@ -1784,7 +1783,7 @@ function UptimePanel() {
               <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
                 {['1h','24h','7d','15d'].map(w => (
                   <button key={w} onClick={() => setWindow(w)}
-                    className={`px-3 py-1 rounded text-xs font-medium transition-all ${window === w ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+                    className={`px-3 py-1 rounded text-xs font-medium transition-all ${window === w ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>
                     {w}
                   </button>
                 ))}
@@ -1794,11 +1793,11 @@ function UptimePanel() {
                 <RefreshCw className={`w-3 h-3 ${(liveLoading||graphLoading) ? 'animate-spin' : ''}`}/> Refresh
               </button>
               <button onClick={() => setEditMode(e => !e)}
-                className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300' : 'btn-secondary'}`}>
+                className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'btn-secondary'}`}>
                 <Edit2 className="w-3 h-3"/> {editMode ? 'Exit Edit' : 'Edit Mode'}
               </button>
               {editMode && (
-                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1">
+                <span className="text-xs text-amber-600 bg-amber-50 border-2 border-amber-600 px-2 py-1 rounded-lg flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3"/> Drag points or click bars to edit · saves to MongoDB
                 </span>
               )}
@@ -1840,17 +1839,17 @@ function UptimePanel() {
                           </span>
                           <span className="text-xs text-neutral-400">{WIN_LABEL[window]} avg</span>
                           <button onClick={() => { setOvService(name); setShowOverride(true); }}
-                            className="text-xs px-2 py-1 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1">
+                            className="text-xs px-2 py-1 rounded-lg border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                             <Gauge className="w-3 h-3"/> Fix Downtime
                           </button>
                         </div>
                       </div>
                       <div className="bg-neutral-50 rounded-xl px-2 pt-2 pb-1 relative">
-                        {editMode && <div className="absolute top-2 right-2 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 z-10">↕ drag</div>}
+                        {editMode && <div className="absolute top-2 right-2 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border-2 border-amber-600 z-10">↕ drag</div>}
                         <UptimeSparkline data={gData} editMode={editMode} service={name} onPointEdit={handlePointEdit} height={80}/>
-                        <div className="flex justify-between text-xs text-neutral-400 px-1 pb-1 mt-1">
+                        <div className="flex justify-between text-xs text-neutral-500 px-1 pb-1 mt-1">
                           <span>{gData?.[0]?.label}</span>
-                          <span className="text-neutral-300">{gData?.length} points</span>
+                          <span className="text-neutral-600">{gData?.length} points</span>
                           <span>{gData?.[gData.length-1]?.label}</span>
                         </div>
                       </div>
@@ -1896,7 +1895,7 @@ function UptimePanel() {
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded ${uptimeBg(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : 'no data'}</span>
                                 <button onClick={() => { setOvService(svc.key); setShowOverride(true); }}
-                                  className="text-xs px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1">
+                                  className="text-xs px-1.5 py-0.5 rounded border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                                   <Gauge className="w-2.5 h-2.5"/>Fix
                                 </button>
                               </div>
@@ -1922,11 +1921,11 @@ function UptimePanel() {
                 <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-neutral-600 hover:bg-neutral-50 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-blue-500"/> All Services Quick Reference <span className="text-xs text-neutral-400 ml-1">(admin-only, not on public status page)</span>
                 </summary>
-                <div className="divide-y divide-neutral-50 max-h-80 overflow-y-auto">
+                <div className="divide-y divide-neutral-200 max-h-80 overflow-y-auto">
                   {SERVICE_CATEGORIES.map(cat => (
                     <div key={cat.id}>
                       <div className="px-4 py-1.5 bg-neutral-50 sticky top-0">
-                        <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{cat.label}</span>
+                        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{cat.label}</span>
                       </div>
                       {cat.services.map(svc => {
                         const d = serviceHist[svc.key];
@@ -1941,7 +1940,7 @@ function UptimePanel() {
                             <div className="flex items-center gap-2">
                               <span className={`text-xs font-bold ${uptimeColor(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : '—'}</span>
                               <button onClick={() => { setOvService(svc.key); setShowOverride(true); }}
-                                className="text-xs px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                className="text-xs px-1.5 py-0.5 rounded border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                                 Fix
                               </button>
                             </div>
@@ -1990,9 +1989,9 @@ function UptimePanel() {
                 {r.status === 'pending' && (
                   <div className="flex gap-2 flex-shrink-0">
                     <button onClick={() => { setCreateForm(f=>({...f,reportIds:[r._id],description:r.description,title:`Issue with ${svcMeta?.name||r.affectedService}`})); setSelServices(r.affectedService&&r.affectedService!=='general'?[r.affectedService]:[]); setShowCreate(true); }}
-                      className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">→ Incident</button>
+                      className="text-xs px-2 py-1.5 rounded-lg bg-hl text-ink hover:bg-hl font-bold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">→ Incident</button>
                     <button onClick={() => uptimeAPI.updateReport(r._id,{status:'dismissed'}).then(()=>setReports(x=>x.map(y=>y._id===r._id?{...y,status:'dismissed'}:y))).catch(()=>toast.error('Failed'))}
-                      className="text-xs px-2 py-1.5 rounded-lg border border-neutral-200 text-neutral-500">Dismiss</button>
+                      className="text-xs px-2 py-1.5 rounded-lg border-2 border-ink text-neutral-500 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Dismiss</button>
                   </div>
                 )}
               </div>
@@ -2042,7 +2041,7 @@ function UptimePanel() {
                     <p className="text-xs text-neutral-400 mt-1">{tAgo(inc.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {inc.status!=='resolved' && <button onClick={e=>{e.stopPropagation();setTlTarget(inc._id);setTlForm({status:'investigating',message:''}); }} className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">Update</button>}
+                    {inc.status!=='resolved' && <button onClick={e=>{e.stopPropagation();setTlTarget(inc._id);setTlForm({status:'investigating',message:''}); }} className="text-xs px-2 py-1.5 rounded-lg bg-hl text-ink hover:bg-hl font-bold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Update</button>}
                     <button onClick={e=>{e.stopPropagation();if(!confirm('Delete?'))return;uptimeAPI.deleteIncident(inc._id).then(()=>setIncidents(x=>x.filter(y=>y._id!==inc._id))).catch(()=>toast.error('Failed'));}} className="p-1.5 text-neutral-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5"/></button>
                     {isEx?<ChevronUp className="w-4 h-4 text-neutral-400"/>:<ChevronDown className="w-4 h-4 text-neutral-400"/>}
                   </div>
@@ -2050,14 +2049,14 @@ function UptimePanel() {
                 {isEx && (
                   <div className="px-5 pb-5 border-t border-neutral-100">
                     {inc.description && <p className="text-sm text-neutral-600 mt-4 mb-3">{inc.description}</p>}
-                    {affNames.length>0 && <div className="mb-3 flex flex-wrap gap-1">{affNames.map(n=><span key={n} className="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full">{n}</span>)}</div>}
+                    {affNames.length>0 && <div className="mb-3 flex flex-wrap gap-1">{affNames.map(n=><span key={n} className="text-xs bg-red-50 text-red-600 border-2 border-red-600 px-2 py-0.5 rounded-full">{n}</span>)}</div>}
                     {inc.timeline?.length>0 && (
                       <div className="relative pl-4 mt-3">
                         <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200"/>
                         {[...inc.timeline].reverse().map((u,j)=>{
                           const usm=STATUS_META[u.status]||STATUS_META.investigating;
                           return <div key={j} className="relative mb-3">
-                            <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${usm.dot}`}/>
+                            <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-ink ${usm.dot}`}/>
                             <p className="text-xs font-semibold text-neutral-700">{usm.label} <span className="font-normal text-neutral-400">{tAgo(u.createdAt)}</span></p>
                             <p className="text-sm text-neutral-600 mt-0.5">{u.message}</p>
                           </div>;
@@ -2074,16 +2073,16 @@ function UptimePanel() {
 
       {/* ═══ SET UPTIME % MODAL ═══════════════════════════════════════════ */}
       {showOverride && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowOverride(false)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowOverride(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
               <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-emerald-600"/> Fix Downtime Records</h3>
-              <button onClick={()=>setShowOverride(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
+              <button onClick={()=>setShowOverride(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-500"/></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Service <span className="text-neutral-400">({ALL_SERVICES_FLAT.length + serverNames.length} options)</span></label>
-                <select value={ovService} onChange={e=>setOvService(e.target.value)} className="input w-full text-sm">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Service <span className="text-neutral-500">({ALL_SERVICES_FLAT.length + serverNames.length} options)</span></label>
+                <select value={ovService} onChange={e=>setOvService(e.target.value)} className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                   <optgroup label="— Servers (real health check data)">
                     {serverNames.map(n=><option key={n} value={n}>{n}</option>)}
                     <option value="general">general</option>
@@ -2095,13 +2094,13 @@ function UptimePanel() {
                   ))}
                 </select>
               </div>
-              <p className="text-xs text-neutral-500 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
-                All <code className="font-mono bg-white px-1 rounded border border-neutral-200">down</code> health check records for this service will be permanently updated to <code className="font-mono bg-white px-1 rounded border border-neutral-200">up</code> in MongoDB. This corrects false downtime caused by 502s or transient errors — not a display override.
+              <p className="text-xs text-neutral-500 bg-emerald-50 border-2 border-emerald-600 rounded-lg px-3 py-2.5">
+                All <code className="font-mono bg-white px-1 rounded border-2 border-ink">down</code> health check records for this service will be permanently updated to <code className="font-mono bg-white px-1 rounded border-2 border-ink">up</code> in MongoDB. This corrects false downtime caused by 502s or transient errors — not a display override.
               </p>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={()=>setShowOverride(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSetOverride} className="flex-1 btn bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 text-sm gap-1"><Check className="w-4 h-4"/> Fix Records</button>
+              <button onClick={handleSetOverride} className="flex-1 btn !bg-emerald-600 hover:!bg-emerald-700 !text-white !border-emerald-600 text-sm gap-1"><Check className="w-4 h-4"/> Fix Records</button>
             </div>
           </div>
         </div>
@@ -2109,26 +2108,26 @@ function UptimePanel() {
 
       {/* ═══ FIX DAY MODAL ════════════════════════════════════════════ */}
       {editingPoint && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setEditingPoint(null)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setEditingPoint(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
               <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-emerald-600"/> Fix Day's Records</h3>
-              <button onClick={()=>setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
+              <button onClick={()=>setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-500"/></button>
             </div>
             <div className="p-5 space-y-3">
               <p className="text-sm text-neutral-700">
                 Permanently fix all <code className="font-mono text-xs bg-neutral-100 px-1 rounded">down</code> health check records to <code className="font-mono text-xs bg-neutral-100 px-1 rounded">up</code> for:
               </p>
-              <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm font-medium">
+              <div className="bg-neutral-50 border-2 border-ink rounded-lg px-3 py-2.5 text-sm font-medium shadow">
                 <span className="text-neutral-800">{ALL_SERVICES_FLAT.find(s=>s.key===editingPoint.service)?.name||editingPoint.service}</span>
-                <span className="text-neutral-400 mx-2">·</span>
+                <span className="text-neutral-500 mx-2">·</span>
                 <span className="text-neutral-600 font-mono">{editingPoint.date}</span>
               </div>
-              <p className="text-xs text-neutral-400">This updates the actual MongoDB records — not a display override. The uptime percentage will recalculate naturally.</p>
+              <p className="text-xs text-neutral-500">This updates the actual MongoDB records — not a display override. The uptime percentage will recalculate naturally.</p>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={()=>setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSavePoint} className="flex-1 btn bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 text-sm gap-1"><Save className="w-4 h-4"/> Fix Records</button>
+              <button onClick={handleSavePoint} className="flex-1 btn !bg-emerald-600 hover:!bg-emerald-700 !text-white !border-emerald-600 text-sm gap-1"><Save className="w-4 h-4"/> Fix Records</button>
             </div>
           </div>
         </div>
@@ -2136,42 +2135,42 @@ function UptimePanel() {
 
       {/* ═══ CREATE INCIDENT MODAL ═══════════════════════════════════════ */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowCreate(false)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowCreate(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
             <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold">Create Incident</h3>
-              <button onClick={()=>setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
+              <button onClick={()=>setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-500"/></button>
             </div>
             <div className="p-5 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e=>setCreateForm(f=>({...f,title:e.target.value}))} placeholder="e.g. API Delays" className="input w-full text-sm"/></div>
-                <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e=>setCreateForm(f=>({...f,severity:e.target.value}))} className="input w-full text-sm">{['minor','major','critical'].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
+                <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e=>setCreateForm(f=>({...f,title:e.target.value}))} placeholder="e.g. API Delays" className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"/></div>
+                <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e=>setCreateForm(f=>({...f,severity:e.target.value}))} className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">{['minor','major','critical'].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               </div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e=>setCreateForm(f=>({...f,description:e.target.value}))} rows={2} className="input w-full text-sm resize-none"/></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e=>setCreateForm(f=>({...f,initialMessage:e.target.value}))} rows={2} className="input w-full text-sm resize-none"/></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e=>setCreateForm(f=>({...f,description:e.target.value}))} rows={2} className="input w-full text-sm resize-none border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"/></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e=>setCreateForm(f=>({...f,initialMessage:e.target.value}))} rows={2} className="input w-full text-sm resize-none border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"/></div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-neutral-600">Affected Services <span className="text-neutral-400 font-normal">({ALL_SERVICES_FLAT.length} total)</span></label>
+                  <label className="text-xs font-medium text-neutral-600">Affected Services <span className="text-neutral-500 font-normal">({ALL_SERVICES_FLAT.length} total)</span></label>
                   <div className="flex gap-3">
                     <button type="button" onClick={()=>setSelServices(ALL_SERVICES_FLAT.map(s=>s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">All</button>
                     <button type="button" onClick={()=>setSelServices([])} className="text-xs text-neutral-500 font-medium">Clear</button>
                   </div>
                 </div>
-                {selServices.length>0 && <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">{selServices.map(key=>{const svc=ALL_SERVICES_FLAT.find(s=>s.key===key);return<span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">{svc?.name||key}<button type="button" onClick={()=>setSelServices(p=>p.filter(k=>k!==key))} className="hover:opacity-70"><X className="w-2.5 h-2.5"/></button></span>;})}</div>}
-                <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{maxHeight:'280px',overflowY:'auto'}}>
+                {selServices.length>0 && <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border-2 border-red-600 rounded-lg">{selServices.map(key=>{const svc=ALL_SERVICES_FLAT.find(s=>s.key===key);return<span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">{svc?.name||key}<button type="button" onClick={()=>setSelServices(p=>p.filter(k=>k!==key))} className="hover:opacity-70"><X className="w-2.5 h-2.5"/></button></span>;})}</div>}
+                <div className="border-2 border-ink rounded-xl overflow-hidden shadow" style={{maxHeight:'280px',overflowY:'auto'}}>
                   {SERVICE_CATEGORIES.map(cat=>{
                     const catKeys=cat.services.map(s=>s.key);
                     const allSel=catKeys.every(k=>selServices.includes(k)), someSel=catKeys.some(k=>selServices.includes(k));
                     return <div key={cat.id} className="border-b border-neutral-100 last:border-0">
                       <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
                         <button type="button" onClick={()=>{if(allSel)setSelServices(p=>p.filter(k=>!catKeys.includes(k)));else setSelServices(p=>[...new Set([...p,...catKeys])]);}} className="flex items-center gap-2 group">
-                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${allSel?'bg-neutral-800 border-neutral-800':someSel?'border-neutral-400 bg-neutral-200':'border-neutral-300'}`}>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${allSel?'bg-lav border-ink':someSel?'border-neutral-400 bg-neutral-200':'border-neutral-300'}`}>
                             {allSel&&<svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                             {someSel&&!allSel&&<div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm"/>}
                           </div>
                           <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{cat.label}</span>
                         </button>
-                        <span className="text-xs text-neutral-400">{catKeys.filter(k=>selServices.includes(k)).length}/{catKeys.length}</span>
+                        <span className="text-xs text-neutral-500">{catKeys.filter(k=>selServices.includes(k)).length}/{catKeys.length}</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3">
                         {cat.services.map(svc=>{const sel=selServices.includes(svc.key);return<label key={svc.key} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${sel?'bg-red-50':'hover:bg-neutral-50'}`}>
@@ -2187,8 +2186,8 @@ function UptimePanel() {
             </div>
             <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0">
               <button onClick={()=>setShowCreate(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={async()=>{if(!createForm.title.trim()){toast.error('Title required');return;}setCreating(true);try{await uptimeAPI.createIncident({...createForm,affectedServices:selServices});toast.success('Created');setShowCreate(false);loadAll();}catch{toast.error('Failed');}finally{setCreating(false);}}} disabled={creating} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2">
-                {creating?<span className="spinner w-4 h-4 border-2 border-white/30 border-t-white"/>:<Plus className="w-4 h-4"/>} Create Incident
+              <button onClick={async()=>{if(!createForm.title.trim()){toast.error('Title required');return;}setCreating(true);try{await uptimeAPI.createIncident({...createForm,affectedServices:selServices});toast.success('Created');setShowCreate(false);loadAll();}catch{toast.error('Failed');}finally{setCreating(false);}}} disabled={creating} className="flex-1 btn !bg-white hover:bg-lav !text-ink text-sm gap-2">
+                {creating?<span className="spinner w-4 h-4 border-2 border-ink border-t-white"/>:<Plus className="w-4 h-4"/>} Create Incident
               </button>
             </div>
           </div>
@@ -2197,16 +2196,16 @@ function UptimePanel() {
 
       {/* ═══ TIMELINE UPDATE MODAL ══════════════════════════════════════ */}
       {tlTarget && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setTlTarget(null)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setTlTarget(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-bold">Post Update</h3><button onClick={()=>setTlTarget(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button></div>
+            <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-bold">Post Update</h3><button onClick={()=>setTlTarget(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-500"/></button></div>
             <div className="p-5 space-y-4">
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Status</label><select value={tlForm.status} onChange={e=>setTlForm(f=>({...f,status:e.target.value}))} className="input w-full text-sm">{Object.entries(STATUS_META).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Message *</label><textarea value={tlForm.message} onChange={e=>setTlForm(f=>({...f,message:e.target.value}))} rows={3} className="input w-full text-sm resize-none"/></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Status</label><select value={tlForm.status} onChange={e=>setTlForm(f=>({...f,status:e.target.value}))} className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">{Object.entries(STATUS_META).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Message *</label><textarea value={tlForm.message} onChange={e=>setTlForm(f=>({...f,message:e.target.value}))} rows={3} className="input w-full text-sm resize-none border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"/></div>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={()=>setTlTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={async()=>{if(!tlForm.message.trim()){toast.error('Required');return;}try{const r=await uptimeAPI.addTimelineUpdate(tlTarget,tlForm);setIncidents(inc=>inc.map(i=>i._id===tlTarget?r.data.incident:i));setTlTarget(null);toast.success('Updated');}catch{toast.error('Failed');}}} className={`flex-1 btn text-white text-sm gap-2 ${tlForm.status==='resolved'?'bg-emerald-600 hover:bg-emerald-700 border-emerald-600':'bg-neutral-900 hover:bg-neutral-800'}`}>
+              <button onClick={async()=>{if(!tlForm.message.trim()){toast.error('Required');return;}try{const r=await uptimeAPI.addTimelineUpdate(tlTarget,tlForm);setIncidents(inc=>inc.map(i=>i._id===tlTarget?r.data.incident:i));setTlTarget(null);toast.success('Updated');}catch{toast.error('Failed');}}} className={`flex-1 btn text-sm gap-2 ${tlForm.status==='resolved'?'!bg-emerald-600 hover:!bg-emerald-700 !border-emerald-600 !text-white':'!bg-white hover:!bg-lav !text-ink'}`}>
                 {tlForm.status==='resolved'?'Resolve':'Post Update'}
               </button>
             </div>
@@ -2306,24 +2305,24 @@ function SystemPanel() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isActive ? tc.iconBg : 'bg-neutral-100'}`}>
-                  <AlertCircle className={`w-5 h-5 ${isActive ? tc.icon : 'text-neutral-400'}`} />
+                  <AlertCircle className={`w-5 h-5 ${isActive ? tc.icon : 'text-neutral-500'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-bold text-sm">Maintenance Mode</h3>
                     {isActive && (
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold border ${tc.pill}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold border-2 border-ink ${tc.pill}`}>
                         <span className={`w-1.5 h-1.5 rounded-full animate-pulse inline-block ${tc.dot}`} />
                         {TYPE_LABELS[t]} — ACTIVE
                       </span>
                     )}
                     {isUpcoming && (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 border border-neutral-200">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 border-2 border-ink">
                         <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 inline-block" />
                         {TYPE_LABELS[maintenance?.type || 's']} — UPCOMING
                       </span>
                     )}
-                    {isOff && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-400">OFF</span>}
+                    {isOff && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-500">OFF</span>}
                   </div>
                   <p className="text-xs text-neutral-500 leading-relaxed">
                     {isActive   && `Site locked · all public traffic blocked · admin panel stays live`}
@@ -2331,10 +2330,10 @@ function SystemPanel() {
                     {isOff      && 'Site is fully live. Enable to show maintenance page or schedule an upcoming banner.'}
                   </p>
                   {(isActive || isUpcoming) && maintenance?.message && (
-                    <p className="text-xs text-neutral-600 font-medium mt-2 bg-white rounded-lg px-2 py-1.5 border border-neutral-200">"{maintenance.message}"</p>
+                    <p className="text-xs text-neutral-600 font-medium mt-2 bg-white rounded-lg px-2 py-1.5 border-2 border-ink">"{maintenance.message}"</p>
                   )}
                   {(isActive || isUpcoming) && maintenance?.by && (
-                    <p className="text-xs text-neutral-400 mt-1">Set by {maintenance.by}{maintenance.start ? ` · ${new Date(maintenance.start).toLocaleString()}` : ''}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Set by {maintenance.by}{maintenance.start ? ` · ${new Date(maintenance.start).toLocaleString()}` : ''}</p>
                   )}
                 </div>
               </div>
@@ -2343,7 +2342,7 @@ function SystemPanel() {
                 <button
                   onClick={() => doMaintenance('resolve')}
                   disabled={maintSaving}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all disabled:opacity-50"
+                  className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   {maintSaving ? 'Saving…' : 'Resolve'}
                 </button>
@@ -2361,7 +2360,7 @@ function SystemPanel() {
                       <button
                         key={k}
                         onClick={() => setMaintForm(p => ({ ...p, type: k }))}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${maintForm.type === k ? `${TYPE_COLORS[k].pill}` : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${maintForm.type === k ? `${TYPE_COLORS[k].pill}` : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
                       >{v}</button>
                     ))}
                   </div>
@@ -2369,31 +2368,31 @@ function SystemPanel() {
 
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Message <span className="font-normal text-neutral-400">(optional)</span></label>
+                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Message <span className="font-normal text-neutral-500">(optional)</span></label>
                     <input
                       type="text" maxLength={280}
                       value={maintForm.message}
                       onChange={e => setMaintForm(p => ({ ...p, message: e.target.value }))}
                       placeholder={maintForm.type === 'i' ? "Investigating an issue with the API." : maintForm.type === 'd' ? "Experiencing elevated error rates." : "Scheduled maintenance. Back shortly."}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
+                      className="w-full text-sm border-2 border-ink rounded-lg px-3 py-2 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">ETA <span className="font-normal text-neutral-400">(optional)</span></label>
+                    <label className="block text-xs font-semibold text-neutral-500 mb-1">ETA <span className="font-normal text-neutral-500">(optional)</span></label>
                     <input
                       type="datetime-local"
                       value={maintForm.eta}
                       onChange={e => setMaintForm(p => ({ ...p, eta: e.target.value }))}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
+                      className="w-full text-sm border-2 border-ink rounded-lg px-3 py-2 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Scheduled start <span className="font-normal text-neutral-400">(for upcoming banner)</span></label>
+                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Scheduled start <span className="font-normal text-neutral-500">(for upcoming banner)</span></label>
                     <input
                       type="datetime-local"
                       value={maintForm.start}
                       onChange={e => setMaintForm(p => ({ ...p, start: e.target.value }))}
-                      className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-neutral-400"
+                      className="w-full text-sm border-2 border-ink rounded-lg px-3 py-2 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
                     />
                   </div>
                 </div>
@@ -2403,18 +2402,18 @@ function SystemPanel() {
                   <button
                     onClick={() => doMaintenance('activate')}
                     disabled={maintSaving}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 ${TYPE_COLORS[maintForm.type]?.btn || 'bg-amber-500 hover:bg-amber-600'}`}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold text-ink transition-all disabled:opacity-50 ${TYPE_COLORS[maintForm.type]?.btn || 'bg-amber-500 hover:bg-amber-600 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                   >
                     {maintSaving ? 'Saving…' : 'Enable now'}
                   </button>
                   <button
                     onClick={() => doMaintenance('schedule')}
                     disabled={maintSaving}
-                    className="px-4 py-2 rounded-xl text-sm font-bold border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-all disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl text-sm font-bold border-2 border-ink text-neutral-600 hover:bg-neutral-50 transition-all disabled:opacity-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                   >
                     Schedule (banner only)
                   </button>
-                  <span className="text-xs text-neutral-400 ml-1">Mesh, watchdog &amp; admin stay live</span>
+                  <span className="text-xs text-neutral-500 ml-1">Mesh, watchdog &amp; admin stay live</span>
                 </div>
               </div>
             )}
@@ -2457,7 +2456,7 @@ function SystemPanel() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {[['RSS', sys.process.memoryMB.rss], ['Heap Used', sys.process.memoryMB.heapUsed], ['Heap Total', sys.process.memoryMB.heapTotal], ['External', sys.process.memoryMB.external]].map(([l, v]) => (
                 <div key={l} className="text-center p-3 bg-neutral-50 rounded-xl">
-                  <p className="text-xs text-neutral-400 mb-1">{l}</p>
+                  <p className="text-xs text-neutral-500 mb-1">{l}</p>
                   <p className="text-sm font-bold text-neutral-900">{v} MB</p>
                 </div>
               ))}
@@ -2493,7 +2492,7 @@ function SystemPanel() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {Object.entries(sys.collections || {}).map(([k, v]) => (
                 <div key={k} className="p-3 bg-neutral-50 rounded-xl">
-                  <p className="text-xs text-neutral-400 capitalize mb-1">{k}</p>
+                  <p className="text-xs text-neutral-500 capitalize mb-1">{k}</p>
                   <p className="text-2xl font-bold text-neutral-900">{formatNumber(v)}</p>
                 </div>
               ))}
@@ -2526,17 +2525,17 @@ function SystemPanel() {
 
           <div className="space-y-3">
             {watchdogData.watchdog?.services?.map(svc => (
-              <div key={svc.name} className={`flex items-center justify-between p-3 rounded-xl ${svc.status === 'down' ? 'bg-red-50 border border-red-200' : 'bg-neutral-50'}`}>
+              <div key={svc.name} className={`flex items-center justify-between p-3 rounded-xl ${svc.status === 'down' ? 'bg-red-50 border-2 border-red-600' : 'bg-neutral-50'}`}>
                 <div className="flex items-center gap-3">
                   <div className={`w-3 h-3 rounded-full flex-shrink-0 ${svc.status === 'up' ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
                   <div>
                     <p className="text-sm font-medium">{svc.name}</p>
-                    <p className="text-xs text-neutral-400">{svc.type}{svc.region ? ` · ${svc.region}` : ''}</p>
+                    <p className="text-xs text-neutral-500">{svc.type}{svc.region ? ` · ${svc.region}` : ''}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <StatusBadge status={svc.status} />
-                  {svc.lastPingMs ? <p className="text-xs text-neutral-400 mt-1">{svc.lastPingMs}ms</p> : svc.status === 'down' ? <p className="text-xs text-red-400 mt-1">No response</p> : null}
+                  {svc.lastPingMs ? <p className="text-xs text-neutral-500 mt-1">{svc.lastPingMs}ms</p> : svc.status === 'down' ? <p className="text-xs text-red-700 mt-1">No response</p> : null}
                 </div>
               </div>
             ))}
@@ -2555,7 +2554,7 @@ function SystemPanel() {
                   toast.error(`ntfy test failed: ${msg}`);
                 }
               }}
-              className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+              className="text-xs px-2 py-1 rounded-lg border-2 border-ink text-neutral-500 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
             >
               Test ntfy
             </button>
@@ -2726,12 +2725,12 @@ function LogsPanel() {
       {sources.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           {sources.map(s => (
-            <div key={s.source} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.ok ? 'border-neutral-700 bg-neutral-900' : 'border-red-800 bg-red-950/40'}`}>
+            <div key={s.source} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border-2 border-ink ${s.ok ? 'border-ink bg-white' : 'border-red-800 bg-red-50'}`}>
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.ok ? sourceDotClass(s.source) : 'bg-red-500'}`} />
-              <span className={s.ok ? 'text-neutral-200' : 'text-red-300'}>{s.name}</span>
+              <span className={s.ok ? 'text-ink' : 'text-red-700'}>{s.name}</span>
               {s.ok
                 ? <span className="text-neutral-500">{s.count.toLocaleString()} logs</span>
-                : <span className="text-red-400 text-[10px]">unreachable</span>
+                : <span className="text-red-700 text-[10px]">unreachable</span>
               }
             </div>
           ))}
@@ -2742,7 +2741,7 @@ function LogsPanel() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
           {[['all', 'All', counts.all], ['info', 'Info', counts.info], ['warn', 'Warn', counts.warn], ['error', 'Error', counts.error]].map(([id, l, c]) => (
-            <button key={id} onClick={() => setFilter(id)} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${filter === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+            <button key={id} onClick={() => setFilter(id)} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${filter === id ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>
               {l} <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${filter === id ? (id === 'error' ? 'bg-red-100 text-red-600' : id === 'warn' ? 'bg-amber-100 text-amber-600' : 'bg-neutral-100 text-neutral-600') : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>
             </button>
           ))}
@@ -2750,11 +2749,11 @@ function LogsPanel() {
 
         {uniqueSources.length > 1 && (
           <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
-            <button onClick={() => setSourceFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sourceFilter === 'all' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>All</button>
+            <button onClick={() => setSourceFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sourceFilter === 'all' ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>All</button>
             {uniqueSources.map(src => {
               const name = sources.find(s => s.source === src)?.name || src;
               return (
-                <button key={src} onClick={() => setSourceFilter(src)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${sourceFilter === src ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+                <button key={src} onClick={() => setSourceFilter(src)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${sourceFilter === src ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>
                   <span className={`inline-block w-1.5 h-1.5 rounded-full ${sourceDotClass(src)}`} />{name}
                 </button>
               );
@@ -2764,7 +2763,7 @@ function LogsPanel() {
 
         <div className="flex-1 min-w-40 relative">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input type="text" placeholder="Search all logs..." className="input pl-9 text-sm py-1.5" value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Search all logs..." className="input pl-9 text-sm py-1.5 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         {live && (
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
@@ -2774,12 +2773,12 @@ function LogsPanel() {
       </div>
 
       {/* Terminal */}
-      <div className="bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-neutral-800 bg-neutral-900">
+      <div className="bg-white rounded-2xl border-2 border-ink overflow-hidden shadow">
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-ink bg-white">
           <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-red-50" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-50" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-50" />
           </div>
           <span className="text-xs text-neutral-500 font-mono">fleet logs · all services · sorted by time</span>
           <span className="ml-auto text-xs text-neutral-600">{filtered.length.toLocaleString()} / {counts.all.toLocaleString()}</span>
@@ -2826,7 +2825,7 @@ function OrganizersPanel() {
         <div><h2 className="text-lg font-bold">All Organizers</h2><p className="text-sm text-neutral-500">{organizers.length} unique organizers across all events</p></div>
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input type="text" placeholder="Search organizers..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Search organizers..." className="input pl-10 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
@@ -2841,7 +2840,7 @@ function OrganizersPanel() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-200">
                 {filtered.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-neutral-400">No organizers found</td></tr>
                 ) : filtered.map(o => (
@@ -2889,7 +2888,7 @@ function StaffPanel() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div><h2 className="text-lg font-bold">All Staff Accounts</h2><p className="text-sm text-neutral-500">{staff.length} staff accounts across all events</p></div>
-        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search staff..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search staff..." className="input pl-10 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} /></div>
       </div>
 
       {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : (
@@ -2899,7 +2898,7 @@ function StaffPanel() {
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>{['Staff Account', 'Event', 'Role', 'Last Seen', 'Has PIN'].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-200">
                 {filtered.length === 0 ? <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-neutral-400">No staff found</td></tr> : filtered.map(s => (
                   <tr key={s._id} className="hover:bg-neutral-50">
                     <td className="px-5 py-4">
@@ -2957,7 +2956,7 @@ function AllUsersPanel() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div><h2 className="text-lg font-bold">All Users / Participants</h2><p className="text-sm text-neutral-500">{formatNumber(total)} total participants across all events</p></div>
-        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search by username..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search by username..." className="input pl-10 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={search} onChange={e => setSearch(e.target.value)} /></div>
       </div>
 
       {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : (
@@ -2967,7 +2966,7 @@ function AllUsersPanel() {
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>{['User', 'Event', 'Joined', 'RSVP', 'Password', 'RSVP Status'].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-200">
                 {users.length === 0 ? <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-neutral-400">No users found</td></tr> : users.map(u => (
                   <tr key={u._id} className="hover:bg-neutral-50">
                     <td className="px-5 py-3">
@@ -3207,7 +3206,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
           </div>
           <button
             onClick={onNeedLogin}
-            className="flex-shrink-0 text-xs font-semibold bg-amber-900 text-amber-50 hover:bg-amber-800 transition-colors rounded-lg px-3 py-1.5"
+            className="flex-shrink-0 text-xs font-semibold bg-amber-900 text-amber-50 hover:bg-amber-800 transition-colors rounded-lg px-3 py-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             Log In
           </button>
@@ -3220,7 +3219,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">{total} total reports</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 text-sm border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+        <button onClick={load} className="flex items-center gap-2 px-3 py-2 text-sm border-2 border-ink rounded-xl hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>
@@ -3249,7 +3248,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
         <select
           value={filter.category}
           onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
-          className="px-3 py-2 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none"
+          className="px-3 py-2 text-sm border-2 border-ink rounded-xl bg-white focus:outline-none focus:ring-[3px] focus:ring-ac"
         >
           <option value="">All categories</option>
           <option value="bug">Bug</option>
@@ -3262,7 +3261,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
         <select
           value={filter.severity}
           onChange={e => setFilter(f => ({ ...f, severity: e.target.value }))}
-          className="px-3 py-2 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none"
+          className="px-3 py-2 text-sm border-2 border-ink rounded-xl bg-white focus:outline-none focus:ring-[3px] focus:ring-ac"
         >
           <option value="">All severities</option>
           <option value="low">Low</option>
@@ -3273,7 +3272,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
         {(filter.status || filter.category || filter.severity) && (
           <button
             onClick={() => setFilter({ status: '', category: '', severity: '' })}
-            className="px-3 py-2 text-xs text-neutral-500 hover:text-neutral-900 border border-dashed border-neutral-300 rounded-xl"
+            className="px-3 py-2 text-xs text-neutral-500 hover:text-neutral-900 border-2 border-dashed border-ink rounded-xl shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             Clear filters
           </button>
@@ -3296,7 +3295,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
                   r.severity === 'critical' ? 'border-l-red-500' :
                   r.severity === 'high'     ? 'border-l-orange-400' :
                   r.severity === 'medium'   ? 'border-l-amber-400' : 'border-l-emerald-400'
-                } ${selected?._id === r._id ? 'ring-2 ring-neutral-900' : ''}`}
+                } ${selected?._id === r._id ? 'ring-2 ring-ink' : ''}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -3367,8 +3366,8 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
                       onClick={() => updateStatus(selected._id, s)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                         selected.status === s
-                          ? `bg-${statusColor[s]}-600 text-white`
-                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                          ? `bg- border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold${statusColor[s]}-600 text-white`
+                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                       }`}
                     >
                       {s.replace('_', ' ')}
@@ -3385,12 +3384,12 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
                   onChange={e => setNoteText(e.target.value)}
                   rows={3}
                   placeholder="Notes visible only to admins…"
-                  className="w-full text-xs px-3 py-2 border border-neutral-200 rounded-xl focus:outline-none focus:border-neutral-900 resize-none"
+                  className="w-full text-xs px-3 py-2 border-2 border-ink rounded-xl focus:outline-none focus:border-ink resize-none focus:ring-[3px] focus:ring-ac bg-white"
                 />
                 <button
                   onClick={saveNote}
                   disabled={saving}
-                  className="mt-1.5 w-full py-1.5 bg-neutral-900 text-white text-xs font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                  className="mt-1.5 w-full py-1.5 bg-hl text-ink text-xs font-bold rounded-lg hover:bg-hl disabled:opacity-50 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   {saving ? 'Saving…' : 'Save Notes'}
                 </button>
@@ -3422,7 +3421,7 @@ planitapp.onrender.com
 
 ---
 This email is in response to a bug report submitted at planitapp.onrender.com/help.`)}`}
-                className="flex items-center justify-center gap-2 w-full py-2 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2 border-2 border-ink rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Email Reporter
@@ -3459,10 +3458,10 @@ const CC_STYLES = `
 function CCStat({ label, value, sub, color = 'text-neutral-900', glow, onClick }) {
   return (
     <div onClick={onClick}
-      className={`rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:border-violet-300' : ''} ${glow || ''}`}>
+      className={`rounded-xl border-2 border-ink bg-white p-4 shadow-sm transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:border-violet-300' : ''} ${glow || ''}`}>
       <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{label}</p>
       <p className={`text-2xl font-bold cc-mono leading-none ${color}`}>{value ?? '—'}</p>
-      {sub && <p className="text-xs text-neutral-400 mt-1.5 leading-tight">{sub}</p>}
+      {sub && <p className="text-xs text-neutral-500 mt-1.5 leading-tight">{sub}</p>}
     </div>
   );
 }
@@ -3666,7 +3665,7 @@ function CommandCenterPanel() {
   );
 
   const Panel = ({ children, className = '' }) => (
-    <div className={`rounded-xl border border-neutral-200 bg-white shadow-sm ${className}`}>{children}</div>
+    <div className={`rounded-xl border-2 border-ink bg-white shadow-sm ${className}`}>{children}</div>
   );
 
   const PanelHead = ({ children }) => (
@@ -3676,10 +3675,10 @@ function CommandCenterPanel() {
   const Tag = ({ children, color = 'neutral' }) => {
     const cls = {
       neutral: 'bg-neutral-100 text-neutral-600',
-      green:   'bg-emerald-50 text-emerald-700 border border-emerald-200',
-      red:     'bg-red-50 text-red-700 border border-red-200',
-      amber:   'bg-amber-50 text-amber-700 border border-amber-200',
-      violet:  'bg-violet-50 text-violet-700 border border-violet-200',
+      green:   'bg-emerald-50 text-emerald-700 border-2 border-emerald-600',
+      red:     'bg-red-50 text-red-700 border-2 border-red-600',
+      amber:   'bg-amber-50 text-amber-700 border-2 border-amber-600',
+      violet:  'bg-violet-50 text-violet-700 border-2 border-blue-600',
     }[color] || 'bg-neutral-100 text-neutral-600';
     return <span className={`cc-tag ${cls}`}>{children}</span>;
   };
@@ -3698,7 +3697,7 @@ function CommandCenterPanel() {
             </div>
             <div>
               <span className="text-sm font-bold text-neutral-900">Command Center</span>
-              <span className="ml-2 text-xs text-neutral-400">Planit Platform</span>
+              <span className="ml-2 text-xs text-neutral-500">Planit Platform</span>
             </div>
           </div>
 
@@ -3710,16 +3709,16 @@ function CommandCenterPanel() {
               <span className={`font-semibold cc-mono ${online===total ? 'text-emerald-600' : 'text-red-600'}`}>{online}/{total}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-400">Threat Level</span>
+              <span className="text-neutral-500">Threat Level</span>
               <CCThreat score={threat} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-400">Live Sockets</span>
+              <span className="text-neutral-500">Live Sockets</span>
               <span className="font-semibold text-violet-600 cc-mono">{runtime?.wsStats?.connected ?? '—'}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-400">Organizers</span>
-              <span className="font-semibold text-neutral-400 cc-mono">{platform?.maoCount ?? '—'}</span>
+              <span className="text-neutral-500">Organizers</span>
+              <span className="font-semibold text-neutral-500 cc-mono">{platform?.maoCount ?? '—'}</span>
             </div>
             {refreshAt && <span className="text-neutral-700 cc-mono text-xs">Updated {refreshAt.toLocaleTimeString()}</span>}
           </div>
@@ -3727,11 +3726,11 @@ function CommandCenterPanel() {
           {/* Controls */}
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => setLive(v=>!v)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${live ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-neutral-100 border-neutral-300 text-neutral-500'}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${live ? 'bg-emerald-50 border-emerald-300 text-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 border-neutral-300 text-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
               {live ? '● Live' : '○ Paused'}
             </button>
             <button onClick={() => fetchAll()} disabled={loading}
-              className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 text-xs font-medium transition-colors disabled:opacity-40 flex items-center gap-1.5 text-neutral-600">
+              className="px-3 py-1.5 rounded-lg border-2 border-ink bg-white hover:bg-neutral-50 text-xs font-bold transition-colors disabled:opacity-40 flex items-center gap-1.5 text-neutral-600 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
             </button>
           </div>
@@ -3743,8 +3742,7 @@ function CommandCenterPanel() {
             const Icon = t.ico;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={`px-5 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap flex items-center gap-2 shrink-0
-                  ${tab===t.id ? 'border-violet-600 text-violet-700 bg-violet-50/50' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'}`}>
+                className={`px-5 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap flex items-center gap-2 shrink-0 ${tab===t.id ? 'border-violet-600 text-violet-700 bg-blue-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'}`}>
                 <Icon className="w-3.5 h-3.5" />{t.lbl}
               </button>
             );
@@ -3785,7 +3783,7 @@ function CommandCenterPanel() {
                           <div className={`w-2.5 h-2.5 rounded-full ${ok?'bg-emerald-500':'bg-red-500'}`} />
                           <div>
                             <span className="text-sm font-bold text-neutral-900">{svc.service?.charAt(0).toUpperCase()+svc.service?.slice(1)}</span>
-                            <span className="ml-2 text-xs text-neutral-400">{svc.type}</span>
+                            <span className="ml-2 text-xs text-neutral-500">{svc.type}</span>
                           </div>
                         </div>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ok?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700'}`}>{ok?'Online':'Offline'}</span>
@@ -3793,12 +3791,12 @@ function CommandCenterPanel() {
                       {!ok && <p className="text-sm text-red-600 mb-3 bg-red-50 rounded-lg p-2">{svc.error||'Service unreachable'}</p>}
                       {ok && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-                          {svc.uptime   != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Uptime</p><p className="font-semibold text-neutral-400 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
-                          {svc.pid      != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">PID</p><p className="font-semibold text-neutral-400 cc-mono">{svc.pid}</p></div>}
-                          {svc.node              && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Node</p><p className="font-semibold text-neutral-400 cc-mono">{svc.node}</p></div>}
-                          {svc.errors24h!= null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Err/24h</p><p className={`font-semibold cc-mono ${svc.errors24h>0?'text-red-600':'text-emerald-600'}`}>{svc.errors24h}</p></div>}
-                          {svc.liveClients!=null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">SSE</p><p className="font-semibold text-neutral-400 cc-mono">{svc.liveClients}</p></div>}
-                          {svc.backends  !=null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Nodes</p><p className="font-semibold text-neutral-400 cc-mono">{svc.backends}</p></div>}
+                          {svc.uptime   != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">Uptime</p><p className="font-semibold text-neutral-500 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
+                          {svc.pid      != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">PID</p><p className="font-semibold text-neutral-500 cc-mono">{svc.pid}</p></div>}
+                          {svc.node              && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">Node</p><p className="font-semibold text-neutral-500 cc-mono">{svc.node}</p></div>}
+                          {svc.errors24h!= null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">Err/24h</p><p className={`font-semibold cc-mono ${svc.errors24h>0?'text-red-600':'text-emerald-600'}`}>{svc.errors24h}</p></div>}
+                          {svc.liveClients!=null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">SSE</p><p className="font-semibold text-neutral-500 cc-mono">{svc.liveClients}</p></div>}
+                          {svc.backends  !=null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-500 text-xs mb-0.5">Nodes</p><p className="font-semibold text-neutral-500 cc-mono">{svc.backends}</p></div>}
                           {svc.memMB && (
                             <div className="col-span-3 bg-neutral-50 rounded-lg p-2.5">
                               <div className="flex justify-between mb-1.5"><span className="text-neutral-500 text-xs">Heap Usage</span><span className="text-neutral-600 text-xs cc-mono">{svc.memMB.heapUsed}/{svc.memMB.heapTotal} MB ({mem}%)</span></div>
@@ -3859,14 +3857,14 @@ function CommandCenterPanel() {
                         {platform.eventsPerDay.map((d,i) => (
                           <div key={i} className="flex-1 flex flex-col items-center relative" style={{ height:'100%' }}>
                             <div className="absolute bottom-0 w-full hover:bg-violet-500 transition-colors rounded-t cursor-pointer"
-                              style={{ height:`${Math.max(4,Math.round((d.count/max)*112))}px`, background:'#7c3aed' }}
+                              style={{ height:`${Math.max(4,Math.round((d.count/max)*112))}px`, background:'#2236ff' }}
                               title={`${d._id}: ${d.count} events`} />
                           </div>
                         ))}
                       </div>
                     );
-                  })() : <div className="h-28 flex items-center justify-center text-neutral-400 text-sm">No data available</div>}
-                  <div className="flex justify-between text-xs text-neutral-400 mt-2">
+                  })() : <div className="h-28 flex items-center justify-center text-neutral-500 text-sm">No data available</div>}
+                  <div className="flex justify-between text-xs text-neutral-500 mt-2">
                     <span>{platform?.eventsPerDay?.[0]?._id?.slice(5)}</span>
                     <span>{platform?.eventsPerDay?.at(-1)?._id?.slice(5)}</span>
                   </div>
@@ -3895,10 +3893,10 @@ function CommandCenterPanel() {
               <PanelHead><span className="text-sm font-semibold text-neutral-700">Feature Adoption</span></PanelHead>
               <div className="p-5 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {platform?.featureAdoption && Object.entries(platform.featureAdoption).map(([feat, { pct, count }]) => (
-                  <div key={feat} className="bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+                  <div key={feat} className="bg-neutral-50 rounded-xl p-4 border-2 border-ink shadow">
                     <p className="text-xs text-neutral-500 font-medium capitalize mb-2">{feat}</p>
                     <p className="text-2xl font-bold cc-mono text-violet-700">{pct}%</p>
-                    <p className="text-xs text-neutral-400 mb-2">{count} events</p>
+                    <p className="text-xs text-neutral-500 mb-2">{count} events</p>
                     <CCBar v={pct} max={100} color="#7c3aed" />
                   </div>
                 ))}
@@ -3920,11 +3918,11 @@ function CommandCenterPanel() {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <span className="text-neutral-700 w-4 cc-mono">{i+1}</span>
-                          <div><p className="font-bold text-neutral-800">{u.name||'—'}</p><p className="text-neutral-400 cc-mono">{u._id}</p></div>
+                          <div><p className="font-bold text-neutral-800">{u.name||'—'}</p><p className="text-neutral-500 cc-mono">{u._id}</p></div>
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right font-semibold text-violet-700 cc-mono">{u.events}</td>
-                      <td className="px-5 py-3 text-right text-neutral-400 cc-mono">{u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
+                      <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -3939,7 +3937,7 @@ function CommandCenterPanel() {
                   {platform.eventsByStatus.map(s => {
                     const clr = {active:'text-emerald-600',completed:'text-blue-600',draft:'text-neutral-500',cancelled:'text-red-500'}[s._id]||'text-neutral-400';
                     return (
-                      <div key={s._id} className="bg-neutral-50 rounded-lg px-5 py-3 border border-neutral-100">
+                      <div key={s._id} className="bg-neutral-50 rounded-lg px-5 py-3 border-2 border-ink shadow-md">
                         <p className={`text-xl font-semibold cc-mono ${clr}`}>{s.count}</p>
                         <p className="text-xs text-neutral-500 mt-1">{s._id}</p>
                       </div>
@@ -3955,14 +3953,13 @@ function CommandCenterPanel() {
         {tab === 'threat' && (
           <div className="space-y-5">
             {/* Threat header */}
-            <div className={`rounded-xl border p-4 flex items-center justify-between
-              ${threat>=75?'border-red-300 bg-red-50 cc-glow-r':threat>=50?'border-amber-200 bg-amber-50 cc-glow-a':'border-emerald-200 bg-emerald-50 cc-glow-g'}`}>
+            <div className={`rounded-xl border-2 p-4 flex items-center justify-between border-ink shadow ${threat>=75?'border-red-300 bg-red-50 cc-glow-r':threat>=50?'border-amber-200 bg-amber-50 cc-glow-a':'border-emerald-200 bg-emerald-50 cc-glow-g'}`}>
               <div>
                 <p className="text-xs text-neutral-500 tracking-wide font-semibold mb-2">Current Threat Assessment</p>
                 <CCThreat score={threat} />
-                <p className="text-xs text-neutral-400 mt-1.5">Score: {threat}/100 · Updated: {refreshAt?.toLocaleTimeString()??'—'}</p>
+                <p className="text-xs text-neutral-500 mt-1.5">Score: {threat}/100 · Updated: {refreshAt?.toLocaleTimeString()??'—'}</p>
               </div>
-              <button onClick={() => fetchAll(['security'])} className="px-3 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors font-medium">Re-scan</button>
+              <button onClick={() => fetchAll(['security'])} className="px-3 py-1.5 border-2 border-ink rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors font-bold shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Re-scan</button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -3975,25 +3972,25 @@ function CommandCenterPanel() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               <Panel>
                 <PanelHead><span className="text-sm font-semibold text-neutral-700">Top Error Patterns</span></PanelHead>
-                <div className="divide-y divide-neutral-100">
+                <div className="divide-y divide-neutral-200">
                   {security?.topErrors?.length ? security.topErrors.map((e,i) => (
                     <div key={i} className="px-5 py-3 flex items-center justify-between gap-3 cc-tr">
                       <p className="text-sm text-neutral-500 cc-mono flex-1 truncate">{e.msg}</p>
                       <Tag color={e.count>10?'red':'neutral'}>{e.count}×</Tag>
                     </div>
-                  )) : <p className="px-4 py-4 text-sm text-neutral-400">No error patterns</p>}
+                  )) : <p className="px-4 py-4 text-sm text-neutral-500">No error patterns</p>}
                 </div>
               </Panel>
 
               <Panel>
                 <PanelHead><span className="text-sm font-semibold text-neutral-700">Auth Failure Log</span></PanelHead>
-                <div className="divide-y divide-neutral-100 max-h-48 overflow-y-auto">
+                <div className="divide-y divide-neutral-200 max-h-48 overflow-y-auto">
                   {security?.failedLogins?.length ? security.failedLogins.slice(0,15).map((e,i) => (
                     <div key={i} className="px-4 py-2 flex items-center justify-between gap-2 cc-tr">
                       <p className="text-sm text-red-600/70 cc-mono flex-1 truncate">{e.msg}</p>
                       <span className="text-xs text-neutral-500 cc-mono shrink-0">{new Date(e.ts).toLocaleTimeString()}</span>
                     </div>
-                  )) : <p className="px-4 py-4 text-sm text-neutral-400">No auth failures</p>}
+                  )) : <p className="px-4 py-4 text-sm text-neutral-500">No auth failures</p>}
                 </div>
               </Panel>
             </div>
@@ -4030,9 +4027,9 @@ function CommandCenterPanel() {
                   <tbody>
                     {security.largeFiles.map((f,i) => (
                       <tr key={i} className="border-b border-neutral-100 cc-tr">
-                        <td className="px-4 py-2 text-neutral-400 truncate max-w-xs">{f.name||'unnamed'}</td>
+                        <td className="px-4 py-2 text-neutral-500 truncate max-w-xs">{f.name||'unnamed'}</td>
                         <td className="px-4 py-2 text-right cc-mono text-neutral-800">{f.size?`${(f.size/1048576).toFixed(1)} MB`:'—'}</td>
-                        <td className="px-4 py-2 text-right text-neutral-400 cc-mono">{f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():'—'}</td>
+                        <td className="px-4 py-2 text-right text-neutral-500 cc-mono">{f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():'—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -4054,7 +4051,7 @@ function CommandCenterPanel() {
                       <tr key={i} className="border-b border-neutral-100 cc-tr">
                         <td className="px-4 py-2">
                           <p className="font-bold text-neutral-700 truncate max-w-xs">{e.title}</p>
-                          <p className="text-neutral-400 cc-mono">{e.subdomain}</p>
+                          <p className="text-neutral-500 cc-mono">{e.subdomain}</p>
                         </td>
                         <td className="px-4 py-2 text-right font-semibold text-neutral-600 cc-mono">{e.participantCount}</td>
                         <td className="px-4 py-2 text-right"><Tag color={e.status==='active'?'green':e.status==='completed'?'violet':'neutral'}>{e.status}</Tag></td>
@@ -4077,10 +4074,10 @@ function CommandCenterPanel() {
                 <div className="flex gap-2 mb-4">
                   <input value={sq} onChange={e=>setSq(e.target.value)} onKeyDown={e=>e.key==='Enter'&&globalSearch()}
                     placeholder="Search participants, events, organisers across all data…"
-                    className="flex-1 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:border-violet-500 placeholder-neutral-300 cc-mono" />
+                    className="flex-1 bg-neutral-50 border-2 border-ink rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:border-violet-500 placeholder-neutral-400 cc-mono focus:ring-[3px] focus:ring-ac" />
                   <button onClick={globalSearch} disabled={sLoading||sq.length<2}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium disabled:opacity-40 transition-colors flex items-center gap-2">
-                    {sLoading?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-1"/>Scanning</> :<><Search className="w-3 h-3"/>Search</>}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-bold disabled:opacity-40 transition-colors flex items-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
+                    {sLoading?<><span className="w-4 h-4 border-2 border-ink border-t-white rounded-full animate-spin inline-block mr-1"/>Scanning</> :<><Search className="w-3 h-3"/>Search</>}
                   </button>
                 </div>
                 {sr && (
@@ -4096,7 +4093,7 @@ function CommandCenterPanel() {
                           {items?.length ? items.map((it,i) => (
                             <div key={i} className="bg-neutral-50 rounded-lg px-3 py-2 text-sm">
                               <p className="font-bold text-neutral-800">{it.h}</p>
-                              <p className="text-neutral-400 cc-mono">{it.s}</p>
+                              <p className="text-neutral-500 cc-mono">{it.s}</p>
                             </div>
                           )) : <p className="text-neutral-700 text-sm">No results</p>}
                         </div>
@@ -4111,7 +4108,7 @@ function CommandCenterPanel() {
             {events?.activeVelocity?.length > 0 && (
               <Panel>
                 <PanelHead><span className="text-sm font-semibold text-neutral-700">LIVE CHECK-IN VELOCITY</span></PanelHead>
-                <div className="divide-y divide-neutral-100">
+                <div className="divide-y divide-neutral-200">
                   {events.activeVelocity.map((e,i) => (
                     <div key={i} className="px-5 py-4 flex items-center gap-4 cc-tr">
                       <div className="flex-1 min-w-0">
@@ -4120,7 +4117,7 @@ function CommandCenterPanel() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-semibold text-emerald-600 cc-mono">{e.checkedIn}/{e.total}</p>
-                        <p className="text-xs text-neutral-400">{e.pct}%</p>
+                        <p className="text-xs text-neutral-500">{e.pct}%</p>
                       </div>
                       <div className="w-20 shrink-0">
                         <CCBar v={e.pct} max={100} color="#22c55e" />
@@ -4134,19 +4131,19 @@ function CommandCenterPanel() {
 
             {/* Abandoned events */}
             {events?.abandonedEvents?.length > 0 && (
-              <Panel className="border-amber-800/20 cc-glow-a">
+              <Panel className="border-amber-700 cc-glow-a">
                 <PanelHead>
                   <span className="text-xs font-black tracking-wide text-amber-700">ABANDONED Events ({events.abandonedEvents.length})</span>
                   <button onClick={() => bulkOp('cancel-abandoned',{},'Cancel all abandoned events?')} disabled={bulk}
-                    className="text-sm px-3 py-1 border border-amber-300 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors font-black disabled:opacity-40">
+                    className="text-sm px-3 py-1 border-2 border-amber-600 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors font-black disabled:opacity-40 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                     BULK CANCEL
                   </button>
                 </PanelHead>
-                <div className="divide-y divide-neutral-100 max-h-52 overflow-y-auto">
+                <div className="divide-y divide-neutral-200 max-h-52 overflow-y-auto">
                   {events.abandonedEvents.slice(0,20).map((e,i) => (
                     <div key={i} className="px-5 py-3 flex items-center justify-between gap-3 cc-tr">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-400 truncate">{e.title}</p>
+                        <p className="text-sm font-medium text-neutral-500 truncate">{e.title}</p>
                         <p className="text-xs text-neutral-500 cc-mono">{e.organizerEmail}</p>
                       </div>
                       <div className="text-right shrink-0">
@@ -4168,11 +4165,11 @@ function CommandCenterPanel() {
                   { action:'delete-empty-drafts', label:'DELETE EMPTY DRAFTS',  desc:'Delete draft events >3 days old with zero guests',   filter:{days:3}, color:'border-red-300 text-red-600',    confirm:'Delete all empty draft events? Cannot be undone.' },
                   { action:'cancel-abandoned',    label:'CANCEL ABANDONED',     desc:'Cancel active events past their date, no check-ins', filter:{},       color:'border-amber-300 text-amber-600', confirm:'Cancel all abandoned events?' },
                 ].map(op => (
-                  <div key={op.action} className={`rounded-xl border ${op.color} bg-neutral-50 p-3.5`}>
+                  <div key={op.action} className={`rounded-xl border-2 border-ink shadow ${op.color} bg-neutral-50 p-3.5`}>
                     <p className="text-xs font-semibold mb-1">{op.label}</p>
                     <p className="text-xs text-neutral-500 mb-3 leading-relaxed">{op.desc}</p>
                     <button onClick={() => bulkOp(op.action, op.filter, op.confirm)} disabled={bulk}
-                      className="w-full py-1.5 border border-current rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-neutral-100 transition-colors">
+                      className="w-full py-1.5 border-2 border-current rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-neutral-100 transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                       {bulk?'Executing…':'Execute'}
                     </button>
                   </div>
@@ -4184,7 +4181,7 @@ function CommandCenterPanel() {
             {events?.cleanupCandidates?.length > 0 && (
               <Panel>
                 <PanelHead><span className="text-sm font-semibold text-neutral-700">Cleanup Candidates — {events.cleanupCandidates.length} CANDIDATES</span></PanelHead>
-                <div className="divide-y divide-neutral-100 max-h-40 overflow-y-auto">
+                <div className="divide-y divide-neutral-200 max-h-40 overflow-y-auto">
                   {events.cleanupCandidates.map((e,i) => (
                     <div key={i} className="px-4 py-2 flex items-center justify-between cc-tr">
                       <p className="text-sm text-neutral-500 truncate">{e.title}</p>
@@ -4206,22 +4203,22 @@ function CommandCenterPanel() {
               </PanelHead>
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Target Node</p>
+                  <p className="text-xs text-neutral-500 tracking-wide uppercase mb-2 font-bold">Target Node</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {['backend','router','watchdog'].map(t => (
                       <button key={t} onClick={()=>{setDTarget(t);setDCmd(CMDS[t][0].id);}}
-                        className={`py-2 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all ${dTarget===t?'bg-violet-600 text-white':'bg-neutral-100 text-neutral-600 hover:bg-neutral-100 border border-neutral-200'}`}>
+                        className={`py-2 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all ${dTarget===t?'bg-violet-600 text-white border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold':'bg-neutral-100 text-neutral-600 hover:bg-neutral-100 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                         {t}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Command</p>
+                  <p className="text-xs text-neutral-500 tracking-wide uppercase mb-2 font-bold">Command</p>
                   <div className="space-y-1.5">
                     {CMDS[dTarget].map(cmd => (
                       <button key={cmd.id} onClick={()=>setDCmd(cmd.id)}
-                        className={`w-full text-left p-3 rounded-xl transition-colors ${dCmd===cmd.id?'bg-violet-50 border border-violet-300':'bg-neutral-50 hover:bg-neutral-100 border border-transparent'}`}>
+                        className={`w-full text-left p-3 rounded-xl transition-colors ${dCmd===cmd.id?'bg-violet-50 border-2 border-blue-600 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold':'bg-neutral-50 hover:bg-neutral-100 border-2 border-transparent border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                         <p className="text-sm font-semibold text-neutral-800 tracking-wider">{cmd.label}</p>
                         <p className="text-xs text-neutral-500 mt-0.5">{cmd.desc}</p>
                       </button>
@@ -4229,34 +4226,34 @@ function CommandCenterPanel() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Params <span className="normal-case font-normal text-neutral-800">(optional JSON)</span></p>
+                  <p className="text-xs text-neutral-500 tracking-wide uppercase mb-2 font-bold">Params <span className="normal-case font-normal text-neutral-800">(optional JSON)</span></p>
                   <textarea value={dParams} onChange={e=>setDParams(e.target.value)} rows={3}
                     placeholder='{ "provider": "brevo" }'
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-sm cc-mono text-neutral-700 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-300" />
+                    className="w-full bg-neutral-50 border-2 border-ink rounded-xl px-3 py-2.5 text-sm cc-mono text-neutral-700 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-400 focus:ring-[3px] focus:ring-ac" />
                 </div>
                 <button onClick={dispatch} disabled={dRunning}
-                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-40">
-                  {dRunning?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Executing…</>:<><Play className="w-4 h-4"/>Execute Command</>}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
+                  {dRunning?<><span className="w-4 h-4 border-2 border-ink border-t-white rounded-full animate-spin"/>Executing…</>:<><Play className="w-4 h-4"/>Execute Command</>}
                 </button>
               </div>
             </Panel>
 
             <div className="space-y-4">
               {/* Last result */}
-              <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-5 flex-1">
+              <div className="rounded-xl bg-neutral-50 border-2 border-ink p-5 flex-1 shadow-md">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-semibold text-neutral-700">Command Output</p>
                   {cmdLog[0] && <span className="text-xs text-neutral-500 cc-mono bg-neutral-100 px-2 py-0.5 rounded-full">{cmdLog[0].ms}ms</span>}
                 </div>
                 {!cmdLog.length
-                  ? <p className="text-sm text-neutral-400 cc-mono italic">Awaiting command…</p>
+                  ? <p className="text-sm text-neutral-500 cc-mono italic">Awaiting command…</p>
                   : <>
                     <div className="flex items-center gap-2 mb-3">
                       <Tag color={cmdLog[0].ok?'green':'red'}>{cmdLog[0].ok?'Success':'Failed'}</Tag>
                       <span className="text-sm text-neutral-600 cc-mono">{cmdLog[0].target} / {cmdLog[0].cmd}</span>
-                      <span className="text-xs text-neutral-400 cc-mono ml-auto">{new Date(cmdLog[0].ts).toLocaleTimeString()}</span>
+                      <span className="text-xs text-neutral-500 cc-mono ml-auto">{new Date(cmdLog[0].ts).toLocaleTimeString()}</span>
                     </div>
-                    <pre className="text-sm cc-mono text-neutral-700 whitespace-pre-wrap overflow-auto max-h-64 bg-white border border-neutral-200 rounded-lg p-3 mt-2">
+                    <pre className="text-sm cc-mono text-neutral-700 whitespace-pre-wrap overflow-auto max-h-64 bg-white border-2 border-ink rounded-lg p-3 mt-2">
                       {cmdLog[0].ok ? JSON.stringify(cmdLog[0].result,null,2) : cmdLog[0].error}
                     </pre>
                   </>}
@@ -4271,7 +4268,7 @@ function CommandCenterPanel() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-neutral-700">Email Signal Pool</span>
               <button onClick={() => adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)).catch(()=>{})}
-                className="px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
+                className="px-2.5 py-1.5 border-2 border-ink rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <RefreshCw className="w-3 h-3"/> REFRESH
               </button>
             </div>
@@ -4285,28 +4282,28 @@ function CommandCenterPanel() {
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <p className="text-sm font-black tracking-wide text-neutral-800">{p.provider?.toUpperCase()}</p>
-                            <p className="text-xs text-neutral-400">{p.totalKeys} key(s) · {(p.monthlyFree||0).toLocaleString()}/mo free</p>
+                            <p className="text-xs text-neutral-500">{p.totalKeys} key(s) · {(p.monthlyFree||0).toLocaleString()}/mo free</p>
                           </div>
                           <Tag color={p.activeKeys>0?'green':'red'}>{p.activeKeys} ACTIVE</Tag>
                         </div>
                         <div className="space-y-2">
                           {p.keys?.map(k => (
-                            <div key={k.index} className={`flex items-center justify-between rounded-lg p-3 ${k.status==='active'?'bg-emerald-50 border border-emerald-200':'bg-red-50 border border-red-200'}`}>
+                            <div key={k.index} className={`flex items-center justify-between rounded-lg p-3 ${k.status==='active'?'bg-emerald-50 border-2 border-emerald-600':'bg-red-50 border-2 border-red-600'}`}>
                               <div className="flex items-center gap-2">
                                 <Key className={`w-3 h-3 ${k.status==='active'?'text-emerald-600':'text-red-600'}`}/>
                                 <span className="text-sm cc-mono text-neutral-500">{k.keySuffix}</span>
                               </div>
                               <div className="text-right text-sm">
                                 <p className={`font-black tracking-wider ${k.status==='active'?'text-emerald-600':'text-red-600'}`}>{k.status?.toUpperCase()}</p>
-                                {k.resumesAt && <p className="text-neutral-400 cc-mono">{new Date(k.resumesAt).toLocaleTimeString()}</p>}
-                                <p className="text-neutral-400 cc-mono">{k.useCount} sends</p>
+                                {k.resumesAt && <p className="text-neutral-500 cc-mono">{new Date(k.resumesAt).toLocaleTimeString()}</p>}
+                                <p className="text-neutral-500 cc-mono">{k.useCount} sends</p>
                               </div>
                             </div>
                           ))}
                         </div>
                         {p.keys?.some(k=>k.status==='suspended') && (
                           <button onClick={async()=>{try{await adminAPI.ccCommand('router','clear-key-suspension',{provider:name});toast.success('Cleared');setTimeout(()=>adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)),800);}catch{toast.error('Failed');}}}
-                            className="mt-3 w-full py-2 rounded-lg border border-amber-300 text-sm font-semibold text-amber-600 hover:bg-amber-50 tracking-wide transition-colors">
+                            className="mt-3 w-full py-2 rounded-lg border-2 border-amber-600 text-sm font-semibold text-amber-600 hover:bg-amber-50 tracking-wide transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                             UNSUSPEND {name.toUpperCase()} KEYS
                           </button>
                         )}
@@ -4314,7 +4311,7 @@ function CommandCenterPanel() {
                     </Panel>
                   ))}
                   {pool._summary && (
-                    <div className="lg:col-span-2 rounded-xl border border-violet-500/20 bg-violet-900/10 p-4 flex items-center justify-between">
+                    <div className="lg:col-span-2 rounded-xl border border-blue-700 bg-blue-50 p-4 flex items-center justify-between">
                       <p className="text-sm text-violet-700 font-black tracking-wide">Total Monthly Free Capacity</p>
                       <p className="text-2xl font-semibold text-violet-700 cc-mono">{(pool._summary.totalMonthlyFree||0).toLocaleString()} emails/mo</p>
                     </div>
@@ -4330,7 +4327,7 @@ function CommandCenterPanel() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-neutral-700">Database Storage</span>
               <button onClick={()=>adminAPI.ccGetDb().then(r=>setDb(r.data)).catch(()=>{})}
-                className="px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
+                className="px-2.5 py-1.5 border-2 border-ink rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <RefreshCw className="w-3 h-3"/> REFRESH
               </button>
             </div>
@@ -4356,7 +4353,7 @@ function CommandCenterPanel() {
                           <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{(c.count||0).toLocaleString()}</td>
                           <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{c.sizeMB} MB</td>
                           <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{c.indexSizeMB} MB</td>
-                          <td className="px-5 py-3 text-right text-neutral-400 cc-mono">{c.avgObjSize?`${c.avgObjSize}B`:'—'}</td>
+                          <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{c.avgObjSize?`${c.avgObjSize}B`:'—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -4413,7 +4410,7 @@ function CommandCenterPanel() {
                     <PanelHead><span className="text-sm font-semibold text-neutral-700">Environment Configuration</span></PanelHead>
                     <div className="p-4 space-y-1.5">
                       {runtime.config.map(c => (
-                        <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-50 border border-emerald-200':'bg-red-50 border border-red-200'}`}>
+                        <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-50 border-2 border-emerald-600':'bg-red-50 border-2 border-red-600'}`}>
                           <span className="text-sm text-neutral-500">{c.label}</span>
                           <Tag color={c.set?'green':'red'}>{c.set ? 'SET' : 'MISSING'}</Tag>
                         </div>
@@ -4423,7 +4420,7 @@ function CommandCenterPanel() {
                 )}
               </div>
             )}
-            <button onClick={()=>fetchAll(['runtime'])} className="px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
+            <button onClick={()=>fetchAll(['runtime'])} className="px-3 py-2 border-2 border-ink rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
               <RefreshCw className="w-3 h-3"/> Refresh Runtime
             </button>
           </div>
@@ -4434,20 +4431,20 @@ function CommandCenterPanel() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-neutral-700">Command Audit Log ({cmdLog.length})</span>
-              {cmdLog.length>0 && <button onClick={()=>setCmdLog([])} className="text-sm text-neutral-400 hover:text-red-600 transition-colors">CLEAR</button>}
+              {cmdLog.length>0 && <button onClick={()=>setCmdLog([])} className="text-sm text-neutral-500 hover:text-red-600 transition-colors">CLEAR</button>}
             </div>
             {!cmdLog.length
-              ? <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-14 text-center text-neutral-800 text-sm tracking-wide">No commands executed this session</div>
+              ? <div className="rounded-xl bg-neutral-50 border-2 border-ink p-14 text-center text-neutral-800 text-sm tracking-wide shadow">No commands executed this session</div>
               : <div className="space-y-2">
                 {cmdLog.map((e,i) => (
-                  <div key={i} className={`rounded-xl border p-4 ${e.ok?'bg-emerald-50 border-emerald-200':'bg-red-50 border-red-200'}`}>
+                  <div key={i} className={`rounded-xl border-2 p-4 border-ink shadow ${e.ok?'bg-emerald-50 border-emerald-200':'bg-red-50 border-red-200'}`}>
                     <div className="flex items-center gap-3 mb-2 text-sm">
                       <Tag color={e.ok?'green':'red'}>{e.ok?'OK':'FAIL'}</Tag>
                       <span className="cc-mono text-neutral-500">{e.target} / {e.cmd}</span>
-                      <span className="text-neutral-400 cc-mono">{e.ms}ms</span>
-                      <span className="ml-auto text-neutral-400 cc-mono">{new Date(e.ts).toLocaleTimeString()}</span>
+                      <span className="text-neutral-500 cc-mono">{e.ms}ms</span>
+                      <span className="ml-auto text-neutral-500 cc-mono">{new Date(e.ts).toLocaleTimeString()}</span>
                     </div>
-                    <pre className="text-sm cc-mono text-neutral-600 whitespace-pre-wrap overflow-auto max-h-36 bg-white border border-neutral-200 rounded-lg p-3 mt-2">
+                    <pre className="text-sm cc-mono text-neutral-600 whitespace-pre-wrap overflow-auto max-h-36 bg-white border-2 border-ink rounded-lg p-3 mt-2">
                       {e.ok ? JSON.stringify(e.result,null,2) : e.error}
                     </pre>
                   </div>
@@ -4552,7 +4549,7 @@ function BannedIpsPanel() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowManual(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold border-2 border-ink rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             <ShieldCheck className="w-4 h-4" />
             Unban IP
@@ -4560,7 +4557,7 @@ function BannedIpsPanel() {
           <button
             onClick={load}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold border-2 border-ink rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -4570,24 +4567,24 @@ function BannedIpsPanel() {
 
       {/* Manual unban input */}
       {showManual && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+        <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-600 rounded-xl flex items-center gap-3">
           <input
             type="text"
             value={manualIp}
             onChange={e => setManualIp(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleManualUnban()}
             placeholder="e.g. 203.0.113.42 or 2001:db8::1"
-            className="flex-1 px-3 py-2 text-sm border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="flex-1 px-3 py-2 text-sm border-2 border-blue-600 rounded-lg bg-white focus:outline-none focus:ring-[3px] focus:ring-blue-300 border-ink focus:ring-ac"
             autoFocus
           />
           <button
             onClick={handleManualUnban}
             disabled={unbanning != null}
-            className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             {unbanning ? 'Unbanning…' : 'Unban'}
           </button>
-          <button onClick={() => { setShowManual(false); setManualIp(''); }} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+          <button onClick={() => { setShowManual(false); setManualIp(''); }} className="text-neutral-500 hover:text-neutral-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -4595,17 +4592,17 @@ function BannedIpsPanel() {
 
       {/* Confirm dialog */}
       {confirmIp && (
-        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
+        <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-600 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-amber-800">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500" />
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-700" />
             Unban <strong className="font-mono">{confirmIp}</strong>? This clears the Redis key and in-memory warn counter immediately.
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setConfirmIp(null)} className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
+            <button onClick={() => setConfirmIp(null)} className="px-3 py-1.5 text-sm border-2 border-ink rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
             <button
               onClick={() => handleUnban(confirmIp)}
               disabled={unbanning === confirmIp}
-              className="px-3 py-1.5 text-sm font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-sm font-semibold bg-amber-500 text-ink rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               {unbanning === confirmIp ? 'Unbanning…' : 'Confirm Unban'}
             </button>
@@ -4622,7 +4619,7 @@ function BannedIpsPanel() {
       )}
 
       {!loading && loadError && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="p-4 bg-red-50 border-2 border-red-600 rounded-xl text-sm text-red-700">
           <strong>Error:</strong> {loadError}
         </div>
       )}
@@ -4636,7 +4633,7 @@ function BannedIpsPanel() {
       )}
 
       {!loading && !loadError && bans.length > 0 && (
-        <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border-2 border-ink rounded-2xl overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">
@@ -4673,7 +4670,7 @@ function BannedIpsPanel() {
                     <button
                       onClick={() => setConfirmIp(ban.ip)}
                       disabled={unbanning === ban.ip || confirmIp === ban.ip}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border-2 border-red-600 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     >
                       {unbanning === ban.ip
                         ? <><Loader2 className="w-3 h-3 animate-spin" /> Unbanning…</>
@@ -4685,7 +4682,7 @@ function BannedIpsPanel() {
               ))}
             </tbody>
           </table>
-          <div className="px-4 py-2 border-t border-neutral-100 bg-neutral-50 text-xs text-neutral-400">
+          <div className="px-4 py-2 border-t border-neutral-100 bg-neutral-50 text-xs text-neutral-500">
             {bans.length} active ban{bans.length !== 1 ? 's' : ''} · These expire automatically per <code className="bg-neutral-100 px-1 rounded">SECURITY_BAN_MINUTES</code>
           </div>
         </div>
@@ -4911,14 +4908,14 @@ function BlocklistPanel() {
           <button
             type="button"
             onClick={() => setShowPublicList(v => !v)}
-            className="btn bg-violet-600 hover:bg-violet-700 text-white gap-2 text-sm"
+            className="btn !bg-violet-600 hover:!bg-violet-700 !text-white gap-2 text-sm"
           >
             <Download className="w-4 h-4" /> Public word list
           </button>
           <button
             type="button"
             onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); setBulkMode(false); setBulkText(''); }}
-            className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
+            className="btn !bg-red-600 hover:!bg-red-700 !text-white gap-2 text-sm"
           >
             <Plus className="w-4 h-4" /> Add Entry
           </button>
@@ -4933,16 +4930,16 @@ function BlocklistPanel() {
               <h3 className="text-sm font-bold text-violet-900">Public Bad-Words List</h3>
               <p className="text-xs text-violet-600 mt-0.5">{PUBLIC_BAD_WORDS.length} terms. All loaded as <strong>name contains</strong> rules — any display name containing one of these words will be blocked automatically.</p>
             </div>
-            <button type="button" onClick={() => setShowPublicList(false)} className="text-violet-400 hover:text-violet-700"><X className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setShowPublicList(false)} className="text-blue-700 hover:text-violet-700"><X className="w-4 h-4" /></button>
           </div>
-          <div className="flex flex-wrap gap-1.5 mb-4 max-h-36 overflow-y-auto p-2 bg-white rounded-xl border border-violet-200">
+          <div className="flex flex-wrap gap-1.5 mb-4 max-h-36 overflow-y-auto p-2 bg-white rounded-xl border-2 border-blue-600">
             {PUBLIC_BAD_WORDS.map(w => (
-              <span key={w} className="text-xs font-mono bg-red-50 border border-red-200 text-red-700 px-1.5 py-0.5 rounded">{w}</span>
+              <span key={w} className="text-xs font-mono bg-red-50 border-2 border-red-600 text-red-700 px-1.5 py-0.5 rounded">{w}</span>
             ))}
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowPublicList(false)} className="btn btn-secondary text-sm">Cancel</button>
-            <button type="button" onClick={loadPublicList} className="btn bg-violet-600 hover:bg-violet-700 text-white gap-2 text-sm">
+            <button type="button" onClick={loadPublicList} className="btn !bg-violet-600 hover:!bg-violet-700 !text-white gap-2 text-sm">
               <Download className="w-4 h-4" /> Load all {PUBLIC_BAD_WORDS.length} words into bulk import
             </button>
           </div>
@@ -4951,8 +4948,8 @@ function BlocklistPanel() {
 
       {/* Load error banner */}
       {loadError && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+        <div className="rounded-xl bg-red-50 border-2 border-red-600 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-red-700 flex-shrink-0" />
           <p className="text-sm text-red-700 flex-1">Could not load blocklist: <span className="font-mono">{loadError}</span></p>
           <button type="button" onClick={load} className="text-xs font-semibold text-red-600 hover:underline">Retry</button>
         </div>
@@ -4968,7 +4965,7 @@ function BlocklistPanel() {
             <button
               type="button"
               onClick={() => { setBulkMode(v => !v); setBulkText(''); }}
-              className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all ${bulkMode ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-red-300 hover:border-red-500'}`}
+              className={`text-xs font-semibold px-3 py-1 rounded-lg border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${bulkMode ? 'bg-red-600 text-white border-red-600 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white text-red-600 border-red-300 hover:border-red-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
             >
               {bulkMode ? 'Single mode' : 'Bulk import'}
             </button>
@@ -4983,15 +4980,15 @@ function BlocklistPanel() {
                     key={k}
                     type="button"
                     onClick={() => setForm(f => ({ ...f, type: k }))}
-                    className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-left transition-all ${
-                      form.type === k ? 'border-red-500 bg-white shadow-sm' : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${
+                      form.type === k ? 'border-red-500 bg-white shadow-sm border-2 rounded-lg font-bold' : 'border-neutral-200 bg-white hover:border-neutral-300 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Icon className={`w-4 h-4 ${form.type === k ? 'text-red-600' : 'text-neutral-400'}`} />
+                      <Icon className={`w-4 h-4 ${form.type === k ? 'text-red-600' : 'text-neutral-500'}`} />
                       <span className={`text-xs font-bold ${form.type === k ? 'text-red-700' : 'text-neutral-600'}`}>{v.label}</span>
                     </div>
-                    <p className="text-xs text-neutral-400 leading-4">{v.desc}</p>
+                    <p className="text-xs text-neutral-500 leading-4">{v.desc}</p>
                   </button>
                 );
               })}
@@ -4999,7 +4996,7 @@ function BlocklistPanel() {
 
             {/* Match type (name only) */}
             {form.type === 'name' && !bulkMode && (
-              <div className="flex items-center gap-4 p-3 bg-white rounded-xl border border-neutral-200">
+              <div className="flex items-center gap-4 p-3 bg-white rounded-xl border-2 border-ink shadow">
                 <span className="text-xs font-bold text-neutral-600">Match mode:</span>
                 {[
                   { val: 'contains', label: 'Contains', desc: 'Blocks any name with this word anywhere in it (recommended)' },
@@ -5014,7 +5011,7 @@ function BlocklistPanel() {
                     <span className={`text-xs font-semibold ${form.matchType === val ? 'text-red-700' : 'text-neutral-500'}`}>{label}</span>
                   </label>
                 ))}
-                <p className="text-xs text-neutral-400 ml-auto hidden sm:block">
+                <p className="text-xs text-neutral-500 ml-auto hidden sm:block">
                   {form.matchType === 'contains' && '"fuck" blocks: fuckyou, omgfuck123, fucking'}
                   {form.matchType === 'exact' && '"fuck" only blocks the exact word "fuck"'}
                   {form.matchType === 'regex' && 'e.g. "f[u@4][c<][k]" blocks leetspeak variations'}
@@ -5026,11 +5023,11 @@ function BlocklistPanel() {
             {bulkMode ? (
               <div>
                 <label className="block text-xs font-semibold text-neutral-600 mb-1">
-                  Words to block <span className="text-red-500">*</span>
-                  <span className="ml-2 font-normal text-neutral-400">— paste comma, space, or newline separated</span>
+                  Words to block <span className="text-red-700">*</span>
+                  <span className="ml-2 font-normal text-neutral-500">— paste comma, space, or newline separated</span>
                 </label>
                 <textarea
-                  className="input text-sm font-mono w-full h-36 resize-y"
+                  className="input text-sm font-mono w-full h-36 resize-y border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                   placeholder={"fuck, shit, asshole\nbadword1, badword2\nor one per line"}
                   value={bulkText}
                   onChange={e => setBulkText(e.target.value)}
@@ -5044,7 +5041,7 @@ function BlocklistPanel() {
                   <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (applied to all)</label>
                   <input
                     type="text"
-                    className="input text-sm"
+                    className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     placeholder="e.g. Profanity filter"
                     value={form.reason}
                     onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
@@ -5056,11 +5053,11 @@ function BlocklistPanel() {
                 <div>
                   <label className="block text-xs font-semibold text-neutral-600 mb-1">
                     {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Word or pattern'}
-                    <span className="text-red-500 ml-0.5">*</span>
+                    <span className="text-red-700 ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
-                    className="input text-sm font-mono"
+                    className="input text-sm font-mono border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : form.matchType === 'regex' ? 'f[u@4][c<][k]' : 'badword'}
                     value={form.value}
                     onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
@@ -5075,7 +5072,7 @@ function BlocklistPanel() {
                   <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (internal note)</label>
                   <input
                     type="text"
-                    className="input text-sm"
+                    className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     placeholder="e.g. Profanity, TOS violation"
                     value={form.reason}
                     onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
@@ -5100,7 +5097,7 @@ function BlocklistPanel() {
                   <label className="text-xs font-semibold text-neutral-600">Expires at</label>
                   <input
                     type="datetime-local"
-                    className="input text-sm py-1.5"
+                    className="input text-sm py-1.5 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     value={form.expiresAt}
                     onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
                   />
@@ -5113,7 +5110,7 @@ function BlocklistPanel() {
               <div>
                 <div className="flex justify-between text-xs text-neutral-500 mb-1">
                   <span>Adding {bulkProgress.done} / {bulkProgress.total}…</span>
-                  {bulkProgress.failed > 0 && <span className="text-red-500">{bulkProgress.failed} failed</span>}
+                  {bulkProgress.failed > 0 && <span className="text-red-700">{bulkProgress.failed} failed</span>}
                 </div>
                 <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                   <div
@@ -5130,9 +5127,9 @@ function BlocklistPanel() {
                 type="button"
                 disabled={adding}
                 onClick={bulkMode ? handleBulkAdd : handleAdd}
-                className="btn bg-red-600 hover:bg-red-700 text-white text-sm gap-2 disabled:opacity-60"
+                className="btn !bg-red-600 hover:!bg-red-700 !text-white text-sm gap-2 disabled:opacity-60"
               >
-                {adding ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Ban className="w-4 h-4" />}
+                {adding ? <span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> : <Ban className="w-4 h-4" />}
                 {bulkMode ? `Add ${bulkText.trim() ? bulkText.split(/[\s,\n]+/).filter(w => w.trim()).length + ' words' : 'words'} to blocklist` : 'Add to blocklist'}
               </button>
             </div>
@@ -5152,7 +5149,7 @@ function BlocklistPanel() {
             key={key}
             type="button"
             onClick={() => setTypeFilter(key)}
-            className={`card p-4 text-left transition-all hover:shadow-md ${typeFilter === key ? 'ring-2 ring-neutral-900' : ''}`}
+            className={`card p-4 text-left transition-all hover:shadow-md ${typeFilter === key ? 'ring-2 ring-ink' : ''}`}
           >
             <p className="text-2xl font-bold text-neutral-900">{counts[key]}</p>
             <p className="text-xs text-neutral-500 mt-0.5">{label}</p>
@@ -5161,10 +5158,10 @@ function BlocklistPanel() {
       </div>
 
       {/* How matching works info box */}
-      <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+      <div className="rounded-xl bg-blue-50 border-2 border-blue-600 p-4">
         <p className="text-xs font-bold text-blue-800 mb-1.5">How name blocking works</p>
         <p className="text-xs text-blue-700 leading-relaxed">
-          Name entries use <strong>contains</strong> matching by default — a blocked word of <code className="font-mono bg-white px-1 rounded border border-blue-200">fuck</code> will block <em>fuckyou</em>, <em>omgfuck123</em>, and <em>fucking</em>. IP and event entries always use exact matching. The backend checks every display name at join time against all entries of type <strong>name</strong>.
+          Name entries use <strong>contains</strong> matching by default — a blocked word of <code className="font-mono bg-white px-1 rounded border-2 border-blue-600">fuck</code> will block <em>fuckyou</em>, <em>omgfuck123</em>, and <em>fucking</em>. IP and event entries always use exact matching. The backend checks every display name at join time against all entries of type <strong>name</strong>.
         </p>
       </div>
 
@@ -5176,7 +5173,7 @@ function BlocklistPanel() {
             <input
               type="text"
               placeholder="Search value or reason…"
-              className="input pl-9 text-sm py-1.5 w-full"
+              className="input pl-9 text-sm py-1.5 w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -5187,7 +5184,7 @@ function BlocklistPanel() {
                 key={t}
                 type="button"
                 onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${typeFilter === t ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${typeFilter === t ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
               >
                 {t === 'all' ? 'All' : TYPE_META[t].label}
               </button>
@@ -5213,7 +5210,7 @@ function BlocklistPanel() {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-neutral-200">
             {filtered.map(entry => {
               const meta = TYPE_META[entry.type] || TYPE_META.ip;
               const MetaIcon = meta.icon;
@@ -5279,15 +5276,15 @@ function BlocklistPanel() {
         </p>
         <p className="text-xs text-neutral-500 leading-relaxed">
           IP bans added here are also written to Redis immediately. You can also ban an IP directly in the Upstash dashboard by creating key{' '}
-          <code className="font-mono bg-white border border-neutral-200 rounded px-1">sec:ban:1.2.3.4</code> with value{' '}
-          <code className="font-mono bg-white border border-neutral-200 rounded px-1">1</code>.
+          <code className="font-mono bg-white border-2 border-ink rounded px-1">sec:ban:1.2.3.4</code> with value{' '}
+          <code className="font-mono bg-white border-2 border-ink rounded px-1">1</code>.
           No TTL = permanent. Delete the key to unban.
         </p>
       </div>
 
       {/* Delete confirm modal */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setConfirmDelete(null)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4" onClick={() => setConfirmDelete(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -5307,9 +5304,9 @@ function BlocklistPanel() {
                 type="button"
                 onClick={confirmAndDelete}
                 disabled={deleting}
-                className="btn bg-red-600 hover:bg-red-700 text-white flex-1 text-sm gap-2 disabled:opacity-60"
+                className="btn !bg-red-600 hover:!bg-red-700 !text-white flex-1 text-sm gap-2 disabled:opacity-60"
               >
-                {deleting ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Trash className="w-4 h-4" />}
+                {deleting ? <span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> : <Trash className="w-4 h-4" />}
                 Remove
               </button>
             </div>
@@ -5429,11 +5426,11 @@ function SecurityPanel() {
 
   // Feed entry tag styling
   const TAG_STYLE = {
-    honeypot:     'bg-red-900/80 text-red-300 border border-red-700/50',
-    tarpit:       'bg-amber-900/70 text-amber-300 border border-amber-700/40',
-    abuseipdb:    'bg-purple-900/80 text-purple-300 border border-purple-700/50',
-    trafficguard: 'bg-blue-900/80 text-blue-300 border border-blue-700/40',
-    security:     'bg-neutral-800 text-neutral-400 border border-neutral-700',
+    honeypot:     'bg-red-50 text-red-300 border border-red-700',
+    tarpit:       'bg-amber-50 text-amber-300 border border-amber-700',
+    abuseipdb:    'bg-blue-50 text-purple-300 border border-blue-700',
+    trafficguard: 'bg-blue-50 text-blue-300 border border-blue-700',
+    security:     'bg-lav text-neutral-400 border-2 border-ink',
   };
   const TAG_LABEL = {
     honeypot: 'HONEYPOT', tarpit: 'TARPIT', abuseipdb: 'ABUSEIPDB',
@@ -5472,7 +5469,7 @@ function SecurityPanel() {
               onClick={() => setTab(id)}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
                 tab === id
-                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                  ? 'border-indigo-500 text-indigo-600 bg-blue-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700'
               }`}
             >
@@ -5490,7 +5487,7 @@ function SecurityPanel() {
             <button
               onClick={loadSoc}
               disabled={socLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border-2 border-ink rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <RefreshCw className={`w-3 h-3 ${socLoading ? 'animate-spin' : ''}`} />
               Refresh
@@ -5536,7 +5533,7 @@ function SecurityPanel() {
                 <span className="text-xs text-neutral-400 tabular-nums">{feed.length} events</span>
               </div>
               <div
-                className="flex-1 bg-neutral-950 rounded-xl border border-neutral-800 overflow-y-auto font-mono text-xs leading-relaxed"
+                className="flex-1 bg-white rounded-xl border-2 border-ink overflow-y-auto font-mono text-xs leading-relaxed"
                 style={{ minHeight: 380, maxHeight: 520 }}
               >
                 {socLoading && (
@@ -5553,15 +5550,15 @@ function SecurityPanel() {
                 {feed.map((e, i) => (
                   <div
                     key={i}
-                    className={`px-4 py-1.5 border-b border-neutral-900 flex items-start gap-3 hover:bg-neutral-900/60 transition-colors ${i === 0 && liveConnected ? 'bg-neutral-900/50' : ''}`}
+                    className={`px-4 py-1.5 border-b border-ink flex items-start gap-3 hover:bg-white transition-colors ${i === 0 && liveConnected ? 'bg-lav' : ''}`}
                   >
                     <span className="text-neutral-600 shrink-0 pt-px tabular-nums">{fmtTs(e.ts)}</span>
                     <span className={`shrink-0 text-[10px] font-bold px-1.5 py-px rounded leading-tight ${TAG_STYLE[e.tag] || TAG_STYLE.security}`}>
                       {TAG_LABEL[e.tag] || 'SEC'}
                     </span>
                     <span className={`flex-1 break-all ${
-                      e.level === 'error' ? 'text-red-400' :
-                      e.level === 'warn'  ? 'text-amber-300' : 'text-neutral-400'
+                      e.level === 'error' ? 'text-red-700' :
+                      e.level === 'warn'  ? 'text-amber-700' : 'text-neutral-500'
                     }`}>
                       {e.msg}
                     </span>
@@ -5582,7 +5579,7 @@ function SecurityPanel() {
                 </h3>
                 <button
                   onClick={() => setManualBan(p => ({ ...p, show: !p.show }))}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   <Plus className="w-3 h-3" />
                   Ban IP
@@ -5591,14 +5588,14 @@ function SecurityPanel() {
 
               {/* Manual ban form */}
               {manualBan.show && (
-                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl space-y-2 shrink-0">
+                <div className="mb-3 p-3 bg-red-50 border-2 border-red-600 rounded-xl space-y-2 shrink-0">
                   <input
                     type="text"
                     value={manualBan.ip}
                     onChange={e => setManualBan(p => ({ ...p, ip: e.target.value }))}
                     onKeyDown={e => e.key === 'Enter' && handleManualBan()}
                     placeholder="IP address (e.g. 203.0.113.42)"
-                    className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-red-400 font-mono"
+                    className="w-full px-3 py-2 text-xs border-2 border-red-600 rounded-lg bg-white focus:outline-none focus:ring-[3px] focus:ring-red-400 font-mono focus:ring-ac"
                     autoFocus
                   />
                   <input
@@ -5606,13 +5603,13 @@ function SecurityPanel() {
                     value={manualBan.reason}
                     onChange={e => setManualBan(p => ({ ...p, reason: e.target.value }))}
                     placeholder="Reason (optional)"
-                    className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-red-400"
+                    className="w-full px-3 py-2 text-xs border-2 border-red-600 rounded-lg bg-white focus:outline-none focus:ring-[3px] focus:ring-red-400 focus:ring-ac"
                   />
                   <div className="flex gap-2 items-center">
                     <select
                       value={manualBan.minutes}
                       onChange={e => setManualBan(p => ({ ...p, minutes: parseInt(e.target.value) }))}
-                      className="flex-1 px-2 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none"
+                      className="flex-1 px-2 py-2 text-xs border-2 border-red-600 rounded-lg bg-white focus:outline-none focus:ring-[3px] focus:ring-ac"
                     >
                       <option value={60}>1 hour</option>
                       <option value={360}>6 hours</option>
@@ -5623,13 +5620,13 @@ function SecurityPanel() {
                     <button
                       onClick={handleManualBan}
                       disabled={banning || !manualBan.ip.trim()}
-                      className="px-3 py-2 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                      className="px-3 py-2 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     >
                       {banning ? 'Banning…' : 'Ban'}
                     </button>
                     <button
                       onClick={() => setManualBan(p => ({ ...p, show: false, ip: '', reason: '' }))}
-                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                      className="text-neutral-500 hover:text-neutral-600 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -5639,21 +5636,21 @@ function SecurityPanel() {
 
               {/* Unban confirmation */}
               {confirmIp && (
-                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
+                <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-600 rounded-xl shrink-0">
                   <p className="text-xs text-amber-800 mb-2">
                     Unban <strong className="font-mono">{confirmIp}</strong>? Clears the Redis key and warn counter immediately.
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setConfirmIp(null)}
-                      className="flex-1 px-2 py-1.5 text-xs border border-neutral-300 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+                      className="flex-1 px-2 py-1.5 text-xs border-2 border-ink rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => handleUnban(confirmIp)}
                       disabled={unbanning === confirmIp}
-                      className="flex-1 px-2 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                      className="flex-1 px-2 py-1.5 text-xs font-semibold bg-amber-500 text-ink rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     >
                       {unbanning === confirmIp ? 'Unbanning…' : 'Confirm Unban'}
                     </button>
@@ -5662,18 +5659,18 @@ function SecurityPanel() {
               )}
 
               <div
-                className="flex-1 border border-neutral-200 rounded-xl overflow-hidden bg-white"
+                className="flex-1 border-2 border-ink rounded-xl overflow-hidden bg-white shadow"
                 style={{ minHeight: 300, maxHeight: 480, overflowY: 'auto' }}
               >
                 {socLoading && (
-                  <div className="flex items-center justify-center h-24 text-neutral-400">
+                  <div className="flex items-center justify-center h-24 text-neutral-500">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     <span className="text-xs">Loading…</span>
                   </div>
                 )}
                 {!socLoading && bans.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-24 text-neutral-400">
-                    <ShieldCheck className="w-6 h-6 mb-2 text-emerald-400" />
+                  <div className="flex flex-col items-center justify-center h-24 text-neutral-500">
+                    <ShieldCheck className="w-6 h-6 mb-2 text-emerald-700" />
                     <p className="text-xs text-neutral-500">No active bans</p>
                   </div>
                 )}
@@ -5688,7 +5685,7 @@ function SecurityPanel() {
                           }`}>
                             {ban.source}
                           </span>
-                          <span className="text-[10px] text-neutral-400 font-mono tabular-nums">
+                          <span className="text-[10px] text-neutral-500 font-mono tabular-nums">
                             {fmtTtl(ban.ttlSeconds)}
                           </span>
                           {tpLevels[ban.ip] > 0 && (
@@ -5701,7 +5698,7 @@ function SecurityPanel() {
                       <button
                         onClick={() => setConfirmIp(ban.ip)}
                         disabled={unbanning === ban.ip || confirmIp === ban.ip}
-                        className="shrink-0 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 transition-colors"
+                        className="shrink-0 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                       >
                         {unbanning === ban.ip
                           ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -5779,16 +5776,16 @@ function SecurityPanel() {
                   placeholder="recipient@example.com"
                   value={emailTest.to}
                   onChange={e => setEmailTest(p => ({ ...p, to: e.target.value }))}
-                  className="input text-sm flex-1"
+                  className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                   required
                 />
                 <button
                   type="submit"
                   disabled={emailTest.loading || !import.meta.env.VITE_ROUTER_URL}
-                  className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-50"
+                  className="btn !bg-violet-600 hover:!bg-violet-700 !text-white text-sm gap-2 disabled:opacity-50"
                 >
                   {emailTest.loading
-                    ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />
+                    ? <span className="spinner w-4 h-4 border-2 border-ink border-t-white" />
                     : <Send className="w-4 h-4" />}
                   Send test
                 </button>
@@ -5822,7 +5819,7 @@ function SecurityPanel() {
                 </div>
               ))}
             </div>
-            <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+            <div className="text-xs text-neutral-500 bg-neutral-50 rounded-xl p-3 space-y-0.5">
               <p className="font-semibold text-neutral-500 mb-1">Configurable env vars on each backend:</p>
               <p><code className="font-mono">SECURITY_ENABLED</code> — true / false (default: true)</p>
               <p><code className="font-mono">SECURITY_BAN_MINUTES</code> — ban duration (default: 30)</p>
@@ -5855,11 +5852,11 @@ function SecurityPanel() {
               <Database className="w-4 h-4 text-emerald-500" /> Redis (Upstash)
             </h3>
             <p className="text-sm text-neutral-600">Used for email counters, IP ban store, and rate limiting across all features.</p>
-            <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+            <div className="text-xs text-neutral-500 bg-neutral-50 rounded-xl p-3 space-y-0.5">
               <p className="font-semibold text-neutral-500 mb-1">Set on each backend (and router for email counters):</p>
               <p><code className="font-mono">UPSTASH_REDIS_URL</code> — your Upstash REST endpoint</p>
               <p><code className="font-mono">UPSTASH_REDIS_TOKEN</code> — your Upstash REST token</p>
-              <p className="text-neutral-400 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
+              <p className="text-neutral-500 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
             </div>
           </div>
         </div>
@@ -6134,7 +6131,7 @@ function MarketingPanel() {
         <div className="flex bg-neutral-100 rounded-xl p-1 gap-1">
           {[['send','Send Now'], ['schedule','Schedule'], ['scheduled','Scheduled']].map(([id, label]) => (
             <button key={id} onClick={() => setMode(id)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${mode === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}>
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${mode === id ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500 hover:text-neutral-700'}`}>
               {label}
             </button>
           ))}
@@ -6176,7 +6173,7 @@ function MarketingPanel() {
                       </p>
                     </div>
                     {job.status === 'pending' && (
-                      <button onClick={() => cancelScheduled(job.id)} className="btn btn-secondary text-xs py-1.5 text-red-600 hover:bg-red-50 border-red-200 gap-1.5 shrink-0">
+                      <button onClick={() => cancelScheduled(job.id)} className="btn btn-secondary text-xs py-1.5 !text-red-600 hover:!bg-red-50 !border-red-200 gap-1.5 shrink-0">
                         <X className="w-3.5 h-3.5" /> Cancel
                       </button>
                     )}
@@ -6243,33 +6240,33 @@ function MarketingPanel() {
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 mb-1">Email subject line</label>
                   <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
-                    className="input text-sm w-full" placeholder="Leave blank to use template default" />
+                    className="input text-sm w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="Leave blank to use template default" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 mb-1">Button / CTA link</label>
                   <input type="url" value={ctaUrl} onChange={e => setCtaUrl(e.target.value)}
-                    className="input text-sm w-full font-mono" placeholder="https://planit.app" />
+                    className="input text-sm w-full font-mono border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="https://planit.app" />
                 </div>
                 {mode === 'schedule' && (
                   <>
                     <div>
                       <label className="block text-xs font-semibold text-neutral-500 mb-1">Send at (your local time)</label>
                       <input type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)}
-                        className="input text-sm w-full" min={new Date().toISOString().slice(0, 16)} />
+                        className="input text-sm w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" min={new Date().toISOString().slice(0, 16)} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-neutral-500 mb-1">Campaign name <span className="font-normal text-neutral-400">(optional)</span></label>
                       <input type="text" value={campaignLabel} onChange={e => setCampaignLabel(e.target.value)}
-                        className="input text-sm w-full" placeholder="e.g. Q3 Outreach" />
+                        className="input text-sm w-full border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="e.g. Q3 Outreach" />
                     </div>
                   </>
                 )}
                 {/* Personalization tokens info */}
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-3">
                   <p className="text-xs font-semibold text-blue-800 mb-1.5">Personalization tokens available in your template:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {['{{first_name}}', '{{last_name}}', '{{company}}', '{{cta_url}}'].map(tag => (
-                      <code key={tag} className="bg-white border border-blue-200 px-1.5 py-0.5 rounded text-xs text-blue-700 font-mono">{tag}</code>
+                      <code key={tag} className="bg-white border-2 border-blue-600 px-1.5 py-0.5 rounded text-xs text-blue-700 font-mono">{tag}</code>
                     ))}
                   </div>
                   <p className="text-xs text-blue-600 mt-2">Set these per-recipient in the table on the right. Any row left blank will use a generic fallback.</p>
@@ -6292,7 +6289,7 @@ function MarketingPanel() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Recipients selected</span>
-                  <span className={`font-semibold ${selectedRows.length > 0 ? 'text-violet-700' : 'text-neutral-400'}`}>
+                  <span className={`font-semibold ${selectedRows.length > 0 ? 'text-violet-700' : 'text-neutral-500'}`}>
                     {selectedRows.length} / {rows.length}
                   </span>
                 </div>
@@ -6307,33 +6304,33 @@ function MarketingPanel() {
               {mode === 'send' ? (
                 <>
                   <button onClick={handleSend} disabled={sending || !selected || selectedRows.length === 0}
-                    className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold">
+                    className="btn !bg-violet-600 hover:!bg-violet-700 !text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold border-2 !border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     {sending
-                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending…</>
+                      ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> Sending…</>
                       : <><Send className="w-4 h-4" /> Send to {selectedRows.length} {selectedRows.length === 1 ? 'recipient' : 'recipients'}</>}
                   </button>
                   {result && (
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center border-2 border-emerald-600">
                         <p className="text-2xl font-bold text-emerald-700">{result.sent}</p>
                         <p className="text-xs text-emerald-600 mt-0.5 font-medium">Delivered</p>
                       </div>
-                      <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-200">
+                      <div className="bg-neutral-50 rounded-xl p-3 text-center border-2 border-ink shadow">
                         <p className="text-2xl font-bold text-neutral-500">{result.skipped}</p>
-                        <p className="text-xs text-neutral-400 mt-0.5 font-medium">Skipped</p>
+                        <p className="text-xs text-neutral-500 mt-0.5 font-medium">Skipped</p>
                       </div>
-                      <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                      <div className="bg-red-50 rounded-xl p-3 text-center border-2 border-red-600">
                         <p className="text-2xl font-bold text-red-600">{result.failed}</p>
-                        <p className="text-xs text-red-400 mt-0.5 font-medium">Failed</p>
+                        <p className="text-xs text-red-700 mt-0.5 font-medium">Failed</p>
                       </div>
                     </div>
                   )}
                 </>
               ) : (
                 <button onClick={handleSchedule} disabled={scheduling || !selected || selectedRows.length === 0 || !sendAt}
-                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold">
+                  className="btn !bg-indigo-600 hover:!bg-indigo-700 !text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold border-2 !border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   {scheduling
-                    ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Scheduling…</>
+                    ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> Scheduling…</>
                     : <><Clock className="w-4 h-4" /> Schedule Campaign</>}
                 </button>
               )}
@@ -6361,9 +6358,9 @@ function MarketingPanel() {
                   )}
                   {/* THE import button */}
                   <button onClick={handleImport} disabled={importing}
-                    className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-60 px-4 py-2">
+                    className="btn !bg-violet-600 hover:!bg-violet-700 !text-white text-sm gap-2 disabled:opacity-60 px-4 py-2 border-2 !border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                     {importing
-                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Importing…</>
+                      ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> Importing…</>
                       : <><Users className="w-4 h-4" /> Import from Platform</>}
                   </button>
                 </div>
@@ -6378,7 +6375,7 @@ function MarketingPanel() {
                     value={rowFilter}
                     onChange={e => setRowFilter(e.target.value)}
                     placeholder="Filter by email, name, or company…"
-                    className="input text-sm w-full pl-9"
+                    className="input text-sm w-full pl-9 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                   />
                 </div>
               )}
@@ -6412,7 +6409,7 @@ function MarketingPanel() {
                       <th className="px-2 py-3 w-8" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-50">
+                  <tbody className="divide-y divide-neutral-200">
                     {filteredRows.map(row => (
                       <tr key={row.id} className={`group transition-colors ${row.selected ? 'bg-white' : 'bg-neutral-50 opacity-60'}`}>
                         <td className="px-4 py-2">
@@ -6427,7 +6424,7 @@ function MarketingPanel() {
                             value={row.firstName}
                             onChange={e => updateRow(row.id, 'firstName', e.target.value)}
                             placeholder="First"
-                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                            className="w-full text-xs border-2 border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors border-ink focus:ring-[3px] focus:ring-ac"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -6436,7 +6433,7 @@ function MarketingPanel() {
                             value={row.lastName}
                             onChange={e => updateRow(row.id, 'lastName', e.target.value)}
                             placeholder="Last"
-                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                            className="w-full text-xs border-2 border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors border-ink focus:ring-[3px] focus:ring-ac"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -6445,7 +6442,7 @@ function MarketingPanel() {
                             value={row.company}
                             onChange={e => updateRow(row.id, 'company', e.target.value)}
                             placeholder="Company"
-                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                            className="w-full text-xs border-2 border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors border-ink focus:ring-[3px] focus:ring-ac"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -6456,7 +6453,7 @@ function MarketingPanel() {
                         </td>
                         <td className="px-2 py-1.5">
                           <button onClick={() => removeRow(row.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-300 hover:text-red-500 p-1 rounded">
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-600 hover:text-red-700 p-1 rounded">
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </td>
@@ -6477,14 +6474,14 @@ function MarketingPanel() {
                   onKeyDown={e => e.key === 'Enter' && addManualRow()}
                   onPaste={handlePaste}
                   placeholder="Add email manually, or paste a list here…"
-                  className="input text-sm flex-1"
+                  className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 />
                 <button onClick={addManualRow} disabled={!manualEmail.trim()}
                   className="btn btn-secondary text-sm gap-1.5 px-3 disabled:opacity-40 shrink-0">
                   <Plus className="w-4 h-4" /> Add
                 </button>
               </div>
-              <p className="text-xs text-neutral-400 mt-1.5">Tip: paste multiple emails (separated by commas, semicolons, or new lines) and they'll all be added at once.</p>
+              <p className="text-xs text-neutral-500 mt-1.5">Tip: paste multiple emails (separated by commas, semicolons, or new lines) and they'll all be added at once.</p>
             </div>
           </div>
 
@@ -6498,7 +6495,7 @@ function MarketingPanel() {
                 </div>
               </div>
               {selected ? (
-                <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '600px' }}>
+                <div className="rounded-xl border-2 border-ink overflow-hidden relative shadow" style={{ height: '600px' }}>
                   {previewLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
                       <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
@@ -6507,10 +6504,10 @@ function MarketingPanel() {
                   <iframe key={selected} srcDoc={previewHtml} title="Email preview" className="w-full h-full" sandbox="allow-same-origin" />
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 flex items-center justify-center" style={{ height: '300px' }}>
+                <div className="rounded-xl border-2 border-dashed border-ink bg-neutral-50 flex items-center justify-center" style={{ height: '300px' }}>
                   <div className="text-center">
-                    <Mail className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-                    <p className="text-sm text-neutral-400">Select a template above to see a preview</p>
+                    <Mail className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
+                    <p className="text-sm text-neutral-500">Select a template above to see a preview</p>
                   </div>
                 </div>
               )}
@@ -6618,9 +6615,9 @@ function CircadianWheel({ slots, currentHour, floor }) {
 
 function SystemCard({ title, icon: Icon, iconColor, active, activeLabel, tip, children }) {
   return (
-    <div className={`rounded-2xl border-2 p-4 transition-all ${active ? 'border-indigo-200 bg-indigo-50/60' : 'border-neutral-100 bg-white'}`}>
+    <div className={`rounded-2xl border-2 p-4 transition-all ${active ? 'border-indigo-200 bg-blue-50' : 'border-neutral-100 bg-white'}`}>
       <div className="flex items-center gap-2 mb-3">
-        <Icon className={`w-4 h-4 ${iconColor || 'text-indigo-500'}`} />
+        <Icon className={`w-4 h-4 ${iconColor || 'text-blue-700'}`} />
         <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{title}</span>
         {tip && <InfoIcon tip={tip} />}
         {active && <span className="ml-auto text-xs font-semibold text-indigo-600">{activeLabel || 'ACTIVE'}</span>}
@@ -6788,8 +6785,8 @@ function FleetControl() {
               Pinned to <strong>{manual.count} backend{manual.count !== 1 ? 's' : ''}</strong> · mode: <strong>{manual.efficiencyMode}</strong> · all auto-scaling paused
             </p>
           </div>
-          <button onClick={releaseManual} disabled={releasingManual} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
-            {releasingManual ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <RotateCcw className="w-3.5 h-3.5" />}
+          <button onClick={releaseManual} disabled={releasingManual} className="btn text-xs !bg-amber-600 hover:!bg-amber-700 !text-ink gap-1.5 disabled:opacity-60">
+            {releasingManual ? <span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" /> : <RotateCcw className="w-3.5 h-3.5" />}
             Release
           </button>
         </div>
@@ -6797,14 +6794,14 @@ function FleetControl() {
 
       {/* Boost banner */}
       {boost?.active && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-amber-50 border-2 border-amber-600 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0"><Zap className="w-5 h-5 text-amber-600" /></div>
           <div className="flex-1">
             <p className="font-semibold text-amber-900 text-sm">Boost Mode Active</p>
             <p className="text-xs text-amber-700 mt-0.5">{boost.reason} · {boost.minBackends} backends minimum · {minutesLeft}m remaining</p>
           </div>
-          <button onClick={handleCancelBoost} disabled={cancelling} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
-            {cancelling ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <X className="w-3.5 h-3.5" />} Cancel
+          <button onClick={handleCancelBoost} disabled={cancelling} className="btn text-xs !bg-amber-600 hover:!bg-amber-700 !text-ink gap-1.5 disabled:opacity-60">
+            {cancelling ? <span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" /> : <X className="w-3.5 h-3.5" />} Cancel
           </button>
         </div>
       )}
@@ -6859,7 +6856,7 @@ function FleetControl() {
           <input
             type="range" min="1" max={backends.length} value={manualSlider}
             onChange={e => setManualSlider(parseInt(e.target.value))}
-            className="w-full h-2 rounded-full appearance-none bg-neutral-200 accent-amber-500 cursor-pointer"
+            className="w-full h-2 rounded-lg appearance-none bg-neutral-200 accent-amber-500 cursor-pointer"
           />
           <div className="flex justify-between text-xs text-neutral-400 mt-1">
             <span>1 (min)</span>
@@ -6881,7 +6878,7 @@ function FleetControl() {
               { id: 'performance', label: 'Performance', desc: 'Scale up early, stay up',  color: 'violet'  },
             ].map(m => (
               <button key={m.id} onClick={() => setEffMode(m.id)}
-                className={`rounded-xl border-2 p-3 text-left transition-all ${effMode === m.id ? `border-${m.color}-300 bg-${m.color}-50` : 'border-neutral-100 hover:border-neutral-200'}`}>
+                className={`rounded-xl border-2 p-3 text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${effMode === m.id ? `border-${m.color}-300 bg- border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold${m.color}-50` : 'border-neutral-100 hover:border-neutral-200'}`}>
                 <p className="text-xs font-semibold text-neutral-800">{m.label}</p>
                 <p className="text-xs text-neutral-500 mt-0.5">{m.desc}</p>
                 {effMode === m.id && manual?.effectiveThresholds && (
@@ -6897,8 +6894,8 @@ function FleetControl() {
         {/* Apply / Release */}
         <div className="flex gap-3">
           <button onClick={applyManual} disabled={applyingScale}
-            className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60 flex-1">
-            {applyingScale ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Gauge className="w-4 h-4" />}
+            className="btn !bg-amber-500 hover:!bg-amber-600 !text-ink gap-2 disabled:opacity-60 flex-1">
+            {applyingScale ? <span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> : <Gauge className="w-4 h-4" />}
             Pin to {manualSlider} backend{manualSlider !== 1 ? 's' : ''} · {effMode}
           </button>
           {manual?.active && (
@@ -7023,8 +7020,8 @@ function FleetControl() {
 
       {/* Cooldown status */}
       {cooldown && (
-        <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${cooldown.active ? 'border-amber-200 bg-amber-50' : 'border-neutral-100 bg-neutral-50'}`}>
-          <Timer className={`w-4 h-4 flex-shrink-0 ${cooldown.active ? 'text-amber-500' : 'text-neutral-400'}`} />
+        <div className={`rounded-xl border-2 px-4 py-3 flex items-center gap-3 border-ink shadow ${cooldown.active ? 'border-amber-200 bg-amber-50' : 'border-neutral-100 bg-neutral-50'}`}>
+          <Timer className={`w-4 h-4 flex-shrink-0 ${cooldown.active ? 'text-amber-700' : 'text-neutral-500'}`} />
           <span className="text-sm flex items-center gap-1">
             {cooldown.active
               ? <><span className="text-amber-800">Scale-down locked for <strong>{cooldown.secsLeft}s</strong> — prevents thrashing after a scale-up event</span></>
@@ -7050,21 +7047,21 @@ function FleetControl() {
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <span className="text-neutral-400 flex items-center gap-0.5">Latency<InfoIcon tip="Round-trip time from router to this backend. High latency here means the backend is overloaded or waking from sleep." /></span>
+                <span className="text-neutral-500 flex items-center gap-0.5">Latency<InfoIcon tip="Round-trip time from router to this backend. High latency here means the backend is overloaded or waking from sleep." /></span>
                 <span className={`font-mono font-semibold ${b.latencyMs > 2000 ? 'text-red-600' : b.latencyMs > 800 ? 'text-amber-600' : 'text-emerald-700'}`}>{b.latencyMs ? `${b.latencyMs}ms` : '—'}</span>
-                <span className="text-neutral-400 flex items-center gap-0.5">Window req<InfoIcon tip="Requests received in the current 30s window. This is the primary signal the scaling system uses." /></span>
+                <span className="text-neutral-500 flex items-center gap-0.5">Window req<InfoIcon tip="Requests received in the current 30s window. This is the primary signal the scaling system uses." /></span>
                 <span className="font-mono">{b.windowRequests ?? 0}</span>
-                <span className="text-neutral-400 flex items-center gap-0.5">Sockets<InfoIcon tip="Active WebSocket connections. Used instead of req/window when non-zero, since sockets represent persistent load." /></span>
+                <span className="text-neutral-500 flex items-center gap-0.5">Sockets<InfoIcon tip="Active WebSocket connections. Used instead of req/window when non-zero, since sockets represent persistent load." /></span>
                 <span className="font-mono">{b.socketConnections || 0}</span>
                 {b.memoryPct != null && (
-                  <><span className="text-neutral-400 flex items-center gap-0.5">Memory<InfoIcon tip="Heap memory usage %. Above 85% may indicate a memory leak or the backend needs more capacity." /></span>
+                  <><span className="text-neutral-500 flex items-center gap-0.5">Memory<InfoIcon tip="Heap memory usage %. Above 85% may indicate a memory leak or the backend needs more capacity." /></span>
                   <span className={`font-mono ${b.memoryPct > 85 ? 'text-red-600' : b.memoryPct > 70 ? 'text-amber-600' : ''}`}>{b.memoryPct}%</span></>
                 )}
               </div>
               {b.coldStart && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1">Cold starting — scale-up deferred until ready</div>}
               {b.consecutiveErrors > 0 && (
                 <div className="mt-2">
-                  <div className="flex justify-between text-xs text-red-500 mb-1">
+                  <div className="flex justify-between text-xs text-red-700 mb-1">
                     <span>Consecutive errors</span><span>{b.consecutiveErrors}/{scaling?.thresholds?.tripErrors ?? 3}</span>
                   </div>
                   <MiniBar value={b.consecutiveErrors} max={scaling?.thresholds?.tripErrors ?? 3} color="bg-red-400" />
@@ -7114,23 +7111,23 @@ function FleetControl() {
               <label className="block text-xs font-medium text-neutral-600 mb-1">Duration (minutes)</label>
               <input type="number" min="5" max="1440" value={boostForm.durationMinutes}
                 onChange={e => setBoostForm(p => ({...p, durationMinutes: e.target.value}))}
-                className="input text-sm" placeholder="60" />
+                className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="60" />
             </div>
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Min backends</label>
               <input type="number" min="1" max={backends.length} value={boostForm.minBackends}
                 onChange={e => setBoostForm(p => ({...p, minBackends: e.target.value}))}
-                className="input text-sm" placeholder={`${backends.length} (all)`} />
+                className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder={`${backends.length} (all)`} />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-neutral-600 mb-1">Reason</label>
               <input type="text" value={boostForm.reason}
                 onChange={e => setBoostForm(p => ({...p, reason: e.target.value}))}
-                className="input text-sm" placeholder="e.g. Saturday conference, product launch" />
+                className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" placeholder="e.g. Saturday conference, product launch" />
             </div>
             <div className="sm:col-span-2">
-              <button onClick={handleBoost} disabled={boosting} className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60">
-                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white"/> Activating…</> : <><Zap className="w-4 h-4"/> Activate Boost</>}
+              <button onClick={handleBoost} disabled={boosting} className="btn !bg-amber-500 hover:!bg-amber-600 !text-ink gap-2 disabled:opacity-60">
+                {boosting ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white"/> Activating…</> : <><Zap className="w-4 h-4"/> Activate Boost</>}
               </button>
             </div>
           </div>
@@ -7180,14 +7177,14 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout, canSee = () 
           {isActive && <span className="w-1 h-1 rounded-full bg-blue-400" />}
         </button>
         {open && (
-          <div className="absolute bottom-full right-0 mb-2 w-44 bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
+          <div className="absolute bottom-full right-0 mb-2 w-44 bg-white border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
             {MORE_SECTIONS.filter(canSee).map(id => {
               const Icon = icons[id] || Settings;
               return (
                 <button key={id}
                   onClick={() => { setActiveSection(id); setOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                    activeSection === id ? 'bg-white/10 text-white' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                    activeSection === id ? 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:bg-lav hover:text-ink'
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
@@ -7195,10 +7192,10 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout, canSee = () 
                 </button>
               );
             })}
-            <div className="border-t border-white/10" />
+            <div className="border-t border-ink" />
             <button
               onClick={() => { setOpen(false); onLogout(); }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50 hover:text-red-700 transition-colors"
             >
               <LogOut className="w-4 h-4 flex-shrink-0" />
               Log out
@@ -7289,23 +7286,23 @@ function AuditLogsPanel() {
 
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-        <select className="input text-sm" value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(1); }}>
+        <select className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(1); }}>
           <option value="">All Actions</option>
           {KNOWN_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
         <input
-          className="input text-sm"
+          className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
           placeholder="Filter by actor username…"
           value={filterActor}
           onChange={e => { setFilterActor(e.target.value); setPage(1); }}
         />
         <div className="flex items-center gap-1">
           <label className="text-xs text-neutral-500 flex-shrink-0">From</label>
-          <input type="date" className="input text-sm flex-1" value={filterFrom} onChange={e => { setFilterFrom(e.target.value); setPage(1); }} />
+          <input type="date" className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={filterFrom} onChange={e => { setFilterFrom(e.target.value); setPage(1); }} />
         </div>
         <div className="flex items-center gap-1">
           <label className="text-xs text-neutral-500 flex-shrink-0">To</label>
-          <input type="date" className="input text-sm flex-1" value={filterTo} onChange={e => { setFilterTo(e.target.value); setPage(1); }} />
+          <input type="date" className="input text-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={filterTo} onChange={e => { setFilterTo(e.target.value); setPage(1); }} />
         </div>
       </div>
 
@@ -7332,7 +7329,7 @@ function AuditLogsPanel() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">When</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100">
+                <tbody className="divide-y divide-neutral-200">
                   {logs.map(log => (
                     <tr key={log._id} className="hover:bg-neutral-50 transition-colors">
                       <td className="px-4 py-3">
@@ -7644,7 +7641,7 @@ function EmployeeAccountPanel({ currentUser }) {
     <div className="max-w-2xl mx-auto p-6 space-y-5">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-lg">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-lg bg-ac">
           {(p.name || currentUser?.name || 'A').charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -7663,10 +7660,10 @@ function EmployeeAccountPanel({ currentUser }) {
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map(s => (
-          <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-3 text-center">
-            <s.icon className="w-4 h-4 text-neutral-400 mx-auto mb-1" />
+          <div key={s.label} className="rounded-xl border-2 border-ink bg-white p-3 text-center shadow">
+            <s.icon className="w-4 h-4 text-neutral-500 mx-auto mb-1" />
             <p className="text-sm font-bold text-neutral-900 truncate">{s.value}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">{s.label}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -7685,21 +7682,21 @@ function EmployeeAccountPanel({ currentUser }) {
 
       {/* ── PROFILE TAB ─────────────────────────────────────────────────── */}
       {tab === 'profile' && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4">
+        <div className="rounded-2xl border-2 border-ink bg-white p-5 space-y-4 shadow-md">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-neutral-900 text-sm">Profile Details</h3>
             {!editing
               ? <button onClick={() => { setEditing(true); setEditErr(''); }} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"><Edit2 className="w-3 h-3"/>Edit</button>
               : <div className="flex gap-2">
                   <button onClick={() => { setEditing(false); setEditErr(''); }} className="text-xs text-neutral-500 hover:text-neutral-700">Cancel</button>
-                  <button onClick={saveProfile} disabled={editSaving} className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1">
+                  <button onClick={saveProfile} disabled={editSaving} className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                     {editSaving ? <Loader2 className="w-3 h-3 animate-spin"/> : <Save className="w-3 h-3"/>} Save
                   </button>
                 </div>
             }
           </div>
 
-          {editErr && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editErr}</div>}
+          {editErr && <div className="text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2">{editErr}</div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
@@ -7710,11 +7707,11 @@ function EmployeeAccountPanel({ currentUser }) {
               { key:'emergencyContact', label:'Emergency Contact',  placeholder:'Name · Phone', full:true },
             ].map(f => (
               <div key={f.key} className={f.full ? 'sm:col-span-2' : ''}>
-                <p className="text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wide">{f.label}</p>
+                <p className="text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">{f.label}</p>
                 {editing
                   ? <input value={editForm[f.key] || ''} onChange={e => setEditForm(v => ({...v,[f.key]:e.target.value}))} placeholder={f.placeholder}
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                  : <p className="text-sm text-neutral-800">{p[f.key] || <span className="text-neutral-400 italic">Not set</span>}</p>
+                      className="w-full border-2 border-ink rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-indigo-500 focus:ring-ac bg-white" />
+                  : <p className="text-sm text-neutral-800">{p[f.key] || <span className="text-neutral-500 italic">Not set</span>}</p>
                 }
               </div>
             ))}
@@ -7731,7 +7728,7 @@ function EmployeeAccountPanel({ currentUser }) {
               { label:'Notes',       value: p.notes || '—' },
             ].map(f => (
               <div key={f.label}>
-                <p className="text-xs text-neutral-400 uppercase tracking-wide mb-0.5">{f.label}</p>
+                <p className="text-xs text-neutral-500 uppercase tracking-wide mb-0.5">{f.label}</p>
                 <p className="text-xs text-neutral-700">{f.value}</p>
               </div>
             ))}
@@ -7743,11 +7740,11 @@ function EmployeeAccountPanel({ currentUser }) {
       {tab === 'security' && (
         <div className="space-y-4">
           {/* 2FA card */}
-          <div className={`rounded-2xl border p-5 ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
+          <div className={`rounded-2xl border-2 p-5 border-ink shadow-md ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${totpEnabled ? 'bg-emerald-100' : 'bg-neutral-100'}`}>
-                  {totpEnabled ? <ShieldCheck className="w-5 h-5 text-emerald-600"/> : <ShieldOff className="w-5 h-5 text-neutral-400"/>}
+                  {totpEnabled ? <ShieldCheck className="w-5 h-5 text-emerald-600"/> : <ShieldOff className="w-5 h-5 text-neutral-500"/>}
                 </div>
                 <div>
                   <p className="font-semibold text-neutral-900 text-sm">Two-Factor Authentication</p>
@@ -7757,8 +7754,8 @@ function EmployeeAccountPanel({ currentUser }) {
               </div>
               {(setupStep==='idle'||setupStep==='done') && (
                 totpEnabled
-                  ? <button onClick={()=>{setShowDisable(true);setTotpErr('');}} className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Disable 2FA</button>
-                  : <button onClick={beginSetup} disabled={setupLoading} className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
+                  ? <button onClick={()=>{setShowDisable(true);setTotpErr('');}} className="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-red-600 text-red-600 hover:bg-red-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Disable 2FA</button>
+                  : <button onClick={beginSetup} disabled={setupLoading} className="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                       {setupLoading?<Loader2 className="w-3 h-3 animate-spin"/>:<Key className="w-3 h-3"/>} Set up 2FA
                     </button>
               )}
@@ -7768,15 +7765,15 @@ function EmployeeAccountPanel({ currentUser }) {
                 <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>Scan with your authenticator app</p>
                 <p className="text-xs text-neutral-500">Use <strong>Google Authenticator</strong>, <strong>Authy</strong>, <strong>1Password</strong>, or any TOTP app.</p>
                 <div className="flex flex-col items-center gap-3">
-                  <div className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                  <div className="p-3 bg-white rounded-xl border-2 border-ink shadow-sm">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUri)}`} alt="TOTP QR" width={180} height={180} className="block rounded"/>
                   </div>
                   {manualKey && (
                     <div className="w-full">
                       <p className="text-xs text-neutral-500 mb-1">Manual key:</p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 font-mono tracking-widest select-all break-all">{manualKey}</code>
-                        <button onClick={()=>{navigator.clipboard.writeText(manualKey);toast.success('Copied');}} className="p-2 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-100"><Hash className="w-4 h-4"/></button>
+                        <code className="flex-1 text-xs bg-neutral-100 border-2 border-ink rounded-lg px-3 py-2 font-mono tracking-widest select-all break-all">{manualKey}</code>
+                        <button onClick={()=>{navigator.clipboard.writeText(manualKey);toast.success('Copied');}} className="p-2 border-2 border-ink rounded-lg text-neutral-500 hover:bg-neutral-100 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Hash className="w-4 h-4"/></button>
                       </div>
                     </div>
                   )}
@@ -7786,12 +7783,12 @@ function EmployeeAccountPanel({ currentUser }) {
                   <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={setupCode}
                     onChange={e=>{setSetupCode(e.target.value.replace(/\D/g,''));setTotpErr('');}}
                     onKeyDown={e=>e.key==='Enter'&&confirmEnable()}
-                    className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                  <button onClick={confirmEnable} disabled={setupLoading||setupCode.length<6} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-40 flex items-center gap-2">
+                    className="flex-1 border-2 border-ink rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"/>
+                  <button onClick={confirmEnable} disabled={setupLoading||setupCode.length<6} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-40 flex items-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     {setupLoading?<Loader2 className="w-4 h-4 animate-spin"/>:<ShieldCheck className="w-4 h-4"/>} Activate
                   </button>
                 </div>
-                <button onClick={resetSetup} className="text-xs text-neutral-400 hover:text-neutral-600">Cancel setup</button>
+                <button onClick={resetSetup} className="text-xs text-neutral-500 hover:text-neutral-600">Cancel setup</button>
               </div>
             )}
             {setupStep==='done' && (
@@ -7799,20 +7796,20 @@ function EmployeeAccountPanel({ currentUser }) {
                 <CheckCircle className="w-4 h-4 flex-shrink-0"/> TOTP active. You'll be prompted for a code at every login.
               </div>
             )}
-            {totpErr && <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
+            {totpErr && <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
           </div>
 
           {/* Change password */}
-          <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <h3 className="font-semibold text-neutral-900 text-sm flex items-center gap-2 mb-4"><Key className="w-4 h-4 text-neutral-400"/>Change Password</h3>
+          <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
+            <h3 className="font-semibold text-neutral-900 text-sm flex items-center gap-2 mb-4"><Key className="w-4 h-4 text-neutral-500"/>Change Password</h3>
             <form onSubmit={changePassword} className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-neutral-500 block mb-1.5">New Password</label>
                 <div className="relative">
                   <input type={pwShowNew?'text':'password'} placeholder="New password" value={pwNew} autoComplete="new-password"
                     onChange={e=>{setPwNew(e.target.value);setPwErr('');setPwOk(false);}}
-                    className="w-full border border-neutral-300 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-                  <button type="button" tabIndex={-1} onClick={()=>setPwShowNew(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    className="w-full border-2 border-ink rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-[3px] focus:ring-indigo-500 focus:ring-ac bg-white"/>
+                  <button type="button" tabIndex={-1} onClick={()=>setPwShowNew(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">
                     {pwShowNew?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
                   </button>
                 </div>
@@ -7828,16 +7825,16 @@ function EmployeeAccountPanel({ currentUser }) {
                 <div className="relative">
                   <input type={pwShowCon?'text':'password'} placeholder="Confirm password" value={pwConfirm} autoComplete="new-password"
                     onChange={e=>{setPwConfirm(e.target.value);setPwErr('');setPwOk(false);}}
-                    className={`w-full border rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${pwConfirm.length>0?(pwMatch?'border-emerald-400':'border-red-300'):'border-neutral-300'}`}/>
-                  <button type="button" tabIndex={-1} onClick={()=>setPwShowCon(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    className={`w-full border-2 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-[3px] focus:ring-indigo-500 border-ink focus:ring-ac bg-white ${pwConfirm.length>0?(pwMatch?'border-emerald-400 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg':'border-red-300 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'):'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}/>
+                  <button type="button" tabIndex={-1} onClick={()=>setPwShowCon(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500">
                     {pwShowCon?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
                   </button>
                 </div>
-                {pwConfirm.length>0 && <p className={`text-xs mt-1 ${pwMatch?'text-emerald-600':'text-red-500'}`}>{pwMatch?'✓ Passwords match':'✗ Do not match'}</p>}
+                {pwConfirm.length>0 && <p className={`text-xs mt-1 ${pwMatch?'text-emerald-600':'text-red-700'}`}>{pwMatch?'✓ Passwords match':'✗ Do not match'}</p>}
               </div>
-              {pwErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{pwErr}</div>}
-              {pwOk  && <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2"><CheckCircle className="w-3.5 h-3.5 flex-shrink-0"/>Password changed successfully.</div>}
-              <button type="submit" disabled={pwSaving||!pwStrong||!pwMatch} className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-medium hover:bg-neutral-700 disabled:opacity-40 flex items-center justify-center gap-2">
+              {pwErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{pwErr}</div>}
+              {pwOk  && <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border-2 border-emerald-600 rounded-lg px-3 py-2"><CheckCircle className="w-3.5 h-3.5 flex-shrink-0"/>Password changed successfully.</div>}
+              <button type="submit" disabled={pwSaving||!pwStrong||!pwMatch} className="w-full px-4 py-2.5 bg-hl text-ink rounded-xl text-sm font-bold hover:bg-hl disabled:opacity-40 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {pwSaving?<><Loader2 className="w-4 h-4 animate-spin"/>Saving…</>:'Update Password'}
               </button>
             </form>
@@ -7847,7 +7844,7 @@ function EmployeeAccountPanel({ currentUser }) {
 
       {/* ── PERMISSIONS TAB ─────────────────────────────────────────────── */}
       {tab === 'permissions' && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+        <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
           {p.role === 'super_admin' || p.permissions === null ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center">
@@ -7863,23 +7860,23 @@ function EmployeeAccountPanel({ currentUser }) {
                 <span className="text-xs text-neutral-500">{grantedPerms.length} of {Object.keys(PERM_LABELS).length} granted</span>
               </div>
               {grantedPerms.length === 0 ? (
-                <p className="text-sm text-neutral-400 text-center py-6">No permissions have been granted to your account yet. Contact a super admin.</p>
+                <p className="text-sm text-neutral-500 text-center py-6">No permissions have been granted to your account yet. Contact a super admin.</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Object.entries(PERM_LABELS).map(([key, label]) => {
                     const granted = p.permissions?.[key];
                     return (
-                      <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${
-                        granted ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-neutral-100 bg-neutral-50 text-neutral-300'
+                      <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-xs font-medium border-ink ${
+                        granted ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-neutral-100 bg-neutral-50 text-neutral-600'
                       }`}>
-                        {granted ? <Check className="w-3 h-3 text-emerald-600 flex-shrink-0"/> : <X className="w-3 h-3 text-neutral-300 flex-shrink-0"/>}
+                        {granted ? <Check className="w-3 h-3 text-emerald-600 flex-shrink-0"/> : <X className="w-3 h-3 text-neutral-600 flex-shrink-0"/>}
                         {label}
                       </div>
                     );
                   })}
                 </div>
               )}
-              <p className="text-xs text-neutral-400 mt-4">Permissions are managed by super admins. To request changes, contact your administrator.</p>
+              <p className="text-xs text-neutral-500 mt-4">Permissions are managed by super admins. To request changes, contact your administrator.</p>
             </>
           )}
         </div>
@@ -7887,17 +7884,17 @@ function EmployeeAccountPanel({ currentUser }) {
 
       {/* ── ACTIVITY TAB ────────────────────────────────────────────────── */}
       {tab === 'activity' && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+        <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-neutral-900 text-sm">Your Activity Log</h3>
-            <button onClick={()=>{setAuditLoaded(false);setAuditLogs([]);}} className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1">
+            <button onClick={()=>{setAuditLoaded(false);setAuditLogs([]);}} className="text-xs text-neutral-500 hover:text-neutral-600 flex items-center gap-1">
               <RefreshCw className="w-3 h-3"/>Refresh
             </button>
           </div>
           {auditLoading ? (
-            <div className="flex items-center justify-center py-10 gap-2 text-neutral-400"><Loader2 className="w-5 h-5 animate-spin"/>Loading…</div>
+            <div className="flex items-center justify-center py-10 gap-2 text-neutral-500"><Loader2 className="w-5 h-5 animate-spin"/>Loading…</div>
           ) : auditLogs.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-8">No activity recorded yet.</p>
+            <p className="text-sm text-neutral-500 text-center py-8">No activity recorded yet.</p>
           ) : (
             <div className="space-y-2">
               {auditLogs.map((log, i) => (
@@ -7911,8 +7908,8 @@ function EmployeeAccountPanel({ currentUser }) {
                     {log.details?.updatedFields && <p className="text-xs text-neutral-500">Fields: {log.details.updatedFields.join(', ')}</p>}
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <p className="text-xs text-neutral-400">{timeAgo(log.createdAt)}</p>
-                    <p className="text-xs text-neutral-300">{log.status}</p>
+                    <p className="text-xs text-neutral-500">{timeAgo(log.createdAt)}</p>
+                    <p className="text-xs text-neutral-600">{log.status}</p>
                   </div>
                 </div>
               ))}
@@ -7923,29 +7920,29 @@ function EmployeeAccountPanel({ currentUser }) {
 
       {/* Disable 2FA modal */}
       {showDisable && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-start justify-between">
               <div><h3 className="font-bold text-neutral-900">Disable Two-Factor Auth</h3><p className="text-xs text-neutral-500 mt-0.5">Confirm with your password and current code.</p></div>
-              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="text-neutral-400 hover:text-neutral-600 p-1"><X className="w-4 h-4"/></button>
+              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="text-neutral-500 hover:text-neutral-600 p-1"><X className="w-4 h-4"/></button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-neutral-600 block mb-1">Password</label>
-                <input type="password" placeholder="Your current password" value={disablePass} onChange={e=>{setDisablePass(e.target.value);setTotpErr('');}} className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"/>
+                <input type="password" placeholder="Your current password" value={disablePass} onChange={e=>{setDisablePass(e.target.value);setTotpErr('');}} className="w-full border-2 border-ink rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-[3px] focus:ring-red-400 focus:ring-ac bg-white"/>
               </div>
               <div>
                 <label className="text-xs font-medium text-neutral-600 block mb-1">Authenticator Code</label>
                 <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={disableCode}
                   onChange={e=>{setDisableCode(e.target.value.replace(/\D/g,''));setTotpErr('');}}
                   onKeyDown={e=>e.key==='Enter'&&confirmDisable()}
-                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-red-400"/>
+                  className="w-full border-2 border-ink rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-[3px] focus:ring-red-400 focus:ring-ac bg-white"/>
               </div>
             </div>
-            {totpErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
+            {totpErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
             <div className="flex gap-2 pt-1">
-              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-600 hover:bg-neutral-50">Cancel</button>
-              <button onClick={confirmDisable} disabled={disableLoading||!disablePass||disableCode.length<6} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-2">
+              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="flex-1 px-4 py-2.5 border-2 border-ink rounded-xl text-sm text-neutral-600 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
+              <button onClick={confirmDisable} disabled={disableLoading||!disablePass||disableCode.length<6} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {disableLoading?<Loader2 className="w-4 h-4 animate-spin"/>:<ShieldOff className="w-4 h-4"/>} Disable
               </button>
             </div>
@@ -8112,13 +8109,13 @@ function RootAccountPanel() {
       {/* ── SECURITY TAB ── */}
       {tab === 'security' && (<>
       {/* 2FA status card */}
-      <div className={`rounded-2xl border p-5 ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
+      <div className={`rounded-2xl border-2 p-5 border-ink shadow-md ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${totpEnabled ? 'bg-emerald-100' : 'bg-neutral-100'}`}>
               {totpEnabled
                 ? <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                : <ShieldOff   className="w-5 h-5 text-neutral-400" />}
+                : <ShieldOff   className="w-5 h-5 text-neutral-500" />}
             </div>
             <div>
               <p className="font-semibold text-neutral-900 text-sm">
@@ -8142,14 +8139,14 @@ function RootAccountPanel() {
             totpEnabled ? (
               <button
                 onClick={() => { setShowDisable(true); setErr(''); }}
-                className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+                className="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-red-600 text-red-600 hover:bg-red-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 Disable 2FA
               </button>
             ) : (
               <button
                 onClick={beginSetup}
                 disabled={setupLoading}
-                className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                className="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {setupLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Key className="w-3 h-3" />}
                 Set up 2FA
               </button>
@@ -8170,7 +8167,7 @@ function RootAccountPanel() {
 
             {/* QR code rendered via Google Charts API (no extra dep) */}
             <div className="flex flex-col items-center gap-3">
-              <div className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm inline-block">
+              <div className="p-3 bg-white rounded-xl border-2 border-ink shadow-sm inline-block">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUri)}`}
                   alt="TOTP QR Code"
@@ -8182,12 +8179,12 @@ function RootAccountPanel() {
                 <div className="w-full">
                   <p className="text-xs text-neutral-500 mb-1">Or enter this key manually:</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 font-mono tracking-widest text-neutral-700 select-all break-all">
+                    <code className="flex-1 text-xs bg-neutral-100 border-2 border-ink rounded-lg px-3 py-2 font-mono tracking-widest text-neutral-700 select-all break-all">
                       {manualKey}
                     </code>
                     <button
                       onClick={() => { navigator.clipboard.writeText(manualKey); toast.success('Key copied'); }}
-                      className="flex-shrink-0 p-2 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors">
+                      className="flex-shrink-0 p-2 border-2 border-ink rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                       <Hash className="w-4 h-4" />
                     </button>
                   </div>
@@ -8209,17 +8206,17 @@ function RootAccountPanel() {
                 value={setupCode}
                 onChange={e => { setSetupCode(e.target.value.replace(/\D/g,'')); setErr(''); }}
                 onKeyDown={e => e.key === 'Enter' && confirmEnable()}
-                className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border-2 border-ink rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
               />
               <button
                 onClick={confirmEnable}
                 disabled={setupLoading || setupCode.length < 6}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-2">
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {setupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                 Activate
               </button>
             </div>
-            <button onClick={resetSetup} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Cancel setup</button>
+            <button onClick={resetSetup} className="text-xs text-neutral-500 hover:text-neutral-600 transition-colors">Cancel setup</button>
           </div>
         )}
 
@@ -8233,7 +8230,7 @@ function RootAccountPanel() {
 
         {/* Error */}
         {err && (
-          <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             {err}
           </div>
@@ -8242,14 +8239,14 @@ function RootAccountPanel() {
 
       {/* ── DISABLE MODAL ── */}
       {showDisable && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-bold text-neutral-900">Disable Two-Factor Auth</h3>
                 <p className="text-xs text-neutral-500 mt-0.5">Confirm with your password and current authenticator code.</p>
               </div>
-              <button onClick={() => { setShowDisable(false); setErr(''); setDisablePass(''); setDisableCode(''); }} className="text-neutral-400 hover:text-neutral-600 p-1">
+              <button onClick={() => { setShowDisable(false); setErr(''); setDisablePass(''); setDisableCode(''); }} className="text-neutral-500 hover:text-neutral-600 p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -8262,7 +8259,7 @@ function RootAccountPanel() {
                   placeholder="Your current password"
                   value={disablePass}
                   onChange={e => { setDisablePass(e.target.value); setErr(''); }}
-                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                  className="w-full border-2 border-ink rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-[3px] focus:ring-red-400 focus:ring-ac bg-white"
                 />
               </div>
               <div>
@@ -8275,13 +8272,13 @@ function RootAccountPanel() {
                   value={disableCode}
                   onChange={e => { setDisableCode(e.target.value.replace(/\D/g,'')); setErr(''); }}
                   onKeyDown={e => e.key === 'Enter' && confirmDisable()}
-                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-red-400"
+                  className="w-full border-2 border-ink rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-[3px] focus:ring-red-400 focus:ring-ac bg-white"
                 />
               </div>
             </div>
 
             {err && (
-              <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /> {err}
               </div>
             )}
@@ -8289,13 +8286,13 @@ function RootAccountPanel() {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { setShowDisable(false); setErr(''); setDisablePass(''); setDisableCode(''); }}
-                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                className="flex-1 px-4 py-2.5 border-2 border-ink rounded-xl text-sm text-neutral-600 hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 Cancel
               </button>
               <button
                 onClick={confirmDisable}
                 disabled={disableLoading || !disablePass || disableCode.length < 6}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {disableLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldOff className="w-4 h-4" />}
                 Disable 2FA
               </button>
@@ -8331,16 +8328,16 @@ function RootAccountPanel() {
                 const isFail   = log.status === 'failure';
                 const isBlocked = log.status === 'blocked';
                 return (
-                  <div key={log._id || i} className="flex items-start gap-3 p-3 rounded-xl border border-neutral-100 bg-white">
+                  <div key={log._id || i} className="flex items-start gap-3 p-3 rounded-xl border-2 border-ink bg-white shadow">
                     <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${isOk ? 'bg-emerald-400' : isFail ? 'bg-red-400' : 'bg-amber-400'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-neutral-800">{log.action?.replace(/_/g, ' ')}</span>
                         {ip !== '—' && (
-                          <span className="text-xs text-neutral-400 font-mono">IP: {ip}</span>
+                          <span className="text-xs text-neutral-500 font-mono">IP: {ip}</span>
                         )}
                         {details.reason && (
-                          <span className="text-xs text-neutral-400">{details.reason}</span>
+                          <span className="text-xs text-neutral-500">{details.reason}</span>
                         )}
                         <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${
                           isOk ? 'bg-emerald-50 text-emerald-700' :
@@ -8348,7 +8345,7 @@ function RootAccountPanel() {
                           'bg-amber-50 text-amber-700'
                         }`}>{log.status}</span>
                       </div>
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <p className="text-xs text-neutral-500 mt-0.5">
                         {new Date(log.createdAt).toLocaleString()}
                       </p>
                     </div>
@@ -8427,13 +8424,13 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
   const atLimit = data && data.maxEvents != null && data.count >= data.maxEvents;
 
   return (
-    <div className="border border-neutral-200 rounded-xl p-3 space-y-2">
+    <div className="border-2 border-ink rounded-xl p-3 space-y-2 shadow">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5 text-neutral-500" />
           <span className="text-xs font-semibold text-neutral-700">Events</span>
           {data && (
-            <span className={`text-xs px-1.5 py-0.5 rounded border ${atLimit ? 'bg-red-50 text-red-700 border-red-200' : 'bg-neutral-100 text-neutral-500 border-transparent'}`}>
+            <span className={`text-xs px-1.5 py-0.5 rounded border-2 border-ink ${atLimit ? 'bg-red-50 text-red-700 border-red-200' : 'bg-neutral-100 text-neutral-500 border-transparent'}`}>
               {data.count}{data.maxEvents != null ? ` / ${data.maxEvents}` : ''}
             </span>
           )}
@@ -8443,7 +8440,7 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
             if (atLimit) { toast.error(`Event limit reached (${data.count}/${data.maxEvents}). Raise limits.maxEvents to add more.`); return; }
             setShowWizard(true);
           }}
-          className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+          className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-3 h-3" /> New Event
         </button>
       </div>
@@ -8458,7 +8455,7 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
             <div key={ev.id} className="flex items-center justify-between text-xs bg-neutral-50 rounded-lg px-2 py-1.5">
               <div className="min-w-0">
                 <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
-                <div className="text-neutral-400 font-mono truncate">{ev.subdomain}</div>
+                <div className="text-neutral-500 font-mono truncate">{ev.subdomain}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
@@ -8475,24 +8472,24 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
       )}
 
       {accessFor && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-ink/60 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-3">
             <h3 className="text-base font-bold text-neutral-900">Organizer access</h3>
             <p className="text-xs text-neutral-500">{accessFor.title} — sets the organizer's account password and issues a new one-time recovery code. Their old password and code stop working.</p>
-            {accessErr && <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{accessErr}</div>}
+            {accessErr && <div className="text-xs bg-red-50 text-red-700 border-2 border-red-600 rounded-lg px-3 py-2">{accessErr}</div>}
             {accessRes ? (
               <>
                 <p className="text-sm text-neutral-600">Organizer: <span className="font-mono">{accessRes.organizerName}</span></p>
                 <RecoveryCodeBox code={accessRes.recoveryCode} who={accessRes.organizerName} />
-                <button onClick={closeAccess} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Done</button>
+                <button onClick={closeAccess} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Done</button>
               </>
             ) : (
               <>
                 <input type="password" autoComplete="new-password" value={accessPw} onChange={e => setAccessPw(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="New organizer password (min 4)" />
+                  className="w-full border-2 border-ink rounded-lg px-3 py-2 text-sm focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="New organizer password (min 4)" />
                 <div className="flex gap-2">
-                  <button onClick={closeAccess} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
-                  <button onClick={issueAccess} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Set access</button>
+                  <button onClick={closeAccess} className="flex-1 border-2 border-ink rounded-xl py-2 text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+                  <button onClick={issueAccess} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Set access</button>
                 </div>
               </>
             )}
@@ -8523,13 +8520,13 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
 function RecoveryCodeBox({ code, who }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+    <div className="bg-amber-50 border-2 border-amber-600 rounded-xl p-3 space-y-2">
       <div className="text-xs font-semibold text-amber-800">Recovery code{who ? ` for ${who}` : ''} — shown once</div>
       <div className="flex items-center gap-2">
-        <code className="flex-1 font-mono text-sm bg-white border border-amber-200 rounded-lg px-3 py-2 select-all">{code}</code>
+        <code className="flex-1 font-mono text-sm bg-white border-2 border-amber-600 rounded-lg px-3 py-2 select-all">{code}</code>
         <button type="button"
           onClick={async () => { try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } }}
-          className="p-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-100">
+          className="p-2 rounded-lg border-2 border-amber-600 bg-white hover:bg-amber-100 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-amber-700" />}
         </button>
       </div>
@@ -8552,7 +8549,7 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isTS = form.mode === 'table-service';
-  const input = 'mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm';
+  const input = 'mt-1 w-full border-2 border-ink rounded-lg px-3 py-2 text-sm';
 
   const submit = async () => {
     setError(null);
@@ -8594,7 +8591,7 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
   // ── Success: show the recovery code once, then close ──
   if (result) {
     return (
-      <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-ink/60 z-[60] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-3">
           <h3 className="text-base font-bold text-neutral-900">Event created</h3>
           <p className="text-sm text-neutral-600">
@@ -8602,14 +8599,14 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
             The organizer logs in as <span className="font-mono">{result.organizerName}</span> with the account password you just set.
           </p>
           {result.recoveryCode && <RecoveryCodeBox code={result.recoveryCode} who={result.organizerName} />}
-          <button onClick={() => onCreated?.()} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Done</button>
+          <button onClick={() => onCreated?.()} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Done</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-ink/60 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-neutral-200">
           <div>
@@ -8621,7 +8618,7 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
 
         <div className="p-5 space-y-3">
           {error && (
-            <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+            <div className="text-xs bg-red-50 text-red-700 border-2 border-red-600 rounded-lg px-3 py-2">{error}</div>
           )}
 
           <div className="grid grid-cols-4 gap-2">
@@ -8632,7 +8629,7 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
               { v: 'enterprise',    label: 'Enterprise' },
             ].map(({ v, label }) => (
               <button key={v} onClick={() => set('mode', v)}
-                className={`text-xs font-semibold rounded-lg py-1.5 border ${form.mode === v ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
+                className={`text-xs font-semibold rounded-lg py-1.5 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${form.mode === v ? 'bg-blue-600 text-white border-blue-600 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
                 {label}
               </button>
             ))}
@@ -8680,7 +8677,7 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-neutral-500">Organizer account password <span className="text-red-500">*</span></label>
+            <label className="text-xs font-medium text-neutral-500">Organizer account password <span className="text-red-700">*</span></label>
             <input type="password" autoComplete="new-password" value={form.accountPassword} onChange={e => set('accountPassword', e.target.value)}
               className={input} placeholder="At least 4 characters — the organizer logs in with this" />
           </div>
@@ -8699,16 +8696,16 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
             </div>
           )}
 
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-neutral-500">
             The event link is generated from the title. It'll be tagged to {selected?.domain} and appear on this client's branded discovery feed.
             You'll get a one-time recovery code on the next screen.
           </p>
         </div>
 
         <div className="p-5 border-t border-neutral-200 flex gap-2">
-          <button onClick={onClose} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+          <button onClick={onClose} className="flex-1 border-2 border-ink rounded-xl py-2 text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
           <button onClick={submit} disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl py-2 text-sm font-semibold">
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl py-2 text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Create Event'}
           </button>
         </div>
@@ -8756,13 +8753,13 @@ function PortalPasswordRow({ selected, isDemo, API }) {
   };
 
   return (
-    <div className="border border-neutral-200 rounded-xl p-3 space-y-2">
+    <div className="border-2 border-ink rounded-xl p-3 space-y-2 shadow">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lock className="w-3.5 h-3.5 text-neutral-500" />
           <span className="text-xs font-semibold text-neutral-700">Client Portal</span>
           {status?.enabled
-            ? <span className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">Enabled</span>
+            ? <span className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 border-2 border-emerald-600">Enabled</span>
             : <span className="text-xs px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500">Disabled</span>
           }
         </div>
@@ -8785,7 +8782,7 @@ function PortalPasswordRow({ selected, isDemo, API }) {
             type={show ? 'text' : 'password'}
             value={pw} onChange={e => setPw(e.target.value)}
             placeholder={status?.enabled ? 'Set new password...' : 'Set portal password (min 12 chars)'}
-            className="w-full px-3 py-1.5 pr-8 text-xs rounded-lg border border-neutral-200 bg-neutral-50 outline-none"
+            className="w-full px-3 py-1.5 pr-8 text-xs rounded-lg border-2 border-ink bg-neutral-50 outline-none focus:ring-[3px] focus:ring-ac"
           />
           <button type="button" onClick={() => setShow(s => !s)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400">
@@ -8793,7 +8790,7 @@ function PortalPasswordRow({ selected, isDemo, API }) {
           </button>
         </div>
         <button onClick={setPassword} disabled={saving || !pw}
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40 whitespace-nowrap">
+          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-hl text-ink hover:bg-hl disabled:opacity-40 whitespace-nowrap border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           {saving ? '...' : status?.enabled ? 'Reset' : 'Enable'}
         </button>
       </div>
@@ -8983,7 +8980,7 @@ function BlogCMSPanel() {
       </div>
 
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+        <div className="rounded-xl bg-red-50 border-2 border-red-600 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
         </div>
       )}
@@ -8992,7 +8989,7 @@ function BlogCMSPanel() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
         <input
-          className="input pl-9 text-sm w-full max-w-sm"
+          className="input pl-9 text-sm w-full max-w-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
           placeholder="Filter posts…"
           value={filter}
           onChange={e => setFilter(e.target.value)}
@@ -9009,7 +9006,7 @@ function BlogCMSPanel() {
           <p className="text-xs text-neutral-400 mt-1">Click "New Post" to create your first blog post</p>
         </div>
       ) : (
-        <div className="card divide-y divide-neutral-100 overflow-hidden">
+        <div className="card divide-y divide-neutral-200 overflow-hidden">
           {visible.map(post => (
             <div
               key={post._id}
@@ -9075,7 +9072,7 @@ function BlogCMSPanel() {
                       <button
                         onClick={() => handleDelete(post._id)}
                         disabled={deleting === post._id}
-                        className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50"
+                        className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                       >
                         {deleting === post._id ? '…' : 'Confirm'}
                       </button>
@@ -9089,7 +9086,7 @@ function BlogCMSPanel() {
                   ) : (
                     <button
                       onClick={() => setDeleteConfirm(post._id)}
-                      className="btn btn-ghost p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50"
+                      className="btn btn-ghost p-1.5 !text-red-400 hover:!text-red-600 hover:!bg-red-50"
                       title="Delete post"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -9151,7 +9148,7 @@ function BlogCMSPanel() {
       </div>
 
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+        <div className="rounded-xl bg-red-50 border-2 border-red-600 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
         </div>
       )}
@@ -9165,7 +9162,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Post Title *</label>
               <input
-                className="input w-full text-base font-semibold"
+                className="input w-full text-base font-semibold border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 placeholder="An attention-grabbing headline…"
                 value={form.title}
                 onChange={upd('title')}
@@ -9176,7 +9173,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>URL Slug</label>
               <input
-                className="input w-full font-mono text-sm text-indigo-600"
+                className="input w-full font-mono text-sm text-indigo-600 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 placeholder="auto-generated-from-title"
                 value={form.slug}
                 onChange={upd('slug')}
@@ -9190,7 +9187,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Excerpt</label>
               <textarea
-                className="input w-full resize-none text-sm leading-relaxed"
+                className="input w-full resize-none text-sm leading-relaxed border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 rows={3}
                 placeholder="A compelling summary that makes readers want to read more…"
                 value={form.excerpt}
@@ -9208,7 +9205,7 @@ function BlogCMSPanel() {
               </span>
             </label>
             <textarea
-              className="input w-full font-mono text-xs leading-relaxed resize-y"
+              className="input w-full font-mono text-xs leading-relaxed resize-y border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
               rows={30}
               placeholder={"## First Section\n\nWrite your content here…\n\n## Another Section\n\nMore content…"}
               value={form.content}
@@ -9224,7 +9221,7 @@ function BlogCMSPanel() {
 
             <div>
               <label className={fieldLabel}>Category</label>
-              <select className="input w-full text-sm" value={form.category} onChange={upd('category')}>
+              <select className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={form.category} onChange={upd('category')}>
                 {BLOG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
@@ -9232,7 +9229,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Tags (comma-separated)</label>
               <input
-                className="input w-full text-sm"
+                className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 placeholder="planning, tips, events"
                 value={form.tags}
                 onChange={upd('tags')}
@@ -9242,7 +9239,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Author</label>
               <input
-                className="input w-full text-sm"
+                className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 value={form.author}
                 onChange={upd('author')}
                 maxLength={100}
@@ -9252,7 +9249,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Publish Date</label>
               <input
-                className="input w-full text-sm"
+                className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 type="date"
                 value={form.publishDate}
                 onChange={upd('publishDate')}
@@ -9262,7 +9259,7 @@ function BlogCMSPanel() {
             <div>
               <label className={fieldLabel}>Read Time (minutes)</label>
               <input
-                className="input w-full text-sm"
+                className="input w-full text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 type="number"
                 min={1}
                 max={120}
@@ -9278,10 +9275,10 @@ function BlogCMSPanel() {
                   type="color"
                   value={form.heroColor}
                   onChange={upd('heroColor')}
-                  className="w-9 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-white"
+                  className="w-9 h-9 rounded-lg border-2 border-ink cursor-pointer p-0.5 bg-white"
                 />
                 <input
-                  className="input flex-1 text-sm font-mono"
+                  className="input flex-1 text-sm font-mono border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                   value={form.heroColor}
                   onChange={upd('heroColor')}
                   placeholder="#6366f1"
@@ -9294,10 +9291,10 @@ function BlogCMSPanel() {
             <button
               type="button"
               onClick={() => setForm(f => ({ ...f, featured: !f.featured }))}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${
                 form.featured
-                  ? 'bg-amber-50 border-amber-200'
-                  : 'bg-neutral-50 border-neutral-200'
+                  ? 'bg-amber-50 border-amber-200 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                  : 'bg-neutral-50 border-neutral-200 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
               }`}
             >
               <span className={`text-sm font-semibold ${form.featured ? 'text-amber-700' : 'text-neutral-500'}`}>
@@ -9314,7 +9311,7 @@ function BlogCMSPanel() {
             onClick={handleSave}
             disabled={saving}
             className={`w-full btn text-sm flex items-center gap-2 justify-center py-2.5 transition-all ${
-              savedOk ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : 'btn-primary'
+              savedOk ? 'bg-emerald-600 hover:bg-emerald-600 text-white border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'btn-primary'
             }`}
           >
             {saving ? (
@@ -9546,7 +9543,7 @@ function WhiteLabelPanel() {
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">Manage custom-branded deployments for your clients</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-blue-700 transition-colors">
+        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-4 h-4" /> New Client
         </button>
       </div>
@@ -9561,7 +9558,7 @@ function WhiteLabelPanel() {
             { label: 'Suspended',     value: stats.suspended, icon: AlertTriangle, color: 'text-red-600' },
             { label: 'MRR (sandbox)', value: fmtMoney(stats.mrr), icon: DollarSign, color: 'text-blue-600', note: 'Bitcoin billing' },
           ].map(({ label, value, icon: Icon, color, note }) => (
-            <div key={label} className="bg-white border border-neutral-200 rounded-xl p-4">
+            <div key={label} className="bg-white border-2 border-ink rounded-xl p-4 shadow">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-neutral-500 font-medium">{label}</span>
                 <Icon className={`w-4 h-4 ${color}`} />
@@ -9599,31 +9596,31 @@ function WhiteLabelPanel() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
-            className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-4 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
             placeholder="Search clients, domains…"
             value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white">
           <option value="">All Statuses</option>
           {Object.entries(STATUS_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-          className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white">
           <option value="">All Tiers</option>
           {Object.entries(TIER_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+      <div className="bg-white border-2 border-ink rounded-2xl overflow-hidden shadow">
         {loading ? (
-          <div className="flex items-center justify-center h-40 text-neutral-400 gap-2">
+          <div className="flex items-center justify-center h-40 text-neutral-500 gap-2">
             <RefreshCw className="w-5 h-5 animate-spin" /> Loading…
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-neutral-400">
+          <div className="flex flex-col items-center justify-center h-40 text-neutral-500">
             <Layers className="w-8 h-8 mb-2 opacity-30" />
             <p className="text-sm">No white label clients yet</p>
             <button onClick={openCreate} className="mt-3 text-blue-600 text-sm hover:underline">Create your first client →</button>
@@ -9638,7 +9635,7 @@ function WhiteLabelPanel() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-200">
                 {items.map(item => {
                   const tier = TIER_COLORS[item.tier] || TIER_COLORS.basic;
                   const status = STATUS_COLORS[item.status] || STATUS_COLORS.trial;
@@ -9648,7 +9645,7 @@ function WhiteLabelPanel() {
                     <tr key={item._id} className="hover:bg-neutral-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-medium text-neutral-900">{item.clientName}</div>
-                        {item.contactEmail && <div className="text-xs text-neutral-400">{item.contactEmail}</div>}
+                        {item.contactEmail && <div className="text-xs text-neutral-500">{item.contactEmail}</div>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 text-neutral-600 font-mono text-xs">
@@ -9671,9 +9668,9 @@ function WhiteLabelPanel() {
                           <span className={`text-xs flex items-center gap-1 ${keyWarn ? 'text-red-600 font-medium' : 'text-neutral-500'}`}>
                             {keyWarn && <AlertTriangle className="w-3 h-3" />}
                             {fmtDate(item.keyExpiresAt)}
-                            {days !== null && <span className="text-neutral-400">({days}d)</span>}
+                            {days !== null && <span className="text-neutral-500">({days}d)</span>}
                           </span>
-                        ) : <span className="text-neutral-400 text-xs">No key</span>}
+                        ) : <span className="text-neutral-500 text-xs">No key</span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -9706,7 +9703,7 @@ function WhiteLabelPanel() {
 
       {/* ── Create/Edit Modal ───────────────────────────────────────────────── */}
       {(modal === 'create' || modal === 'edit') && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white z-10">
               <h3 className="text-lg font-bold text-neutral-900">
@@ -9721,25 +9718,25 @@ function WhiteLabelPanel() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Client Name *</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} placeholder="La Taverna Dayton" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Custom Domain *</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.domain} onChange={e => setForm(f => ({ ...f, domain: e.target.value.toLowerCase() }))}
                       placeholder="reservations.theirclient.com"
                       disabled={modal === 'edit'} />
-                    {modal === 'edit' && <p className="text-xs text-neutral-400 mt-1">Domain cannot be changed after creation. Delete and recreate if needed.</p>}
+                    {modal === 'edit' && <p className="text-xs text-neutral-500 mt-1">Domain cannot be changed after creation. Delete and recreate if needed.</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Contact Name</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} placeholder="Jane Smith" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Contact Email</label>
-                    <input type="email" className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input type="email" className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} placeholder="jane@client.com" />
                   </div>
                 </div>
@@ -9751,7 +9748,7 @@ function WhiteLabelPanel() {
                 <div className="grid grid-cols-3 gap-3">
                   {Object.entries(TIER_COLORS).map(([key, val]) => (
                     <button key={key} onClick={() => applyTierDefaults(key)}
-                      className={`p-3 border-2 rounded-xl text-left transition-all ${form.tier === key ? 'border-blue-500 bg-blue-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                      className={`p-3 border-2 rounded-xl text-left transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${form.tier === key ? 'border-blue-500 bg-blue-50 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 hover:border-neutral-300'}`}>
                       <div className={`text-xs font-bold mb-1 ${val.text}`}>{val.label}</div>
                       <div className="text-[11px] text-neutral-500">
                         {key === 'basic' && 'Custom domain, logo & colors'}
@@ -9765,7 +9762,7 @@ function WhiteLabelPanel() {
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Status</label>
                     <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                      className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white">
                       {Object.entries(STATUS_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                   </div>
@@ -9778,34 +9775,34 @@ function WhiteLabelPanel() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Display Name</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.branding.companyName} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, companyName: e.target.value } }))}
                       placeholder={form.clientName || 'Company name on guest pages'} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Primary Color</label>
                     <div className="flex items-center gap-2">
-                      <input type="color" className="w-10 h-9 border border-neutral-200 rounded-lg cursor-pointer"
+                      <input type="color" className="w-10 h-9 border-2 border-ink rounded-lg cursor-pointer"
                         value={form.branding.primaryColor} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, primaryColor: e.target.value } }))} />
-                      <input className="flex-1 border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      <input className="flex-1 border-2 border-ink rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                         value={form.branding.primaryColor} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, primaryColor: e.target.value } }))} />
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Logo URL</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.branding.logoUrl || ''} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, logoUrl: e.target.value } }))}
                       placeholder="https://..." />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Font Family</label>
-                    <select className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <select className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.branding.fontFamily || 'Inter'} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, fontFamily: e.target.value } }))}>
                       {['Inter','Roboto','Poppins','Lato','Montserrat','Playfair Display','Georgia'].map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </div>
                   {form.tier !== 'basic' && (
-                    <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border-2 border-blue-600">
                       <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.branding.hidePoweredBy ? 'bg-blue-600' : 'bg-neutral-300'}`}
                         onClick={() => setForm(f => ({ ...f, branding: { ...f.branding, hidePoweredBy: !f.branding.hidePoweredBy } }))}>
                         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.branding.hidePoweredBy ? 'left-4' : 'left-0.5'}`} />
@@ -9822,7 +9819,7 @@ function WhiteLabelPanel() {
               {/* Live Preview */}
               <div>
                 <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Live Preview</h4>
-                <div className="rounded-xl border border-neutral-200 overflow-hidden" style={{ fontFamily: `'${form.branding.fontFamily || 'Inter'}', sans-serif` }}>
+                <div className="rounded-xl border-2 border-ink overflow-hidden shadow" style={{ fontFamily: `'${form.branding.fontFamily || 'Inter'}', sans-serif` }}>
                   {/* Mini nav */}
                   <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-neutral-100">
                     {form.branding.logoUrl
@@ -9846,19 +9843,19 @@ function WhiteLabelPanel() {
                       {form.pages?.home?.subheadline || 'Browse and book upcoming events.'}
                     </div>
                     {form.pages?.home?.tableServiceEventId ? (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink" style={{ background: form.branding.primaryColor || '#2563eb' }}>
                         → Redirects to reservation page
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink" style={{ background: form.branding.primaryColor || '#2563eb' }}>
                         {form.pages?.home?.ctaText || 'Browse events'}
                       </div>
                     )}
                   </div>
                   {/* Mini footer */}
                   <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-neutral-100">
-                    <span className="text-xs text-neutral-400">{form.branding.companyName || form.clientName || 'Your Business'}</span>
-                    {!form.branding.hidePoweredBy && <span className="text-xs text-neutral-300">Powered by PlanIt</span>}
+                    <span className="text-xs text-neutral-500">{form.branding.companyName || form.clientName || 'Your Business'}</span>
+                    {!form.branding.hidePoweredBy && <span className="text-xs text-neutral-600">Powered by PlanIt</span>}
                   </div>
                 </div>
               </div>
@@ -9869,25 +9866,25 @@ function WhiteLabelPanel() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Main Headline</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.home?.headline || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, headline: e.target.value } } }))}
                       placeholder="Book your table tonight" maxLength={200} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Subheadline</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.home?.subheadline || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, subheadline: e.target.value } } }))}
                       placeholder="Reserve your spot in seconds." maxLength={400} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Hero Image URL</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.home?.heroImageUrl || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, heroImageUrl: e.target.value } } }))}
                       placeholder="https://..." />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">CTA Button Text</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.home?.ctaText || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, ctaText: e.target.value } } }))}
                       placeholder="Browse events" maxLength={60} />
                   </div>
@@ -9895,7 +9892,7 @@ function WhiteLabelPanel() {
                     <label className="block text-sm font-medium text-neutral-700 mb-1">
                       Reservation Page — Linked Event Subdomain
                     </label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.home?.tableServiceEventId || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, tableServiceEventId: e.target.value.trim() } } }))}
                       placeholder="e.g. nobu-downtown" maxLength={200} />
                     {form.pages?.home?.tableServiceEventId && (
@@ -9903,7 +9900,7 @@ function WhiteLabelPanel() {
                         Home page will redirect to: <code className="font-mono">/e/{form.pages.home.tableServiceEventId}/reserve</code>
                       </p>
                     )}
-                    <p className="text-xs text-neutral-400 mt-1">Leave blank to show the events grid instead.</p>
+                    <p className="text-xs text-neutral-500 mt-1">Leave blank to show the events grid instead.</p>
                   </div>
                 </div>
               </div>
@@ -9914,19 +9911,19 @@ function WhiteLabelPanel() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
-                    <input type="email" className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input type="email" className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.contact?.email || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, email: e.target.value } } }))}
                       placeholder="hello@restaurant.com" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Phone</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.contact?.phone || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, phone: e.target.value } } }))}
                       placeholder="+1 555 000 0000" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Address</label>
-                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={form.pages?.contact?.address || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, address: e.target.value } } }))}
                       placeholder="123 Main St, City, State" />
                   </div>
@@ -9943,7 +9940,7 @@ function WhiteLabelPanel() {
                     ['showSeatingChart', 'Seating chart'],
                     ['showSocialShare',  'Social share buttons'],
                   ].map(([key, label]) => (
-                    <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-neutral-50 border-2 border-ink shadow">
                       <span className="text-sm text-neutral-700">{label}</span>
                       <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.features?.[key] ? 'bg-blue-600' : 'bg-neutral-300'}`}
                         onClick={() => setForm(f => ({ ...f, features: { ...f.features, [key]: !f.features?.[key] } }))}>
@@ -9957,7 +9954,7 @@ function WhiteLabelPanel() {
               {/* Billing (Sandbox notice) */}
               <div>
                 <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Billing</h4>
-                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-3">
+                <div className="flex items-start gap-3 p-4 bg-amber-50 border-2 border-amber-600 rounded-xl mb-3">
                   <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-amber-800">
                     <strong>Bitcoin billing</strong> — the amount you set here is what the client sees in their dashboard and what their payment link charges (in USD, converted to BTC at checkout). Pick a preset or enter a custom amount.
@@ -9976,7 +9973,7 @@ function WhiteLabelPanel() {
                     ).map(({ label, amount }) => (
                       <button key={label}
                         onClick={() => amount !== null && setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: amount } }))}
-                        className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${form.billing.monthlyAmount === amount && amount !== null ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
+                        className={`px-3 py-1.5 rounded-xl text-sm font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${form.billing.monthlyAmount === amount && amount !== null ? 'bg-blue-600 text-white border-blue-600 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
                         {label}
                       </button>
                     ))}
@@ -9988,11 +9985,11 @@ function WhiteLabelPanel() {
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Monthly Amount (USD)</label>
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-500 text-sm">$</span>
-                    <input type="number" min="0" step="0.01" className="w-40 border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <input type="number" min="0" step="0.01" className="w-40 border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 focus:ring-ac bg-white"
                       value={(form.billing.monthlyAmount / 100).toFixed(2)}
                       onChange={e => setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: Math.round(parseFloat(e.target.value || 0) * 100) } }))} />
-                    <span className="text-neutral-400 text-sm">/ month</span>
-                    <span className="text-xs text-neutral-400">— shown in client dashboard</span>
+                    <span className="text-neutral-500 text-sm">/ month</span>
+                    <span className="text-xs text-neutral-500">— shown in client dashboard</span>
                   </div>
                 </div>
               </div>
@@ -10006,7 +10003,7 @@ function WhiteLabelPanel() {
                     <div className="flex gap-2">
                       {[90, 180, 365, 730].map(d => (
                         <button key={d} onClick={() => setForm(f => ({ ...f, keyValidDays: d }))}
-                          className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${form.keyValidDays === d ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
+                          className={`px-3 py-1.5 rounded-xl text-sm font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${form.keyValidDays === d ? 'bg-blue-600 text-white border-blue-600 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
                           {d === 365 ? '1yr' : d === 730 ? '2yr' : `${d}d`}
                         </button>
                       ))}
@@ -10018,7 +10015,7 @@ function WhiteLabelPanel() {
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Internal Notes</label>
-                <textarea rows={3} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                <textarea rows={3} className="w-full border-2 border-ink rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-[3px] focus:ring-blue-500 resize-none focus:ring-ac bg-white"
                   value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   placeholder="Contract date, special terms, contact history…" />
               </div>
@@ -10032,9 +10029,9 @@ function WhiteLabelPanel() {
               )}
               {modal === 'create' && <div />}
               <div className="flex gap-3">
-                <button onClick={() => setModal(null)} className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+                <button onClick={() => setModal(null)} className="px-4 py-2 rounded-xl border-2 border-ink text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
                 <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {saving ? 'Saving…' : modal === 'create' ? 'Create Client' : 'Save Changes'}
                 </button>
@@ -10046,7 +10043,7 @@ function WhiteLabelPanel() {
 
       {/* ── View / Detail Modal ─────────────────────────────────────────────── */}
       {modal === 'view' && selected && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white">
               <div>
@@ -10072,7 +10069,7 @@ function WhiteLabelPanel() {
               </div>
 
               {/* License Key */}
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+              <div className="bg-neutral-50 border-2 border-ink rounded-xl p-4 shadow">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1"><Key className="w-3 h-3" /> License Key</span>
                   <div className="flex gap-1">
@@ -10091,7 +10088,7 @@ function WhiteLabelPanel() {
                   <div className="font-mono text-sm text-neutral-800 break-all">
                     {revealedKey === selected._id ? selected.licenseKey : '•'.repeat(selected.licenseKey.length)}
                   </div>
-                ) : <div className="text-sm text-neutral-400">No key generated</div>}
+                ) : <div className="text-sm text-neutral-500">No key generated</div>}
                 <div className="flex items-center justify-between mt-2">
                   <span className={`text-xs ${daysUntil(selected.keyExpiresAt) <= 30 ? 'text-red-600 font-medium' : 'text-neutral-500'}`}>
                     Expires {fmtDate(selected.keyExpiresAt)}
@@ -10115,7 +10112,7 @@ function WhiteLabelPanel() {
                   { label: 'Hide Branding', value: selected.branding?.hidePoweredBy ? 'Yes' : 'No' },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <div className="text-xs text-neutral-400 mb-0.5">{label}</div>
+                    <div className="text-xs text-neutral-500 mb-0.5">{label}</div>
                     <div className="font-medium text-neutral-800">{value}</div>
                   </div>
                 ))}
@@ -10129,7 +10126,7 @@ function WhiteLabelPanel() {
               )}
 
               {selected.suspendReason && selected.status === 'suspended' && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                <div className="bg-red-50 border-2 border-red-600 rounded-xl p-3">
                   <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1">Suspend Reason</div>
                   <div className="text-sm text-red-700">{selected.suspendReason}</div>
                 </div>
@@ -10152,7 +10149,7 @@ function WhiteLabelPanel() {
                       toast.error(e?.response?.data?.error || 'Failed to create payment link');
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2 text-xs font-semibold">
+                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2 text-xs font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   <CreditCard className="w-3.5 h-3.5" /> Create Payment Link
                 </button>
                 <button
@@ -10166,7 +10163,7 @@ function WhiteLabelPanel() {
                       toast.error(e?.response?.data?.error || 'No invoices yet — create a payment link first');
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl py-2 text-xs font-semibold">
+                  className="flex-1 flex items-center justify-center gap-2 border-2 border-blue-600 text-indigo-700 hover:bg-indigo-50 rounded-xl py-2 text-xs font-semibold shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   <ExternalLink className="w-3.5 h-3.5" /> Latest Invoice
                 </button>
               </div>
@@ -10175,12 +10172,12 @@ function WhiteLabelPanel() {
               {/* Edit / Suspend row */}
               <div className="flex gap-2">
                 <button onClick={() => { setModal(null); openEdit(selected); }}
-                  className="flex-1 flex items-center justify-center gap-2 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">
+                  className="flex-1 flex items-center justify-center gap-2 border-2 border-ink rounded-xl py-2 text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   <Edit2 className="w-4 h-4" /> Edit
                 </button>
                 <button
                   onClick={() => setConfirmSuspend({ item: selected, suspend: selected.status !== 'suspended' })}
-                  className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium ${selected.status === 'suspended' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium ${selected.status === 'suspended' ? 'bg-green-600 text-white hover:bg-green-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-amber-500 text-ink hover:bg-amber-600 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                   {selected.status === 'suspended' ? <><Play className="w-4 h-4" /> Reactivate</> : <><Power className="w-4 h-4" /> Suspend</>}
                 </button>
               </div>
@@ -10205,7 +10202,7 @@ function WhiteLabelPanel() {
               { s: 'rejected',  label: 'Rejected' },
             ].map(({ s, label }) => (
               <button key={s} onClick={() => { setLeadStatusFilter(s); loadLeads(s); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${leadStatusFilter === s ? 'bg-blue-600 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${leadStatusFilter === s ? 'bg-blue-600 text-white border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                 {label}{leadCounts[s] ? ` (${leadCounts[s]})` : ''}
               </button>
             ))}
@@ -10245,7 +10242,7 @@ function WhiteLabelPanel() {
           ) : (
             <div className="space-y-3">
               {leads.map(lead => (
-                <div key={lead._id} className="bg-white border border-neutral-200 rounded-xl p-4 hover:border-neutral-300 transition-colors">
+                <div key={lead._id} className="bg-white border-2 border-ink rounded-xl p-4 hover:border-neutral-300 transition-colors shadow">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
 
                     {/* Left: Business info */}
@@ -10267,10 +10264,10 @@ function WhiteLabelPanel() {
                         }`}>{lead.tierInterest === 'unsure' ? 'Tier TBD' : lead.tierInterest + ' plan'}</span>
                       </div>
                       <div className="text-sm text-neutral-600">{lead.contactName} &middot; <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a></div>
-                      {lead.phone   && <div className="text-xs text-neutral-400 mt-0.5">{lead.phone}</div>}
-                      {lead.website && <div className="text-xs text-neutral-400">{lead.website}</div>}
-                      {lead.message && <div className="mt-2 text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2 border border-neutral-100">"{lead.message}"</div>}
-                      <div className="text-xs text-neutral-300 mt-2">Received {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                      {lead.phone   && <div className="text-xs text-neutral-500 mt-0.5">{lead.phone}</div>}
+                      {lead.website && <div className="text-xs text-neutral-500">{lead.website}</div>}
+                      {lead.message && <div className="mt-2 text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2 border-2 border-ink">"{lead.message}"</div>}
+                      <div className="text-xs text-neutral-600 mt-2">Received {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
 
                     {/* Right: Actions */}
@@ -10283,7 +10280,7 @@ function WhiteLabelPanel() {
                           const url = `${base}/white-label/setup-fee?lead=${lead._id}&business=${encodeURIComponent(lead.businessName)}&email=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.contactName || '')}`;
                           navigator.clipboard.writeText(url).then(() => toast.success('Payment link copied to clipboard'));
                         }}
-                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <CreditCard className="w-3.5 h-3.5" /> Copy $299 Payment Link
                       </button>
 
@@ -10305,7 +10302,7 @@ function WhiteLabelPanel() {
                           ].join('\n');
                           return `mailto:${lead.email}?subject=${encodeURIComponent('Your PlanIt White Label Setup')}&body=${encodeURIComponent(body)}`;
                         })()}
-                        className="flex items-center justify-center gap-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors text-center no-underline">
+                        className="flex items-center justify-center gap-2 border-2 border-ink hover:bg-neutral-50 text-neutral-700 rounded-lg px-3 py-2 text-xs font-bold transition-colors text-center no-underline shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <Mail className="w-3.5 h-3.5" /> Email Payment Link
                       </a>
 
@@ -10318,7 +10315,7 @@ function WhiteLabelPanel() {
                         api.patch(`/whitelabel/leads/${lead._id}`, { status: 'converted' }).then(() => {
                           setLeads(prev => prev.filter(l => l._id !== lead._id));
                         });
-                      }} className="flex items-center justify-center gap-2 border border-green-200 hover:bg-green-50 text-green-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors">
+                      }} className="flex items-center justify-center gap-2 border-2 border-emerald-600 hover:bg-green-50 text-green-700 rounded-lg px-3 py-2 text-xs font-bold transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                         <UserPlus className="w-3.5 h-3.5" /> Convert to Client
                       </button>
 
@@ -10329,7 +10326,7 @@ function WhiteLabelPanel() {
                           await api.patch(`/whitelabel/leads/${lead._id}`, { status: newStatus });
                           setLeads(prev => prev.map(l => l._id === lead._id ? { ...l, status: newStatus } : l));
                           setLeadCounts(prev => ({ ...prev, [lead.status]: (prev[lead.status] || 1) - 1, [newStatus]: (prev[newStatus] || 0) + 1 }));
-                        }} className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+                        }} className="flex-1 text-xs border-2 border-ink rounded-lg px-2 py-1.5 focus:outline-none focus:ring-[3px] focus:ring-blue-500 bg-white focus:ring-ac">
                           {['new','contacted','converted','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
@@ -10344,7 +10341,7 @@ function WhiteLabelPanel() {
       )}
       {/* ── Confirm Suspend ─────────────────────────────────────────────────── */}
       {confirmSuspend && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-ink/60 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
             <h4 className="text-lg font-bold text-neutral-900 mb-2">
               {confirmSuspend.suspend ? 'Suspend Client?' : 'Reactivate Client?'}
@@ -10355,9 +10352,9 @@ function WhiteLabelPanel() {
                 : `${confirmSuspend.item.clientName} will be reactivated and their white label domain will work again.`}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmSuspend(null)} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+              <button onClick={() => setConfirmSuspend(null)} className="flex-1 border-2 border-ink rounded-xl py-2 text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
               <button onClick={() => handleSuspend(confirmSuspend.item, confirmSuspend.suspend)}
-                className={`flex-1 rounded-xl py-2 text-sm font-medium text-white ${confirmSuspend.suspend ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                className={`flex-1 rounded-xl py-2 text-sm font-medium text-white ${confirmSuspend.suspend ? 'bg-red-600 hover:bg-red-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-green-600 hover:bg-green-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                 {confirmSuspend.suspend ? 'Suspend' : 'Reactivate'}
               </button>
             </div>
@@ -10367,15 +10364,15 @@ function WhiteLabelPanel() {
 
       {/* ── Confirm Delete ──────────────────────────────────────────────────── */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-ink/60 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
             <h4 className="text-lg font-bold text-neutral-900 mb-2">Delete White Label?</h4>
             <p className="text-sm text-neutral-500 mb-5">
               This is permanent. Their license key will be invalidated immediately and their domain will stop working.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
-              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-700">Delete</button>
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 border-2 border-ink rounded-xl py-2 text-sm font-bold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-bold hover:bg-red-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Delete</button>
             </div>
           </div>
         </div>
@@ -10708,17 +10705,17 @@ export default function Admin() {
     return (
       <div className="font-sans" style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#09090b',
+        background: '#ffffff',
         position: 'relative', overflow: 'hidden', padding: '24px',
       }}>
         {/* Dot-grid texture */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
+          backgroundSize: '28px 28px', display: 'none',
         }} />
         {/* Top accent */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(239,68,68,0.6),transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: '#d12f2f', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
 
@@ -10727,30 +10724,30 @@ export default function Admin() {
             {/* Icon */}
             <div style={{
               width: 56, height: 56, borderRadius: 14,
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)',
+              background: '#ffe1de', border: '2px solid #a82020',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px',
             }}>
-              <Lock style={{ width: 24, height: 24, color: '#f87171' }} />
+              <Lock style={{ width: 24, height: 24, color: '#a82020' }} />
             </div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: '0 0 8px', letterSpacing: '-0.03em' }}>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0d0e1c', margin: '0 0 8px', letterSpacing: '-0.03em' }}>
               Password reset required
             </h1>
-            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.8rem', color: '#5a5d70', margin: 0, lineHeight: 1.6 }}>
               An administrator has required you to set a new password<br />before you can access the panel.
             </p>
           </div>
 
           {/* Card */}
           <div style={{
-            background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)',
+            background: '#ffffff', border: '2px solid #0d0e1c',
             borderRadius: 14, padding: '28px 26px 24px',
           }}>
             <form onSubmit={submitReset}>
 
               {/* New password */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: '#5a5d70', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
                   New Password
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -10765,13 +10762,13 @@ export default function Admin() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: '10px 40px 10px 13px', fontSize: '0.875rem',
-                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                      borderRadius: 7, color: '#fff', outline: 'none', fontFamily: 'inherit',
+                      background: '#ffffff', border: '2px solid #0d0e1c',
+                      borderRadius: 7, color: '#0d0e1c', outline: 'none', fontFamily: 'inherit',
                       transition: 'border-color 0.12s', caretColor: '#f87171',
                     }}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setForceResetShowNew(v => !v)}
-                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.25)', display: 'flex' }}>
+                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#5a5d70', display: 'flex' }}>
                     {forceResetShowNew
                       ? <EyeOff style={{ width: 15, height: 15 }} />
                       : <Eye style={{ width: 15, height: 15 }} />}
@@ -10803,7 +10800,7 @@ export default function Admin() {
 
               {/* Confirm password */}
               <div style={{ marginBottom: 22 }}>
-                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: '#5a5d70', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
                   Confirm Password
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -10818,14 +10815,14 @@ export default function Admin() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: '10px 40px 10px 13px', fontSize: '0.875rem',
-                      background: 'rgba(255,255,255,0.03)',
+                      background: '#ffffff',
                       border: `1px solid ${forceResetConfirm.length > 0 ? (pwMatch ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)') : 'rgba(255,255,255,0.07)'}`,
-                      borderRadius: 7, color: '#fff', outline: 'none', fontFamily: 'inherit',
+                      borderRadius: 7, color: '#0d0e1c', outline: 'none', fontFamily: 'inherit',
                       transition: 'border-color 0.12s', caretColor: '#f87171',
                     }}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setForceResetShowConf(v => !v)}
-                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.25)', display: 'flex' }}>
+                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#5a5d70', display: 'flex' }}>
                     {forceResetShowConf
                       ? <EyeOff style={{ width: 15, height: 15 }} />
                       : <Eye style={{ width: 15, height: 15 }} />}
@@ -10842,8 +10839,8 @@ export default function Admin() {
               {forceResetError && (
                 <div style={{
                   marginBottom: 16, padding: '10px 13px', borderRadius: 7,
-                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                  fontSize: '0.78rem', color: '#fca5a5', lineHeight: 1.5,
+                  background: '#ffe1de', border: '2px solid #a82020',
+                  fontSize: '0.78rem', color: '#a82020', lineHeight: 1.5,
                 }}>
                   {forceResetError}
                 </div>
@@ -10855,7 +10852,7 @@ export default function Admin() {
                 disabled={forceResetSaving || !pwStrong || !pwMatch}
                 style={{
                   width: '100%', padding: '11px 16px', borderRadius: 7,
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '2px solid #0d0e1c',
                   background: forceResetSaving || !pwStrong || !pwMatch
                     ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)',
                   color: forceResetSaving || !pwStrong || !pwMatch
@@ -10867,7 +10864,7 @@ export default function Admin() {
                 }}
               >
                 {forceResetSaving
-                  ? <><span className="spinner w-4 h-4 border-2 border-neutral-700/40 border-t-neutral-900" /> Saving…</>
+                  ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-neutral-900" /> Saving…</>
                   : 'Set new password & continue'}
               </button>
 
@@ -10875,7 +10872,7 @@ export default function Admin() {
           </div>
 
           {/* Footer note */}
-          <p style={{ textAlign: 'center', marginTop: 18, fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)', lineHeight: 1.6 }}>
+          <p style={{ textAlign: 'center', marginTop: 18, fontSize: '0.7rem', color: '#5a5d70', lineHeight: 1.6 }}>
             Your previous sessions have been revoked.<br />
             Contact your administrator if you need help.
           </p>
@@ -10889,7 +10886,7 @@ export default function Admin() {
     <div className="font-sans" style={{
       minHeight: '100vh',
       display: 'flex',
-      background: '#09090b',
+      background: '#ffffff',
       position: 'relative',
       overflow: 'hidden',
     }}>
@@ -10897,10 +10894,10 @@ export default function Admin() {
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
+        backgroundSize: '28px 28px', display: 'none',
       }} />
       {/* Top accent line */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.6) 50%, transparent 100%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: '#2236ff', pointerEvents: 'none' }} />
 
       {/* ── Left branding panel (desktop only) ── */}
       <div className="hidden lg:flex" style={{
@@ -10909,25 +10906,25 @@ export default function Admin() {
         width: '400px',
         flexShrink: 0,
         padding: '48px',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
+        borderRight: '1px solid #d9dbe8',
         position: 'relative',
       }}>
         {/* Wordmark */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 30, height: 30, borderRadius: 7,
-            border: '1px solid rgba(255,255,255,0.12)',
+            border: '2px solid #0d0e1c',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Shield style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.7)' }} />
+            <Shield style={{ width: 14, height: 14, color: '#0d0e1c' }} />
           </div>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#5a5d70', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             PlanIt
           </span>
           <span style={{
             fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.1em',
             textTransform: 'uppercase', color: 'rgba(99,102,241,0.8)',
-            border: '1px solid rgba(99,102,241,0.25)', padding: '2px 7px', borderRadius: 4,
+            border: '2px solid #2236ff', padding: '2px 7px', borderRadius: 4,
           }}>
             Admin
           </span>
@@ -10941,17 +10938,17 @@ export default function Admin() {
             textTransform: 'uppercase', color: 'rgba(99,102,241,0.6)',
             marginBottom: 18,
           }}>
-            <span style={{ width: 16, height: 1, background: 'rgba(99,102,241,0.4)', display: 'inline-block' }} />
+            <span style={{ width: 16, height: 1, background: '#eceeff', display: 'inline-block' }} />
             Restricted Access
           </div>
           <h2 style={{
-            fontSize: '1.85rem', fontWeight: 700, color: '#fff',
+            fontSize: '1.85rem', fontWeight: 700, color: '#0d0e1c',
             letterSpacing: '-0.04em', lineHeight: 1.15, margin: '0 0 18px',
           }}>
             Infrastructure<br />Control Center
           </h2>
           <p style={{
-            fontSize: '0.78rem', color: 'rgba(255,255,255,0.28)',
+            fontSize: '0.78rem', color: '#5a5d70',
             lineHeight: 1.75, margin: 0, maxWidth: 260,
           }}>
             Authorized personnel only. All sessions are logged, timestamped, and subject to audit review.
@@ -10962,10 +10959,10 @@ export default function Admin() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
             width: 6, height: 6, borderRadius: '50%',
-            background: '#22c55e',
-            boxShadow: '0 0 0 3px rgba(34,197,94,0.15)',
+            background: '#0c8a5b',
+            boxShadow: '4px 4px 0 #0d0e1c',
           }} />
-          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.02em' }}>
+          <span style={{ fontSize: '0.7rem', color: '#5a5d70', letterSpacing: '0.02em' }}>
             Systems operational
           </span>
         </div>
@@ -10985,20 +10982,20 @@ export default function Admin() {
           }}>
             <div style={{
               width: 26, height: 26, borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.12)',
+              border: '2px solid #0d0e1c',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Shield style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.6)' }} />
+              <Shield style={{ width: 13, height: 13, color: '#5a5d70' }} />
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>PlanIt Admin</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5a5d70', letterSpacing: '0.08em', textTransform: 'uppercase' }}>PlanIt Admin</span>
           </div>
 
           {/* Heading */}
           <div style={{ marginBottom: 32 }}>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: '0 0 7px', letterSpacing: '-0.03em' }}>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0d0e1c', margin: '0 0 7px', letterSpacing: '-0.03em' }}>
               {loginStep === 'totp' ? 'Two-factor verification' : 'Sign in to Admin'}
             </h1>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.28)', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.78rem', color: '#5a5d70', margin: 0, lineHeight: 1.5 }}>
               {loginStep === 'totp'
                 ? 'Enter the 6-digit code from your authenticator app'
                 : 'Enter your credentials to continue'}
@@ -11007,8 +11004,8 @@ export default function Admin() {
 
           {/* Card */}
           <div style={{
-            background: 'rgba(255,255,255,0.025)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: '#ffffff',
+            border: '2px solid #0d0e1c',
             borderRadius: 12,
             padding: '26px 24px 22px',
           }}>
@@ -11020,7 +11017,7 @@ export default function Admin() {
                 <div style={{ marginBottom: 14 }}>
                   <label style={{
                     display: 'block', fontSize: '0.68rem', fontWeight: 500,
-                    color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                    color: '#5a5d70', letterSpacing: '0.07em',
                     textTransform: 'uppercase', marginBottom: 7,
                   }}>Username</label>
                   <input
@@ -11033,9 +11030,9 @@ export default function Admin() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: '10px 13px', fontSize: '0.875rem',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      borderRadius: 7, color: '#fff',
+                      background: '#ffffff',
+                      border: '2px solid #0d0e1c',
+                      borderRadius: 7, color: '#0d0e1c',
                       outline: 'none', fontFamily: 'inherit',
                       transition: 'border-color 0.12s, background 0.12s',
                       caretColor: '#818cf8',
@@ -11047,7 +11044,7 @@ export default function Admin() {
                 <div style={{ marginBottom: 22 }}>
                   <label style={{
                     display: 'block', fontSize: '0.68rem', fontWeight: 500,
-                    color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                    color: '#5a5d70', letterSpacing: '0.07em',
                     textTransform: 'uppercase', marginBottom: 7,
                   }}>Password</label>
                   <input
@@ -11060,9 +11057,9 @@ export default function Admin() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       padding: '10px 13px', fontSize: '0.875rem',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      borderRadius: 7, color: '#fff',
+                      background: '#ffffff',
+                      border: '2px solid #0d0e1c',
+                      borderRadius: 7, color: '#0d0e1c',
                       outline: 'none', fontFamily: 'inherit',
                       transition: 'border-color 0.12s, background 0.12s',
                       caretColor: '#818cf8',
@@ -11081,17 +11078,17 @@ export default function Admin() {
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 42, height: 42, borderRadius: 10,
-                    background: 'rgba(99,102,241,0.08)',
-                    border: '1px solid rgba(99,102,241,0.18)',
+                    background: '#eceeff',
+                    border: '2px solid #2236ff',
                     margin: '0 auto 22px',
                   }}>
-                    <Fingerprint style={{ width: 20, height: 20, color: '#818cf8' }} />
+                    <Fingerprint style={{ width: 20, height: 20, color: '#2236ff' }} />
                   </div>
 
                   <div style={{ marginBottom: 16 }}>
                     <label style={{
                       display: 'block', fontSize: '0.68rem', fontWeight: 500,
-                      color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                      color: '#5a5d70', letterSpacing: '0.07em',
                       textTransform: 'uppercase', marginBottom: 7,
                     }}>Authenticator Code</label>
                     <input
@@ -11106,9 +11103,9 @@ export default function Admin() {
                         width: '100%', boxSizing: 'border-box',
                         padding: '13px', fontSize: '1.6rem',
                         letterSpacing: '0.4em', textAlign: 'center',
-                        background: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,255,255,0.07)',
-                        borderRadius: 7, color: '#fff',
+                        background: '#ffffff',
+                        border: '2px solid #0d0e1c',
+                        borderRadius: 7, color: '#0d0e1c',
                         outline: 'none', fontFamily: 'ui-monospace, monospace',
                         transition: 'border-color 0.12s',
                         caretColor: '#818cf8',
@@ -11121,7 +11118,7 @@ export default function Admin() {
                     onClick={() => { setLoginStep('credentials'); setTotpCode(''); setTurnstileKey(k => k + 1); setTurnstileToken(''); }}
                     style={{
                       background: 'none', border: 'none',
-                      color: 'rgba(255,255,255,0.25)', fontSize: '0.76rem',
+                      color: '#5a5d70', fontSize: '0.76rem',
                       cursor: 'pointer', marginBottom: 18, padding: 0,
                       fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
                       transition: 'color 0.12s',
@@ -11141,7 +11138,7 @@ export default function Admin() {
                 style={{
                   width: '100%', padding: '11px 16px',
                   borderRadius: 7,
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '2px solid #0d0e1c',
                   background: (loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken))
                     ? 'rgba(255,255,255,0.06)'
                     : 'rgba(255,255,255,0.92)',
@@ -11158,7 +11155,7 @@ export default function Admin() {
                 onMouseLeave={e => { if (!loggingIn && turnstileToken) e.currentTarget.style.background = 'rgba(255,255,255,0.92)'; }}
               >
                 {loggingIn
-                  ? <><span className="spinner w-4 h-4 border-2 border-neutral-700/40 border-t-neutral-900" /> Authenticating</>
+                  ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-neutral-900" /> Authenticating</>
                   : loginStep === 'totp' ? 'Verify identity' : 'Continue'}
               </button>
 
@@ -11168,13 +11165,13 @@ export default function Admin() {
           {/* Footer */}
           <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <a href="/"
-              style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3, transition: 'color 0.12s' }}
+              style={{ fontSize: '0.72rem', color: '#5a5d70', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3, transition: 'color 0.12s' }}
               onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
             >
               <ChevronLeft style={{ width: 11, height: 11 }} /> Back to site
             </a>
-            <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.1)', letterSpacing: '0.03em' }}>
+            <span style={{ fontSize: '0.68rem', color: '#5a5d70', letterSpacing: '0.03em' }}>
               Monitored · Audited
             </span>
           </div>
@@ -11191,14 +11188,14 @@ export default function Admin() {
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-neutral-950 flex flex-col overflow-y-auto shadow-2xl">
-            <div className="h-14 flex items-center gap-3 px-3 border-b border-white/5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-4 h-4 text-white" />
+          <div className="absolute inset-0 bg-ink/60" onClick={() => setMobileNavOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white flex flex-col overflow-y-auto shadow-2xl">
+            <div className="h-14 flex items-center gap-3 px-3 border-b border-ink">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-lav text-ink">
+                <Shield className="w-4 h-4 text-ink" />
               </div>
-              <span className="text-sm font-bold text-white">Admin Panel</span>
-              <button onClick={() => setMobileNavOpen(false)} className="ml-auto text-neutral-500 hover:text-white transition-colors">
+              <span className="text-sm font-bold text-ink">Admin Panel</span>
+              <button onClick={() => setMobileNavOpen(false)} className="ml-auto text-neutral-500 hover:text-ink transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -11210,17 +11207,17 @@ export default function Admin() {
                 const isAcc = id === 'account';
                 return (
                   <React.Fragment key={id}>
-                    {isCc  && <div className="mx-2 my-2 border-t border-white/10" />}
-                    {isWl  && <div className="mx-2 my-2 border-t border-white/10" />}
-                    {isAcc && <div className="mx-2 my-2 border-t border-white/10" />}
+                    {isCc  && <div className="mx-2 my-2 border-t border-ink" />}
+                    {isWl  && <div className="mx-2 my-2 border-t border-ink" />}
+                    {isAcc && <div className="mx-2 my-2 border-t border-ink" />}
                     <button onClick={() => {
                       if (isSec) { window.location.href = '/admin/security'; return; }
                       setActiveSection(id); setSelectedEvent(null); setMobileNavOpen(false);
                     }}
                       className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
                         activeSection === id
-                          ? isCc ? 'bg-violet-900/60 text-violet-300' : 'bg-white/10 text-white'
-                          : isCc ? 'text-violet-500 hover:bg-violet-900/30 hover:text-violet-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                          ? isCc ? 'bg-blue-50 text-blue-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                          : isCc ? 'text-blue-700 hover:bg-blue-50 hover:text-blue-700' : 'text-neutral-500 hover:bg-lav hover:text-ink'
                       }`}>
                       <I className="w-4 h-4 flex-shrink-0" />
                       <span>{label}</span>
@@ -11230,13 +11227,13 @@ export default function Admin() {
                 );
               })}
             </nav>
-            <div className="p-2 border-t border-white/5 space-y-0.5">
+            <div className="p-2 border-t border-ink space-y-0.5">
               {hasFlag('canRunCleanup') && (
-              <button onClick={() => { setCleanupResult(null); setShowCleanup(true); setMobileNavOpen(false); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all">
+              <button onClick={() => { setCleanupResult(null); setShowCleanup(true); setMobileNavOpen(false); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-700 hover:bg-red-50 hover:text-red-700 transition-all">
                 <Trash className="w-4 h-4 flex-shrink-0" /> Cleanup
               </button>
               )}
-              <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white transition-all">
+              <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-500 hover:bg-lav hover:text-ink transition-all">
                 <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
               </button>
             </div>
@@ -11245,14 +11242,14 @@ export default function Admin() {
       )}
 
       {/* Sidebar */}
-      <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      <aside className={`hidden md:flex bg-white flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
         {/* Logo */}
-        <div className="h-14 flex items-center gap-3 px-3 border-b border-white/5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-4 h-4 text-white" />
+        <div className="h-14 flex items-center gap-3 px-3 border-b border-ink">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-lav text-ink">
+            <Shield className="w-4 h-4 text-ink" />
           </div>
-          {sidebarOpen && <span className="text-sm font-bold text-white">Admin Panel</span>}
-          <button onClick={() => setSidebarOpen(v => !v)} className="ml-auto text-neutral-500 hover:text-white transition-colors">
+          {sidebarOpen && <span className="text-sm font-bold text-ink">Admin Panel</span>}
+          <button onClick={() => setSidebarOpen(v => !v)} className="ml-auto text-neutral-500 hover:text-ink transition-colors">
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
@@ -11266,17 +11263,17 @@ export default function Admin() {
             const isAcc = id === 'account';
             return (
               <React.Fragment key={id}>
-                {isCc  && <div className="mx-2 my-2 border-t border-white/10" />}
-                {isWl  && <div className="mx-2 my-2 border-t border-white/10" />}
-                {isAcc && <div className="mx-2 my-2 border-t border-white/10" />}
+                {isCc  && <div className="mx-2 my-2 border-t border-ink" />}
+                {isWl  && <div className="mx-2 my-2 border-t border-ink" />}
+                {isAcc && <div className="mx-2 my-2 border-t border-ink" />}
                 <button onClick={() => {
                   if (isSec) { window.location.href = '/admin/security'; return; }
                   setActiveSection(id); setSelectedEvent(null);
                 }}
                   className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
                     activeSection === id
-                      ? isCc ? 'bg-violet-900/60 text-violet-300' : 'bg-white/10 text-white'
-                      : isCc ? 'text-violet-500 hover:bg-violet-900/30 hover:text-violet-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                      ? isCc ? 'bg-blue-50 text-blue-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                      : isCc ? 'text-blue-700 hover:bg-blue-50 hover:text-blue-700' : 'text-neutral-500 hover:bg-lav hover:text-ink'
                   }`}
                   title={!sidebarOpen ? label : undefined}>
                   <I className="w-4 h-4 flex-shrink-0" />
@@ -11289,13 +11286,13 @@ export default function Admin() {
         </nav>
 
         {/* Bottom actions */}
-        <div className="p-2 border-t border-white/5 space-y-0.5">
+        <div className="p-2 border-t border-ink space-y-0.5">
           {hasFlag('canRunCleanup') && (
-          <button onClick={() => { setCleanupResult(null); setShowCleanup(true); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all" title={!sidebarOpen ? 'Cleanup' : undefined}>
+          <button onClick={() => { setCleanupResult(null); setShowCleanup(true); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-700 hover:bg-red-50 hover:text-red-700 transition-all" title={!sidebarOpen ? 'Cleanup' : undefined}>
             <Trash className="w-4 h-4 flex-shrink-0" />{sidebarOpen && 'Cleanup'}
           </button>
           )}
-          <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white transition-all" title={!sidebarOpen ? 'Logout' : undefined}>
+          <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-500 hover:bg-lav hover:text-ink transition-all" title={!sidebarOpen ? 'Logout' : undefined}>
             <LogOut className="w-4 h-4 flex-shrink-0" />{sidebarOpen && 'Logout'}
           </button>
         </div>
@@ -11314,7 +11311,7 @@ export default function Admin() {
             </span>
             <button
               onClick={exitReadOnlyMode}
-              className="flex-shrink-0 bg-amber-950 text-amber-50 hover:bg-amber-900 transition-colors rounded-md px-3 py-1 font-semibold"
+              className="flex-shrink-0 bg-amber-950 text-amber-50 hover:bg-amber-900 transition-colors rounded-md px-3 py-1 font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Log In
             </button>
@@ -11330,7 +11327,7 @@ export default function Admin() {
             <h1 className="text-sm font-bold text-neutral-900 truncate">
               {selectedEvent ? selectedEvent.title : NAV_ITEMS.find(n => n.id === activeSection)?.label || 'Dashboard'}
             </h1>
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-neutral-500">
               {selectedEvent ? 'Event Management' : 'PlanIt Admin'}
             </p>
           </div>
@@ -11347,8 +11344,8 @@ export default function Admin() {
             finally { setSearchLoading(false); }
           }}>
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-              <input type="text" placeholder="Global search..." className="input py-1.5 pl-9 text-sm w-48" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+              <input type="text" placeholder="Global search..." className="input py-1.5 pl-9 text-sm w-48 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
             <button type="submit" disabled={searchLoading} className="btn btn-secondary text-xs py-1.5 px-3 gap-1">
               {searchLoading ? <span className="spinner w-3 h-3 border-2 border-neutral-300 border-t-neutral-600" /> : <Search className="w-3 h-3" />}
@@ -11357,7 +11354,7 @@ export default function Admin() {
 
           <button
             onClick={toggleAdminTheme}
-            className="btn btn-secondary text-xs py-1.5 px-2.5"
+            className="btn btn-secondary text-xs py-1.5 px-2.5 !hidden"
             title={adminTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label={adminTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
@@ -11369,10 +11366,10 @@ export default function Admin() {
           </button>
 
           {stats && (
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-1.5">
-              <Activity className="w-3 h-3 text-emerald-500" />
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 bg-neutral-50 border-2 border-ink rounded-lg px-3 py-1.5">
+              <Activity className="w-3 h-3 text-emerald-700" />
               <span className="font-medium">{formatNumber(stats.totalEvents)}</span> events
-              <span className="text-neutral-300">·</span>
+              <span className="text-neutral-600">·</span>
               <span className="font-medium">{formatNumber(stats.totalParticipants)}</span> users
             </div>
           )}
@@ -11389,7 +11386,7 @@ export default function Admin() {
               {outageStatus && outageStatus !== 'operational' && (
                 <button
                   onClick={() => setActiveSection('system')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${outageStatus === 'outage' ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-amber-50 border-amber-300 hover:bg-amber-100'}`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${outageStatus === 'outage' ? 'bg-red-50 border-red-300 hover:bg-red-100 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-amber-50 border-amber-300 hover:bg-amber-100 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                 >
                   <div className={`w-3 h-3 rounded-full flex-shrink-0 animate-pulse ${outageStatus === 'outage' ? 'bg-red-500' : 'bg-amber-400'}`} />
                   <div className="flex-1 min-w-0">
@@ -11424,9 +11421,9 @@ export default function Admin() {
               {/* Events Table */}
               <div className="card shadow-lg">
                 <div className="p-5 border-b border-neutral-200 flex items-center justify-between gap-4 flex-wrap">
-                  <h2 className="text-base font-bold text-neutral-900">All Events <span className="text-sm font-normal text-neutral-400">(click to manage)</span></h2>
+                  <h2 className="text-base font-bold text-neutral-900">All Events <span className="text-sm font-normal text-neutral-500">(click to manage)</span></h2>
                   <div className="flex items-center gap-2">
-                    <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="input py-1.5 text-sm">
+                    <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="input py-1.5 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                       {['all', 'active', 'completed', 'cancelled', 'draft'].map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
                     </select>
                     <button onClick={loadDashboard} className="btn btn-ghost p-2"><RefreshCw className="w-4 h-4" /></button>
@@ -11437,18 +11434,18 @@ export default function Admin() {
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                       <tr>{['Event', 'Organizer', 'Date', 'Participants', 'Mode', 'Status', ''].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-neutral-200">
                       {events.length === 0 ? (
-                        <tr><td colSpan={7} className="px-5 py-16 text-center"><Activity className="w-10 h-10 mx-auto text-neutral-300 mb-3" /><p className="text-sm text-neutral-400">No events found</p></td></tr>
+                        <tr><td colSpan={7} className="px-5 py-16 text-center"><Activity className="w-10 h-10 mx-auto text-neutral-600 mb-3" /><p className="text-sm text-neutral-500">No events found</p></td></tr>
                       ) : events.map(ev => (
                         <tr key={ev._id} className="hover:bg-neutral-50 cursor-pointer transition-colors" onClick={() => setSelectedEvent(ev)}>
-                          <td className="px-5 py-3"><p className="text-sm font-semibold text-neutral-900">{ev.title}</p><p className="text-xs text-neutral-400 font-mono">/{ev.subdomain}</p></td>
-                          <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
+                          <td className="px-5 py-3"><p className="text-sm font-semibold text-neutral-900">{ev.title}</p><p className="text-xs text-neutral-500 font-mono">/{ev.subdomain}</p></td>
+                          <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-500">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
-                          <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-400" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
-                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
+                          <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-500" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-500">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
-                          <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
+                          <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-500 ml-auto" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -11481,7 +11478,7 @@ export default function Admin() {
                 <div className="p-5 border-b border-neutral-200 flex items-center justify-between gap-4 flex-wrap">
                   <h2 className="text-base font-bold">All Events</h2>
                   <div className="flex items-center gap-2">
-                    <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="input py-1.5 text-sm">
+                    <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="input py-1.5 text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg">
                       {['all', 'active', 'completed', 'cancelled', 'draft'].map(s => <option key={s} value={s}>{s === 'all' ? 'All Statuses' : s}</option>)}
                     </select>
                     <button onClick={loadDashboard} className="btn btn-ghost p-2"><RefreshCw className="w-4 h-4" /></button>
@@ -11492,16 +11489,16 @@ export default function Admin() {
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                       <tr>{['Event', 'Organizer', 'Date', 'Participants', 'Mode', 'Status', ''].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>)}</tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-neutral-200">
                       {events.map(ev => (
                         <tr key={ev._id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => setSelectedEvent(ev)}>
-                          <td className="px-5 py-3"><p className="text-sm font-semibold">{ev.title}</p><p className="text-xs text-neutral-400 font-mono">/{ev.subdomain}</p></td>
-                          <td className="px-5 py-3"><p className="text-sm">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
+                          <td className="px-5 py-3"><p className="text-sm font-semibold">{ev.title}</p><p className="text-xs text-neutral-500 font-mono">/{ev.subdomain}</p></td>
+                          <td className="px-5 py-3"><p className="text-sm">{ev.organizerName}</p><p className="text-xs text-neutral-500">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
                           <td className="px-5 py-3 text-sm">{ev.participants?.length || 0}</td>
-                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-semibold">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-semibold">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Enterprise</span> : <span className="text-xs text-neutral-500">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
-                          <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
+                          <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-500 ml-auto" /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -11545,7 +11542,7 @@ export default function Admin() {
 
       {/* Search Results Modal */}
       {searchResults && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 pt-16 px-4" onClick={() => setSearchResults(null)}>
+        <div className="fixed inset-0 bg-ink/60 flex items-start justify-center z-50 pt-16 px-4" onClick={() => setSearchResults(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
               <div>
@@ -11554,7 +11551,7 @@ export default function Admin() {
                   {(searchResults.events?.length || 0)} events · {(searchResults.participants?.length || 0)} users · {(searchResults.messages?.length || 0)} messages · {(searchResults.polls?.length || 0)} polls
                 </p>
               </div>
-              <button onClick={() => setSearchResults(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+              <button onClick={() => setSearchResults(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-500" /></button>
             </div>
             <div className="overflow-y-auto p-5 space-y-5">
               {/* Events */}
@@ -11563,14 +11560,14 @@ export default function Admin() {
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Events ({searchResults.events.length})</p>
                   <div className="space-y-1.5">
                     {searchResults.events.map(ev => (
-                      <button key={ev._id} onClick={() => { setSearchResults(null); setSelectedEvent(ev); setActiveSection('events'); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 border border-neutral-100 text-left transition-colors">
+                      <button key={ev._id} onClick={() => { setSearchResults(null); setSelectedEvent(ev); setActiveSection('events'); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 border-2 border-ink text-left transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{ev.title?.charAt(0)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-neutral-900 truncate">{ev.title}</p>
-                          <p className="text-xs text-neutral-400 font-mono">/{ev.subdomain} · {ev.organizerName}</p>
+                          <p className="text-xs text-neutral-500 font-mono">/{ev.subdomain} · {ev.organizerName}</p>
                         </div>
                         <StatusBadge status={ev.status} />
-                        <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-neutral-600 flex-shrink-0" />
                       </button>
                     ))}
                   </div>
@@ -11582,11 +11579,11 @@ export default function Admin() {
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Users ({searchResults.participants.length})</p>
                   <div className="space-y-1.5">
                     {searchResults.participants.map(p => (
-                      <div key={p._id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                      <div key={p._id} className="flex items-center gap-3 p-3 rounded-xl border-2 border-ink bg-neutral-50 shadow">
                         <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{p.username?.charAt(0)?.toUpperCase()}</div>
                         <div>
                           <p className="text-sm font-semibold text-neutral-900">{p.username}</p>
-                          <p className="text-xs text-neutral-400">Joined {rel(p.joinedAt)}{p.role ? ` · ${p.role}` : ''}</p>
+                          <p className="text-xs text-neutral-500">Joined {rel(p.joinedAt)}{p.role ? ` · ${p.role}` : ''}</p>
                         </div>
                       </div>
                     ))}
@@ -11599,7 +11596,7 @@ export default function Admin() {
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Messages ({searchResults.messages.length})</p>
                   <div className="space-y-1.5">
                     {searchResults.messages.map(m => (
-                      <div key={m._id} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                      <div key={m._id} className="p-3 rounded-xl border-2 border-ink bg-neutral-50 shadow">
                         <p className="text-xs font-semibold text-neutral-500 mb-0.5">{m.username} · {rel(m.createdAt)}</p>
                         <p className="text-sm text-neutral-800 line-clamp-2">{m.content}</p>
                       </div>
@@ -11613,9 +11610,9 @@ export default function Admin() {
                   <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Polls ({searchResults.polls.length})</p>
                   <div className="space-y-1.5">
                     {searchResults.polls.map(p => (
-                      <div key={p._id} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                      <div key={p._id} className="p-3 rounded-xl border-2 border-ink bg-neutral-50 shadow">
                         <p className="text-sm font-medium text-neutral-800">{p.question}</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">{p.options?.length || 0} options · {rel(p.createdAt)}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{p.options?.length || 0} options · {rel(p.createdAt)}</p>
                       </div>
                     ))}
                   </div>
@@ -11624,8 +11621,8 @@ export default function Admin() {
               {/* No results */}
               {!searchResults.events?.length && !searchResults.participants?.length && !searchResults.messages?.length && !searchResults.polls?.length && (
                 <div className="text-center py-12">
-                  <Search className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-sm text-neutral-400">No results found for "{searchResults.query}"</p>
+                  <Search className="w-10 h-10 text-neutral-600 mx-auto mb-3" />
+                  <p className="text-sm text-neutral-500">No results found for "{searchResults.query}"</p>
                 </div>
               )}
             </div>
@@ -11635,17 +11632,17 @@ export default function Admin() {
 
       {/* Cleanup Modal */}
       {showCleanup && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-ink/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Trash className="w-5 h-5 text-white" /></div>
-              <div><h2 className="font-bold text-white">Manual Cleanup</h2><p className="text-xs text-red-200">Delete events older than 7 days</p></div>
-              <button onClick={() => setShowCleanup(false)} className="ml-auto text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="px-6 py-5 flex items-center gap-3 bg-lav text-ink">
+              <div className="w-10 h-10 rounded-xl bg-lav flex items-center justify-center"><Trash className="w-5 h-5 text-ink" /></div>
+              <div><h2 className="font-bold text-ink">Manual Cleanup</h2><p className="text-xs text-red-200">Delete events older than 7 days</p></div>
+              <button onClick={() => setShowCleanup(false)} className="ml-auto text-ink hover:text-ink"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6">
               {!cleanupResult ? (
                 <>
-                  <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-5">
+                  <div className="flex items-start gap-3 p-4 bg-amber-50 border-2 border-amber-600 rounded-xl mb-5">
                     <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-amber-800">
                       <p>This will permanently delete all events (including cancelled) whose date was <strong>7+ days ago</strong> along with all their data.</p>
@@ -11655,14 +11652,14 @@ export default function Admin() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => setShowCleanup(false)} className="flex-1 btn btn-secondary">Cancel</button>
-                    <button onClick={runCleanup} disabled={cleanupRunning} className="flex-1 btn bg-red-600 hover:bg-red-700 text-white gap-2 disabled:opacity-60">
-                      {cleanupRunning ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Running...</> : <><Trash className="w-4 h-4" /> Run Cleanup</>}
+                    <button onClick={runCleanup} disabled={cleanupRunning} className="flex-1 btn !bg-red-600 hover:!bg-red-700 !text-white gap-2 disabled:opacity-60">
+                      {cleanupRunning ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" /> Running...</> : <><Trash className="w-4 h-4" /> Run Cleanup</>}
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className={`p-4 rounded-xl mb-4 ${cleanupResult.success ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div className={`p-4 rounded-xl mb-4 ${cleanupResult.success ? 'bg-emerald-50 border-2 border-emerald-600' : 'bg-red-50 border-2 border-red-600'}`}>
                     {cleanupResult.success ? <CheckCircle className="w-5 h-5 text-emerald-600 mb-2" /> : <AlertTriangle className="w-5 h-5 text-red-600 mb-2" />}
                     <p className={`text-sm font-semibold ${cleanupResult.success ? 'text-emerald-800' : 'text-red-800'}`}>{cleanupResult.success ? 'Cleanup complete' : 'Cleanup failed'}</p>
                     {cleanupResult.results && (
@@ -11673,7 +11670,7 @@ export default function Admin() {
                     )}
                   </div>
                   {cleanupResult.cloudinary && !cleanupResult.cloudinary.skipped && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
+                    <div className="p-4 bg-blue-50 border-2 border-blue-600 rounded-xl mb-4">
                       <p className="text-sm font-semibold text-blue-800 mb-1">Cloudinary Orphan Sweep</p>
                       <p className="text-sm text-blue-700">Scanned: <strong>{cleanupResult.cloudinary.scanned}</strong> assets</p>
                       <p className="text-sm text-blue-700">Orphans deleted: <strong>{cleanupResult.cloudinary.deleted}</strong></p>
@@ -11683,7 +11680,7 @@ export default function Admin() {
                     </div>
                   )}
                   {cleanupResult.cloudinary?.skipped && (
-                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl mb-4">
+                    <div className="p-3 bg-neutral-50 border-2 border-ink rounded-xl mb-4 shadow">
                       <p className="text-xs text-neutral-500">Cloudinary sweep skipped — not configured</p>
                     </div>
                   )}
@@ -11696,7 +11693,7 @@ export default function Admin() {
       )}
     
       {/* ── Mobile bottom nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-neutral-950 border-t border-white/10 flex items-center justify-around px-1 safe-area-pb" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-white/10 flex items-center justify-around px-1 safe-area-pb" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {[
           { id: 'dashboard',  icon: Monitor,   label: 'Home'      },
           { id: 'events',     icon: Calendar,  label: 'Events'    },
@@ -11708,7 +11705,7 @@ export default function Admin() {
           <button key={id}
             onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
             className={`flex flex-col items-center gap-0.5 py-2 px-2 min-w-0 flex-1 transition-colors ${
-              activeSection === id ? 'text-white' : 'text-neutral-500'
+              activeSection === id ? 'text-ink' : 'text-neutral-500'
             }`}
           >
             <Icon className="w-5 h-5 flex-shrink-0" />

@@ -47,7 +47,7 @@ const STEPS = [
 export default function EnterpriseTour({ onClose }) {
   return (
     <div className="fixed inset-0 z-[290] bg-neutral-50 overflow-y-auto">
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-10">
+      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-10">
         <div className="max-w-screen-lg mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <div data-tour="hdr-title" className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1">
             <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center flex-shrink-0">
@@ -55,7 +55,7 @@ export default function EnterpriseTour({ onClose }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-neutral-900 truncate leading-tight">Annual Sales Kickoff</p>
-              <p className="text-[11px] text-neutral-400 truncate">planit.app/e/sales-kickoff</p>
+              <p className="text-[11px] text-neutral-500 truncate">planit.app/e/sales-kickoff</p>
             </div>
           </div>
 
@@ -74,10 +74,10 @@ export default function EnterpriseTour({ onClose }) {
       </header>
 
       <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col gap-3">
-        <div data-tour="banner" className="p-4 rounded-2xl flex items-center justify-between gap-4 text-white cursor-pointer"
-          style={{ background: 'linear-gradient(135deg,#1e3a5f,#1a1a2e)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div data-tour="banner" className="p-4 rounded-2xl flex items-center justify-between gap-4 text-ink cursor-pointer"
+          style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-lav flex items-center justify-center flex-shrink-0">
               <UserCheck className="w-4 h-4" />
             </div>
             <div>
@@ -90,12 +90,12 @@ export default function EnterpriseTour({ onClose }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
           <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide" style={{ background: '#fafafa' }}>
             {TABS.map(({ id, label, icon: Icon, count }) => (
               <div key={id} data-tour={`tab-${id}`}
                 className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 flex-shrink-0 cursor-pointer ${
-                  id === 'people' ? 'text-neutral-900 border-neutral-900 bg-white' : 'text-neutral-500 border-transparent hover:text-neutral-800'
+                  id === 'people' ? 'text-neutral-900 border-ink bg-white' : 'text-neutral-500 border-transparent hover:text-neutral-800'
                 }`}>
                 <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>{label}</span>
@@ -114,7 +114,7 @@ export default function EnterpriseTour({ onClose }) {
               { name: 'David Okafor', status: 'Invited',     color: 'neutral' },
               { name: 'Mei Chen',     status: 'Checked in',  color: 'emerald' },
             ].map((g, idx) => (
-              <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100">
+              <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-neutral-50 border-2 border-ink shadow">
                 <span className="text-sm font-semibold text-neutral-800">{g.name}</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${g.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-200 text-neutral-500'}`}>
                   {g.status}

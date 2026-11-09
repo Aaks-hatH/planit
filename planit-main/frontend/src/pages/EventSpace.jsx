@@ -44,22 +44,22 @@ function QRModal({ eventId, onClose }) {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl border border-neutral-100 animate-fade-in" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl border-2 border-ink animate-fade-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-neutral-900">Event QR Code</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-neutral-100 flex items-center justify-center transition-colors">
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
-        <div className="flex justify-center mb-3 bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+        <div className="flex justify-center mb-3 bg-neutral-50 rounded-xl p-4 border-2 border-ink shadow">
           {imgError ? (
-            <div className="w-52 h-52 flex flex-col items-center justify-center gap-2 text-neutral-400">
+            <div className="w-52 h-52 flex flex-col items-center justify-center gap-2 text-neutral-500">
               <QrCode className="w-8 h-8 opacity-30" />
               <p className="text-xs text-center">QR unavailable — try refreshing</p>
               <button
                 onClick={() => setImgError(false)}
-                className="text-xs text-blue-500 hover:underline"
+                className="text-xs text-blue-700 hover:underline"
               >Retry</button>
             </div>
           ) : (
@@ -71,7 +71,7 @@ function QRModal({ eventId, onClose }) {
             />
           )}
         </div>
-        <p className="text-xs text-neutral-400 text-center mb-3">Scan to join · branded for sharing</p>
+        <p className="text-xs text-neutral-500 text-center mb-3">Scan to join · branded for sharing</p>
         <button onClick={handleDownload} className="btn btn-secondary w-full text-xs gap-1.5 rounded-xl">
           <Download className="w-3.5 h-3.5" /> Download SVG
         </button>
@@ -324,13 +324,13 @@ export function JoinGate({ eventId, onJoined }) {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#06060c' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#ffffff' }}>
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <Calendar className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+          style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
+          <Calendar className="w-5 h-5" style={{ color: '#5a5d70' }} />
         </div>
-        <span className="spinner w-4 h-4 border-2 border-white/10 border-t-white/30" />
+        <span className="spinner w-4 h-4 border-2 border-ink border-t-white/30" />
       </div>
     </div>
   );
@@ -368,7 +368,7 @@ export function JoinGate({ eventId, onJoined }) {
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} className={`rounded-full transition-all duration-300 ${
               i < currentStepNum
-                ? 'w-6 h-1.5 bg-neutral-900'
+                ? 'w-6 h-1.5 bg-white'
                 : 'w-1.5 h-1.5 bg-neutral-300'
             }`} />
           ))}
@@ -383,7 +383,7 @@ export function JoinGate({ eventId, onJoined }) {
               Your Name
             </label>
             <input
-              type="text" required className="input rounded-xl"
+              type="text" required className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white"
               placeholder="Enter your name"
               value={username}
               onChange={handleUsernameChange}
@@ -392,8 +392,8 @@ export function JoinGate({ eventId, onJoined }) {
               autoComplete="off" autoFocus
             />
             {showDropdown && filteredParticipants.length > 0 && (
-              <div className="absolute z-20 w-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3 pt-2.5 pb-1">Previously joined</p>
+              <div className="absolute z-20 w-full mt-1.5 bg-white border-2 border-ink rounded-xl shadow-2xl overflow-hidden">
+                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-3 pt-2.5 pb-1">Previously joined</p>
                 {filteredParticipants.slice(0, 6).map(p => (
                   <button key={p.username} type="button"
                     className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 text-left transition-colors"
@@ -405,8 +405,8 @@ export function JoinGate({ eventId, onJoined }) {
                       <span className="text-sm font-medium text-neutral-900">{p.username}</span>
                     </div>
                     {p.hasPassword
-                      ? <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Lock className="w-2.5 h-2.5" />protected</span>
-                      : <span className="text-[10px] text-neutral-300">returning</span>}
+                      ? <span className="flex items-center gap-1 text-[10px] text-neutral-500"><Lock className="w-2.5 h-2.5" />protected</span>
+                      : <span className="text-[10px] text-neutral-600">returning</span>}
                   </button>
                 ))}
               </div>
@@ -420,7 +420,7 @@ export function JoinGate({ eventId, onJoined }) {
                 Account Password <span className="normal-case font-normal text-neutral-400">(optional)</span>
               </label>
               <input
-                type="password" className="input rounded-xl"
+                type="password" className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white"
                 placeholder="Protect your username (min 4 chars)"
                 value={accountPassword}
                 onChange={e => setAccountPassword(e.target.value)}
@@ -434,25 +434,25 @@ export function JoinGate({ eventId, onJoined }) {
           )}
 
           {isFullBlocked && (
-            <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-              <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 bg-amber-50 border-2 border-amber-600 rounded-xl">
+              <XCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-amber-700">This event is full. Only participants who have already joined can sign in.</p>
             </div>
           )}
 
           {error && step === 'name' && (
-            <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-600 rounded-xl">
+              <XCircle className="w-4 h-4 text-red-700 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
           <button type="submit"
             disabled={joining || !username.trim() || !!isFullBlocked}
-            className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+            className="w-full h-12 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ background: '#ffffff' }}>
             {joining
-              ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Checking…</>
+              ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" />Checking…</>
               : <><UserPlus className="w-4 h-4" />Continue<ChevronRight className="w-4 h-4 ml-auto" /></>}
           </button>
         </form>
@@ -461,7 +461,7 @@ export function JoinGate({ eventId, onJoined }) {
       {/* ── STEP: account password ── */}
       {step === 'account-password' && (
         <form onSubmit={handleAccountPasswordContinue} className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-neutral-50 border-2 border-ink rounded-xl shadow">
             <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
               {username.charAt(0).toUpperCase()}
             </div>
@@ -470,7 +470,7 @@ export function JoinGate({ eventId, onJoined }) {
               <p className="text-[11px] text-neutral-500">Protected account</p>
             </div>
             <button type="button" onClick={() => { setStep('name'); setAccountPassword(''); setError(''); }}
-              className="ml-auto text-xs text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+              className="ml-auto text-xs text-neutral-500 hover:text-neutral-700 transition-colors flex-shrink-0">
               Change
             </button>
           </div>
@@ -481,7 +481,7 @@ export function JoinGate({ eventId, onJoined }) {
             </label>
             <input
               ref={accountPwdRef}
-              type="password" required className="input rounded-xl"
+              type="password" required className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white"
               placeholder="Enter your account password"
               value={accountPassword}
               onChange={e => { setAccountPassword(e.target.value); setError(''); }}
@@ -496,17 +496,17 @@ export function JoinGate({ eventId, onJoined }) {
           </div>
 
           {error && step === 'account-password' && (
-            <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-600 rounded-xl">
+              <XCircle className="w-4 h-4 text-red-700 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
           <button type="submit" disabled={joining || !accountPassword}
-            className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+            className="w-full h-12 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ background: '#ffffff' }}>
             {joining
-              ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Verifying…</>
+              ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" />Verifying…</>
               : <><LogIn className="w-4 h-4" />{publicInfo.isPasswordProtected ? 'Continue' : 'Join Event'}<ChevronRight className="w-4 h-4 ml-auto" /></>}
           </button>
         </form>
@@ -515,7 +515,7 @@ export function JoinGate({ eventId, onJoined }) {
       {/* ── STEP: event password ── */}
       {step === 'event-password' && (
         <form onSubmit={handleEventPasswordContinue} className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-neutral-50 border-2 border-ink rounded-xl shadow">
             <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
               {username.charAt(0).toUpperCase()}
             </div>
@@ -523,7 +523,7 @@ export function JoinGate({ eventId, onJoined }) {
               <p className="text-sm font-bold text-neutral-900 truncate">{username}</p>
             </div>
             <button type="button" onClick={() => { setStep('name'); setPassword(''); setAccountPassword(''); setError(''); }}
-              className="ml-auto text-xs text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+              className="ml-auto text-xs text-neutral-500 hover:text-neutral-700 transition-colors flex-shrink-0">
               Change
             </button>
           </div>
@@ -532,7 +532,7 @@ export function JoinGate({ eventId, onJoined }) {
             <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
               Event Password
             </label>
-            <input type="password" required className="input rounded-xl" autoFocus
+            <input type="password" required className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" autoFocus
               placeholder="Enter the event password"
               value={password}
               onChange={e => { setPassword(e.target.value); setError(''); }}
@@ -541,17 +541,17 @@ export function JoinGate({ eventId, onJoined }) {
           </div>
 
           {error && step === 'event-password' && (
-            <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 bg-red-50 border-2 border-red-600 rounded-xl">
+              <XCircle className="w-4 h-4 text-red-700 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
           <button type="submit" disabled={joining || !password}
-            className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+            className="w-full h-12 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ background: '#ffffff' }}>
             {joining
-              ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Joining…</>
+              ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" />Joining…</>
               : <><LogIn className="w-4 h-4" />Join Event<ChevronRight className="w-4 h-4 ml-auto" /></>}
           </button>
         </form>
@@ -574,7 +574,7 @@ export function JoinGate({ eventId, onJoined }) {
               This page will automatically unlock once the organizer approves.
             </p>
           </div>
-          <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border-2 border-amber-600 rounded-xl">
             <span className="flex gap-0.5">
               <span className="w-1 h-3 bg-amber-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]" style={{animationDelay:'0ms'}}/>
               <span className="w-1 h-3 bg-amber-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]" style={{animationDelay:'150ms'}}/>
@@ -597,13 +597,13 @@ export function JoinGate({ eventId, onJoined }) {
 
   return (
     <>
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(150deg,#06060c 0%,#0d0d1a 45%,#060610 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#ffffff' }}>
       {/* Ambient background glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute top-[-15%] left-[8%] w-[700px] h-[700px] rounded-full"
-          style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.07) 0%,transparent 70%)' }} />
+          style={{ background: '#eceeff' }} />
         <div className="absolute bottom-[-10%] right-[3%] w-[500px] h-[500px] rounded-full"
-          style={{ background: 'radial-gradient(circle,rgba(139,92,246,0.05) 0%,transparent 70%)' }} />
+          style={{ background: '#eceeff' }} />
       </div>
 
       {/* Top bar */}
@@ -616,10 +616,10 @@ export function JoinGate({ eventId, onJoined }) {
             : (
               <>
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <Calendar className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                  style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
+                  <Calendar className="w-3.5 h-3.5" style={{ color: '#5a5d70' }} />
                 </div>
-                <span className="text-sm font-bold tracking-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <span className="text-sm font-bold tracking-tight" style={{ color: '#0d0e1c' }}>
                   {isWL ? (wl?.branding?.companyName || wl?.clientName || '') : 'PlanIt'}
                 </span>
               </>
@@ -627,7 +627,7 @@ export function JoinGate({ eventId, onJoined }) {
           }
         </div>
         <button onClick={() => navigate('/')} className="text-xs transition-colors"
-          style={{ color: 'rgba(255,255,255,0.35)' }}
+          style={{ color: '#5a5d70' }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}>
           ← Home
@@ -640,78 +640,78 @@ export function JoinGate({ eventId, onJoined }) {
 
           {/* Event hero */}
           <div className="rounded-2xl overflow-hidden mb-3"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(24px)' }}>
+            style={{ background: '#ffffff', border: '2px solid #0d0e1c',  }}>
             <div className="p-6">
               {/* Status chips */}
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 {isFull && (
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                    style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.18)' }}>
+                    style={{ color: '#6e5400', background: '#fff6c2', border: '2px solid #6e5400' }}>
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse-dot" />Event Full
                   </span>
                 )}
                 {publicInfo.isPasswordProtected && (
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                    style={{ color: '#a78bfa', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.18)' }}>
+                    style={{ color: '#2236ff', background: '#eceeff', border: '2px solid #2236ff' }}>
                     <Lock className="w-2.5 h-2.5" />Password Protected
                   </span>
                 )}
                 {publicInfo.status === 'cancelled' && (
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                    style={{ color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.18)' }}>
+                    style={{ color: '#a82020', background: '#ffe1de', border: '2px solid #a82020' }}>
                     Cancelled
                   </span>
                 )}
               </div>
 
-              <h1 className="text-[22px] font-bold leading-tight tracking-tight mb-4" style={{ color: 'rgba(255,255,255,0.95)' }}>
+              <h1 className="text-[22px] font-bold leading-tight tracking-tight mb-4" style={{ color: '#0d0e1c' }}>
                 {publicInfo.title}
               </h1>
 
               <div className="space-y-2">
                 {publicInfo.date && (
-                  <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                  <div className="flex items-center gap-2.5 text-sm" style={{ color: '#5a5d70' }}>
+                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#5a5d70' }} />
                     {formatDate(publicInfo.date)}
                   </div>
                 )}
                 {publicInfo.location && (
-                  <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                  <div className="flex items-center gap-2.5 text-sm" style={{ color: '#5a5d70' }}>
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#5a5d70' }} />
                     {publicInfo.location}
                   </div>
                 )}
-                <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                  <Users className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
-                  Hosted by <strong className="font-semibold ml-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{publicInfo.organizerName}</strong>
+                <div className="flex items-center gap-2.5 text-sm" style={{ color: '#5a5d70' }}>
+                  <Users className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#5a5d70' }} />
+                  Hosted by <strong className="font-semibold ml-0.5" style={{ color: '#0d0e1c' }}>{publicInfo.organizerName}</strong>
                 </div>
               </div>
 
               {/* Capacity bar */}
-              <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="mt-5 pt-4" style={{ borderTop: '1px solid #d9dbe8' }}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>Capacity</span>
-                  <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  <span className="text-[11px] font-medium" style={{ color: '#5a5d70' }}>Capacity</span>
+                  <span className="text-xs font-semibold" style={{ color: '#5a5d70' }}>
                     {publicInfo.participantCount} / {publicInfo.maxParticipants}
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#ffffff' }}>
                   <div className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${fillPct}%`,
                       background: isFull
-                        ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
-                        : 'linear-gradient(90deg,#6366f1,#8b5cf6)'
+                        ? '#ffe14d'
+                        : '#2236ff'
                     }} />
                 </div>
                 {(yes + maybe + noCount) > 0 && (
                   <div className="flex items-center gap-3 mt-3">
-                    <span className="text-xs font-semibold" style={{ color: '#34d399' }}>{yes} going</span>
-                    <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                    <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>{maybe} maybe</span>
+                    <span className="text-xs font-semibold" style={{ color: '#0a7149' }}>{yes} going</span>
+                    <span className="text-[10px]" style={{ color: '#5a5d70' }}>·</span>
+                    <span className="text-xs font-semibold" style={{ color: '#6e5400' }}>{maybe} maybe</span>
                     {noCount > 0 && <>
-                      <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                      <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{noCount} can't go</span>
+                      <span className="text-[10px]" style={{ color: '#5a5d70' }}>·</span>
+                      <span className="text-xs" style={{ color: '#5a5d70' }}>{noCount} can't go</span>
                     </>}
                   </div>
                 )}
@@ -721,13 +721,13 @@ export function JoinGate({ eventId, onJoined }) {
 
           {/* Action card */}
           <div className="rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 28px 72px rgba(0,0,0,0.55)' }}>
+            style={{ background: '#ffffff', border: '2px solid #0d0e1c', boxShadow: '4px 4px 0 #0d0e1c' }}>
 
             {isFull ? (
               waitlistDone ? (
                 /* ── Waitlist success ── */
                 <div className="p-8 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 border-2 border-emerald-600 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle2 className="w-7 h-7 text-emerald-600" />
                   </div>
                   <h2 className="text-lg font-bold text-neutral-900 mb-1.5">You're on the waitlist!</h2>
@@ -745,13 +745,13 @@ export function JoinGate({ eventId, onJoined }) {
                   <div className="flex rounded-xl p-1 mb-5" style={{ background: '#f2f2f5' }}>
                     <button onClick={() => { setFullMode('waitlist'); setStep('name'); setError(''); }}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
-                        fullMode === 'waitlist' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                        fullMode === 'waitlist' ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500 hover:text-neutral-700'
                       }`}>
                       <ClipboardList className="w-3.5 h-3.5" />Waitlist
                     </button>
                     <button onClick={() => { setFullMode('signin'); setStep('name'); setError(''); }}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
-                        fullMode === 'signin' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                        fullMode === 'signin' ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500 hover:text-neutral-700'
                       }`}>
                       <LogIn className="w-3.5 h-3.5" />Already Joined
                     </button>
@@ -760,7 +760,7 @@ export function JoinGate({ eventId, onJoined }) {
                   {fullMode === 'waitlist' ? (
                     <div>
                       <div className="flex items-start gap-3 p-3.5 rounded-xl mb-4"
-                        style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                        style={{ background: '#fff6c2', border: '2px solid #6e5400' }}>
                         <Users className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="text-sm font-bold text-amber-800">This event is full</p>
@@ -772,21 +772,21 @@ export function JoinGate({ eventId, onJoined }) {
                       <div className="space-y-3">
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Your Name</label>
-                          <input type="text" className="input rounded-xl" placeholder="Enter your name"
+                          <input type="text" className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="Enter your name"
                             value={waitlistName} onChange={e => setWaitlistName(e.target.value)} autoFocus />
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-                            Email <span className="normal-case font-normal text-neutral-400">(optional)</span>
+                            Email <span className="normal-case font-normal text-neutral-500">(optional)</span>
                           </label>
-                          <input type="email" className="input rounded-xl" placeholder="your@email.com"
+                          <input type="email" className="input rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="your@email.com"
                             value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)} />
                         </div>
                         <button onClick={handleWaitlistJoin} disabled={waitlistJoining || !waitlistName.trim()}
-                          className="w-full h-11 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-                          style={{ background: 'linear-gradient(135deg,#d97706,#b45309)' }}>
+                          className="w-full h-11 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                          style={{ background: '#ffe14d' }}>
                           {waitlistJoining
-                            ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Joining…</>
+                            ? <><span className="spinner w-4 h-4 border-2 border-ink border-t-white" />Joining…</>
                             : <><ClipboardList className="w-4 h-4" />Join Waitlist</>
                           }
                         </button>
@@ -812,7 +812,7 @@ export function JoinGate({ eventId, onJoined }) {
                      step === 'pending-approval' ? 'Request sent' :
                      'Join this event'}
                   </h2>
-                  <p className="text-sm text-neutral-400 mt-0.5">
+                  <p className="text-sm text-neutral-500 mt-0.5">
                     {step === 'account-password' ? 'Your username is protected with a password' :
                      step === 'event-password'   ? 'This event requires a password to join' :
                      'Enter your name to get access'}
@@ -823,9 +823,9 @@ export function JoinGate({ eventId, onJoined }) {
             )}
 
             {/* Organizer footer */}
-            <div className="px-5 py-3.5 border-t border-neutral-100" style={{ background: 'rgba(249,249,252,0.8)' }}>
+            <div className="px-5 py-3.5 border-t border-neutral-100" style={{ background: '#eceeff' }}>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-neutral-400">Are you the organizer?</p>
+                <p className="text-xs text-neutral-500">Are you the organizer?</p>
                 <button onClick={() => navigate(`/event/${eventId}/login`)}
                   className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 hover:text-neutral-900 transition-colors">
                   <Lock className="w-3 h-3" />Organizer login <ChevronRight className="w-3 h-3" />
@@ -890,19 +890,19 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
       {grouped.map(({ emoji, count, mine }) => (
         <button key={emoji} onClick={() => toggle(emoji)}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border transition-all ${
-            mine ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-400'
+          className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
+            mine ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-400 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
           }`}>
           <span>{emoji}</span><span>{count}</span>
         </button>
       ))}
       <div className="relative">
         <button onClick={() => setOpen(o => !o)}
-          className="flex items-center px-1.5 py-0.5 rounded-full text-xs border border-dashed border-neutral-300 bg-white text-neutral-400 hover:text-neutral-600 hover:border-neutral-400 transition-colors">
+          className="flex items-center px-1.5 py-0.5 rounded-lg text-xs border-2 border-dashed border-ink bg-white text-neutral-500 hover:text-neutral-600 hover:border-neutral-400 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <Smile className="w-3 h-3" />
         </button>
         {open && (
-          <div className="absolute bottom-7 left-0 flex gap-1.5 bg-white border border-neutral-200 rounded-2xl p-2.5 shadow-xl z-20">
+          <div className="absolute bottom-7 left-0 flex gap-1.5 bg-white border-2 border-ink rounded-2xl p-2.5 shadow-xl z-20">
             {REACTION_EMOJIS.map(e => (
               <button key={e} onClick={() => toggle(e)} className="text-lg hover:scale-125 transition-transform">
                 {e}
@@ -1550,8 +1550,8 @@ export default function EventSpace() {
 
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSeatingMap && isOrganizer && seatingLoading && !seatingData && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-950/90">
-          <div className="text-neutral-400 text-sm font-semibold animate-pulse">Loading seating map…</div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/60">
+          <div className="text-neutral-500 text-sm font-semibold animate-pulse">Loading seating map…</div>
         </div>
       )}
       {showSeatingMap && isOrganizer && seatingData && (
@@ -1581,12 +1581,12 @@ export default function EventSpace() {
       {event?.coverImage && (
         <div className="w-full h-40 md:h-52 overflow-hidden flex-shrink-0 relative">
           <img src={event.coverImage} alt="Event cover" className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom,transparent 50%,#f7f7f9 100%)' }} />
+          <div className="absolute inset-0" style={{ background: '#ffffff' }} />
         </div>
       )}
 
       {/* ── Header ── */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-50">
+      <header className="bg-white border-b border-neutral-200/60 sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <a href="/"
@@ -1600,7 +1600,7 @@ export default function EventSpace() {
                   {countdown.d > 0 && `${countdown.d}d `}{String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')} to go
                 </p>
               ) : (
-                <p className="text-[11px] text-neutral-400 truncate">{formatDate(event?.date)}</p>
+                <p className="text-[11px] text-neutral-500 truncate">{formatDate(event?.date)}</p>
               )}
             </div>
           </div>
@@ -1613,7 +1613,7 @@ export default function EventSpace() {
             </button>
             {onlineUsers.length > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-emerald-700"
-                style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                style={{ background: '#d6f7e8', border: '2px solid #0a7149' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
                 {onlineUsers.length} online
               </div>
@@ -1628,7 +1628,7 @@ export default function EventSpace() {
             </button>
             {isOrganizer && event?.isEnterpriseMode && (
               <button onClick={() => navigate(`/event/${eventId}/checkin`)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors">
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <UserCheck className="w-3.5 h-3.5" />Check-in
               </button>
             )}
@@ -1637,7 +1637,7 @@ export default function EventSpace() {
                 className="relative w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
                 <ClipboardList className="w-3.5 h-3.5 text-neutral-600" />
                 {waitlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-ink text-[9px] font-bold rounded-full flex items-center justify-center">
                     {waitlistCount > 9 ? '9+' : waitlistCount}
                   </span>
                 )}
@@ -1646,7 +1646,7 @@ export default function EventSpace() {
             <button title="Leave event"
               onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
-              <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-500 transition-colors" />
+              <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-700 transition-colors" />
             </button>
             <button onClick={() => setShowOnboarding(true)} title="Take the tour"
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
@@ -1663,7 +1663,7 @@ export default function EventSpace() {
       {/* Mobile sidebar overlay */}
       {showMobileSidebar && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileSidebar(false)} />
+          <div className="absolute inset-0 bg-ink/60" onClick={() => setShowMobileSidebar(false)} />
           <div className="absolute right-0 top-0 bottom-0 w-80 max-w-[90vw] bg-white overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
               <span className="text-sm font-bold text-neutral-900">Event Info</span>
@@ -1682,10 +1682,10 @@ export default function EventSpace() {
 
           {/* Enterprise banner */}
           {event?.isEnterpriseMode && isOrganizer && (
-            <div className="p-4 rounded-2xl flex items-center justify-between gap-4 text-white"
-              style={{ background: 'linear-gradient(135deg,#1e3a5f,#1a1a2e)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="p-4 rounded-2xl flex items-center justify-between gap-4 text-ink"
+              style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-lav flex items-center justify-center flex-shrink-0">
                   <UserCheck className="w-4.5 h-4.5" />
                 </div>
                 <div>
@@ -1694,7 +1694,7 @@ export default function EventSpace() {
                 </div>
               </div>
               <button onClick={() => navigate(`/event/${eventId}/checkin`)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-neutral-900 rounded-xl font-bold text-xs hover:bg-neutral-100 transition-colors flex-shrink-0">
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-neutral-900 rounded-xl font-bold text-xs hover:bg-neutral-100 transition-colors flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <UserCheck className="w-3.5 h-3.5" />Manage
               </button>
             </div>
@@ -1702,16 +1702,16 @@ export default function EventSpace() {
 
           {/* Claude AI banner — shown to organizers who haven't dismissed it */}
           {isOrganizer && !claudeBannerDismissed && (
-            <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="rounded-2xl border-2 border-ink bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-900 text-white flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-white text-ink flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h3 className="text-sm sm:text-base font-black text-neutral-950">Manage this event with Claude</h3>
-                      <span className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-neutral-700">Connector</span>
+                      <span className="inline-flex items-center rounded-full border-2 border-ink bg-neutral-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-neutral-700">Connector</span>
                     </div>
                     <p className="text-xs sm:text-sm text-neutral-600 leading-5 max-w-2xl">
                       Add PlanIt as a Claude connector, then ask Claude to add guests, check attendance, send announcements, and review RSVP or seating details for this event.
@@ -1723,25 +1723,25 @@ export default function EventSpace() {
                     href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-neutral-950 px-3.5 py-2 text-xs font-black text-white transition-colors hover:bg-neutral-800"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-ink transition-colors hover:bg-neutral-800 hover:text-white border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
                   >
                     <Bot className="w-3.5 h-3.5" /> Add to Claude
                   </a>
                   <a
                     href="/help#claude"
-                    className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-50"
+                    className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-ink bg-white px-3.5 py-2 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
                   >
                     Setup help
                   </a>
                   <a
                     href="/mcp-docs"
-                    className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-50"
+                    className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-ink bg-white px-3.5 py-2 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
                   >
                     Docs
                   </a>
                   <button
                     onClick={() => { try { localStorage.setItem('planit_claude_banner_dismissed', '1'); } catch {} setClaudeBannerDismissed(true); }}
-                    className="w-9 h-9 rounded-xl border border-neutral-200 bg-white flex items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+                    className="w-9 h-9 rounded-xl border-2 border-ink bg-white flex items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
                     title="Dismiss"
                     aria-label="Dismiss Claude connector banner"
                   >
@@ -1754,8 +1754,8 @@ export default function EventSpace() {
 
           {/* Status banners */}
           {event?.status === 'cancelled' && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200">
-              <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border-2 border-red-600">
+              <XCircle className="w-5 h-5 text-red-700 flex-shrink-0" />
               <div>
                 <p className="text-sm font-bold text-red-800">This event has been cancelled</p>
                 <p className="text-xs text-red-600 mt-0.5">New joins and RSVPs are disabled.</p>
@@ -1763,7 +1763,7 @@ export default function EventSpace() {
             </div>
           )}
           {event?.status === 'completed' && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-neutral-100 border border-neutral-200">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-neutral-100 border-2 border-ink shadow">
               <CheckCircle2 className="w-5 h-5 text-neutral-500 flex-shrink-0" />
               <div>
                 <p className="text-sm font-bold text-neutral-700">This event has ended</p>
@@ -1774,7 +1774,7 @@ export default function EventSpace() {
 
           {/* Main content card */}
           <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex flex-col min-h-0"
-            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: 'calc(100vh - 7rem)' }}>
+            style={{ boxShadow: '4px 4px 0 #0d0e1c', height: 'calc(100vh - 7rem)' }}>
 
             {/* ── Tabs ── */}
             <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide flex-shrink-0" style={{ background: '#fafafa' }}>
@@ -1782,8 +1782,8 @@ export default function EventSpace() {
                 <button key={id} onClick={() => setActiveTab(id)}
                   className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex-shrink-0 ${
                     activeTab === id
-                      ? 'text-neutral-900 border-neutral-900 bg-white'
-                      : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-white/60'
+                      ? 'text-neutral-900 border-ink bg-white border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                      : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-white'
                   }`}>
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="hidden xs:inline sm:inline">{label}</span>
@@ -1805,10 +1805,10 @@ export default function EventSpace() {
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-16">
                       <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
-                        <MessageSquare className="w-6 h-6 text-neutral-400" />
+                        <MessageSquare className="w-6 h-6 text-neutral-500" />
                       </div>
                       <p className="text-sm font-bold text-neutral-700">No messages yet</p>
-                      <p className="text-xs text-neutral-400 mt-1">Be the first to say hello 👋</p>
+                      <p className="text-xs text-neutral-500 mt-1">Be the first to say hello 👋</p>
                     </div>
                   ) : messages.map((msg) => {
                     const isMine = msg.username === currentUser;
@@ -1819,8 +1819,8 @@ export default function EventSpace() {
                         <div className={`max-w-[74%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
                           <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
                             <span className="text-xs font-bold text-neutral-700">{msg.username}</span>
-                            <span className="text-[10px] text-neutral-400">{formatRelativeTime(msg.createdAt)}</span>
-                            {msg.edited && <span className="text-[10px] text-neutral-300 italic">edited</span>}
+                            <span className="text-[10px] text-neutral-500">{formatRelativeTime(msg.createdAt)}</span>
+                            {msg.edited && <span className="text-[10px] text-neutral-600 italic">edited</span>}
                           </div>
                           <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                             isMine ? 'bg-neutral-900 text-white rounded-tr-sm' : 'bg-neutral-100 text-neutral-900 rounded-tl-sm'
@@ -1830,7 +1830,7 @@ export default function EventSpace() {
                           <ReactionBar messageId={msgId} reactions={msg.reactions || []} currentUser={currentUser} eventId={eventId} />
                           {(isOrganizer || isMine) && (
                             <button onClick={() => handleDeleteMessage(msgId)}
-                              className="text-[10px] text-neutral-400 hover:text-red-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              className="text-[10px] text-neutral-500 hover:text-red-700 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               Delete
                             </button>
                           )}
@@ -1839,7 +1839,7 @@ export default function EventSpace() {
                     );
                   })}
                   {typingUsers.length > 0 && (
-                    <p className="text-xs text-neutral-400 italic pl-9">
+                    <p className="text-xs text-neutral-500 italic pl-9">
                       {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
                     </p>
                   )}
@@ -1848,10 +1848,10 @@ export default function EventSpace() {
                 <div className="border-t border-neutral-100 p-3.5">
                   <form onSubmit={handleSendMessage} className="flex gap-2">
                     <input type="text" value={messageInput} onChange={handleMessageInputChange}
-                      placeholder="Send a message…" className="input flex-1 text-sm rounded-xl" maxLength={MAX_MESSAGE_LENGTH} />
+                      placeholder="Send a message…" className="input flex-1 text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" maxLength={MAX_MESSAGE_LENGTH} />
                     <button type="submit" disabled={!messageInput.trim() || sendingMessage}
-                      className="w-10 h-10 rounded-xl bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors">
-                      <Send className="w-4 h-4 text-white" />
+                      className="w-10 h-10 rounded-xl bg-white hover:bg-lav disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors">
+                      <Send className="w-4 h-4 text-ink" />
                     </button>
                   </form>
                 </div>
@@ -1867,17 +1867,17 @@ export default function EventSpace() {
                       <Plus className="w-4 h-4" />Create poll
                     </button>
                   ) : (
-                    <div className="bg-white border border-neutral-200 rounded-2xl p-5 mb-5">
+                    <div className="bg-white border-2 border-ink rounded-2xl p-5 mb-5 shadow-md">
                       <h3 className="text-sm font-bold text-neutral-900 mb-4">New poll</h3>
                       <form onSubmit={handleCreatePoll} className="space-y-3">
                         <input type="text" value={newPoll.question}
                           onChange={e => setNewPoll({ ...newPoll, question: e.target.value })}
-                          placeholder="What's your question?" className="input rounded-xl text-sm" required />
+                          placeholder="What's your question?" className="input rounded-xl text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" required />
                         {newPoll.options.map((opt, i) => (
                           <div key={i} className="flex gap-2">
                             <input type="text" value={opt}
                               onChange={e => { const o = [...newPoll.options]; o[i] = e.target.value; setNewPoll({ ...newPoll, options: o }); }}
-                              placeholder={`Option ${i + 1}`} className="input flex-1 text-sm rounded-xl" />
+                              placeholder={`Option ${i + 1}`} className="input flex-1 text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" />
                             {newPoll.options.length > 2 && (
                               <button type="button" className="btn btn-secondary px-2.5 rounded-xl"
                                 onClick={() => setNewPoll({ ...newPoll, options: newPoll.options.filter((_, idx) => idx !== i) })}>
@@ -1906,20 +1906,20 @@ export default function EventSpace() {
                 {polls.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
-                      <BarChart3 className="w-6 h-6 text-neutral-400" />
+                      <BarChart3 className="w-6 h-6 text-neutral-500" />
                     </div>
                     <p className="text-sm font-bold text-neutral-700">No polls yet</p>
-                    <p className="text-xs text-neutral-400 mt-1">Create one to get the group's opinion</p>
+                    <p className="text-xs text-neutral-500 mt-1">Create one to get the group's opinion</p>
                   </div>
                 ) : polls.map(poll => {
                   const totalVotes = poll.options?.reduce((sum, o) => sum + (o.votes?.length || 0), 0) || 0;
                   const pollId = poll._id || poll.id;
                   return (
-                    <div key={pollId} className="bg-white border border-neutral-200 rounded-2xl p-5 mb-4">
+                    <div key={pollId} className="bg-white border-2 border-ink rounded-2xl p-5 mb-4 shadow-md">
                       <div className="flex items-start justify-between mb-4">
                         <h3 className="text-sm font-bold text-neutral-900 pr-3 leading-snug">{poll.question}</h3>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide flex-shrink-0 ${
-                          poll.status === 'closed' ? 'bg-neutral-100 text-neutral-500' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          poll.status === 'closed' ? 'bg-neutral-100 text-neutral-500' : 'bg-emerald-50 text-emerald-700 border-2 border-emerald-600'
                         }`}>
                           {poll.status === 'closed' ? 'Closed' : '● Active'}
                         </span>
@@ -1932,21 +1932,21 @@ export default function EventSpace() {
                           return (
                             <button key={i} onClick={() => poll.status === 'active' && handleVote(pollId, i)}
                               disabled={poll.status === 'closed'}
-                              className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 relative overflow-hidden ${
-                                userVoted ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-900'
+                              className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 relative overflow-hidden border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${
+                                userVoted ? 'border-ink bg-hl text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-900 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                               } ${poll.status === 'closed' ? 'cursor-default' : 'cursor-pointer'}`}>
-                              <div className={`absolute inset-0 transition-all duration-700 ${userVoted ? 'bg-white/10' : 'bg-neutral-100'}`}
+                              <div className={`absolute inset-0 transition-all duration-700 ${userVoted ? 'bg-lav' : 'bg-neutral-100'}`}
                                 style={{ width: `${pct}%` }} />
                               <div className="relative flex items-center justify-between gap-2">
                                 <span className="text-sm font-semibold">{option.text}</span>
-                                <span className={`text-xs font-bold flex-shrink-0 ${userVoted ? 'text-white/70' : 'text-neutral-400'}`}>{pct}%</span>
+                                <span className={`text-xs font-bold flex-shrink-0 ${userVoted ? 'text-ink' : 'text-neutral-500'}`}>{pct}%</span>
                               </div>
                             </button>
                           );
                         })}
                       </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs text-neutral-400">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+                        <span className="text-xs text-neutral-500">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
                         {isOrganizer && poll.status === 'active' && (
                           <button onClick={() => handleClosePoll(pollId)}
                             className="text-xs text-neutral-500 hover:text-neutral-900 font-bold transition-colors">
@@ -1973,24 +1973,24 @@ export default function EventSpace() {
                 {files.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
-                      <FileText className="w-6 h-6 text-neutral-400" />
+                      <FileText className="w-6 h-6 text-neutral-500" />
                     </div>
                     <p className="text-sm font-bold text-neutral-700">No files yet</p>
-                    <p className="text-xs text-neutral-400 mt-1">Share documents, images, and more</p>
+                    <p className="text-xs text-neutral-500 mt-1">Share documents, images, and more</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {files.map(file => {
                       const fid = file._id || file.id;
                       return (
-                        <div key={fid} className="flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                        <div key={fid} className="flex items-center justify-between p-4 bg-white border-2 border-ink rounded-xl hover:border-neutral-300 transition-colors shadow">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
                               <FileText className="w-4.5 h-4.5 text-neutral-500" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-neutral-900 truncate">{file.filename}</p>
-                              <p className="text-xs text-neutral-400">{formatFileSize(file.size)} · by {file.uploadedBy}</p>
+                              <p className="text-xs text-neutral-500">{formatFileSize(file.size)} · by {file.uploadedBy}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
@@ -2000,8 +2000,8 @@ export default function EventSpace() {
                             </button>
                             {(isOrganizer || file.uploadedBy === currentUser) && (
                               <button onClick={() => handleDeleteFile(fid)}
-                                className="w-8 h-8 rounded-lg border border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors">
-                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                className="w-8 h-8 rounded-lg border-2 border-red-600 hover:bg-red-50 flex items-center justify-center transition-colors">
+                                <Trash2 className="w-3.5 h-3.5 text-red-700" />
                               </button>
                             )}
                           </div>
@@ -2023,29 +2023,29 @@ export default function EventSpace() {
                         <Plus className="w-4 h-4" />Add agenda item
                       </button>
                     ) : (
-                      <div className="bg-white border border-neutral-200 rounded-2xl p-5 mb-5">
+                      <div className="bg-white border-2 border-ink rounded-2xl p-5 mb-5 shadow-md">
                         <h3 className="text-sm font-bold text-neutral-900 mb-4">New agenda item</h3>
                         <form onSubmit={handleAddAgendaItem} className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs font-bold text-neutral-500 mb-1">Title</label>
-                              <input type="text" className="input text-sm rounded-xl" placeholder="Opening remarks" required
+                              <input type="text" className="input text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="Opening remarks" required
                                 value={newAgendaItem.title} onChange={e => setNewAgendaItem(p => ({ ...p, title: e.target.value }))} />
                             </div>
                             <div>
                               <label className="block text-xs font-bold text-neutral-500 mb-1">Time</label>
-                              <input type="text" className="input text-sm rounded-xl" placeholder="9:00 AM"
+                              <input type="text" className="input text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="9:00 AM"
                                 value={newAgendaItem.time} onChange={e => setNewAgendaItem(p => ({ ...p, time: e.target.value }))} />
                             </div>
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-neutral-500 mb-1">Description (optional)</label>
-                            <input type="text" className="input text-sm rounded-xl" placeholder="Brief description"
+                            <input type="text" className="input text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="Brief description"
                               value={newAgendaItem.description} onChange={e => setNewAgendaItem(p => ({ ...p, description: e.target.value }))} />
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-neutral-500 mb-1">Duration (min)</label>
-                            <input type="number" className="input text-sm rounded-xl" placeholder="30" min="0"
+                            <input type="number" className="input text-sm rounded-xl border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white" placeholder="30" min="0"
                               value={newAgendaItem.duration} onChange={e => setNewAgendaItem(p => ({ ...p, duration: e.target.value }))} />
                           </div>
                           <div className="flex gap-2 pt-1">
@@ -2060,19 +2060,19 @@ export default function EventSpace() {
                 {agenda.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
-                      <Clock className="w-6 h-6 text-neutral-400" />
+                      <Clock className="w-6 h-6 text-neutral-500" />
                     </div>
                     <p className="text-sm font-bold text-neutral-700">No agenda yet</p>
-                    {isOrganizer && <p className="text-xs text-neutral-400 mt-1">Add items to plan your schedule</p>}
+                    {isOrganizer && <p className="text-xs text-neutral-500 mt-1">Add items to plan your schedule</p>}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {agenda.map((item, idx) => (
-                      <div key={item.id || idx} className="flex items-start gap-4 p-4 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                      <div key={item.id || idx} className="flex items-start gap-4 p-4 bg-white border-2 border-ink rounded-xl hover:border-neutral-300 transition-colors shadow">
                         {item.time && (
                           <div className="flex-shrink-0 text-right min-w-14">
                             <p className="text-xs font-bold text-neutral-600 font-mono">{item.time}</p>
-                            {item.duration > 0 && <p className="text-[10px] text-neutral-400">{item.duration}m</p>}
+                            {item.duration > 0 && <p className="text-[10px] text-neutral-500">{item.duration}m</p>}
                           </div>
                         )}
                         <div className={`flex-1 min-w-0 ${item.time ? 'border-l-2 border-neutral-200 pl-4' : ''}`}>
@@ -2082,7 +2082,7 @@ export default function EventSpace() {
                         {(isOrganizer || event?.settings?.allowParticipantAgenda) && (
                           <button onClick={() => handleDeleteAgendaItem(item.id)}
                             className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0">
-                            <Trash2 className="w-3.5 h-3.5 text-neutral-400 hover:text-red-500 transition-colors" />
+                            <Trash2 className="w-3.5 h-3.5 text-neutral-500 hover:text-red-700 transition-colors" />
                           </button>
                         )}
                       </div>
@@ -2111,33 +2111,33 @@ export default function EventSpace() {
 
                 {/* ── Live totals bar ── */}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border-2 border-emerald-600 rounded-lg">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                     <span className="text-xs font-bold text-emerald-700">{totalGoing} going</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border-2 border-amber-600 rounded-lg">
                     <span className="text-xs font-bold text-amber-700">{totalMaybe} maybe</span>
                   </div>
                   {rsvpDeclined.length + (rsvpSummary.no || 0) > 0 && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border-2 border-ink rounded-lg shadow">
                       <span className="text-xs font-bold text-neutral-500">{rsvpDeclined.length + (rsvpSummary.no || 0)} can't go</span>
                     </div>
                   )}
                   {rsvpPending.length > 0 && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border-2 border-blue-600 rounded-lg">
                       <span className="text-xs font-bold text-indigo-600">{rsvpPending.length} pending</span>
                     </div>
                   )}
                   {rsvpWaiting.length > 0 && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border-2 border-amber-600 rounded-lg">
                       <span className="text-xs font-bold text-orange-600">{rsvpWaiting.length} waitlisted</span>
                     </div>
                   )}
                 </div>
 
                 {/* ── How it works info banner ── */}
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2.5">
-                  <HelpCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-600 rounded-xl flex gap-2.5">
+                  <HelpCircle className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
                   <div className="text-xs text-blue-700 leading-relaxed space-y-0.5">
                     <p className="font-bold text-blue-800">Two ways people join this event</p>
                     <p><span className="font-semibold">Event Space Members</span> — joined via invite link or code, can chat and collaborate in real time.</p>
@@ -2147,16 +2147,16 @@ export default function EventSpace() {
                 </div>
 
                 {/* ── Your RSVP ── */}
-                <div className="mb-4 p-3.5 bg-white border border-neutral-200 rounded-xl">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5">Your RSVP (in this event space)</p>
+                <div className="mb-4 p-3.5 bg-white border-2 border-ink rounded-xl shadow">
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2.5">Your RSVP (in this event space)</p>
                   <div className="flex gap-2">
                     {[
                       ['yes',   'Going',    myRsvp === 'yes'   ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-neutral-600 border-neutral-200 hover:border-emerald-300'],
                       ['maybe', 'Maybe',    myRsvp === 'maybe' ? 'bg-amber-500 text-white border-amber-500'     : 'bg-white text-neutral-600 border-neutral-200 hover:border-amber-300'],
-                      ['no',    "Can't go", myRsvp === 'no'    ? 'bg-neutral-800 text-white border-neutral-800' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'],
+                      ['no',    "Can't go", myRsvp === 'no'    ? 'bg-lav text-white border-ink' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'],
                     ].map(([status, label, cls]) => (
                       <button key={status} onClick={() => handleRsvp(status)}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg border-2 transition-all ${cls}`}>
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${cls}`}>
                         {label}
                       </button>
                     ))}
@@ -2165,9 +2165,9 @@ export default function EventSpace() {
 
                 {/* ── Event Space Members section ── */}
                 <div className="mb-1">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-0.5">
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 px-0.5">
                     Event Space Members
-                    <span className="ml-1.5 normal-case font-normal text-neutral-400">({participants.length})</span>
+                    <span className="ml-1.5 normal-case font-normal text-neutral-500">({participants.length})</span>
                   </p>
                   <div className="space-y-1.5">
                     {participants.map(p => {
@@ -2177,7 +2177,7 @@ export default function EventSpace() {
                       const isPlanner = p.role === 'planner' || p.role === 'co-organizer';
                       const pRsvp    = rsvps.find(r => r.username === p.username);
                       return (
-                        <div key={p.username} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                        <div key={p.username} className="flex items-center gap-3 p-3 bg-white border-2 border-ink rounded-xl hover:border-neutral-300 transition-colors shadow">
                           <div className="relative flex-shrink-0">
                             <Avatar name={p.username} size="md" />
                             {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
@@ -2213,19 +2213,19 @@ export default function EventSpace() {
                                   {pRsvp.status === 'yes' ? '✓ Going' : pRsvp.status === 'maybe' ? '? Maybe' : '✗ Can\'t go'}
                                 </span>
                               ) : (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-400">No response</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-500">No response</span>
                               )}
                             </div>
-                            <p className="text-xs text-neutral-400 mt-0.5">
+                            <p className="text-xs text-neutral-500 mt-0.5">
                               {isOnline ? <span className="text-emerald-600 font-semibold">● Online now</span> : `Joined ${formatRelativeTime(p.joinedAt)}`}
                             </p>
                           </div>
                           {isOrganizer && p.username !== currentUser && (
                             <button
                               onClick={() => handleRoleChange(p.username, isOrg ? 'participant' : 'organizer')}
-                              className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-colors flex-shrink-0 ${
+                              className={`text-[10px] font-bold px-2 py-1 rounded-lg border-2 transition-colors flex-shrink-0 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
                                 isOrg
-                                  ? 'border-neutral-200 text-neutral-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50'
+                                  ? 'border-neutral-200 text-neutral-500 hover:border-red-200 hover:text-red-700 hover:bg-red-50'
                                   : 'border-neutral-200 text-neutral-500 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50'
                               }`}
                               title={isOrg ? 'Remove organizer role' : 'Promote to organizer'}
@@ -2237,24 +2237,24 @@ export default function EventSpace() {
                       );
                     })}
                     {participants.length === 0 && (
-                      <p className="text-xs text-neutral-400 text-center py-4">No members yet</p>
+                      <p className="text-xs text-neutral-500 text-center py-4">No members yet</p>
                     )}
                   </div>
                 </div>
 
                 {/* ── RSVP Form Guests section ── */}
                 <div className="mt-4">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-0.5">
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 px-0.5">
                     RSVP Form Guests
-                    <span className="ml-1.5 normal-case font-normal text-neutral-400">({rsvpGuests.length} via public RSVP page)</span>
+                    <span className="ml-1.5 normal-case font-normal text-neutral-500">({rsvpGuests.length} via public RSVP page)</span>
                   </p>
                   {!rsvpGuestsLoaded ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="w-5 h-5 border-2 border-neutral-200 border-t-indigo-500 rounded-full animate-spin" />
                     </div>
                   ) : rsvpGuests.length === 0 ? (
-                    <div className="p-4 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-center">
-                      <p className="text-xs text-neutral-400 leading-relaxed">
+                    <div className="p-4 bg-neutral-50 border-2 border-dashed border-ink rounded-xl text-center shadow">
+                      <p className="text-xs text-neutral-500 leading-relaxed">
                         No one has signed up via the RSVP page yet.<br />
                         Share your RSVP link to start collecting responses.
                       </p>
@@ -2278,16 +2278,16 @@ export default function EventSpace() {
                         }[g.response] || { bg: 'bg-neutral-100 text-neutral-500', label: g.response };
 
                         return (
-                          <div key={g._id} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                          <div key={g._id} className="flex items-center gap-3 p-3 bg-white border-2 border-ink rounded-xl hover:border-neutral-300 transition-colors shadow">
                             {/* Avatar */}
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-bold text-white">{initials}</span>
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-lav text-ink">
+                              <span className="text-xs font-bold text-ink">{initials}</span>
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <p className="text-sm font-bold text-neutral-900 truncate">{name}</p>
                                 {/* RSVP form guest role tag */}
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 text-[10px] font-bold border border-violet-100">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 text-[10px] font-bold border-2 border-blue-600">
                                   RSVP Guest
                                 </span>
                                 {/* Their response */}
@@ -2300,9 +2300,9 @@ export default function EventSpace() {
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
-                                {g.email && <p className="text-xs text-neutral-400 truncate">{g.email}</p>}
+                                {g.email && <p className="text-xs text-neutral-500 truncate">{g.email}</p>}
                                 {g.plusOnes > 0 && (
-                                  <span className="text-[10px] text-neutral-400">+{g.plusOnes} guest{g.plusOnes > 1 ? 's' : ''}</span>
+                                  <span className="text-[10px] text-neutral-500">+{g.plusOnes} guest{g.plusOnes > 1 ? 's' : ''}</span>
                                 )}
                               </div>
                             </div>
@@ -2336,86 +2336,86 @@ export default function EventSpace() {
           <div className="sticky top-20 space-y-3">
 
             {event?.date && (
-              <div className="bg-white rounded-2xl border border-neutral-200 p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div className="bg-white rounded-2xl border-2 border-ink p-4 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
                 <Countdown eventDate={event.date} />
               </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Event Info</h3>
+            <div className="bg-white rounded-2xl border-2 border-ink p-5 space-y-4 shadow-md" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
+              <h3 className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Event Info</h3>
               {event?.isEnterpriseMode && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 border-2 border-blue-600 rounded-lg text-xs font-bold text-indigo-700">
                   <Shield className="w-3 h-3" />Enterprise
                 </div>
               )}
               {event?.date && (
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Date</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Date</p>
                   <p className="text-sm text-neutral-800 font-semibold">{formatDate(event.date)}</p>
                 </div>
               )}
               {event?.location && (
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Location</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Location</p>
                   <p className="text-sm text-neutral-800 font-semibold">{event.location}</p>
                 </div>
               )}
               {event?.description && (
                 <div className="space-y-0.5">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">About</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">About</p>
                   <p className="text-sm text-neutral-600 leading-relaxed line-clamp-4">{event.description}</p>
                 </div>
               )}
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-neutral-50 border border-neutral-100">
+              <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-neutral-50 border-2 border-ink shadow">
                 <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Members</span>
                 <span className="text-sm font-bold text-neutral-900">
-                  {participants.length}<span className="text-xs text-neutral-400 font-medium"> / {event?.maxParticipants || 100}</span>
+                  {participants.length}<span className="text-xs text-neutral-500 font-medium"> / {event?.maxParticipants || 100}</span>
                 </span>
               </div>
               {rsvpGuests.length > 0 && (
-                <div className="flex items-center justify-between py-2 px-4 rounded-xl bg-violet-50 border border-violet-100">
+                <div className="flex items-center justify-between py-2 px-4 rounded-xl bg-violet-50 border-2 border-blue-600">
                   <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wide">RSVP Guests</span>
                   <span className="text-sm font-bold text-violet-700">{rsvpGuests.length}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border-2 border-emerald-600 px-2.5 py-1 rounded-lg">
                   {(rsvpSummary.yes || 0) + rsvpGuests.filter(g => g.response === 'yes' && g.status === 'confirmed').length} going
                 </span>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 border-2 border-amber-600 px-2.5 py-1 rounded-lg">
                   {(rsvpSummary.maybe || 0) + rsvpGuests.filter(g => g.response === 'maybe').length} maybe
                 </span>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-2" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div className="bg-white rounded-2xl border-2 border-ink p-4 space-y-2 shadow" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
               {isOrganizer && (
                 <>
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 pt-1 pb-0.5">Organizer</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1 pb-0.5">Organizer</p>
                   {event?.isEnterpriseMode && (
                     <button onClick={() => navigate(`/event/${eventId}/checkin`)}
-                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold">
+                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                       <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />Guest Check-in
                     </button>
                   )}
                   {!event?.isTableServiceMode && (
                     <button onClick={handleOpenSeatingMap}
-                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-colors font-bold">
+                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-colors font-bold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                       <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                       {event?.seatingMap?.enabled ? 'Seating Map' : 'Set Up Seating'}
                     </button>
                   )}
                   <button onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold relative">
+                    className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold relative border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     <Sliders className="w-3.5 h-3.5 flex-shrink-0" />Event Settings
                     {pendingApprovals > 0 && (
-                      <span className="ml-auto flex items-center justify-center w-5 h-5 text-[10px] font-black bg-red-500 text-white rounded-full ring-2 ring-white">
+                      <span className="ml-auto flex items-center justify-center w-5 h-5 text-[10px] font-black bg-red-500 text-white rounded-full ring-2 ring-ink">
                         {pendingApprovals > 9 ? '9+' : pendingApprovals}
                       </span>
                     )}
                   </button>
                   <button onClick={() => navigate(`/event/${eventId}/login`)}
-                    className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl transition-colors font-semibold">
+                    className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-hl hover:bg-hl text-ink rounded-xl transition-colors font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     <Lock className="w-3.5 h-3.5 flex-shrink-0" />Login on new device
                   </button>
                   <div className="border-t border-neutral-100 pt-1 mt-1" />
@@ -2423,43 +2423,43 @@ export default function EventSpace() {
               )}
               {event?.subdomain && (
                 <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/e/${event.subdomain}`); toast.success('Copied!'); }}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <Copy className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="truncate font-mono">Copy /e/{event.subdomain}</span>
                 </button>
               )}
               <button onClick={handleCopyLink}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /> : <Copy className="w-3.5 h-3.5 flex-shrink-0" />}
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" /> : <Copy className="w-3.5 h-3.5 flex-shrink-0" />}
                 <span>{copied ? 'Copied!' : 'Copy event link'}</span>
               </button>
               <button onClick={handleCalendarExport}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <Download className="w-3.5 h-3.5 flex-shrink-0" />Export to calendar
               </button>
               <button onClick={() => setShowQR(true)}
-                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <QrCode className="w-3.5 h-3.5 flex-shrink-0" />Show QR code
               </button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-neutral-200 p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-3">Need help?</p>
+            <div className="bg-white rounded-2xl border-2 border-ink p-5 shadow-md" style={{ boxShadow: '4px 4px 0 #0d0e1c' }}>
+              <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3">Need help?</p>
               <a href="mailto:planit.userhelp@gmail.com"
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors mb-2">
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors mb-2 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <span className="truncate">planit.userhelp@gmail.com</span>
               </a>
               <a href="/help"
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors">
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-neutral-50 hover:bg-neutral-100 border-2 border-ink rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Help Center
               </a>
-              <p className="text-[10px] text-neutral-400 mt-3 leading-relaxed">
+              <p className="text-[10px] text-neutral-500 mt-3 leading-relaxed">
                 Contact us for capacity increases, event changes, or support.
               </p>
             </div>

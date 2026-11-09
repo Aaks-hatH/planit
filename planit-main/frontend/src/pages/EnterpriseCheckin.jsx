@@ -39,8 +39,7 @@ function RoleBadge({ role, size = 'sm' }) {
   const Icon = cfg.icon;
   const isSm = size === 'sm';
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border font-bold uppercase tracking-wide
-      ${cfg.bg} ${cfg.text} ${cfg.border}
+    <span className={`inline-flex items-center gap-1 rounded-md border-2 font-bold uppercase tracking-wide border-ink ${cfg.bg} ${cfg.text} ${cfg.border}
       ${isSm ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'}`}>
       <Icon className={isSm ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} />
       {cfg.label}
@@ -104,21 +103,21 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-            <ScanLine className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-lav border-2 border-ink flex items-center justify-center">
+            <ScanLine className="w-8 h-8 text-ink" />
           </div>
-          <h1 className="text-white text-2xl font-black mb-1">Check-in Staff Login</h1>
-          <p className="text-neutral-400 text-sm">{eventTitle || 'Event Check-in'}</p>
+          <h1 className="text-ink text-2xl font-black mb-1">Check-in Staff Login</h1>
+          <p className="text-neutral-500 text-sm">{eventTitle || 'Event Check-in'}</p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Username</label>
+            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Username</label>
             <input
               type="text"
               value={username}
@@ -128,11 +127,11 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:border-neutral-500 placeholder-neutral-600"
+              className="w-full bg-lav border-2 border-ink text-ink rounded-xl px-4 py-3 text-base focus:outline-none focus:border-ink placeholder-neutral-400 focus:ring-[3px] focus:ring-ac"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">PIN</label>
+            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">PIN</label>
             <div className="relative">
               <input
                 type={showPin ? 'text' : 'password'}
@@ -140,12 +139,12 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
                 onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
                 placeholder="4–8 digit PIN"
                 inputMode="numeric"
-                className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-xl px-4 py-3 pr-12 text-base font-mono tracking-[0.3em] focus:outline-none focus:border-neutral-500 placeholder-neutral-600"
+                className="w-full bg-lav border-2 border-ink text-ink rounded-xl px-4 py-3 pr-12 text-base font-mono tracking-[0.3em] focus:outline-none focus:border-ink placeholder-neutral-400 focus:ring-[3px] focus:ring-ac"
               />
               <button
                 type="button"
                 onClick={() => setShowPin(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600"
               >
                 {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -153,15 +152,15 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
           </div>
 
           {error && (
-            <div className="bg-red-900/40 border border-red-700 rounded-xl px-4 py-3">
-              <p className="text-sm text-red-300 font-medium">{error}</p>
+            <div className="bg-red-50 border border-red-700 rounded-xl px-4 py-3">
+              <p className="text-sm text-red-700 font-medium">{error}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={loading || !username.trim() || pin.length < 4}
-            className="w-full bg-white text-neutral-900 font-black rounded-xl py-3 text-base hover:bg-neutral-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
+            className="w-full bg-white text-neutral-900 font-black rounded-xl py-3 text-base hover:bg-neutral-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserCheck className="w-5 h-5" />}
             {loading ? 'Logging in...' : 'Log In to Check-in'}
@@ -237,7 +236,7 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
                 {onShowMap && (
                   <button
                     onClick={onShowMap}
-                    className="ml-2 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all"
+                    className="ml-2 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                   >
                     Show on Map
                   </button>
@@ -269,19 +268,19 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
             {paused ? 'Screen paused — tap Done when ready' : `Auto-closing in ${countdown}s...`}
           </p>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-neutral-400 font-medium tracking-wide">
+            <span className="text-xs text-neutral-500 font-medium tracking-wide">
               Powered by <span className="font-black text-neutral-600">Planit</span>
             </span>
             <div className="w-px h-4 bg-neutral-200" />
             <button
               onClick={() => setPaused(v => !v)}
-              className="px-4 py-2 text-sm font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-all"
+              className="px-4 py-2 text-sm font-semibold text-neutral-600 border-2 border-ink rounded-xl hover:bg-neutral-100 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               {paused ? 'Resume' : 'Keep Open'}
             </button>
             <button
               onClick={onDone}
-              className="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"
+              className="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Done
             </button>
@@ -330,7 +329,7 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               <IconComponent className={`w-20 h-20 ${
                 details?.severity === 'critical' ? 'text-red-600' :
                 details?.severity === 'high' ? 'text-orange-600' :
-                'text-yellow-500'
+                'text-amber-700'
               }`} strokeWidth={3} />
             </div>
           </div>
@@ -449,14 +448,14 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
           <div className="flex gap-4">
             <button 
               onClick={onDone} 
-              className="flex-1 px-8 py-4 bg-neutral-200 text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-300 transition-all"
+              className="flex-1 px-8 py-4 bg-neutral-200 text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-300 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Close
             </button>
             {canOverride && (
               <button 
                 onClick={onOverride} 
-                className="flex-1 px-8 py-4 bg-white text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-100 transition-all border-2 border-white/80"
+                className="flex-1 px-8 py-4 bg-white text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-100 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 Manager Override
               </button>
@@ -473,9 +472,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ROLE_ACCENT = {
-  VIP:     { bar: '#92400e', bg: '#92400e', textColor: '#ffffff', label: 'VIP'     },
-  SPEAKER: { bar: '#1e1b4b', bg: '#1e1b4b', textColor: '#ffffff', label: 'SPEAKER' },
-  GUEST:   { bar: '#171717', bg: '#171717', textColor: '#ffffff', label: 'GUEST'   },
+  VIP:     { bar: '#92400e', bg: '#ffe14d', textColor: '#ffffff', label: 'VIP'     },
+  SPEAKER: { bar: '#1e1b4b', bg: '#ffffff', textColor: '#ffffff', label: 'SPEAKER' },
+  GUEST:   { bar: '#171717', bg: '#ffffff', textColor: '#ffffff', label: 'GUEST'   },
 };
 
 function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny, onPinVerify }) {
@@ -508,8 +507,8 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-6 overflow-y-auto">
-      <div className="bg-white w-full max-w-xl my-auto border-2 border-neutral-900 overflow-hidden">
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-6 overflow-y-auto">
+      <div className="bg-white w-full max-w-xl my-auto border-2 border-ink overflow-hidden">
 
         {/* ── ROLE BAND — first thing eyes land on ──────────────────── */}
         <div className="flex items-center justify-between px-8 py-3" style={{ backgroundColor: accent.bg }}>
@@ -522,63 +521,63 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         </div>
 
         {/* ── NAME BLOCK — dominant, readable at arm's length ───────── */}
-        <div className="px-8 pt-7 pb-6 border-b-2 border-neutral-900">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-400 mb-2">Attendee Name</p>
+        <div className="px-8 pt-7 pb-6 border-b-2 border-ink">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 mb-2">Attendee Name</p>
           <h2 className="text-5xl font-black text-neutral-900 leading-none tracking-tight break-words">
             {guest.guestName}
           </h2>
           {(guest.guestEmail || guest.guestPhone) && (
             <p className="text-sm text-neutral-500 font-mono mt-3 leading-relaxed">
               {guest.guestEmail}
-              {guest.guestEmail && guest.guestPhone && <span className="mx-2 text-neutral-300">|</span>}
+              {guest.guestEmail && guest.guestPhone && <span className="mx-2 text-neutral-600">|</span>}
               {guest.guestPhone}
             </p>
           )}
         </div>
 
         {/* ── 2×2 DATA GRID — large labels, large values ────────────── */}
-        <div className="grid grid-cols-2 border-b-2 border-neutral-900">
+        <div className="grid grid-cols-2 border-b-2 border-ink">
           {/* Adults */}
-          <div className="px-8 py-5 border-r-2 border-b-2 border-neutral-900">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Adults</p>
+          <div className="px-8 py-5 border-r-2 border-b-2 border-ink">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Adults</p>
             <p className="text-4xl font-black text-neutral-900 leading-none">{guest.adults ?? 1}</p>
           </div>
           {/* Children */}
-          <div className="px-8 py-5 border-b-2 border-neutral-900">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Children</p>
+          <div className="px-8 py-5 border-b-2 border-ink">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Children</p>
             <p className="text-4xl font-black text-neutral-900 leading-none">{guest.children ?? 0}</p>
           </div>
           {/* Table */}
-          <div className="px-8 py-5 border-r-2 border-neutral-900">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Table</p>
-            <p className={`text-4xl font-black leading-none ${guest.tableLabel ? 'text-neutral-900' : 'text-neutral-300'}`}>
+          <div className="px-8 py-5 border-r-2 border-ink">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Table</p>
+            <p className={`text-4xl font-black leading-none ${guest.tableLabel ? 'text-neutral-900' : 'text-neutral-600'}`}>
               {guest.tableLabel || '—'}
             </p>
           </div>
           {/* Seat */}
           <div className="px-8 py-5">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Seat</p>
-            <p className={`text-4xl font-black leading-none ${seatValue ? 'text-neutral-900' : 'text-neutral-300'}`}>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Seat</p>
+            <p className={`text-4xl font-black leading-none ${seatValue ? 'text-neutral-900' : 'text-neutral-600'}`}>
               {seatValue || '—'}
             </p>
           </div>
         </div>
 
         {/* ── CONFIRMATION CODE + TRUST ──────────────────────────────── */}
-        <div className="flex items-stretch border-b-2 border-neutral-900">
-          <div className="flex-1 px-8 py-5 border-r-2 border-neutral-900">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Confirmation Code</p>
+        <div className="flex items-stretch border-b-2 border-ink">
+          <div className="flex-1 px-8 py-5 border-r-2 border-ink">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Confirmation Code</p>
             <p className="text-2xl font-black font-mono tracking-[0.15em] text-neutral-900">{guest.inviteCode}</p>
           </div>
           <div className="px-8 py-5">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Trust Score</p>
-            <p className="text-2xl font-black leading-none" style={{ color: trustColor }}>{trustScore}<span className="text-sm font-bold text-neutral-300 ml-0.5">/100</span></p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-1.5">Trust Score</p>
+            <p className="text-2xl font-black leading-none" style={{ color: trustColor }}>{trustScore}<span className="text-sm font-bold text-neutral-600 ml-0.5">/100</span></p>
           </div>
         </div>
 
         {/* ── NOTES ─────────────────────────────────────────────────── */}
         {guest.notes && (
-          <div className="px-8 py-5 border-b-2 border-neutral-900 bg-neutral-50">
+          <div className="px-8 py-5 border-b-2 border-ink bg-neutral-50">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-2">Notes</p>
             <p className="text-base text-neutral-800 leading-relaxed">{guest.notes}</p>
           </div>
@@ -586,7 +585,7 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 
         {/* ── SECURITY WARNINGS ─────────────────────────────────────── */}
         {hasWarnings && (
-          <div className="border-b-2 border-neutral-900">
+          <div className="border-b-2 border-ink">
             <div className="bg-amber-400 px-8 py-3 flex items-center justify-between">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-neutral-900">Security Alert</p>
               <AlertTriangle className="w-4 h-4 text-neutral-900" />
@@ -617,10 +616,10 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 
         {/* ── PIN VERIFICATION ──────────────────────────────────────── */}
         {requiresPin && guest.hasPin && (
-          <div className="border-b-2 border-neutral-900">
-            <div className="bg-neutral-900 px-8 py-3 flex items-center justify-between">
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-white">PIN Required</p>
-              <Lock className="w-4 h-4 text-neutral-400" />
+          <div className="border-b-2 border-ink">
+            <div className="bg-white px-8 py-3 flex items-center justify-between">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-ink">PIN Required</p>
+              <Lock className="w-4 h-4 text-neutral-500" />
             </div>
             <div className="px-8 py-6">
               <p className="text-sm text-neutral-600 mb-4 font-medium">
@@ -632,13 +631,13 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
                   value={pin}
                   onChange={e => { setPin(e.target.value.toUpperCase()); setPinError(''); }}
                   placeholder="ENTER PIN"
-                  className="flex-1 border-2 border-neutral-900 px-4 py-3 text-xl font-black font-mono uppercase tracking-[0.2em] focus:outline-none bg-white placeholder-neutral-300"
+                  className="flex-1 border-2 border-ink px-4 py-3 text-xl font-black font-mono uppercase tracking-[0.2em] focus:outline-none bg-white placeholder-neutral-400 focus:ring-[3px] focus:ring-ac rounded-lg"
                   maxLength={6}
                 />
                 <button
                   onClick={handlePinSubmit}
                   disabled={verifyingPin}
-                  className="px-6 py-3 bg-neutral-900 text-white font-black text-xs uppercase tracking-widest hover:bg-neutral-700 transition-colors disabled:opacity-40 border-2 border-neutral-900 border-l-0"
+                  className="px-6 py-3 bg-hl text-ink font-black text-xs uppercase tracking-widest hover:bg-hl transition-colors disabled:opacity-40 border-2 border-ink border-l-0 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
                 >
                   {verifyingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
                 </button>
@@ -657,13 +656,13 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 
         {/* ── STAFF INSTRUCTIONS ────────────────────────────────────── */}
         {staffNote && (
-          <div className="border-b-2 border-neutral-900 bg-neutral-900">
-            <div className="px-8 py-3 flex items-center justify-between border-b border-neutral-700">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-300">Staff Instructions</p>
-              <Info className="w-3.5 h-3.5 text-neutral-400" />
+          <div className="border-b-2 border-ink bg-white">
+            <div className="px-8 py-3 flex items-center justify-between border-b border-ink">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-600">Staff Instructions</p>
+              <Info className="w-3.5 h-3.5 text-neutral-500" />
             </div>
             <div className="px-8 py-4">
-              <p className="text-base text-white leading-relaxed font-medium">{staffNote}</p>
+              <p className="text-base text-ink leading-relaxed font-medium">{staffNote}</p>
             </div>
           </div>
         )}
@@ -672,14 +671,14 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         <div className="grid grid-cols-2">
           <button
             onClick={onDeny}
-            className="py-6 bg-white text-neutral-900 text-base font-black uppercase tracking-widest border-r-2 border-neutral-900 hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
+            className="py-6 bg-white text-neutral-900 text-base font-black uppercase tracking-widest border-r-2 border-ink hover:bg-neutral-100 active:bg-neutral-200 transition-colors border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             Deny Entry
           </button>
           <button
             onClick={onAdmit}
             disabled={requiresPin && guest.hasPin && !pinVerified}
-            className="py-6 bg-neutral-900 text-white text-base font-black uppercase tracking-widest hover:bg-neutral-800 active:bg-black transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+            className="py-6 bg-hl text-ink text-base font-black uppercase tracking-widest hover:bg-hl active:bg-black transition-colors disabled:opacity-25 disabled:cursor-not-allowed border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             Admit
           </button>
@@ -829,32 +828,32 @@ function QRScanner({ onScan, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-white/10">
-        <button onClick={onClose} className="text-white flex items-center gap-2 hover:opacity-80">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 bg-lav border-b border-ink">
+        <button onClick={onClose} className="text-ink flex items-center gap-2 hover:opacity-80">
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
-        <span className="text-white text-sm font-semibold">SCAN QR CODE</span>
+        <span className="text-ink text-sm font-semibold">SCAN QR CODE</span>
         <div className="w-16" />
       </div>
       
-      <div className="flex-1 relative flex items-center justify-center bg-black">
+      <div className="flex-1 relative flex items-center justify-center bg-white">
         {error ? (
-          <div className="text-center text-white p-8">
-            <CameraOff className="w-16 h-16 mx-auto mb-4 text-red-400" />
+          <div className="text-center text-ink p-8">
+            <CameraOff className="w-16 h-16 mx-auto mb-4 text-red-700" />
             <p className="text-lg font-semibold mb-2">Camera Error</p>
-            <p className="text-sm text-neutral-300 mb-8 max-w-xs mx-auto">{error}</p>
+            <p className="text-sm text-neutral-600 mb-8 max-w-xs mx-auto">{error}</p>
             <div className="flex flex-col gap-3 max-w-xs mx-auto">
               <button
                 onClick={handleRetry}
-                className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200"
+                className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 Retry Camera
               </button>
               <button
                 onClick={onClose}
-                className="px-6 py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600"
+                className="px-6 py-3 bg-white text-ink rounded-xl font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 Close
               </button>
@@ -864,10 +863,10 @@ function QRScanner({ onScan, onClose }) {
           <div className="w-full max-w-md px-4">
             {/* QR Reader div - DO NOT REMOVE */}
             <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-2xl"></div>
-            <p className="text-white text-center mt-6 text-sm">
+            <p className="text-ink text-center mt-6 text-sm">
                Position QR code within the frame
             </p>
-            <p className="text-neutral-400 text-center mt-2 text-xs">
+            <p className="text-neutral-500 text-center mt-2 text-xs">
               Scanning automatically when QR code is detected
             </p>
           </div>
@@ -950,7 +949,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
 
   if (showSuccess && createdInvite) {
     return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
         <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
           <div className="text-center mb-6">
             <CheckCircle className="w-16 h-16 text-emerald-600 mx-auto mb-4" />
@@ -972,11 +971,11 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 type="text"
                 value={getInviteLink()}
                 readOnly
-                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono bg-neutral-50"
+                className="flex-1 border-2 border-ink rounded-xl px-4 py-2.5 text-sm font-mono bg-neutral-50 focus:ring-[3px] focus:ring-ac focus:outline-none"
               />
               <button
                 onClick={copyInviteLink}
-                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 flex items-center gap-2"
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 flex items-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <Copy className="w-4 h-4" />
                 Copy
@@ -992,7 +991,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 setCreatedInvite(null);
                 onSave();
               }}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black"
+              className="flex-1 px-4 py-2.5 bg-hl text-ink rounded-xl font-semibold hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Done
             </button>
@@ -1007,7 +1006,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                   window.open(`mailto:${guestEmail || ''}?subject=${encodeURIComponent(`You're invited: ${event?.title}`)}&body=${encodeURIComponent(emailBody)}`);
                 }
               }}
-              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 border-2 border-ink rounded-xl font-semibold hover:bg-neutral-50 flex items-center justify-center gap-2 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Mail className="w-4 h-4" />
               {formData.guestEmail ? 'Send Invite Email' : 'Share Invite'}
@@ -1019,7 +1018,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">{invite ? 'Edit' : 'Create'} Invite</h2>
@@ -1032,7 +1031,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               type="text"
               value={formData.guestName}
               onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
               placeholder="John Smith"
               required
             />
@@ -1050,10 +1049,9 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                     key={role}
                     type="button"
                     onClick={() => setFormData({ ...formData, guestRole: role })}
-                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition-all
-                      ${active
+                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${active
                         ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
-                        : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'
+                        : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'
                       }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -1062,7 +1060,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 );
               })}
             </div>
-            <p className="text-xs text-neutral-400 mt-1">Shown to staff at check-in. Defaults to Guest.</p>
+            <p className="text-xs text-neutral-500 mt-1">Shown to staff at check-in. Defaults to Guest.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1072,7 +1070,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 type="number"
                 value={formData.adults}
                 onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+                className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
                 min="0"
               />
             </div>
@@ -1082,21 +1080,21 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 type="number"
                 value={formData.children}
                 onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+                className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
                 min="0"
               />
             </div>
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1">
-              Email <span className="text-red-500">*</span>
+              Email <span className="text-red-700">*</span>
               <span className="ml-1.5 text-xs font-normal text-neutral-500">(required)</span>
             </label>
             <input
               type="email"
               value={formData.guestEmail}
               onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
               placeholder="john@email.com"
               required
             />
@@ -1111,7 +1109,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               type="tel"
               value={formData.guestPhone}
               onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white"
               placeholder="555-1234"
             />
           </div>
@@ -1121,7 +1119,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               type="text"
               value={formData.securityPin}
               onChange={(e) => setFormData({ ...formData, securityPin: e.target.value.toUpperCase() })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 font-mono"
+              className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink font-mono focus:ring-[3px] focus:ring-ac bg-white"
               placeholder="ABC123"
               maxLength={6}
             />
@@ -1131,16 +1129,16 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 resize-none"
+              className="w-full border-2 border-ink rounded-xl px-4 py-2.5 focus:outline-none focus:border-ink resize-none focus:ring-[3px] focus:ring-ac bg-white"
               rows={3}
               placeholder="Special requirements, dietary restrictions, etc."
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border-2 border-ink rounded-xl font-semibold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-50">
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-hl text-ink rounded-xl font-semibold hover:bg-hl disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {saving ? 'Saving...' : invite ? 'Update' : 'Create'}
             </button>
           </div>
@@ -1195,7 +1193,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
           <div>
@@ -1207,7 +1205,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
 
         <div className="p-6 space-y-5">
           {/* Format guide */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
+          <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-4 text-sm space-y-2">
             <p className="font-bold text-blue-900">Required CSV format</p>
             <p className="text-blue-800 font-mono text-xs leading-relaxed break-all">
               guestName, <span className="underline decoration-dotted">guestEmail</span>, guestRole, adults, children, securityPin, notes
@@ -1243,7 +1241,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
             <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
             <button
               onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed border-neutral-200 rounded-xl py-6 text-sm text-neutral-500 font-medium hover:border-neutral-400 hover:text-neutral-700 transition-all flex flex-col items-center gap-2"
+              className="w-full border-2 border-dashed border-neutral-200 rounded-xl py-6 text-sm text-neutral-500 font-bold hover:border-neutral-400 hover:text-neutral-700 transition-all flex flex-col items-center gap-2 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Upload className="w-6 h-6" />
               Click to upload a .csv file, or paste below
@@ -1257,7 +1255,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
               value={csvText}
               onChange={e => setCsvText(e.target.value)}
               rows={7}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-neutral-400 resize-none"
+              className="w-full border-2 border-ink rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-ink resize-none focus:ring-[3px] focus:ring-ac bg-white"
               placeholder={TEMPLATE}
               spellCheck={false}
             />
@@ -1265,7 +1263,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
 
           {/* Results */}
           {result && (
-            <div className={`rounded-xl p-4 text-sm space-y-2 ${result.imported > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+            <div className={`rounded-xl p-4 text-sm space-y-2 ${result.imported > 0 ? 'bg-emerald-50 border-2 border-emerald-600' : 'bg-amber-50 border-2 border-amber-600'}`}>
               <p className="font-bold">{result.imported} imported, {result.skipped} skipped</p>
               {result.errors?.length > 0 && (
                 <div className="space-y-1 text-xs text-red-700">
@@ -1281,18 +1279,18 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
 
         <div className="p-6 border-t border-neutral-100 flex gap-3">
           {result?.imported > 0 ? (
-            <button onClick={onImported} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black">
+            <button onClick={onImported} className="flex-1 px-4 py-2.5 bg-hl text-ink rounded-xl font-semibold hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               Done
             </button>
           ) : (
             <>
-              <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
+              <button onClick={onClose} className="flex-1 px-4 py-2.5 border-2 border-ink rounded-xl font-semibold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 Cancel
               </button>
               <button
                 onClick={handleImport}
                 disabled={importing || !csvText.trim()}
-                className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-40 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-hl text-ink rounded-xl font-semibold hover:bg-hl disabled:opacity-40 flex items-center justify-center gap-2 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</> : 'Import Guests'}
               </button>
@@ -1340,7 +1338,7 @@ function ActivityLogDialog({ eventId, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
           <div>
@@ -1356,8 +1354,7 @@ function ActivityLogDialog({ eventId, onClose }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all
-                ${filter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${filter === f ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
             >
               {f === 'all' ? 'All' : ACTION_LABELS[f]?.label || f}
             </button>
@@ -1367,33 +1364,33 @@ function ActivityLogDialog({ eventId, onClose }) {
         <div className="overflow-y-auto flex-1">
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />
             </div>
           )}
           {error && (
-            <div className="text-center py-16 text-red-500 text-sm">{error}</div>
+            <div className="text-center py-16 text-red-700 text-sm">{error}</div>
           )}
           {!loading && !error && filtered.length === 0 && (
-            <div className="text-center py-16 text-neutral-400 text-sm">No activity yet</div>
+            <div className="text-center py-16 text-neutral-500 text-sm">No activity yet</div>
           )}
           {!loading && !error && filtered.map((entry, i) => {
             const cfg = ACTION_LABELS[entry.action] || { label: entry.action, color: 'text-neutral-600 bg-neutral-50 border-neutral-200' };
             return (
               <div key={i} className="flex items-start gap-4 px-6 py-4 border-b border-neutral-50 hover:bg-neutral-50 transition-colors">
                 <div className="flex-shrink-0 pt-0.5">
-                  <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+                  <span className={`inline-block px-2 py-0.5 rounded border-2 text-[10px] font-bold uppercase tracking-wide border-ink ${cfg.color}`}>
                     {cfg.label}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-neutral-800">{entry.details || entry.target || '—'}</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 mt-0.5">
                     <span className="font-semibold text-neutral-600">{entry.actor}</span>
-                    {entry.actorRole && <span className="ml-1 text-neutral-400">({entry.actorRole})</span>}
+                    {entry.actorRole && <span className="ml-1 text-neutral-500">({entry.actorRole})</span>}
                     {entry.target && entry.details && <span className="ml-1">· {entry.target}</span>}
                   </p>
                 </div>
-                <div className="flex-shrink-0 text-xs text-neutral-400 whitespace-nowrap">
+                <div className="flex-shrink-0 text-xs text-neutral-500 whitespace-nowrap">
                   {fmt(entry.timestamp)}
                 </div>
               </div>
@@ -1402,7 +1399,7 @@ function ActivityLogDialog({ eventId, onClose }) {
         </div>
 
         <div className="p-4 border-t border-neutral-100 flex-shrink-0">
-          <button onClick={onClose} className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold text-sm hover:bg-neutral-50">
+          <button onClick={onClose} className="w-full px-4 py-2.5 border-2 border-ink rounded-xl font-semibold text-sm hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Close
           </button>
         </div>
@@ -2169,9 +2166,9 @@ export default function EnterpriseCheckin() {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-neutral-400 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-neutral-500 mx-auto mb-4" />
           <p className="text-neutral-600">Loading check-in system...</p>
-          <p className="text-xs text-neutral-400 mt-2">Check console (F12) if stuck</p>
+          <p className="text-xs text-neutral-500 mt-2">Check console (F12) if stuck</p>
         </div>
       </div>
     );
@@ -2181,19 +2178,19 @@ export default function EnterpriseCheckin() {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <AlertTriangle className="w-16 h-16 text-red-700 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">Failed to Load</h2>
           <p className="text-neutral-600 mb-6">{loadError}</p>
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => navigate(`/event/${eventId}`)}
-              className="px-4 py-2 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50"
+              className="px-4 py-2 border-2 border-ink rounded-xl font-semibold hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Go Back
             </button>
             <button
               onClick={loadAllData}
-              className="px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black"
+              className="px-4 py-2 bg-hl text-ink rounded-xl font-semibold hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Retry
             </button>
@@ -2337,7 +2334,7 @@ export default function EnterpriseCheckin() {
             <div>
               <h1 className="text-base font-bold text-neutral-900 truncate max-w-[240px]">{event?.title || 'Event'}</h1>
               <div className="flex items-center gap-1.5">
-                <p className="text-xs text-neutral-400">Check-in</p>
+                <p className="text-xs text-neutral-500">Check-in</p>
                 {authState.username && (
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${authState.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
                     {authState.role === 'staff' ? ' ' : ' '}{authState.username}
@@ -2349,7 +2346,7 @@ export default function EnterpriseCheckin() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettingsPanel(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border-2 border-ink rounded-xl hover:bg-neutral-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               title="Security Settings"
             >
               <Settings className="w-3.5 h-3.5" />
@@ -2364,7 +2361,7 @@ export default function EnterpriseCheckin() {
             {seatingEnabled ? (
               <button
                 onClick={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-violet-700 bg-violet-50 border-2 border-blue-600 rounded-xl hover:bg-violet-100 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Seating</span>
@@ -2378,7 +2375,7 @@ export default function EnterpriseCheckin() {
                   setShowSeatingMap(true);
                 }}
                 title="Create a seating chart for this event"
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-dashed border-neutral-300 rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border-2 border-dashed border-ink rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Set Up Seating</span>
@@ -2389,7 +2386,7 @@ export default function EnterpriseCheckin() {
               <>
                 <button
                   onClick={() => setShowActivityLog(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border-2 border-ink rounded-xl hover:bg-neutral-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                   title="Activity Log"
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
@@ -2397,14 +2394,14 @@ export default function EnterpriseCheckin() {
                 </button>
                 <button
                   onClick={() => setShowCsvImport(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border-2 border-blue-600 rounded-xl hover:bg-blue-100 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Import CSV</span>
                 </button>
                 <button
                   onClick={() => setShowInviteDialog(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border-2 border-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Add Guest</span>
@@ -2413,7 +2410,7 @@ export default function EnterpriseCheckin() {
             )}
             <button
               onClick={() => setShowManual(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border-2 border-ink rounded-xl hover:bg-neutral-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Keyboard className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Manual</span>
@@ -2423,17 +2420,17 @@ export default function EnterpriseCheckin() {
                 resetScan();
                 setScanMode(true);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl transition-all shadow-sm border-2 border-ink"
             >
               <Camera className="w-4 h-4" />
               Scan QR
-              <span className="hidden lg:inline text-xs text-white/60 font-normal ml-1">[S]</span>
+              <span className="hidden lg:inline text-xs text-neutral-500 font-normal ml-1">[S]</span>
             </button>
             {authState.role === 'staff' && (
               <button
                 onClick={handleStaffLogout}
                 title="Log out of check-in"
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border-2 border-ink rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Log Out</span>
@@ -2455,14 +2452,14 @@ export default function EnterpriseCheckin() {
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                 placeholder="Enter invite code e.g. AB12CD34"
-                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
+                className="flex-1 border-2 border-ink rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-ink bg-white focus:ring-[3px] focus:ring-ac"
                 autoFocus
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
                 inputMode="text"
               />
-              <button type="submit" disabled={!manualCode.trim()} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
+              <button type="submit" disabled={!manualCode.trim()} className="px-4 py-2.5 bg-hl text-ink rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-hl transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 Verify
               </button>
             </form>
@@ -2479,14 +2476,14 @@ export default function EnterpriseCheckin() {
             { label: 'Adults Expected', value: stats?.totalExpectedAdults ?? 0, color: 'text-neutral-600' },
             { label: 'Children', value: stats?.totalExpectedChildren ?? 0, color: 'text-indigo-600' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-2xl border border-neutral-150 p-5 shadow-sm">
+            <div key={label} className="bg-white rounded-2xl border-2 border-ink p-5 shadow-sm">
               <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>
               <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
             </div>
           ))}
         </div>
         
-        <div className="bg-white rounded-2xl border border-neutral-150 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border-2 border-ink shadow-sm overflow-hidden">
           {/* Progress bar */}
           {invites.length > 0 && (() => {
             const pct = Math.round(((stats?.checkedIn ?? invites.filter(i => i.checkedIn).length) / invites.length) * 100);
@@ -2512,19 +2509,19 @@ export default function EnterpriseCheckin() {
               placeholder="Search guests…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400 w-56"
+              className="border-2 border-ink rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-ink w-56 focus:ring-[3px] focus:ring-ac bg-white"
             />
           </div>
           
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-neutral-200">
             {sorted.length === 0 ? (
-              <div className="text-center py-12 text-neutral-400 text-sm">
+              <div className="text-center py-12 text-neutral-500 text-sm">
                 {invites.length === 0 ? (
                   <div>
                     <p className="mb-4">No guests yet.</p>
                     <button
                       onClick={() => setShowInviteDialog(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-hl text-ink text-sm font-semibold rounded-xl hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                     >
                       <Plus className="w-4 h-4" />
                       Add First Guest
@@ -2544,7 +2541,7 @@ export default function EnterpriseCheckin() {
                   <div
                     key={invite._id}
                     className={`flex items-center gap-5 px-8 py-5 hover:bg-neutral-50 transition-colors ${
-                      invite.checkedIn ? 'bg-emerald-50/40 hover:bg-emerald-50' : ''
+                      invite.checkedIn ? 'bg-emerald-50 hover:bg-emerald-50' : ''
                     }`}
                   >
                     <div
@@ -2561,7 +2558,7 @@ export default function EnterpriseCheckin() {
                         <RoleBadge role={invite.guestRole || 'GUEST'} />
                         {/* Table assignment badge */}
                         {invite.tableLabel && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold border border-violet-200">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold border-2 border-blue-600">
                             <MapPin className="w-2.5 h-2.5" />
                             {invite.tableLabel}
                           </span>
@@ -2570,7 +2567,7 @@ export default function EnterpriseCheckin() {
                           <span title={invite.notes} className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded bg-neutral-200 text-neutral-500 text-xs font-bold cursor-help" aria-label="Has notes">N</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-500 flex-wrap">
                         <span className="font-mono font-medium">{invite.inviteCode}</span>
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
@@ -2578,7 +2575,7 @@ export default function EnterpriseCheckin() {
                         </span>
                         {children > 0 && (
                           <span className="flex items-center gap-1">
-                            <Baby className="w-3 h-3 text-blue-400" />
+                            <Baby className="w-3 h-3 text-blue-700" />
                             {children} child{children !== 1 ? 'ren' : ''}
                           </span>
                         )}
@@ -2596,7 +2593,7 @@ export default function EnterpriseCheckin() {
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Admitted
                           </div>
-                          <p className="text-xs text-neutral-400 flex items-center gap-1 justify-end">
+                          <p className="text-xs text-neutral-500 flex items-center gap-1 justify-end">
                             <Clock className="w-3 h-3" />
                             {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -2617,21 +2614,21 @@ export default function EnterpriseCheckin() {
                               setEditingInvite(invite);
                               setShowInviteDialog(true);
                             }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
+                            className="p-1.5 text-neutral-500 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
                             title="Edit"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteInvite(invite._id)}
-                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleScan(invite.inviteCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-hl text-ink text-xs font-semibold rounded-xl hover:bg-hl transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                           >
                             <UserCheck className="w-3.5 h-3.5" />
                             Check In
@@ -2650,35 +2647,35 @@ export default function EnterpriseCheckin() {
       <footer className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
         {/* Offline indicator */}
         {isOffline && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-700">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-xs font-bold text-amber-400">
+            <span className="text-xs font-bold text-amber-700">
               Offline{pendingSync > 0 ? ` — ${pendingSync} check-in${pendingSync !== 1 ? 's' : ''} queued` : ' — using cached guest list'}
             </span>
           </div>
         )}
         {isOffline && cacheInfo && (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border-2 border-ink shadow">
             <Clock className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="text-xs font-semibold text-neutral-400">
+            <span className="text-xs font-semibold text-neutral-500">
               Cache: {cacheInfo.total} guests · {cacheInfo.builtAt ? new Date(cacheInfo.builtAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'saved'}
             </span>
           </div>
         )}
         {!isOffline && pendingSync > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-700">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-bold text-blue-400">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
+            <span className="text-xs font-bold text-blue-700">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
           </div>
         )}
         {syncError && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-            <span className="text-xs font-bold text-red-400">{syncError}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-50 border border-red-700">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-700" />
+            <span className="text-xs font-bold text-red-700">{syncError}</span>
           </div>
         )}
         {!isOffline && pendingSync === 0 && !syncError && (
-          <p className="text-xs text-neutral-400 font-medium tracking-wide">
+          <p className="text-xs text-neutral-500 font-medium tracking-wide">
             Powered by <span className="font-black text-neutral-500">Planit</span>
           </p>
         )}

@@ -48,7 +48,7 @@ function EyeToggle({ show, onToggle }) {
       style={{
         position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
         background: 'none', border: 'none', cursor: 'pointer',
-        color: 'rgba(255,255,255,0.35)', padding: 0, lineHeight: 1,
+        color: '#5a5d70', padding: 0, lineHeight: 1,
       }}
     >
       {show ? (
@@ -71,10 +71,10 @@ function EyeToggle({ show, onToggle }) {
 const inputStyle = {
   width: '100%', boxSizing: 'border-box',
   padding: '0.7rem 0.875rem',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: '#ffffff',
+  border: '2px solid #0d0e1c',
   borderRadius: '0.5rem',
-  color: '#fff', fontSize: '0.875rem',
+  color: '#0d0e1c', fontSize: '0.875rem',
   outline: 'none',
   transition: 'border-color 0.2s',
 };
@@ -83,16 +83,16 @@ const labelStyle = {
   display: 'block',
   fontSize: '0.7rem', fontWeight: 700,
   letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: 'rgba(255,255,255,0.45)',
+  color: '#5a5d70',
   marginBottom: '0.4rem',
 };
 
 const errorBoxStyle = {
-  background: 'rgba(239,68,68,0.1)',
-  border: '1px solid rgba(239,68,68,0.3)',
+  background: '#ffe1de',
+  border: '2px solid #a82020',
   borderRadius: '0.5rem',
   padding: '0.625rem 0.75rem',
-  fontSize: '0.8rem', color: '#fca5a5',
+  fontSize: '0.8rem', color: '#a82020',
   lineHeight: 1.5,
 };
 
@@ -211,12 +211,12 @@ export default function ForgotPassword() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#05050f',
+      background: '#ffffff',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: '2rem 1rem',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      color: '#fff',
+      color: '#0d0e1c',
       position: 'relative',
       overflow: 'hidden',
     }}>
@@ -236,7 +236,7 @@ export default function ForgotPassword() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             width: '48px', height: '48px', borderRadius: '12px',
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            background: '#ffffff', border: '2px solid #0d0e1c',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1rem',
           }}>
@@ -245,13 +245,13 @@ export default function ForgotPassword() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
           </div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.18)', marginBottom: '0.25rem' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase', color: '#5a5d70', marginBottom: '0.25rem' }}>
             PlanIt
           </div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.25rem', letterSpacing: '-0.02em' }}>
             Reset account password
           </h1>
-          <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+          <p style={{ fontSize: '0.8125rem', color: '#5a5d70', margin: 0 }}>
             Use your recovery code to set a new password
           </p>
         </div>
@@ -274,15 +274,15 @@ export default function ForgotPassword() {
         {step === 'find' && (
           <div style={cardStyle}>
             <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: '#ffffff',
+              border: '2px solid #0d0e1c',
               borderRadius: '0.875rem',
               padding: '1.5rem',
             }}>
               <h2 style={{ margin: '0 0 0.25rem', fontSize: '0.9375rem', fontWeight: 700 }}>
                 Find your event
               </h2>
-              <p style={{ margin: '0 0 1.25rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.45)' }}>
+              <p style={{ margin: '0 0 1.25rem', fontSize: '0.8125rem', color: '#5a5d70' }}>
                 Enter your event slug or paste the full event URL.
               </p>
 
@@ -308,7 +308,7 @@ export default function ForgotPassword() {
                   style={{
                     width: '100%', padding: '0.75rem',
                     borderRadius: '0.5rem', border: 'none',
-                    background: '#f59e0b', color: '#000',
+                    background: '#ffe14d', color: '#000',
                     fontWeight: 700, fontSize: '0.875rem',
                     cursor: findLoading ? 'not-allowed' : 'pointer',
                     opacity: findLoading ? 0.7 : 1,
@@ -319,7 +319,7 @@ export default function ForgotPassword() {
                   {findLoading && (
                     <span style={{
                       width: '14px', height: '14px',
-                      border: '2px solid rgba(0,0,0,0.3)',
+                      border: '2px solid #0d0e1c',
                       borderTopColor: '#000',
                       borderRadius: '50%',
                       animation: 'fp-spin 0.7s linear infinite',
@@ -331,8 +331,8 @@ export default function ForgotPassword() {
               </form>
             </div>
 
-            <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
-              <a href="/" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Back to home</a>
+            <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.8rem', color: '#5a5d70' }}>
+              <a href="/" style={{ color: '#5a5d70', textDecoration: 'none' }}>Back to home</a>
             </p>
           </div>
         )}
@@ -341,8 +341,8 @@ export default function ForgotPassword() {
         {step === 'reset' && foundEvent && (
           <div style={cardStyle}>
             <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: '#ffffff',
+              border: '2px solid #0d0e1c',
               borderRadius: '0.875rem',
               padding: '1.5rem',
             }}>
@@ -350,15 +350,15 @@ export default function ForgotPassword() {
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
                 padding: '0.375rem 0.625rem',
-                background: 'rgba(245,158,11,0.1)',
-                border: '1px solid rgba(245,158,11,0.2)',
+                background: '#fff6c2',
+                border: '2px solid #6e5400',
                 borderRadius: '0.375rem',
                 marginBottom: '1.125rem',
               }}>
-                <span style={{ fontSize: '0.7rem', color: '#fcd34d', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.7rem', color: '#6e5400', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                   Event:
                 </span>
-                <span style={{ fontSize: '0.8rem', color: '#fef3c7', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.8rem', color: '#6e5400', fontWeight: 600 }}>
                   {foundEvent.title}
                 </span>
               </div>
@@ -366,7 +366,7 @@ export default function ForgotPassword() {
               <h2 style={{ margin: '0 0 0.25rem', fontSize: '0.9375rem', fontWeight: 700 }}>
                 Enter your details
               </h2>
-              <p style={{ margin: '0 0 1.25rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.45)' }}>
+              <p style={{ margin: '0 0 1.25rem', fontSize: '0.8125rem', color: '#5a5d70' }}>
                 Use the name you joined the workspace with and the recovery code you were shown when you set your password.
               </p>
 
@@ -387,17 +387,17 @@ export default function ForgotPassword() {
 
                 {/* Recovery code explanation */}
                 <div style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#ffffff',
+                  border: '2px solid #0d0e1c',
                   borderRadius: '0.5rem',
                   padding: '0.75rem',
                   marginBottom: '0.75rem',
                 }}>
-                  <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  <p style={{ margin: '0 0 0.25rem', fontSize: '0.75rem', fontWeight: 700, color: '#5a5d70', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                     What is a recovery code?
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.55 }}>
-                    A <span style={{ fontFamily: 'monospace', color: 'rgba(255,255,255,0.6)' }}>XXXX-XXXX-XXXX-XXXX-XXXX</span> code
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#5a5d70', lineHeight: 1.55 }}>
+                    A <span style={{ fontFamily: 'monospace', color: '#5a5d70' }}>XXXX-XXXX-XXXX-XXXX-XXXX</span> code
                     shown to you once when you first set your account password. It was displayed in a dialog at that time.
                     If you do not have it, log back in with your current password and generate a new one from the event workspace.
                   </p>
@@ -453,7 +453,7 @@ export default function ForgotPassword() {
                     <EyeToggle show={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
                   </div>
                   {confirmPassword && newPassword !== confirmPassword && (
-                    <p style={{ fontSize: '0.72rem', color: '#f87171', marginTop: '0.25rem' }}>
+                    <p style={{ fontSize: '0.72rem', color: '#a82020', marginTop: '0.25rem' }}>
                       Passwords do not match
                     </p>
                   )}
@@ -488,7 +488,7 @@ export default function ForgotPassword() {
                   {resetLoading && (
                     <span style={{
                       width: '14px', height: '14px',
-                      border: '2px solid rgba(0,0,0,0.3)',
+                      border: '2px solid #0d0e1c',
                       borderTopColor: '#000',
                       borderRadius: '50%',
                       animation: 'fp-spin 0.7s linear infinite',
@@ -503,7 +503,7 @@ export default function ForgotPassword() {
             <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.8rem' }}>
               <button
                 onClick={() => goToStep('find')}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.8rem' }}
+                style={{ background: 'none', border: 'none', color: '#5a5d70', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.8rem' }}
               >
                 Wrong event? Go back
               </button>
@@ -515,8 +515,8 @@ export default function ForgotPassword() {
         {step === 'success' && (
           <div style={cardStyle}>
             <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: '#ffffff',
+              border: '2px solid #0d0e1c',
               borderRadius: '0.875rem',
               padding: '2rem 1.5rem',
               textAlign: 'center',
@@ -525,8 +525,8 @@ export default function ForgotPassword() {
               <div style={{
                 width: '52px', height: '52px',
                 borderRadius: '50%',
-                background: 'rgba(16,185,129,0.12)',
-                border: '1px solid rgba(16,185,129,0.3)',
+                background: '#d6f7e8',
+                border: '2px solid #0a7149',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 1.25rem',
               }}>
@@ -538,12 +538,12 @@ export default function ForgotPassword() {
               <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.0625rem', fontWeight: 800 }}>
                 Password reset successfully
               </h2>
-              <p style={{ margin: '0 0 0.5rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.8125rem', color: '#5a5d70', lineHeight: 1.6 }}>
                 Your account password has been updated. Your recovery code has been invalidated — a new one will be generated the next time you log in and trigger it.
               </p>
               {foundEvent && (
-                <p style={{ margin: '0 0 1.5rem', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.35)' }}>
-                  Event: <strong style={{ color: 'rgba(255,255,255,0.6)' }}>{foundEvent.title}</strong>
+                <p style={{ margin: '0 0 1.5rem', fontSize: '0.8125rem', color: '#5a5d70' }}>
+                  Event: <strong style={{ color: '#5a5d70' }}>{foundEvent.title}</strong>
                 </p>
               )}
 
@@ -554,7 +554,7 @@ export default function ForgotPassword() {
                     style={{
                       display: 'block', padding: '0.7rem',
                       borderRadius: '0.5rem', textDecoration: 'none',
-                      background: '#f59e0b', color: '#000',
+                      background: '#ffe14d', color: '#000',
                       fontWeight: 700, fontSize: '0.875rem',
                       transition: 'opacity 0.2s',
                     }}
@@ -567,9 +567,9 @@ export default function ForgotPassword() {
                   style={{
                     display: 'block', padding: '0.7rem',
                     borderRadius: '0.5rem', textDecoration: 'none',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.6)',
+                    background: '#ffffff',
+                    border: '2px solid #0d0e1c',
+                    color: '#5a5d70',
                     fontWeight: 600, fontSize: '0.875rem',
                   }}
                 >

@@ -181,7 +181,7 @@ function ServiceRow({ service, incidents, online }) {
   const disrupted = isServiceDisrupted(service.key, incidents, online);
 
   return (
-    <div style={{ padding: '14px 0', borderBottom: '1px solid #f3f4f6' }}>
+    <div style={{ padding: '14px 0', borderBottom: '1px solid #d9dbe8' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {!disrupted ? (
@@ -196,14 +196,14 @@ function ServiceRow({ service, incidents, online }) {
               <circle cx="12" cy="17" r="1.2" fill="#fff" />
             </svg>
           )}
-          <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+          <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827', fontFamily: '"Hanken Grotesk", sans-serif' }}>
             {service.name}
           </span>
         </div>
         <span style={{
           fontSize: '12px', fontWeight: '600',
           color: disrupted ? (!online ? '#dc2626' : '#ea580c') : '#16a34a',
-          fontFamily: '"DM Sans", sans-serif',
+          fontFamily: '"Hanken Grotesk", sans-serif',
         }}>
           {disrupted ? (!online ? 'Offline' : 'Disrupted') : 'Operational'}
         </span>
@@ -212,9 +212,9 @@ function ServiceRow({ service, incidents, online }) {
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>15 days ago</span>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{pct !== null ? `${pct}% uptime` : '—'}</span>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
+        <span style={{ fontSize: '11px', color: '#5a5d70', fontFamily: '"Hanken Grotesk", sans-serif' }}>15 days ago</span>
+        <span style={{ fontSize: '11px', color: '#5a5d70', fontFamily: '"Hanken Grotesk", sans-serif' }}>{pct !== null ? `${pct}% uptime` : '—'}</span>
+        <span style={{ fontSize: '11px', color: '#5a5d70', fontFamily: '"Hanken Grotesk", sans-serif' }}>Today</span>
       </div>
     </div>
   );
@@ -230,7 +230,7 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
   const allOk = disruptedCount === 0;
 
   return (
-    <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+    <div style={{ borderBottom: '1px solid #d9dbe8' }}>
       <button
         onClick={() => setExpanded(e => !e)}
         style={{ width: '100%', background: 'none', border: 'none', padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left', transition: 'background 0.1s' }}
@@ -251,14 +251,14 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
             <circle cx="12" cy="17" r="1.2" fill="#fff" />
           </svg>
         )}
-        <span style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+        <span style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: '#111827', fontFamily: '"Hanken Grotesk", sans-serif' }}>
           {category.label}
         </span>
         {!allOk && (
           <span style={{
             fontSize: '12px', fontWeight: '600',
             color: (!online && disruptedCount === category.services.length) ? '#dc2626' : '#ea580c',
-            fontFamily: '"DM Sans", sans-serif',
+            fontFamily: '"Hanken Grotesk", sans-serif',
           }}>
             {disruptedCount} {!online ? 'offline' : 'disrupted'}
           </span>
@@ -304,7 +304,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
   return (
     <div style={{
       padding: '18px 0',
-      borderBottom: '1px solid #edf2f7',
+      borderBottom: '1px solid #2236ff',
     }}>
       {/* Top row: name + pct on left, dot + status on right */}
       <div style={{
@@ -317,7 +317,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
           <span style={{
             fontSize: '15px', fontWeight: '500', color: '#1a202c',
-            fontFamily: '"DM Sans", sans-serif', whiteSpace: 'nowrap',
+            fontFamily: '"Hanken Grotesk", sans-serif', whiteSpace: 'nowrap',
           }}>
             {server.name}
           </span>
@@ -326,7 +326,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
               <span style={{ color: '#cbd5e0', fontSize: '13px', userSelect: 'none' }}>·</span>
               <span style={{
                 fontSize: '13px', color: '#718096',
-                fontFamily: '"DM Sans", sans-serif', whiteSpace: 'nowrap',
+                fontFamily: '"Hanken Grotesk", sans-serif', whiteSpace: 'nowrap',
               }}>
                 {subLabel}
               </span>
@@ -338,7 +338,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
               <span style={{
                 fontSize: '13px', fontWeight: '500',
                 color: isDown ? '#e53e3e' : '#38a169',
-                fontFamily: '"DM Sans", sans-serif',
+                fontFamily: '"Hanken Grotesk", sans-serif',
               }}>
                 {pct}%
               </span>
@@ -367,7 +367,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
           </div>
           <span style={{
             fontSize: '14px', fontWeight: '500', color: statusColor,
-            fontFamily: '"DM Sans", sans-serif',
+            fontFamily: '"Hanken Grotesk", sans-serif',
           }}>
             {statusText}
           </span>
@@ -397,9 +397,9 @@ function InfrastructureSection({ servers, uptimeHistory }) {
   return (
     <div style={{
       background: '#fff',
-      border: '1px solid #e5e7eb',
+      border: '2px solid #0d0e1c',
       borderRadius: '12px',
-      padding: '4px 24px 8px',
+      padding: '4px 24px 8px', boxShadow: '4px 4px 0 #0d0e1c',
     }}>
       {sorted.map((server, i) => (
         <ServerHealthRow key={i} server={server} uptimeHistory={uptimeHistory} />
@@ -419,7 +419,7 @@ function IncidentTimeline({ incident }) {
         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}
       >
         <span style={{
-          fontSize: '15px', fontWeight: '600', fontFamily: '"DM Sans", sans-serif',
+          fontSize: '15px', fontWeight: '600', fontFamily: '"Hanken Grotesk", sans-serif',
           color: incident.severity === 'critical' ? '#dc2626' : incident.severity === 'major' ? '#ea580c' : '#d97706',
         }}>
           {incident.title}
@@ -427,17 +427,17 @@ function IncidentTimeline({ incident }) {
       </button>
       {expanded && incident.timeline && [...incident.timeline].reverse().map((u, i) => (
         <div key={i} style={{ marginTop: '10px' }}>
-          <p style={{ fontSize: '14px', color: '#111827', lineHeight: '1.6', fontFamily: '"DM Sans", sans-serif', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: '#111827', lineHeight: '1.6', fontFamily: '"Hanken Grotesk", sans-serif', margin: 0 }}>
             <strong style={{ fontWeight: '700' }}>{STATUS_LABEL[u.status] || u.status}</strong>
             {' — '}{u.message}
           </p>
-          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px', fontFamily: '"DM Sans", sans-serif' }}>
+          <p style={{ fontSize: '12px', color: '#5a5d70', marginTop: '2px', fontFamily: '"Hanken Grotesk", sans-serif' }}>
             {formatUTCDate(u.createdAt)}
           </p>
         </div>
       ))}
       {!incident.timeline?.length && (
-        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px', fontFamily: '"DM Sans", sans-serif' }}>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px', fontFamily: '"Hanken Grotesk", sans-serif' }}>
           <strong>Investigating</strong> — We are currently investigating this issue.
         </p>
       )}
@@ -458,38 +458,38 @@ function ReportModal({ onClose, onSubmit, submitting, success }) {
   }, [onClose]);
 
   if (success) return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
       <div style={{ background: '#fff', borderRadius: '12px', padding: '40px', textAlign: 'center', maxWidth: '360px', width: '90%', animation: 'modalIn 0.25s ease both' }}>
         <div style={{ fontSize: '40px', marginBottom: '12px' }}>✓</div>
-        <p style={{ fontSize: '16px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>Report received</p>
-        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '6px', fontFamily: '"DM Sans", sans-serif' }}>Thank you for helping us improve reliability.</p>
+        <p style={{ fontSize: '16px', fontWeight: '600', color: '#111827', fontFamily: '"Hanken Grotesk", sans-serif' }}>Report received</p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '6px', fontFamily: '"Hanken Grotesk", sans-serif' }}>Thank you for helping us improve reliability.</p>
       </div>
     </div>
   );
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}
+      style={{ position: 'fixed', inset: 0, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '480px', overflow: 'hidden', animation: 'modalIn 0.2s ease both', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-        <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #f3f4f6' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>Report an issue</h2>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px', fontFamily: '"DM Sans", sans-serif' }}>Help us identify problems faster</p>
+      <div style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '480px', overflow: 'hidden', animation: 'modalIn 0.2s ease both', boxShadow: '4px 4px 0 #0d0e1c' }}>
+        <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #d9dbe8' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, fontFamily: '"Hanken Grotesk", sans-serif' }}>Report an issue</h2>
+          <p style={{ fontSize: '13px', color: '#5a5d70', marginTop: '4px', fontFamily: '"Hanken Grotesk", sans-serif' }}>Help us identify problems faster</p>
         </div>
         <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"DM Sans", sans-serif' }}>Affected area</label>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Hanken Grotesk", sans-serif' }}>Affected area</label>
             <select
               value={form.affectedService}
               onChange={e => setForm(f => ({ ...f, affectedService: e.target.value }))}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', fontFamily: '"DM Sans", sans-serif' }}
+              style={{ width: '100%', padding: '10px 12px', border: '2px solid #0d0e1c', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', fontFamily: '"Hanken Grotesk", sans-serif', boxShadow: '4px 4px 0 #0d0e1c' }}
             >
               {serviceOptions.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"DM Sans", sans-serif' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Hanken Grotesk", sans-serif' }}>
               Description <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <textarea
@@ -497,26 +497,26 @@ function ReportModal({ onClose, onSubmit, submitting, success }) {
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               placeholder="What are you experiencing?"
               rows={3}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: '"DM Sans", sans-serif' }}
+              style={{ width: '100%', padding: '10px 12px', border: '2px solid #0d0e1c', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: '"Hanken Grotesk", sans-serif', boxShadow: '4px 4px 0 #0d0e1c' }}
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"DM Sans", sans-serif' }}>
-              Email <span style={{ color: '#9ca3af', fontWeight: '400', textTransform: 'none' }}>(optional)</span>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Hanken Grotesk", sans-serif' }}>
+              Email <span style={{ color: '#5a5d70', fontWeight: '400', textTransform: 'none' }}>(optional)</span>
             </label>
             <input
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               placeholder="you@example.com"
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', boxSizing: 'border-box', fontFamily: '"DM Sans", sans-serif' }}
+              style={{ width: '100%', padding: '10px 12px', border: '2px solid #0d0e1c', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', boxSizing: 'border-box', fontFamily: '"Hanken Grotesk", sans-serif', boxShadow: '4px 4px 0 #0d0e1c' }}
             />
           </div>
         </div>
         <div style={{ padding: '16px 28px 24px', display: 'flex', gap: '10px' }}>
           <button
             onClick={onClose}
-            style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
+            style={{ flex: 1, padding: '10px', border: '2px solid #0d0e1c', borderRadius: '8px', background: '#fff', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer', fontFamily: '"Hanken Grotesk", sans-serif', boxShadow: '3px 3px 0 #0d0e1c' }}
           >Cancel</button>
           <button
             onClick={() => onSubmit(form)}
@@ -527,12 +527,12 @@ function ReportModal({ onClose, onSubmit, submitting, success }) {
               color:      form.description.trim().length < 5 ? '#9ca3af' : '#fff',
               fontSize: '14px', fontWeight: '600',
               cursor: form.description.trim().length < 5 ? 'default' : 'pointer',
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: '"Hanken Grotesk", sans-serif',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}
           >
             {submitting && (
-              <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+              <span style={{ width: 16, height: 16, border: '2px solid #0d0e1c', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
             )}
             Submit report
           </button>
@@ -709,9 +709,9 @@ export default function Status() {
     activeIncidents.length > 0 ? 'incident'  : 'operational';
 
   const BANNER = {
-    offline:     { bg: '#fef2f2', border: '#fecaca', iconFill: '#ef4444', title: 'Service Unavailable',   sub: 'We cannot reach the PlanIt servers. All services may be affected.' },
-    incident:    { bg: '#fff7ed', border: '#fed7aa', iconFill: '#f97316', title: `${activeIncidents.length} Active Incident${activeIncidents.length !== 1 ? 's' : ''}`, sub: 'We are aware of issues affecting some services.' },
-    operational: { bg: '#f0fdf4', border: '#bbf7d0', iconFill: '#22c55e', title: 'All Systems Operational', sub: "We're not aware of any issues affecting our systems." },
+    offline:     { bg: '#ffe1de', border: '#fecaca', iconFill: '#ef4444', title: 'Service Unavailable',   sub: 'We cannot reach the PlanIt servers. All services may be affected.' },
+    incident:    { bg: '#fff6c2', border: '#fed7aa', iconFill: '#f97316', title: `${activeIncidents.length} Active Incident${activeIncidents.length !== 1 ? 's' : ''}`, sub: 'We are aware of issues affecting some services.' },
+    operational: { bg: '#d6f7e8', border: '#bbf7d0', iconFill: '#22c55e', title: 'All Systems Operational', sub: "We're not aware of any issues affecting our systems." },
   }[bannerState];
 
   const allBars  = buildBars(allIncidents, '', !online);
@@ -735,16 +735,16 @@ export default function Status() {
         body { margin:0; }
       `}</style>
 
-      <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '"DM Sans", sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '"Hanken Grotesk", sans-serif' }}>
 
         {/* Header */}
-        <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 50 }}>
+        <header style={{ background: '#fff', borderBottom: '1px solid #d9dbe8', position: 'sticky', top: 0, zIndex: 50 }}>
           <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link to="/" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none', fontWeight: '500' }}>← PlanIt</Link>
             <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>System Status</span>
             <button
               onClick={() => setShowReport(true)}
-              style={{ padding: '7px 14px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#fff', color: '#374151', fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
+              style={{ padding: '7px 14px', border: '2px solid #0d0e1c', borderRadius: '6px', background: '#fff', color: '#374151', fontSize: '13px', fontWeight: '500', cursor: 'pointer', fontFamily: '"Hanken Grotesk", sans-serif', boxShadow: '3px 3px 0 #0d0e1c' }}
               onMouseEnter={e => e.target.style.background = '#f9fafb'}
               onMouseLeave={e => e.target.style.background = '#fff'}
             >
@@ -773,22 +773,22 @@ export default function Status() {
                 <circle cx="12" cy="17" r="1.2" fill="#fff"/>
               </svg>
               <div style={{ flex:1 }}>
-                <p style={{ margin:0, fontSize:15, fontWeight:700, color: maintenance.active ? '#dc2626' : '#92400e', fontFamily:'"DM Sans",sans-serif' }}>
+                <p style={{ margin:0, fontSize:15, fontWeight:700, color: maintenance.active ? '#dc2626' : '#92400e', fontFamily:'"Hanken Grotesk",sans-serif' }}>
                   {maintenance.active ? 'Maintenance In Progress' : 'Scheduled Maintenance'}
                 </p>
                 {maintenance.message && (
-                  <p style={{ margin:'4px 0 0', fontSize:14, color:'#374151', fontFamily:'"DM Sans",sans-serif' }}>
+                  <p style={{ margin:'4px 0 0', fontSize:14, color:'#374151', fontFamily:'"Hanken Grotesk",sans-serif' }}>
                     {maintenance.message}
                   </p>
                 )}
                 <div style={{ display:'flex', gap:16, marginTop:6, flexWrap:'wrap' }}>
                   {maintenance.start && (
-                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"DM Sans",sans-serif' }}>
+                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"Hanken Grotesk",sans-serif' }}>
                       Starts: <strong>{new Date(maintenance.start).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</strong>
                     </span>
                   )}
                   {maintenance.eta && (
-                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"DM Sans",sans-serif' }}>
+                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"Hanken Grotesk",sans-serif' }}>
                       Est. back: <strong>{new Date(maintenance.eta).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</strong>
                     </span>
                   )}
@@ -807,15 +807,15 @@ export default function Status() {
 
           {/* Auto-report banner */}
           {autoReported && !online && (
-            <div style={{ marginTop: '24px', background: '#fef2f2', border: '1px solid #fecaca', borderLeft: '4px solid #ef4444', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', animation: 'fadeIn 0.3s ease both', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: '24px', background: '#ffe1de', border: '2px solid #a82020', borderLeft: '1px solid #a82020', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', animation: 'fadeIn 0.3s ease both', flexWrap: 'wrap', boxShadow: '4px 4px 0 #0d0e1c' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-                <span style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>Unable to reach PlanIt servers</span>
-                <span style={{ fontSize: '13px', color: '#6b7280', fontFamily: '"DM Sans", sans-serif' }}>An automatic report has been sent.</span>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d12f2f', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#dc2626', fontFamily: '"Hanken Grotesk", sans-serif' }}>Unable to reach PlanIt servers</span>
+                <span style={{ fontSize: '13px', color: '#6b7280', fontFamily: '"Hanken Grotesk", sans-serif' }}>An automatic report has been sent.</span>
               </div>
               <button
                 onClick={() => setShowReport(true)}
-                style={{ fontSize: '13px', fontWeight: '500', color: '#dc2626', background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', padding: '5px 12px', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
+                style={{ fontSize: '13px', fontWeight: '500', color: '#dc2626', background: 'none', border: '2px solid #a82020', borderRadius: '6px', padding: '5px 12px', cursor: 'pointer', fontFamily: '"Hanken Grotesk", sans-serif' }}
               >Add details</button>
             </div>
           )}
@@ -835,23 +835,23 @@ export default function Status() {
               </svg>
             )}
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>
+              <p style={{ fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, fontFamily: '"Hanken Grotesk", sans-serif' }}>
                 {BANNER.title}
               </p>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0', fontFamily: '"DM Sans", sans-serif' }}>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                 {BANNER.sub}
               </p>
               {!online && lastFetch && (
-                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '6px 0 0', fontFamily: '"DM Sans", sans-serif' }}>
+                <p style={{ fontSize: '12px', color: '#5a5d70', margin: '6px 0 0', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                   Status data last updated: {lastFetch.toLocaleTimeString()}
                 </p>
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-              <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
+              <span style={{ fontSize: '12px', color: '#5a5d70', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                 {totalPct !== null ? `${totalPct}% uptime (15d)` : '—'}
               </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: online ? '#16a34a' : '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: online ? '#16a34a' : '#dc2626', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: online ? '#22c55e' : '#ef4444', display: 'inline-block', animation: online ? 'none' : 'pulse 1.5s infinite' }} />
                 {latency !== null ? `${latency}ms` : online ? 'Checking...' : 'Offline'}
               </span>
@@ -861,17 +861,17 @@ export default function Status() {
           {/* Active incident cards */}
           {activeIncidents.map(inc => (
             <div key={inc._id} style={{ border: `1px solid ${inc.severity === 'critical' ? '#fecaca' : '#fed7aa'}`, borderLeft: `4px solid ${inc.severity === 'critical' ? '#ef4444' : '#f97316'}`, borderRadius: '8px', background: inc.severity === 'critical' ? '#fef2f2' : '#fff7ed', padding: '16px 20px', marginBottom: '12px', animation: 'fadeIn 0.3s ease both' }}>
-              <p style={{ fontSize: '14px', fontWeight: '700', color: inc.severity === 'critical' ? '#dc2626' : '#ea580c', margin: '0 0 4px', fontFamily: '"DM Sans", sans-serif' }}>
+              <p style={{ fontSize: '14px', fontWeight: '700', color: inc.severity === 'critical' ? '#dc2626' : '#ea580c', margin: '0 0 4px', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                 {inc.title}
               </p>
               {inc.timeline?.length > 0 && (() => {
                 const last = inc.timeline[inc.timeline.length - 1];
                 return (
                   <>
-                    <p style={{ fontSize: '13px', color: '#374151', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>
+                    <p style={{ fontSize: '13px', color: '#374151', margin: 0, fontFamily: '"Hanken Grotesk", sans-serif' }}>
                       <strong>{STATUS_LABEL[last.status]}</strong>{' — '}{last.message}
                     </p>
-                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 0', fontFamily: '"DM Sans", sans-serif' }}>
+                    <p style={{ fontSize: '12px', color: '#5a5d70', margin: '4px 0 0', fontFamily: '"Hanken Grotesk", sans-serif' }}>
                       {formatUTCDate(last.createdAt)}
                     </p>
                   </>
@@ -895,7 +895,7 @@ export default function Status() {
             <h2 style={{ fontSize: '13px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
               System Status
             </h2>
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '2px solid #0d0e1c', borderRadius: '12px', overflow: 'hidden' }}>
               {SERVICE_CATEGORIES.map((cat, i) => (
                 <CategorySection key={cat.id} category={cat} incidents={allIncidents} online={online} defaultOpen={i === 0} />
               ))}
@@ -916,14 +916,14 @@ export default function Status() {
                     <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
                   </div>
                   {dayIncs.length === 0
-                    ? <p style={{ fontSize: '14px', color: '#9ca3af', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>No incidents reported.</p>
+                    ? <p style={{ fontSize: '14px', color: '#5a5d70', margin: 0, fontFamily: '"Hanken Grotesk", sans-serif' }}>No incidents reported.</p>
                     : dayIncs.map(inc => <IncidentTimeline key={inc._id} incident={inc} />)
                   }
                 </div>
               );
             })}
             {allIncidents.length === 0 && (
-              <p style={{ fontSize: '14px', color: '#9ca3af' }}>No incidents in the past 7 days.</p>
+              <p style={{ fontSize: '14px', color: '#5a5d70' }}>No incidents in the past 7 days.</p>
             )}
           </section>
 

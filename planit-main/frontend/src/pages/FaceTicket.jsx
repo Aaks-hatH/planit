@@ -93,19 +93,19 @@ function randomBytes() {
 function BetaBar() {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="border-b border-amber-400/20 bg-amber-400/[0.06]">
+    <div className="border-b border-amber-700 bg-amber-400/[0.06]">
       <button
         onClick={() => setExpanded((e) => !e)}
         className="w-full flex items-center gap-2 px-4 py-2 text-left"
       >
-        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
         <span className="text-[11px] font-mono tracking-wide text-amber-300/90 flex-1">
           BETA DEMO &mdash; not a production security system
         </span>
         <ChevronRight className={`w-3.5 h-3.5 text-amber-400/60 transition-transform ${expanded ? 'rotate-90' : ''}`} />
       </button>
       {expanded && (
-        <div className="px-4 pb-3 -mt-0.5 text-[12px] leading-relaxed text-neutral-400 max-w-2xl">
+        <div className="px-4 pb-3 -mt-0.5 text-[12px] leading-relaxed text-neutral-500 max-w-2xl">
           This is a proof of concept. A printed photo or a photo on another screen could
           potentially fool a single-frame match if no live person is actually present &mdash;
           the liveness check here is a best-effort beta signal, not spoof-proof. No face
@@ -120,14 +120,14 @@ function BetaBar() {
 function PageChrome({ onBack, right, children }) {
   return (
     <div
-      className="min-h-screen bg-[#05050f] text-white flex flex-col"
+      className="min-h-screen bg-white text-ink flex flex-col"
       style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
     >
       <BetaBar />
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-neutral-400 hover:text-white active:text-white transition-colors text-sm -ml-2 px-2 py-1.5 rounded-lg"
+          className="flex items-center gap-2 text-neutral-500 hover:text-ink active:text-ink transition-colors text-sm -ml-2 px-2 py-1.5 rounded-lg"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -158,7 +158,7 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
           <h1 className="font-display font-extrabold text-[2.6rem] sm:text-6xl leading-[1.03] tracking-tight mb-5">
             Your face<br />is the ticket.
           </h1>
-          <p className="text-neutral-400 text-base sm:text-lg leading-relaxed max-w-md mb-8">
+          <p className="text-neutral-500 text-base sm:text-lg leading-relaxed max-w-md mb-8">
             Take a selfie, get a QR code. At the door, a camera checks that the person
             holding the ticket is the person who enrolled &mdash; entirely on-device.
             No account, no server-side face storage.
@@ -166,7 +166,7 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
             <button
               onClick={onEnroll}
-              className="group flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm hover:bg-[#9d92ff] transition-colors"
+              className="group flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm hover:bg-ac transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Camera className="w-4 h-4" />
               Get my ticket
@@ -174,7 +174,7 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
             </button>
             <button
               onClick={onScan}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white font-semibold text-sm hover:bg-white/5 transition-colors"
+              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-ink text-ink font-semibold text-sm hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <ScanLine className="w-4 h-4" />
               Scan a ticket
@@ -187,11 +187,11 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
 
           <button
             onClick={onEvent}
-            className="group flex items-center gap-2.5 text-left px-4 py-3 rounded-xl border border-[#8B7FFF]/25 bg-[#8B7FFF]/[0.06] hover:bg-[#8B7FFF]/[0.1] transition-colors"
+            className="group flex items-center gap-2.5 text-left px-4 py-3 rounded-xl border-2 border-[#8B7FFF]/25 bg-[#8B7FFF]/[0.06] hover:bg-[#8B7FFF]/[0.1] transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             <Users className="w-4 h-4 text-[#8B7FFF] shrink-0" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold text-white">Running an event with many guests?</span>
+              <span className="block text-sm font-semibold text-ink">Running an event with many guests?</span>
               <span className="block text-xs text-neutral-500">Enroll a whole roster, then check people in with just a look &mdash; no ticket needed.</span>
             </span>
             <ChevronRight className="w-4 h-4 text-neutral-500 shrink-0 transition-transform group-hover:translate-x-0.5" />
@@ -199,14 +199,14 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
         </div>
 
         <div className="relative">
-          <div className="absolute -inset-6 bg-[#8B7FFF]/10 blur-3xl rounded-full" />
-          <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
+          <div className="absolute -inset-6 bg-ac rounded-full" />
+          <div className="relative rounded-2xl border-2 border-ink bg-white/[0.03] p-6 shadow-md">
             <div className="flex items-center justify-between mb-5">
               <span className="font-mono text-[10px] tracking-widest text-neutral-500 uppercase">Sample ticket</span>
               <ScanFace className="w-4 h-4 text-neutral-600" />
             </div>
             <div className="flex gap-5">
-              <div className="w-28 h-28 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <div className="w-28 h-28 rounded-xl bg-lav border-2 border-ink flex items-center justify-center shrink-0">
                 <QrCode className="w-14 h-14 text-neutral-600" strokeWidth={1} />
               </div>
               <div className="flex-1 min-w-0">
@@ -215,7 +215,7 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
                 <DemoBarcode height={44} />
               </div>
             </div>
-            <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-neutral-500">
+            <div className="mt-5 pt-4 border-t border-ink flex items-center justify-between font-mono text-[10px] text-neutral-500">
               <span>128 floats \u2192 128 bytes</span>
               <span className="text-teal-400/80">4x smaller</span>
             </div>
@@ -242,12 +242,12 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
       </div>
 
       {/* Disclaimer panel */}
-      <div className="mt-20 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-5 sm:p-6">
+      <div className="mt-20 rounded-xl border border-amber-700 bg-amber-400/[0.04] p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-3">
-          <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <ShieldAlert className="w-4 h-4 text-amber-700" />
           <span className="font-display font-bold text-sm">Read before you try it</span>
         </div>
-        <ul className="space-y-2 text-sm text-neutral-400 leading-relaxed">
+        <ul className="space-y-2 text-sm text-neutral-500 leading-relaxed">
           <li>&bull; This is a proof of concept, not a production security system.</li>
           <li>&bull; A printed photo or a photo shown on another screen could potentially fool a single-frame match if no live person is present.</li>
           <li>&bull; The liveness check (random on-screen challenges) is required to pass, but it&rsquo;s still client-side and not spoof-proof.</li>
@@ -291,14 +291,14 @@ function ModelLoadingCard({ stage, error, onRetry }) {
     <div className="flex flex-col items-center justify-center text-center py-16 px-6">
       {error ? (
         <>
-          <AlertTriangle className="w-10 h-10 text-rose-400 mb-4" />
-          <p className="text-sm text-neutral-300 mb-6 max-w-xs">{error}</p>
-          <button onClick={onRetry} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Retry</button>
+          <AlertTriangle className="w-10 h-10 text-red-700 mb-4" />
+          <p className="text-sm text-neutral-600 mb-6 max-w-xs">{error}</p>
+          <button onClick={onRetry} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry</button>
         </>
       ) : (
         <>
           <Loader2 className="w-8 h-8 text-[#8B7FFF] animate-spin mb-4" />
-          <p className="font-mono text-xs text-neutral-400">{LOAD_LABELS[stage] || 'Loading\u2026'}</p>
+          <p className="font-mono text-xs text-neutral-500">{LOAD_LABELS[stage] || 'Loading\u2026'}</p>
         </>
       )}
     </div>
@@ -406,19 +406,19 @@ function EnrollFlow({ onDone, onComplete }) {
         </p>
         <FaceModeMobileNotice className="mb-4" />
 
-        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
           {camError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-              <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-              <p className="text-sm text-neutral-300 mb-4">{camError}</p>
-              <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+              <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+              <p className="text-sm text-neutral-600 mb-4">{camError}</p>
+              <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
             </div>
           ) : (
             <>
               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-              <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+              <div className="absolute inset-8 border-2 border-dashed border-ink rounded-full pointer-events-none" />
               {!models.ready && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
                   <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
                 </div>
               )}
@@ -427,7 +427,7 @@ function EnrollFlow({ onDone, onComplete }) {
         </div>
 
         {captureError && (
-          <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             {captureError}
           </div>
@@ -436,7 +436,7 @@ function EnrollFlow({ onDone, onComplete }) {
         <button
           onClick={capture}
           disabled={!ready || !models.ready || capturing}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#9d92ff] transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ac transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           {capturing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
           {capturing ? 'Reading your face\u2026' : 'Capture'}
@@ -452,14 +452,14 @@ function EnrollFlow({ onDone, onComplete }) {
       <>
       <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
-        <div className="flex items-center gap-2 text-teal-300 text-sm mb-1.5">
+        <div className="flex items-center gap-2 text-emerald-700 text-sm mb-1.5">
           <CheckCircle2 className="w-4 h-4" />
           Face captured
         </div>
         <h2 className="font-display font-bold text-2xl mb-1.5">Ticket details</h2>
         <p className="text-neutral-500 text-sm mb-6">Demo info only &mdash; nothing here is verified against a real event.</p>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-5">
+        <div className="rounded-xl border-2 border-ink bg-white/[0.03] p-4 mb-5 shadow">
           <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">Your embedding, compressed</span>
           <EmbeddingBarcode bytes={quantized.bytes} height={40} className="mt-3" />
           <div className="mt-2 text-[11px] font-mono text-neutral-600">128 bytes &middot; range [{quantized.min.toFixed(2)}, {quantized.max.toFixed(2)}]</div>
@@ -469,24 +469,24 @@ function EnrollFlow({ onDone, onComplete }) {
           <Field label="Name">
             <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Your name" maxLength={28}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm" />
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg" />
           </Field>
           <Field label="Event name">
             <input value={form.eventName} onChange={(e) => setForm((f) => ({ ...f, eventName: e.target.value }))}
               maxLength={32}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm" />
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg" />
           </Field>
           <Field label="Seat / ticket ID">
             <input value={form.seatId} onChange={(e) => setForm((f) => ({ ...f, seatId: e.target.value }))}
               maxLength={12}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm font-mono" />
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm font-mono focus:ring-[3px] focus:ring-ac rounded-lg" />
           </Field>
         </div>
 
         <button
           onClick={generateTicket}
           disabled={generating}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
           {generating ? 'Generating QR\u2026' : 'Generate my ticket'}
@@ -502,12 +502,12 @@ function EnrollFlow({ onDone, onComplete }) {
       <>
       <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
-        <div className="flex items-center gap-2 text-teal-300 text-sm mb-4">
+        <div className="flex items-center gap-2 text-emerald-700 text-sm mb-4">
           <Sparkles className="w-4 h-4" />
           Ticket ready
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-6 mb-6">
+        <div className="rounded-2xl border-2 border-ink p-6 mb-6 shadow-md bg-lav text-ink">
           <div className="flex items-center justify-between mb-5">
             <span className="font-display font-bold text-lg">{form.eventName}</span>
             <ScanFace className="w-4 h-4 text-neutral-500" />
@@ -529,7 +529,7 @@ function EnrollFlow({ onDone, onComplete }) {
         </div>
 
         {ticket.trimmed && (
-          <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             Ticket details were shortened slightly to keep the QR code reliably scannable.
           </div>
@@ -548,20 +548,20 @@ function EnrollFlow({ onDone, onComplete }) {
             <Smartphone className="w-4 h-4" />
             <span className="font-display font-bold text-sm">Testing this yourself?</span>
           </div>
-          <ol className="space-y-1.5 text-xs text-neutral-400 leading-relaxed list-decimal list-inside">
+          <ol className="space-y-1.5 text-xs text-neutral-500 leading-relaxed list-decimal list-inside">
             <li>Grab a second phone or computer &mdash; you can&rsquo;t scan a QR code from the same screen it&rsquo;s displayed on.</li>
-            <li>On that second device, open this same page and choose <span className="text-neutral-300 font-medium">Scan a ticket</span>.</li>
-            <li>Point its camera at <span className="text-neutral-300 font-medium">this</span> ticket&rsquo;s QR code above.</li>
-            <li>When your ticket shows up, tap <span className="text-neutral-300 font-medium">Verify with camera</span> and look into the second device&rsquo;s camera &mdash; that confirms it&rsquo;s really you.</li>
+            <li>On that second device, open this same page and choose <span className="text-neutral-600 font-medium">Scan a ticket</span>.</li>
+            <li>Point its camera at <span className="text-neutral-600 font-medium">this</span> ticket&rsquo;s QR code above.</li>
+            <li>When your ticket shows up, tap <span className="text-neutral-600 font-medium">Verify with camera</span> and look into the second device&rsquo;s camera &mdash; that confirms it&rsquo;s really you.</li>
           </ol>
         </div>
 
         <div className="flex flex-col gap-3">
-          <button onClick={downloadQR} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm">
+          <button onClick={downloadQR} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Download className="w-4 h-4" />
             Download QR
           </button>
-          <button onClick={onComplete} className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:bg-white/5">
+          <button onClick={onComplete} className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-ink text-ink text-sm font-bold hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Done
           </button>
         </div>
@@ -686,9 +686,9 @@ function QRScanStage({ onDecoded, onCancel }) {
 
       {error ? (
         <div className="text-center py-10">
-          <XCircle className="w-10 h-10 text-rose-400 mx-auto mb-3" />
-          <p className="text-sm text-neutral-300 mb-5">{error}</p>
-          <button onClick={startScanner} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Retry</button>
+          <XCircle className="w-10 h-10 text-red-700 mx-auto mb-3" />
+          <p className="text-sm text-neutral-600 mb-5">{error}</p>
+          <button onClick={startScanner} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry</button>
         </div>
       ) : (
         <>
@@ -699,13 +699,13 @@ function QRScanStage({ onDecoded, onCancel }) {
               the scanner boxed no matter what size the library picks. */}
           <div
             id={containerId}
-            className="qr-reader-box rounded-2xl overflow-hidden border border-white/10 bg-black relative aspect-square w-full [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover [&_canvas]:!w-full"
+            className="qr-reader-box rounded-2xl overflow-hidden border border-white/10 bg-white relative aspect-square w-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:w-full"
           />
           <p className="text-center text-neutral-500 text-xs mt-4">Scanning automatically&hellip;</p>
         </>
       )}
 
-      <button onClick={onCancel} className="w-full mt-6 py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+      <button onClick={onCancel} className="w-full mt-6 py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         Cancel
       </button>
     </div>
@@ -715,20 +715,20 @@ function QRScanStage({ onDecoded, onCancel }) {
 function DecodedTicketCard({ ticket, onVerify, onRescan }) {
   return (
     <div className="max-w-md mx-auto px-5 py-10">
-      <div className="flex items-center gap-2 text-teal-300 text-sm mb-4">
+      <div className="flex items-center gap-2 text-emerald-700 text-sm mb-4">
         <QrCode className="w-4 h-4" />
         Ticket found
       </div>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 mb-8">
+      <div className="rounded-2xl border-2 border-ink bg-white/[0.03] p-5 mb-8 shadow-md">
         <div className="font-display font-bold text-lg">{ticket.name}</div>
         <div className="text-neutral-500 text-sm mb-4">{ticket.eventName} &middot; {ticket.seatId || 'no seat'}</div>
         <EmbeddingBarcode bytes={ticket.quantized.bytes} height={36} />
       </div>
-      <button onClick={onVerify} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm mb-3">
+      <button onClick={onVerify} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
         <ScanFace className="w-4 h-4" />
         Verify with camera
       </button>
-      <button onClick={onRescan} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+      <button onClick={onRescan} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         Scan a different ticket
       </button>
     </div>
@@ -815,25 +815,25 @@ function VerifyCameraStage({ onResult, onCancel }) {
       </p>
       <FaceModeMobileNotice className="mb-4" />
 
-      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
         {camError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-            <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-            <p className="text-sm text-neutral-300 mb-4">{camError}</p>
-            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+            <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+            <p className="text-sm text-neutral-600 mb-4">{camError}</p>
+            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
           </div>
         ) : (
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-            <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+            <div className="absolute inset-8 border-2 border-dashed border-ink rounded-full pointer-events-none" />
             {phase === 'liveness' && <LivenessPrompt challenge={challenge} />}
             {phase === 'liveness' && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                <div className="h-full bg-[#8B7FFF] transition-all duration-100" style={{ width: `${progress * 100}%` }} />
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-lav">
+                <div className="h-full bg-ac transition-all duration-100" style={{ width: `${progress * 100}%` }} />
               </div>
             )}
             {!models.ready && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
                 <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
               </div>
             )}
@@ -842,7 +842,7 @@ function VerifyCameraStage({ onResult, onCancel }) {
       </div>
 
       {issue && (
-        <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {issue}
         </div>
@@ -851,12 +851,12 @@ function VerifyCameraStage({ onResult, onCancel }) {
       <button
         onClick={beginCheck}
         disabled={!ready || !models.ready || phase === 'liveness' || phase === 'match'}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3"
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
       >
         {(phase === 'liveness' || phase === 'match') ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
         {phase === 'liveness' ? 'Checking\u2026' : phase === 'match' ? 'Capturing\u2026' : 'Start check'}
       </button>
-      <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+      <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         Cancel
       </button>
     </div>
@@ -868,9 +868,9 @@ function ConfidenceMeter({ percent, isMatch }) {
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <span className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">Confidence</span>
-        <span className={`font-mono text-sm font-bold ${isMatch ? 'text-teal-300' : 'text-rose-300'}`}>{percent}%</span>
+        <span className={`font-mono text-sm font-bold ${isMatch ? 'text-emerald-700' : 'text-red-700'}`}>{percent}%</span>
       </div>
-      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-2 rounded-full bg-lav overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${isMatch ? 'bg-teal-400' : 'bg-rose-400'}`}
           style={{ width: `${percent}%` }}
@@ -882,8 +882,8 @@ function ConfidenceMeter({ percent, isMatch }) {
 
 function LivenessChip({ label, passed }) {
   return (
-    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium ${
-      passed ? 'border-teal-400/25 bg-teal-400/10 text-teal-300' : 'border-white/10 bg-white/[0.03] text-neutral-500'
+    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 text-xs font-medium border-ink ${
+      passed ? 'border-emerald-700 bg-emerald-50 text-emerald-700' : 'border-ink bg-white/[0.03] text-neutral-500'
     }`}>
       {passed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
       {label}
@@ -909,15 +909,15 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
     <div className="max-w-md mx-auto px-5 py-10">
       <div className={`flex flex-col items-center text-center mb-8 ${isMatch ? '' : ''}`}>
         <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${
-          isMatch ? 'bg-teal-400/15 animate-[pulse_1.4s_ease-in-out_1]' : 'bg-rose-400/15'
+          isMatch ? 'bg-emerald-50 animate-[pulse_1.4s_ease-in-out_1]' : 'bg-red-50'
         }`}>
-          {isMatch ? <CheckCircle2 className="w-10 h-10 text-teal-300" /> : <XCircle className="w-10 h-10 text-rose-300" />}
+          {isMatch ? <CheckCircle2 className="w-10 h-10 text-emerald-700" /> : <XCircle className="w-10 h-10 text-red-700" />}
         </div>
         <h2 className="font-display font-extrabold text-3xl mb-1">{isMatch ? 'Match' : livenessPassed ? 'No match' : 'Liveness failed'}</h2>
         <p className="text-neutral-500 text-sm">{ticket.name} &middot; {ticket.eventName}</p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 mb-6 space-y-5">
+      <div className="rounded-2xl border-2 border-ink bg-white/[0.03] p-5 mb-6 space-y-5 shadow-md">
         <ConfidenceMeter percent={confidence} isMatch={isMatch} />
 
         <div>
@@ -944,11 +944,11 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
       </div>
 
       <div className="flex flex-col gap-3 mt-8">
-        <button onClick={onRescan} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm">
+        <button onClick={onRescan} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <RefreshCw className="w-4 h-4" />
           Scan another ticket
         </button>
-        <button onClick={onExit} className="py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+        <button onClick={onExit} className="py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           Done
         </button>
       </div>

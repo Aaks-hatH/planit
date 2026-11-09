@@ -88,7 +88,7 @@ export default function SupportSuccess() {
   const isFeatureRequest = type === 'feature' || payment.type === 'feature_request';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-lav text-ink">
       <div className="max-w-lg w-full">
         <div className="card p-8 text-center animate-fade-in">
           {/* Success Icon */}
@@ -123,7 +123,7 @@ export default function SupportSuccess() {
           </div>
 
           {/* What's Next */}
-          <div className="text-left bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="text-left bg-blue-50 border-2 border-blue-600 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-neutral-900 mb-2">
               {isFeatureRequest ? "What's next?" : "How we'll use it:"}
             </h3>
@@ -175,7 +175,7 @@ export default function SupportSuccess() {
               href={`https://twitter.com/intent/tweet?text=I%20just%20supported%20PlanIt%20-%20a%20100%25%20free%20event%20management%20tool!%20Check%20it%20out%3A%20https://planitapp.onrender.com`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Share on Twitter
             </a>

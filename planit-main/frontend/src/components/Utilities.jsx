@@ -57,24 +57,24 @@ export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpris
       <div className="p-6 space-y-6">
         {/* Enterprise Mode Banner */}
         {isEnterpriseMode && isOrganizer && (
-          <div className="card p-6 bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-700 shadow-xl">
+          <div className="card p-6 border-blue-700 shadow-xl bg-lav text-ink">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <UserCheck className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full bg-lav flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-6 h-6 text-ink" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-white mb-1">Enterprise Event Management</h3>
+                <h3 className="text-lg font-bold text-ink mb-1">Enterprise Event Management</h3>
                 <p className="text-sm text-blue-100">Manage personalized invites, track RSVPs, and check in guests with QR codes</p>
               </div>
             </div>
             <button 
               onClick={() => navigate(`/event/${eventId}/checkin`)}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold text-base hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold text-base hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl border-2 border-ink"
             >
               <UserCheck className="w-5 h-5" />
               Open Check-in Dashboard
             </button>
-            <div className="mt-4 pt-4 border-t border-white/20">
+            <div className="mt-4 pt-4 border-t border-ink">
               <p className="text-xs text-blue-100 mb-2 font-medium">Quick Actions:</p>
               <div className="grid grid-cols-2 gap-2 text-xs text-blue-50">
                 <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpris
               type="text"
               readOnly
               value={eventUrl}
-              className="input flex-1 bg-neutral-50 font-mono text-sm"
+              className="input flex-1 bg-neutral-50 font-mono text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg"
             />
             <button onClick={copyLink} className="btn btn-primary">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -209,7 +209,7 @@ export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpris
         )}
 
         {/* Social Sharing Tips */}
-        <div className="card p-6 bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="card p-6 bg-lav text-ink">
           <h3 className="text-lg font-semibold text-neutral-900 mb-3">
             💡 Sharing Tips
           </h3>

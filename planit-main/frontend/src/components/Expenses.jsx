@@ -92,7 +92,7 @@ export default function Expenses({ eventId, socket, isOrganizer }) {
   return (
     <div className="h-full flex flex-col">
       {/* Budget Overview */}
-      <div className="p-4 border-b border-neutral-100 bg-gradient-to-br from-neutral-50 to-white">
+      <div className="p-4 border-b border-neutral-100 bg-lav text-ink">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-neutral-900">Budget</h3>
           {isOrganizer && (
@@ -114,7 +114,7 @@ export default function Expenses({ eventId, socket, isOrganizer }) {
                 min="0"
                 required
                 placeholder="Budget amount"
-                className="input input-sm flex-1"
+                className="input input-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 value={newBudget}
                 onChange={(e) => setNewBudget(e.target.value)}
               />
@@ -259,7 +259,7 @@ export default function Expenses({ eventId, socket, isOrganizer }) {
           expenses.map(expense => (
             <div
               key={expense.id}
-              className="p-3 rounded-lg border border-neutral-200 bg-white hover:shadow-sm transition-shadow"
+              className="p-3 rounded-lg border-2 border-ink bg-white hover:shadow-sm transition-shadow"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -277,7 +277,7 @@ export default function Expenses({ eventId, socket, isOrganizer }) {
                     {expense.paidBy && (
                       <span className="text-neutral-500">Paid by {expense.paidBy}</span>
                     )}
-                    <span className="text-neutral-400">
+                    <span className="text-neutral-500">
                       {new Date(expense.date).toLocaleDateString()}
                     </span>
                   </div>
@@ -289,7 +289,7 @@ export default function Expenses({ eventId, socket, isOrganizer }) {
 
                 <button
                   onClick={() => deleteExpense(expense.id)}
-                  className="flex-shrink-0 text-neutral-400 hover:text-red-600 transition-colors"
+                  className="flex-shrink-0 text-neutral-500 hover:text-red-600 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

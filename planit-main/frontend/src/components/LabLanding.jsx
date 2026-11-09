@@ -18,7 +18,7 @@ export default function LabLanding({
             PlanIt Labs &middot; Experimental
           </div>
           <h1 className="font-display font-extrabold text-[2.6rem] sm:text-6xl leading-[1.03] tracking-tight mb-5">{headline}</h1>
-          <p className="text-neutral-400 text-base sm:text-lg leading-relaxed max-w-md mb-8">{body}</p>
+          <p className="text-neutral-500 text-base sm:text-lg leading-relaxed max-w-md mb-8">{body}</p>
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
             <button
               onClick={primary.onClick}
@@ -32,7 +32,7 @@ export default function LabLanding({
             {secondary && (
               <button
                 onClick={secondary.onClick}
-                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white font-semibold text-sm hover:bg-white/5 transition-colors"
+                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-ink text-ink font-semibold text-sm hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 {SIcon && <SIcon className="w-4 h-4" />}
                 {secondary.label}
@@ -48,7 +48,7 @@ export default function LabLanding({
         </div>
 
         <div className="relative">
-          <div className="absolute -inset-6 blur-3xl rounded-full" style={{ background: `${accent}1a` }} />
+          <div className="absolute -inset-6 rounded-full" style={{ background: `${accent}1a` }} />
           <div className="relative">{preview}</div>
         </div>
       </div>
@@ -66,12 +66,12 @@ export default function LabLanding({
         ))}
       </div>
 
-      <div className="mt-20 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-5 sm:p-6">
+      <div className="mt-20 rounded-xl border border-amber-700 bg-amber-400/[0.04] p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-3">
-          <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <ShieldAlert className="w-4 h-4 text-amber-700" />
           <span className="font-display font-bold text-sm">Read before you try it</span>
         </div>
-        <ul className="space-y-2 text-sm text-neutral-400 leading-relaxed">
+        <ul className="space-y-2 text-sm text-neutral-500 leading-relaxed">
           {notes.map((n, i) => <li key={i}>&bull; {n}</li>)}
         </ul>
       </div>

@@ -24,12 +24,12 @@ import { eventAPI } from '../services/api';
 const POLL_MS = 8000;
 
 const STATUS_META = {
-  pending:      { label: 'NEW',       color: '#f59e0b', bg: '#451a03', border: '#92400e' },
-  acknowledged: { label: 'SEEN',      color: '#60a5fa', bg: '#172554', border: '#1d4ed8' },
-  preparing:    { label: 'COOKING',   color: '#fb923c', bg: '#431407', border: '#c2410c' },
-  ready:        { label: 'READY',     color: '#4ade80', bg: '#052e16', border: '#15803d' },
-  delivered:    { label: 'DELIVERED', color: '#a3a3a3', bg: '#171717', border: '#404040' },
-  cancelled:    { label: 'CANCELLED', color: '#f87171', bg: '#2d0a0a', border: '#991b1b' },
+  pending:      { label: 'NEW',       color: '#6e5400', bg: '#ffffff', border: '#92400e' },
+  acknowledged: { label: 'SEEN',      color: '#2236ff', bg: '#ffffff', border: '#1d4ed8' },
+  preparing:    { label: 'COOKING',   color: '#6e5400', bg: '#ffffff', border: '#c2410c' },
+  ready:        { label: 'READY',     color: '#0a7149', bg: '#ffffff', border: '#15803d' },
+  delivered:    { label: 'DELIVERED', color: '#5a5d70', bg: '#ffffff', border: '#404040' },
+  cancelled:    { label: 'CANCELLED', color: '#a82020', bg: '#ffffff', border: '#991b1b' },
 };
 
 const NEXT_STATUS = {
@@ -40,13 +40,13 @@ const NEXT_STATUS = {
 };
 
 const DIETARY_COLORS = {
-  V:  { label: 'Vegetarian',  color: '#4ade80' },
-  VG: { label: 'Vegan',       color: '#86efac' },
-  GF: { label: 'Gluten-Free', color: '#fde68a' },
-  NF: { label: 'Nut-Free',    color: '#fca5a5' },
-  DF: { label: 'Dairy-Free',  color: '#93c5fd' },
-  H:  { label: 'Halal',       color: '#c4b5fd' },
-  K:  { label: 'Kosher',      color: '#f9a8d4' },
+  V:  { label: 'Vegetarian',  color: '#0a7149' },
+  VG: { label: 'Vegan',       color: '#0a7149' },
+  GF: { label: 'Gluten-Free', color: '#6e5400' },
+  NF: { label: 'Nut-Free',    color: '#a82020' },
+  DF: { label: 'Dairy-Free',  color: '#2236ff' },
+  H:  { label: 'Halal',       color: '#2236ff' },
+  K:  { label: 'Kosher',      color: '#a82a74' },
 };
 
 const COURSE_ORDER = ['drink', 'appetizer', 'main', 'side', 'dessert', 'other'];
@@ -121,7 +121,7 @@ function IconKitchen({ size = 20, color = 'rgba(255,255,255,0.55)' }) {
 function DietPill({ tag }) {
   const meta = DIETARY_COLORS[tag];
   if (!meta) return (
-    <span style={{ background: '#292524', border: '1px solid #57534e', color: '#a8a29e', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>{tag}</span>
+    <span style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: '#5a5d70', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4 }}>{tag}</span>
   );
   return (
     <span style={{ background: meta.color + '22', border: `1px solid ${meta.color}55`, color: meta.color, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4 }}>
@@ -147,29 +147,29 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
+      background: '#ffffff', 
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 20,
     }}>
       <div style={{
-        background: '#111',
-        border: '2px solid #92400e',
-        borderRadius: 18,
+        background: '#ffffff',
+        border: '2px solid #6e5400',
+        borderRadius: 12,
         maxWidth: 440,
         width: '100%',
         overflow: 'hidden',
-        boxShadow: '0 0 40px rgba(146,64,14,0.4)',
+        boxShadow: 'none',
       }}>
         {/* Modal header */}
         <div style={{
           padding: '16px 20px',
-          background: '#1c1209',
-          borderBottom: '1px solid #92400e',
+          background: '#ffffff',
+          borderBottom: '1px solid #6e5400',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <IconWarning size={18} color="#f59e0b" />
           <div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#fbbf24', letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#6e5400', letterSpacing: 0.3 }}>
               {step === 1 ? 'Dietary Restriction Alert' : 'Final Confirmation Required'}
             </div>
             <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>
@@ -180,15 +180,15 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
 
         {/* Step progress bar */}
         <div style={{ display: 'flex', gap: 0, height: 3 }}>
-          <div style={{ flex: 1, background: '#f59e0b' }} />
+          <div style={{ flex: 1, background: '#ffe14d' }} />
           <div style={{ flex: 1, background: step === 2 ? '#f59e0b' : '#2d2d2d', transition: 'background 0.3s' }} />
         </div>
 
         <div style={{ padding: '18px 20px 20px' }}>
           {step === 1 ? (
             <>
-              <p style={{ fontSize: 13, color: '#d1d5db', lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
-                This order has <strong style={{ color: '#fbbf24' }}>dietary restrictions</strong>.
+              <p style={{ fontSize: 13, color: '#5a5d70', lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
+                This order has <strong style={{ color: '#6e5400' }}>dietary restrictions</strong>.
                 Review all requirements below before proceeding.
               </p>
 
@@ -224,8 +224,8 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
                   {allNotes.map((note, i) => (
                     <div key={i} style={{
                       padding: '8px 12px', borderRadius: 8,
-                      background: '#1c1209', border: '1px solid #78350f',
-                      fontSize: 12, color: '#fde68a', lineHeight: 1.5,
+                      background: '#ffffff', border: '2px solid #6e5400',
+                      fontSize: 12, color: '#6e5400', lineHeight: 1.5,
                       marginBottom: 6,
                     }}>
                       {note}
@@ -236,29 +236,29 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
 
               <div style={{
                 padding: '10px 12px', borderRadius: 8,
-                background: '#0f1f0f', border: '1px solid #15803d',
-                fontSize: 12, color: '#86efac', marginBottom: 18,
+                background: '#ffffff', border: '2px solid #0a7149',
+                fontSize: 12, color: '#0a7149', marginBottom: 18,
               }}>
                 <strong>Step 1:</strong> Confirm you have read and understood all dietary requirements for this order.
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={onCancel} style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#1c1c1c', border: '1px solid #333', color: '#737373', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={onCancel} style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#ffffff', border: '2px solid #0d0e1c', color: '#737373', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '3px 3px 0 #0d0e1c' }}>
                   Cancel
                 </button>
-                <button onClick={() => setStep(2)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: '#78350f', border: '1px solid #92400e', color: '#fbbf24', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                <button onClick={() => setStep(2)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: '#ffe14d', border: '2px solid #6e5400', color: '#6e5400', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '3px 3px 0 #0d0e1c' }}>
                   I Have Reviewed the Restrictions
                 </button>
               </div>
             </>
           ) : (
             <>
-              <p style={{ fontSize: 13, color: '#d1d5db', lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
-                <strong style={{ color: '#fbbf24' }}>Second confirmation required.</strong> By proceeding, you confirm this order will be prepared in full compliance with all dietary restrictions.
+              <p style={{ fontSize: 13, color: '#5a5d70', lineHeight: 1.6, marginBottom: 16, marginTop: 0 }}>
+                <strong style={{ color: '#6e5400' }}>Second confirmation required.</strong> By proceeding, you confirm this order will be prepared in full compliance with all dietary restrictions.
               </p>
 
               {allDietary.length > 0 && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#1c1209', border: '1px solid #92400e', marginBottom: 16 }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#ffffff', border: '2px solid #6e5400', marginBottom: 16 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
                     Applying these restrictions
                   </div>
@@ -266,7 +266,7 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
                     {allDietary.map(d => {
                       const meta = DIETARY_COLORS[d];
                       return (
-                        <span key={d} style={{ background: '#451a03', border: '1px solid #92400e', color: '#fde68a', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 5 }}>
+                        <span key={d} style={{ background: '#ffffff', border: '2px solid #6e5400', color: '#6e5400', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 5 }}>
                           {meta ? meta.label : d}
                         </span>
                       );
@@ -275,15 +275,15 @@ function DietaryConfirmModal({ ticket, order, onConfirm, onCancel }) {
                 </div>
               )}
 
-              <div style={{ padding: '10px 12px', borderRadius: 8, background: '#0f1f0f', border: '1px solid #15803d', fontSize: 12, color: '#86efac', marginBottom: 18, lineHeight: 1.5 }}>
+              <div style={{ padding: '10px 12px', borderRadius: 8, background: '#ffffff', border: '2px solid #0a7149', fontSize: 12, color: '#0a7149', marginBottom: 18, lineHeight: 1.5 }}>
                 <strong>Step 2:</strong> Confirm this order will be prepared according to all stated requirements. Cross-contamination risks have been considered.
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setStep(1)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#1c1c1c', border: '1px solid #333', color: '#737373', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => setStep(1)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: '#ffffff', border: '2px solid #0d0e1c', color: '#737373', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '3px 3px 0 #0d0e1c' }}>
                   Back
                 </button>
-                <button onClick={onConfirm} style={{ flex: 2, padding: '10px', borderRadius: 10, background: '#15803d', border: '1px solid #22c55e', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                <button onClick={onConfirm} style={{ flex: 2, padding: '10px', borderRadius: 10, background: '#0c8a5b', border: '2px solid #0a7149', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', boxShadow: '3px 3px 0 #0d0e1c' }}>
                   Confirmed — Proceed
                 </button>
               </div>
@@ -325,8 +325,8 @@ function OrderRow({ order, onStatusChange, saving }) {
       {/* Item details */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
-            {order.qty > 1 && <span style={{ color: '#f59e0b', marginRight: 4 }}>x{order.qty}</span>}
+          <span style={{ fontSize: 14, fontWeight: 800, color: '#0d0e1c' }}>
+            {order.qty > 1 && <span style={{ color: '#6e5400', marginRight: 4 }}>x{order.qty}</span>}
             {order.itemName}
           </span>
           <span style={{ fontSize: 11, color: '#525252' }}>{order.courseType}</span>
@@ -343,11 +343,11 @@ function OrderRow({ order, onStatusChange, saving }) {
         {order.specialRequest?.trim() && (
           <div style={{
             marginTop: 6, padding: '5px 8px', borderRadius: 6,
-            background: '#3d1f00', border: '1px solid #92400e',
+            background: '#ffffff', border: '2px solid #6e5400',
             display: 'flex', alignItems: 'flex-start', gap: 6,
           }}>
             <IconWarning size={13} color="#fbbf24" />
-            <span style={{ fontSize: 12, color: '#fde68a', fontWeight: 600, lineHeight: 1.4 }}>
+            <span style={{ fontSize: 12, color: '#6e5400', fontWeight: 600, lineHeight: 1.4 }}>
               {order.specialRequest}
             </span>
           </div>
@@ -361,7 +361,7 @@ function OrderRow({ order, onStatusChange, saving }) {
           disabled={saving}
           style={{
             flexShrink: 0, padding: '6px 11px', borderRadius: 8,
-            background: '#22c55e', border: 'none', color: '#000',
+            background: '#0c8a5b', border: 'none', color: '#000',
             fontSize: 11, fontWeight: 800,
             cursor: saving ? 'not-allowed' : 'pointer',
             opacity: saving ? 0.5 : 1,
@@ -431,9 +431,9 @@ function Ticket({ ticket, eventId, onRefresh }) {
       )}
 
       <div style={{
-        background: '#111',
+        background: '#ffffff',
         border: `2px solid ${hasUrgent ? '#92400e' : allReady ? '#15803d' : '#262626'}`,
-        borderRadius: 16,
+        borderRadius: 8,
         overflow: 'hidden',
         boxShadow: hasUrgent ? '0 0 24px rgba(146,64,14,0.3)' : 'none',
         transition: 'border-color 0.3s',
@@ -452,13 +452,13 @@ function Ticket({ ticket, eventId, onRefresh }) {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           }}>
             <span style={{ fontSize: 9, color: '#737373', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>TBL</span>
-            <span style={{ fontSize: 13, color: '#fff', fontWeight: 900, lineHeight: 1 }}>
+            <span style={{ fontSize: 13, color: '#0d0e1c', fontWeight: 900, lineHeight: 1 }}>
               {ticket.tableLabel.replace(/^table\s*/i, '') || '?'}
             </span>
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#0d0e1c' }}>
               {ticket.partyName || ticket.tableLabel}
               {ticket.partySize > 0 && (
                 <span style={{ fontSize: 11, color: '#737373', fontWeight: 600, marginLeft: 6 }}>
@@ -467,7 +467,7 @@ function Ticket({ ticket, eventId, onRefresh }) {
               )}
             </div>
             <div style={{ fontSize: 11, color: '#525252', marginTop: 1 }}>
-              Server: <span style={{ color: '#f97316', fontWeight: 700 }}>{ticket.serverName || 'Unassigned'}</span>
+              Server: <span style={{ color: '#6e5400', fontWeight: 700 }}>{ticket.serverName || 'Unassigned'}</span>
               <span style={{ marginLeft: 10, color: '#404040' }}>· {timeAgo(ticket.earliestPlacedAt)}</span>
             </div>
           </div>
@@ -477,7 +477,7 @@ function Ticket({ ticket, eventId, onRefresh }) {
             {ticket.hasDietary && (
               <div title="Dietary restrictions present" style={{
                 width: 28, height: 28, borderRadius: 8,
-                background: '#3d1f00', border: '1px solid #92400e',
+                background: '#ffffff', border: '2px solid #6e5400',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <IconLeaf size={13} color="#4ade80" />
@@ -486,7 +486,7 @@ function Ticket({ ticket, eventId, onRefresh }) {
             {ticket.hasSpecial && (
               <div title="Special requests present" style={{
                 width: 28, height: 28, borderRadius: 8,
-                background: '#3d1f00', border: '1px solid #92400e',
+                background: '#ffffff', border: '2px solid #6e5400',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <IconWarning size={13} color="#fbbf24" />
@@ -495,8 +495,8 @@ function Ticket({ ticket, eventId, onRefresh }) {
             {allReady && (
               <div style={{
                 padding: '4px 8px', borderRadius: 8,
-                background: '#052e16', border: '1px solid #15803d',
-                fontSize: 10, fontWeight: 900, color: '#4ade80',
+                background: '#ffffff', border: '2px solid #0a7149',
+                fontSize: 10, fontWeight: 900, color: '#0a7149',
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
                 <IconCheck size={10} color="#4ade80" />
@@ -510,21 +510,21 @@ function Ticket({ ticket, eventId, onRefresh }) {
         {(ticket.guestDietary?.length > 0 || ticket.guestDietaryNotes) && (
           <div style={{
             margin: '10px 12px 0', padding: '8px 10px', borderRadius: 8,
-            background: '#1c1009', border: '1px solid #78350f',
+            background: '#ffffff', border: '2px solid #6e5400',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
               <IconWarning size={11} color="#f59e0b" />
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#6e5400', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Guest Dietary Restrictions
               </span>
             </div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: ticket.guestDietaryNotes ? 5 : 0 }}>
               {ticket.guestDietary.map(d => (
-                <span key={d} style={{ background: '#451a03', border: '1px solid #92400e', color: '#fde68a', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 5 }}>{d}</span>
+                <span key={d} style={{ background: '#ffffff', border: '2px solid #6e5400', color: '#6e5400', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 5 }}>{d}</span>
               ))}
             </div>
             {ticket.guestDietaryNotes && (
-              <div style={{ fontSize: 11, color: '#fbbf24', fontStyle: 'italic' }}>{ticket.guestDietaryNotes}</div>
+              <div style={{ fontSize: 11, color: '#6e5400', fontStyle: 'italic' }}>{ticket.guestDietaryNotes}</div>
             )}
           </div>
         )}
@@ -604,8 +604,8 @@ export default function KitchenView() {
 
   if (loading) {
     return (
-      <div style={{ height: '100dvh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 28, height: 28, border: '3px solid #1c1c1c', borderTopColor: '#525252', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ height: '100dvh', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 28, height: 28, border: '2px solid #0d0e1c', borderTopColor: '#525252', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -613,7 +613,7 @@ export default function KitchenView() {
 
   if (error) {
     return (
-      <div style={{ height: '100dvh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div style={{ height: '100dvh', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
             <IconKitchen size={32} color="#525252" />
@@ -633,36 +633,36 @@ export default function KitchenView() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0a0a0a',
-      color: '#fff',
+      background: '#ffffff',
+      color: '#0d0e1c',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     }}>
       {/* Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
-        height: 56, borderBottom: '1px solid #1c1c1c',
-        background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)',
+        height: 56, borderBottom: '1px solid #d9dbe8',
+        background: '#ffffff', 
         display: 'flex', alignItems: 'center', gap: 16, padding: '0 20px',
       }}>
         <IconKitchen size={20} color="rgba(255,255,255,0.45)" />
         <div>
-          <span style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>{restaurantName}</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#0d0e1c' }}>{restaurantName}</span>
           <span style={{ fontSize: 12, color: '#525252', marginLeft: 8 }}>Kitchen Display</span>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginLeft: 'auto', alignItems: 'center' }}>
           {pendingCount > 0 && (
-            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#451a03', border: '1px solid #92400e', fontSize: 12, fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#ffffff', border: '2px solid #6e5400', fontSize: 12, fontWeight: 800, color: '#6e5400', display: 'flex', alignItems: 'center', gap: 5 }}>
               <IconBell size={11} color="#f59e0b" /> {pendingCount} new
             </div>
           )}
           {preparingCount > 0 && (
-            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#431407', border: '1px solid #c2410c', fontSize: 12, fontWeight: 800, color: '#fb923c', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#ffffff', border: '2px solid #6e5400', fontSize: 12, fontWeight: 800, color: '#6e5400', display: 'flex', alignItems: 'center', gap: 5 }}>
               <IconFire size={11} color="#fb923c" /> {preparingCount} cooking
             </div>
           )}
           {allReadyCount > 0 && (
-            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#052e16', border: '1px solid #15803d', fontSize: 12, fontWeight: 800, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ padding: '4px 10px', borderRadius: 8, background: '#ffffff', border: '2px solid #0a7149', fontSize: 12, fontWeight: 800, color: '#0a7149', display: 'flex', alignItems: 'center', gap: 5 }}>
               <IconCheck size={11} color="#4ade80" /> {allReadyCount} ready
             </div>
           )}

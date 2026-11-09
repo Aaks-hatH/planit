@@ -249,7 +249,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
   // Sum actual people (adults + children) per invite, not just invite count
   const seatedPeople = seated.reduce((sum, g) => sum + (g.peopleCount ?? 1), 0);
   const isOver      = !isZone && seatedPeople > (obj.capacity || 0);
-  const inp         = "w-full border border-neutral-700 rounded-lg px-3 py-2 text-sm bg-neutral-800 text-white focus:outline-none focus:border-neutral-500";
+  const inp         = "w-full border-2 border-ink rounded-lg px-3 py-2 text-sm bg-lav text-ink focus:outline-none focus:border-neutral-500";
 
   return (
     <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -270,7 +270,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
           <div className="grid grid-cols-3 gap-1">
             {Object.entries(TYPE_META).filter(([t]) => t !== 'zone').map(([t, m]) => (
               <button key={t} onClick={() => onChange({ ...obj, type: t, width: m.w, height: m.h })}
-                className={`px-2 py-1.5 rounded-lg border text-xs font-semibold transition-all ${obj.type === t ? 'bg-white text-neutral-900 border-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'}`}>
+                className={`px-2 py-1.5 rounded-lg border-2 text-xs font-semibold transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${obj.type === t ? 'bg-white text-neutral-900 border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-ink text-neutral-500 hover:border-neutral-500 hover:text-ink'}`}>
                 {m.label}
               </button>
             ))}
@@ -284,13 +284,13 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
           <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">W</label>
           <input type="number" min={30} max={400} step={10} value={obj.width || TYPE_META[obj.type]?.w || 80}
             onChange={e => onChange({ ...obj, width: parseInt(e.target.value) || 80 })}
-            className="w-full border border-neutral-700 rounded-lg px-2 py-1.5 text-sm bg-neutral-800 text-white focus:outline-none" />
+            className="w-full border-2 border-ink rounded-lg px-2 py-1.5 text-sm bg-lav text-ink focus:outline-none focus:ring-[3px] focus:ring-ac" />
         </div>
         <div>
           <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">H</label>
           <input type="number" min={30} max={400} step={10} value={obj.height || TYPE_META[obj.type]?.h || 80}
             onChange={e => onChange({ ...obj, height: parseInt(e.target.value) || 80 })}
-            className="w-full border border-neutral-700 rounded-lg px-2 py-1.5 text-sm bg-neutral-800 text-white focus:outline-none" />
+            className="w-full border-2 border-ink rounded-lg px-2 py-1.5 text-sm bg-lav text-ink focus:outline-none focus:ring-[3px] focus:ring-ac" />
         </div>
       </div>
 
@@ -298,7 +298,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
       {!isZone && (
         <div>
           <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
-            Capacity {isOver && <span className="text-amber-400 normal-case font-normal"> — over by {seatedPeople - obj.capacity}!</span>}
+            Capacity {isOver && <span className="text-amber-700 normal-case font-normal"> — over by {seatedPeople - obj.capacity}!</span>}
           </label>
           <input type="number" min={1} max={999} value={obj.capacity}
             onChange={e => onChange({ ...obj, capacity: parseInt(e.target.value) || 1 })} className={inp} />
@@ -312,7 +312,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
           {PALETTE.map((c, i) => (
             <button key={i} onClick={() => onChange({ ...obj, color: c })}
               style={{ background: c || '#e5e7eb' }}
-              className={`w-6 h-6 rounded-full border-2 transition-transform ${obj.color === c ? 'border-white scale-125' : 'border-transparent hover:scale-110'}`} />
+              className={`w-6 h-6 rounded-full border-2 transition-transform ${obj.color === c ? 'border-ink scale-125' : 'border-transparent hover:scale-110'}`} />
           ))}
         </div>
       </div>
@@ -328,7 +328,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
       {!isZone && allGuests && (
         <div>
           <button onClick={() => setShowGuests(v => !v)}
-            className="w-full flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 hover:text-white transition-colors">
+            className="w-full flex items-center justify-between text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 hover:text-ink transition-colors">
             <span>Guests ({seatedPeople}{obj.capacity ? `/${obj.capacity}` : ''} people){isOver ? ' ⚠' : ''}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showGuests ? 'rotate-180' : ''}`} />
           </button>
@@ -341,10 +341,10 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
                     <div key={g.id} className="flex items-center justify-between py-1 text-xs">
                       <div className="flex items-center gap-1.5">
                         <div className={`w-2 h-2 rounded-full ${g.checkedIn ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
-                        <span className="text-neutral-300 truncate max-w-[100px]">{g.guestName}</span>
-                        {g.checkedIn && <span className="text-[10px] text-emerald-400 font-semibold">✓</span>}
+                        <span className="text-neutral-600 truncate max-w-[100px]">{g.guestName}</span>
+                        {g.checkedIn && <span className="text-[10px] text-emerald-700 font-semibold">✓</span>}
                       </div>
-                      <button onClick={() => onUnassignGuest?.(g.id)} className="text-red-400 hover:text-red-300 font-bold ml-2 shrink-0">✕</button>
+                      <button onClick={() => onUnassignGuest?.(g.id)} className="text-red-700 hover:text-red-700 font-bold ml-2 shrink-0">✕</button>
                     </div>
                   ))}
                 </div>
@@ -352,13 +352,13 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
 
               {/* Search & assign */}
               {isSavingForAssign ? (
-                <p className="text-xs text-amber-400 text-center py-2">Saving map first…</p>
+                <p className="text-xs text-amber-700 text-center py-2">Saving map first…</p>
               ) : (
                 <>
                   <input value={guestSearch} onChange={e => setGuestSearch(e.target.value)}
                     placeholder="Search unassigned guests…"
-                    className="w-full border border-neutral-700 rounded-lg px-2.5 py-1.5 text-xs bg-neutral-800 text-white placeholder-neutral-500 focus:outline-none" />
-                  <div className="max-h-36 overflow-y-auto border border-neutral-700 rounded-lg divide-y divide-neutral-800">
+                    className="w-full border-2 border-ink rounded-lg px-2.5 py-1.5 text-xs bg-lav text-ink placeholder-neutral-400 focus:outline-none focus:ring-[3px] focus:ring-ac" />
+                  <div className="max-h-36 overflow-y-auto border-2 border-ink rounded-lg divide-y divide-neutral-200">
                     {unseated.length === 0
                       ? <p className="text-xs text-neutral-500 text-center py-3">
                           {(allGuests || []).length === 0 ? 'No guests in this event yet' : 'All guests assigned'}
@@ -366,7 +366,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
                       : unseated.filter(Boolean).map(g => (
                         <button key={g._id}
                           onClick={() => onAssignGuest?.(g._id, obj.id, obj.label || TYPE_META[obj.type]?.label)}
-                          className="w-full text-left px-2.5 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors">
+                          className="w-full text-left px-2.5 py-2 text-xs font-medium text-neutral-600 hover:bg-lav hover:text-ink transition-colors">
                           {g.guestName}
                         </button>
                       ))
@@ -382,11 +382,11 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
       {/* Actions */}
       <div className="flex gap-2">
         <button onClick={() => onDuplicate?.(obj.id)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-300 bg-neutral-800 border border-neutral-700 rounded-lg hover:bg-neutral-700 transition-all">
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 bg-lav border-2 border-ink rounded-lg hover:bg-lav transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Copy className="w-3 h-3" /> Duplicate
         </button>
         <button onClick={() => onDelete(obj.id)}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg hover:bg-red-900/40 transition-all">
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-red-700 bg-red-50 border-2 border-red-700 rounded-lg hover:bg-red-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Trash2 className="w-3 h-3" /> Remove
         </button>
       </div>
@@ -406,11 +406,11 @@ function StatsBar({ objs, guestsByTable }) {
   const totalIn   = allGuests.filter(g => g?.checkedIn).reduce((s, g) => s + (g?.peopleCount ?? 1), 0);
   const fillPct   = totalCap ? Math.round((totalAss / totalCap) * 100) : 0;
   return (
-    <div className="px-4 py-2.5 border-b border-neutral-800 grid grid-cols-3 gap-2 text-center">
+    <div className="px-4 py-2.5 border-b border-ink grid grid-cols-3 gap-2 text-center">
       {[
-        ['Tables', tables.length, 'text-white'],
-        [`Seated ${fillPct}%`, totalAss, totalAss > totalCap ? 'text-amber-400' : 'text-indigo-400'],
-        ['Checked In', totalIn, 'text-emerald-400'],
+        ['Tables', tables.length, 'text-ink'],
+        [`Seated ${fillPct}%`, totalAss, totalAss > totalCap ? 'text-amber-700' : 'text-blue-700'],
+        ['Checked In', totalIn, 'text-emerald-700'],
       ].map(([label, val, cls]) => (
         <div key={label}>
           <p className="text-[10px] text-neutral-500 uppercase tracking-wide leading-tight">{label}</p>
@@ -681,19 +681,19 @@ export default function SeatingMap({
   const selectedObj = objs.find(o => o.id === selected) || null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-neutral-950">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-white">
 
       {/* ── Mobile Warning ── */}
-      <div className="md:hidden absolute inset-0 z-[60] bg-neutral-950 flex items-center justify-center p-6">
+      <div className="md:hidden absolute inset-0 z-[60] bg-white flex items-center justify-center p-6">
         <div className="max-w-xs w-full text-center space-y-4">
-          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center mx-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <div className="w-14 h-14 bg-amber-50 border border-amber-700 rounded-xl flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
-          <h3 className="text-lg font-bold text-white">Not Optimised for Mobile</h3>
-          <p className="text-neutral-400 text-sm leading-relaxed">
+          <h3 className="text-lg font-bold text-ink">Not Optimised for Mobile</h3>
+          <p className="text-neutral-500 text-sm leading-relaxed">
             The seating map editor requires drag-and-drop table placement using a mouse and cursor. It cannot be used accurately on a touchscreen. Please open it on a desktop or laptop.
           </p>
-          <button onClick={onClose} className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold border border-neutral-700">
+          <button onClick={onClose} className="px-4 py-2 bg-lav text-neutral-600 rounded-xl text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Go Back
           </button>
         </div>
@@ -704,12 +704,12 @@ export default function SeatingMap({
       `}</style>
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-neutral-900 border-b border-neutral-800 shrink-0 gap-3">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-ink shrink-0 gap-3">
         <div className="flex items-center gap-3 shrink-0">
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
-          <h2 className="text-sm font-bold text-white whitespace-nowrap">{isEditor ? 'Seating Editor' : 'Seating Map'}</h2>
-          {isEditor && isDirty && <span className="text-xs text-amber-400 font-medium animate-pulse">● Auto-saving…</span>}
-          {isEditor && !isDirty && isSaving && <span className="text-xs text-green-400 font-medium">✓ Saved</span>}
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-lav text-neutral-500 hover:text-ink transition-colors"><X className="w-4 h-4" /></button>
+          <h2 className="text-sm font-bold text-ink whitespace-nowrap">{isEditor ? 'Seating Editor' : 'Seating Map'}</h2>
+          {isEditor && isDirty && <span className="text-xs text-amber-700 font-medium animate-pulse">● Auto-saving…</span>}
+          {isEditor && !isDirty && isSaving && <span className="text-xs text-emerald-700 font-medium">✓ Saved</span>}
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
@@ -718,35 +718,35 @@ export default function SeatingMap({
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-500" />
             <input value={search} onChange={e => handleSearch(e.target.value)}
               placeholder="Find guest…"
-              className="pl-6 pr-2 py-1 bg-neutral-800 border border-neutral-700 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none w-28" />
+              className="pl-6 pr-2 py-1 bg-lav border-2 border-ink rounded-lg text-xs text-ink placeholder-neutral-400 focus:outline-none w-28 focus:ring-[3px] focus:ring-ac" />
           </div>
 
-          <button onClick={() => setZoom(z => clamp(z - ZOOM_STEP, MIN_ZOOM, MAX_ZOOM))} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"><ZoomOut className="w-3.5 h-3.5" /></button>
-          <span className="text-xs text-neutral-400 font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => clamp(z + ZOOM_STEP, MIN_ZOOM, MAX_ZOOM))} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors"><ZoomIn className="w-3.5 h-3.5" /></button>
-          <button onClick={resetView} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors" title="Reset view"><RotateCcw className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setZoom(z => clamp(z - ZOOM_STEP, MIN_ZOOM, MAX_ZOOM))} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ZoomOut className="w-3.5 h-3.5" /></button>
+          <span className="text-xs text-neutral-500 font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => clamp(z + ZOOM_STEP, MIN_ZOOM, MAX_ZOOM))} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ZoomIn className="w-3.5 h-3.5" /></button>
+          <button onClick={resetView} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Reset view"><RotateCcw className="w-3.5 h-3.5" /></button>
 
           {/* Export */}
-          <button onClick={exportPNG} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors" title="Export PNG"><Download className="w-3.5 h-3.5" /></button>
+          <button onClick={exportPNG} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Export PNG"><Download className="w-3.5 h-3.5" /></button>
 
           {isEditor && (<>
-            <button onClick={doUndo} disabled={undoStack.current.length === 0} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors disabled:opacity-30" title="Undo (Ctrl+Z)"><Undo2 className="w-3.5 h-3.5" /></button>
-            <button onClick={doRedo} disabled={redoStack.current.length === 0} className="p-1.5 rounded-lg bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors disabled:opacity-30" title="Redo (Ctrl+Y)"><Redo2 className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setShowGrid(v => !v)} className={`p-1.5 rounded-lg transition-colors ${showGrid ? 'bg-neutral-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white'}`} title="Toggle grid"><Grid3x3 className="w-3.5 h-3.5" /></button>
+            <button onClick={doUndo} disabled={undoStack.current.length === 0} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors disabled:opacity-30 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Undo (Ctrl+Z)"><Undo2 className="w-3.5 h-3.5" /></button>
+            <button onClick={doRedo} disabled={redoStack.current.length === 0} className="p-1.5 rounded-lg bg-white text-neutral-500 hover:text-ink hover:bg-lav transition-colors disabled:opacity-30 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Redo (Ctrl+Y)"><Redo2 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setShowGrid(v => !v)} className={`p-1.5 rounded-lg transition-colors ${showGrid ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white text-neutral-500 hover:text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`} title="Toggle grid"><Grid3x3 className="w-3.5 h-3.5" /></button>
 
             {/* Table type buttons */}
             {Object.entries(TYPE_META).filter(([t]) => t !== 'zone').map(([t, m]) => (
-              <button key={t} onClick={() => addTable(t)} className="flex items-center gap-1 px-2 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-medium rounded-lg transition-colors">
+              <button key={t} onClick={() => addTable(t)} className="flex items-center gap-1 px-2 py-1.5 bg-white hover:bg-lav text-neutral-600 hover:text-ink text-xs font-bold rounded-lg transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 <Plus className="w-3 h-3" />{m.label}
               </button>
             ))}
             {/* Zone / label button */}
-            <button onClick={() => addTable('zone')} className="flex items-center gap-1 px-2 py-1.5 bg-indigo-900/50 hover:bg-indigo-900 border border-indigo-700/50 text-indigo-300 hover:text-white text-xs font-medium rounded-lg transition-colors" title="Add a text zone label (VIP, Dance Floor, etc.)">
+            <button onClick={() => addTable('zone')} className="flex items-center gap-1 px-2 py-1.5 bg-blue-50 hover:bg-indigo-900 border-2 border-blue-700 text-blue-700 hover:text-ink text-xs font-bold rounded-lg transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title="Add a text zone label (VIP, Dance Floor, etc.)">
               <Tag className="w-3 h-3" /> Zone
             </button>
 
             <button onClick={handleSave} disabled={!isDirty || isSaving}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-all">
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               <Save className="w-3.5 h-3.5" />{isSaving ? 'Saving…' : 'Save Map'}
             </button>
           </>)}
@@ -757,7 +757,7 @@ export default function SeatingMap({
       <div className="flex flex-1 overflow-hidden">
 
         {/* Canvas */}
-        <div className="flex-1 overflow-hidden relative bg-neutral-900">
+        <div className="flex-1 overflow-hidden relative bg-white">
           <svg ref={svgRef} width="100%" height="100%"
             onPointerDown={onSvgPointerDown} onPointerMove={onSvgPointerMove}
             onPointerUp={onSvgPointerUp} onPointerCancel={onSvgPointerUp}
@@ -821,29 +821,29 @@ export default function SeatingMap({
 
         {/* ── Editor right panel ── */}
         {isEditor && (
-          <div className="w-64 bg-neutral-900 border-l border-neutral-800 flex flex-col overflow-hidden shrink-0">
+          <div className="w-64 bg-white border-l border-ink flex flex-col overflow-hidden shrink-0">
       {/* ── Mobile Warning ── */}
-      <div className="md:hidden absolute inset-0 z-50 bg-neutral-950/95 flex items-center justify-center p-6 rounded-xl">
+      <div className="md:hidden absolute inset-0 z-50 bg-ink/60 flex items-center justify-center p-6 rounded-xl">
         <div className="max-w-xs w-full text-center space-y-3">
-          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center mx-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <div className="w-14 h-14 bg-amber-50 border border-amber-700 rounded-xl flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
-          <h3 className="text-base font-bold text-white">Not Optimised for Mobile</h3>
-          <p className="text-neutral-400 text-xs leading-relaxed">
+          <h3 className="text-base font-bold text-ink">Not Optimised for Mobile</h3>
+          <p className="text-neutral-500 text-xs leading-relaxed">
             The seating map editor uses drag-and-drop table placement which requires a mouse and a large screen to use accurately. Please open this on a desktop or laptop.
           </p>
         </div>
       </div>
 
             <StatsBar objs={objs} guestsByTable={guestsByTable} />
-            <div className="px-4 py-2.5 border-b border-neutral-800">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Table Properties</p>
+            <div className="px-4 py-2.5 border-b border-ink">
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Table Properties</p>
             </div>
             <PropsPanel obj={selectedObj} onChange={updateObj} onDelete={deleteObj} onDuplicate={duplicateObj}
               guestsByTable={guestsByTable} allGuests={allGuests}
               onAssignGuest={onAssignGuest} onUnassignGuest={onUnassignGuest}
               isSavingForAssign={isSavingForAssign} />
-            <div className="px-4 py-3 border-t border-neutral-800 shrink-0 space-y-1.5">
+            <div className="px-4 py-3 border-t border-ink shrink-0 space-y-1.5">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Legend</p>
               {[
                 ['bg-indigo-500', 'Partially filled'],
@@ -853,7 +853,7 @@ export default function SeatingMap({
               ].map(([bg, label]) => (
                 <div key={label} className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${bg} inline-block`} />
-                  <span className="text-xs text-neutral-400">{label}</span>
+                  <span className="text-xs text-neutral-500">{label}</span>
                 </div>
               ))}
             </div>
@@ -862,10 +862,10 @@ export default function SeatingMap({
 
         {/* ── Display right panel ── */}
         {!isEditor && selected && (
-          <div className="w-64 bg-neutral-900 border-l border-neutral-800 flex flex-col overflow-hidden shrink-0">
-            <div className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
+          <div className="w-64 bg-white border-l border-ink flex flex-col overflow-hidden shrink-0">
+            <div className="px-4 py-3 border-b border-ink flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{objs.find(o => o.id === selected)?.label || 'Table'}</p>
+                <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{objs.find(o => o.id === selected)?.label || 'Table'}</p>
                 {objs.find(o => o.id === selected)?.type !== 'zone' && (
                   <p className="text-xs text-neutral-500 mt-0.5">
                     {(guestsByTable[selected] || []).filter(g => g?.checkedIn).reduce((s, g) => s + (g?.peopleCount ?? 1), 0)} / {(guestsByTable[selected] || []).reduce((s, g) => s + (g?.peopleCount ?? 1), 0)} checked in
@@ -873,19 +873,19 @@ export default function SeatingMap({
                   </p>
                 )}
               </div>
-              <button onClick={() => setSelected(null)} className="text-neutral-600 hover:text-white transition-colors"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setSelected(null)} className="text-neutral-600 hover:text-ink transition-colors"><X className="w-3.5 h-3.5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
               {!(guestsByTable[selected] || []).length
                 ? <p className="text-xs text-neutral-500 text-center py-6">No guests assigned to this table</p>
                 : (guestsByTable[selected] || []).filter(Boolean).map(g => (
-                  <div key={g.id} className="flex items-center gap-2.5 py-2 border-b border-neutral-800/50 last:border-0">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${g.checkedIn ? 'bg-emerald-900 text-emerald-300' : 'bg-neutral-800 text-neutral-400'}`}>
+                  <div key={g.id} className="flex items-center gap-2.5 py-2 border-b border-ink last:border-0">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${g.checkedIn ? 'bg-emerald-900 text-emerald-300' : 'bg-lav text-neutral-500'}`}>
                       {initials(g.guestName)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-neutral-200 truncate">{g.guestName}</p>
-                      <p className={`text-[10px] font-semibold ${g.checkedIn ? 'text-emerald-400' : 'text-neutral-600'}`}>{g.checkedIn ? 'Checked in' : 'Not arrived'}</p>
+                      <p className="text-xs font-medium text-ink truncate">{g.guestName}</p>
+                      <p className={`text-[10px] font-semibold ${g.checkedIn ? 'text-emerald-700' : 'text-neutral-600'}`}>{g.checkedIn ? 'Checked in' : 'Not arrived'}</p>
                     </div>
                     {g.checkedIn && <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" style={{ animation: 'guestPulse 2s ease-in-out infinite' }} />}
                   </div>

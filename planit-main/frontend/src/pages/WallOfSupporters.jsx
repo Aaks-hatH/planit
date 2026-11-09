@@ -47,8 +47,8 @@ export default function WallOfSupporters() {
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <Heart className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Heart className="w-4 h-4 text-ink" />
             </div>
             <span className="text-lg font-bold text-neutral-900">PlanIt</span>
           </a>
@@ -71,7 +71,7 @@ export default function WallOfSupporters() {
           {/* Stats Cards */}
           <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             <div className="card p-6">
-              <DollarSign className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <DollarSign className="w-8 h-8 text-emerald-700 mx-auto mb-2" />
               <div className="text-3xl font-bold text-neutral-900">
                 ${stats.totalRaised.toFixed(0)}
               </div>
@@ -79,7 +79,7 @@ export default function WallOfSupporters() {
             </div>
 
             <div className="card p-6">
-              <Heart className="w-8 h-8 text-rose-500 mx-auto mb-2" />
+              <Heart className="w-8 h-8 text-red-700 mx-auto mb-2" />
               <div className="text-3xl font-bold text-neutral-900">
                 {stats.supporterCount}
               </div>
@@ -87,7 +87,7 @@ export default function WallOfSupporters() {
             </div>
 
             <div className="card p-6">
-              <Sparkles className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+              <Sparkles className="w-8 h-8 text-blue-700 mx-auto mb-2" />
               <div className="text-3xl font-bold text-neutral-900">
                 {stats.totalRequests}
               </div>
@@ -102,8 +102,8 @@ export default function WallOfSupporters() {
             onClick={() => setActiveTab('supporters')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'supporters'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                ? 'bg-hl text-ink shadow-lg border-2 border-ink rounded-lg font-bold'
+                : 'bg-white text-neutral-600 hover:bg-neutral-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
             }`}
           >
             <Heart className="w-5 h-5 inline mr-2" />
@@ -113,8 +113,8 @@ export default function WallOfSupporters() {
             onClick={() => setActiveTab('features')}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'features'
-                ? 'bg-neutral-900 text-white shadow-lg'
-                : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                ? 'bg-hl text-ink shadow-lg border-2 border-ink rounded-lg font-bold'
+                : 'bg-white text-neutral-600 hover:bg-neutral-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
             }`}
           >
             <Sparkles className="w-5 h-5 inline mr-2" />
@@ -134,7 +134,7 @@ export default function WallOfSupporters() {
               <div className="space-y-4">
                 {supporters.length === 0 ? (
                   <div className="card p-12 text-center">
-                    <Heart className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                    <Heart className="w-16 h-16 text-neutral-600 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-neutral-900 mb-2">
                       Be the first supporter!
                     </h3>
@@ -151,7 +151,7 @@ export default function WallOfSupporters() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-ac">
                               {supporter.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -192,7 +192,7 @@ export default function WallOfSupporters() {
               <div className="space-y-4">
                 {features.length === 0 ? (
                   <div className="card p-12 text-center">
-                    <Sparkles className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                    <Sparkles className="w-16 h-16 text-neutral-600 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-neutral-900 mb-2">
                       No feature requests yet
                     </h3>
@@ -205,7 +205,7 @@ export default function WallOfSupporters() {
                   </div>
                 ) : (
                   <>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="bg-blue-50 border-2 border-blue-600 rounded-lg p-4 mb-6">
                       <p className="text-sm text-blue-900">
                          <strong>How it works:</strong> Features are prioritized by 
                         contribution amount. Higher contributions get built first!
@@ -217,7 +217,7 @@ export default function WallOfSupporters() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900 text-white text-sm font-bold">
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white text-ink text-sm font-bold">
                                 #{idx + 1}
                               </div>
                               <div>
@@ -259,8 +259,8 @@ export default function WallOfSupporters() {
 
         {/* CTA */}
         <div className="mt-12 text-center">
-          <div className="card p-8 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-dashed border-neutral-300">
-            <Heart className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+          <div className="card p-8 border-2 border-dashed border-neutral-300 bg-lav text-ink">
+            <Heart className="w-12 h-12 text-red-700 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-neutral-900 mb-2">
               Want to see your name here?
             </h2>

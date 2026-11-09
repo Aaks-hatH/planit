@@ -37,20 +37,20 @@ const SOURCE_OPTIONS = [
   { key: 'glassdoor',    label: 'Glassdoor',     color: '#0caa41' },
   { key: 'wellfound',    label: 'Wellfound',     color: '#ef4444' },
   { key: 'ziprecruiter', label: 'ZipRecruiter',  color: '#3b82f6' },
-  { key: 'github',       label: 'GitHub',        color: '#a3a3a3' },
-  { key: 'devpost',      label: 'Devpost',       color: '#38bdf8' },
+  { key: 'github',       label: 'GitHub',        color: '#5a5d70' },
+  { key: 'devpost',      label: 'Devpost',       color: '#2236ff' },
   { key: 'discord',      label: 'Discord',       color: '#5865f2' },
   { key: 'reddit',       label: 'Reddit',        color: '#ff4500' },
-  { key: 'twitter',      label: 'X / Twitter',   color: '#e5e5e5' },
+  { key: 'twitter',      label: 'X / Twitter',   color: '#5a5d70' },
   { key: 'instagram',    label: 'Instagram',     color: '#e1306c' },
-  { key: 'tiktok',       label: 'TikTok',        color: '#25f4ee' },
+  { key: 'tiktok',       label: 'TikTok',        color: '#2236ff' },
   { key: 'youtube',      label: 'YouTube',       color: '#ff0033' },
   { key: 'facebook',     label: 'Facebook',      color: '#1877f2' },
-  { key: 'google',       label: 'Google search', color: '#fbbc05' },
-  { key: 'school',       label: 'School / club', color: '#34d399' },
-  { key: 'friend',       label: 'A friend',      color: '#f472b6' },
-  { key: 'planit',       label: 'PlanIt itself', color: '#a78bfa' },
-  { key: 'other',        label: 'Somewhere else', color: '#94a3b8' },
+  { key: 'google',       label: 'Google search', color: '#6e5400' },
+  { key: 'school',       label: 'School / club', color: '#0a7149' },
+  { key: 'friend',       label: 'A friend',      color: '#a82a74' },
+  { key: 'planit',       label: 'PlanIt itself', color: '#2236ff' },
+  { key: 'other',        label: 'Somewhere else', color: '#5a5d70' },
 ];
 const SOURCE_KEYS = SOURCE_OPTIONS.map((s) => s.key);
 const ALIASES = {
@@ -193,19 +193,8 @@ function useScramble(text, run, delay = 0) {
 
 /* ─── Animation primitives ─────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, y = 28, className = '', as = 'div' }) {
-  const reduce = useReducedMotion();
-  const Tag = motion[as] || motion.div;
-  return (
-    <Tag
-      className={className}
-      initial={reduce ? false : { opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.75, delay, ease: EASE }}
-    >
-      {children}
-    </Tag>
-  );
+  const Tag = as || 'div';
+  return <Tag className={className}>{children}</Tag>;
 }
 
 /** Word-by-word masked rise. `accent` words render in the serif italic with a moving gradient. */
@@ -218,7 +207,7 @@ function Words({ text, className = '', delay = 0, accent = [], inView = false })
         <span key={i} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] pr-[0.18em] -mr-[0.18em] pl-[0.04em] -ml-[0.04em]" aria-hidden="true">
           <motion.span
             className={cx('inline-block', accent.includes(i) && 'careers-shine leading-[0.9]')}
-            initial={reduce ? false : { y: '115%', rotate: 4 }}
+            
             {...trigger}
             transition={{ duration: 1, delay: delay + i * 0.07, ease: EASE }}
           >
@@ -249,14 +238,14 @@ function Kinetic({ lines, go = true, delay = 0, className = '' }) {
                   <span className="inline-block overflow-hidden align-bottom" style={box}>
                     <motion.span
                       className="careers-shine inline-block leading-[0.9]"
-                      initial={reduce ? false : hidden} animate={go ? shown : hidden}
+                       animate={go ? shown : hidden}
                       transition={{ duration: 1.1, delay: delay + (k++) * 0.04, ease: EASE }}
                     >{w.t}</motion.span>
                   </span>
                 ) : [...w.t].map((ch, ci) => (
                   <span key={ci} className="inline-block overflow-hidden align-bottom" style={box}>
                     <motion.span
-                      className="inline-block" initial={reduce ? false : hidden} animate={go ? shown : hidden}
+                      className="inline-block"  animate={go ? shown : hidden}
                       transition={{ duration: 1, delay: delay + (k++) * 0.04, ease: EASE }}
                     >{ch}</motion.span>
                   </span>
@@ -293,32 +282,13 @@ function Counter({ to, suffix = '', run = true }) {
 
 /** Pulls its children toward the cursor. */
 function Magnetic({ children, strength = 0.32, className = '' }) {
-  const ref = useRef(null);
-  const reduce = useReducedMotion();
-  const fine = usePointerFine();
-  const x = useMotionValue(0); const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 240, damping: 16, mass: 0.4 }); const sy = useSpring(y, { stiffness: 240, damping: 16, mass: 0.4 });
-  const move = (e) => {
-    if (!fine || reduce || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    x.set((e.clientX - (r.left + r.width / 2)) * strength); y.set((e.clientY - (r.top + r.height / 2)) * strength);
-  };
-  const leave = () => { x.set(0); y.set(0); };
-  return <motion.div ref={ref} style={{ x: sx, y: sy }} onMouseMove={move} onMouseLeave={leave} className={cx('inline-block', className)}>{children}</motion.div>;
+  return <div className={cx('inline-block', className)}>{children}</div>;
 }
 
 /** Card with a cursor-following spotlight. */
 function Spotlight({ children, className = '', color = 'rgba(99,102,241,0.20)' }) {
-  const onMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-  };
   return (
-    <div
-      onMouseMove={onMove}
-      className={cx('lq-glass lq-lift group relative rounded-[1.5rem]', className)}
-    >
+    <div className={cx('card card-hover relative', className)}>
       <div className="relative h-full">{children}</div>
     </div>
   );
@@ -330,9 +300,9 @@ function Eyebrow({ n, children, className = '' }) {
   const inView = useInView(ref, { once: true, margin: '-10%' });
   const txt = useScramble(String(children).toUpperCase(), inView);
   return (
-    <div ref={ref} className={cx('flex items-center gap-3 text-[11px] font-medium tracking-[0.28em] text-indigo-300', className)} aria-label={String(children)}>
+    <div ref={ref} className={cx('flex items-center gap-3 text-[11px] font-medium tracking-[0.28em] text-blue-700', className)} aria-label={String(children)}>
       <span className="text-neutral-500" aria-hidden="true">({n})</span>
-      <motion.span aria-hidden="true" className="h-px bg-gradient-to-r from-indigo-400/70 to-transparent" initial={{ width: 0 }} animate={inView ? { width: 48 } : {}} transition={{ duration: 0.9, ease: EASE }} />
+      <motion.span aria-hidden="true" className="h-px bg-lav text-ink"  animate={inView ? { width: 48 } : {}} transition={{ duration: 0.9, ease: EASE }} />
       <span aria-hidden="true">{txt || '\u00A0'}</span>
     </div>
   );
@@ -341,48 +311,7 @@ function Eyebrow({ n, children, className = '' }) {
 /* ─── Page chrome: grain, cursor, preloader ────────────────────────────────── */
 /** Soft cursor follower. Reads data-cursor="Label" from whatever is under the pointer. */
 function Cursor() {
-  const fine = usePointerFine();
-  const reduce = useReducedMotion();
-  const x = useMotionValue(-100); const y = useMotionValue(-100);
-  const dx = useSpring(x, { stiffness: 900, damping: 50, mass: 0.2 }); const dy = useSpring(y, { stiffness: 900, damping: 50, mass: 0.2 });
-  const rx = useSpring(x, { stiffness: 170, damping: 22, mass: 0.5 }); const ry = useSpring(y, { stiffness: 170, damping: 22, mass: 0.5 });
-  const [mode, setMode] = useState({ kind: 'idle', label: '' });
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!fine || reduce) return undefined;
-    const move = (e) => { x.set(e.clientX); y.set(e.clientY); setVisible(true); };
-    const over = (e) => {
-      const el = e.target.closest?.('[data-cursor],a,button,input,textarea,select,summary');
-      const label = el?.getAttribute?.('data-cursor') || '';
-      const kind = !el ? 'idle' : label ? 'label' : 'link';
-      setMode((m) => (m.kind === kind && m.label === label ? m : { kind, label }));
-    };
-    const leave = () => setVisible(false);
-    window.addEventListener('mousemove', move, { passive: true });
-    window.addEventListener('mouseover', over, { passive: true });
-    document.documentElement.addEventListener('mouseleave', leave);
-    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseover', over); document.documentElement.removeEventListener('mouseleave', leave); };
-  }, [fine, reduce, x, y]);
-  if (!fine || reduce) return null;
-  const size = mode.kind === 'label' ? 84 : mode.kind === 'link' ? 52 : 30;
-  return (
-    <>
-      <motion.div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 z-[250]" style={{ x: dx, y: dy, opacity: visible ? 1 : 0 }}>
-        <span className={cx('absolute block h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white transition-opacity duration-200', mode.kind === 'label' && 'opacity-0')} />
-      </motion.div>
-      <motion.div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 z-[249]" style={{ x: rx, y: ry, opacity: visible ? 1 : 0 }}>
-        <motion.div
-          className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border"
-          animate={{ width: size, height: size, backgroundColor: mode.kind === 'label' ? 'rgba(255,255,255,1)' : mode.kind === 'link' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0)', borderColor: mode.kind === 'label' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.32)' }}
-          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-        >
-          <AnimatePresence>
-            {mode.kind === 'label' && <motion.span key={mode.label} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-[10px] font-medium uppercase tracking-[0.18em] text-neutral-900">{mode.label}</motion.span>}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
-    </>
-  );
+  return null;
 }
 
 const LOAD_WORDS = ['Compiling roles', 'Warming up the crew', 'Aligning pixels', 'Almost there'];
@@ -413,21 +342,21 @@ function Preloader({ ready, onReveal, onDone }) {
   const curtain = { duration: 1.05, ease: [0.76, 0, 0.24, 1], delay: 0.38 };
   return (
     <div className="fixed inset-0 z-[300]" role="status" aria-label="Loading careers">
-      <motion.div className="absolute inset-x-0 top-0 h-1/2 bg-[#05050f]" animate={{ y: exit ? '-101%' : 0 }} transition={curtain}>
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-300/50 to-transparent" />
+      <motion.div className="absolute inset-x-0 top-0 h-1/2 bg-white" animate={{ y: exit ? '-101%' : 0 }} transition={curtain}>
+        <div className="absolute inset-x-0 bottom-0 h-px bg-lav text-ink" />
       </motion.div>
-      <motion.div className="absolute inset-x-0 bottom-0 h-1/2 bg-[#05050f]" animate={{ y: exit ? '101%' : 0 }} transition={curtain} onAnimationComplete={() => exit && onDone()} />
+      <motion.div className="absolute inset-x-0 bottom-0 h-1/2 bg-white" animate={{ y: exit ? '101%' : 0 }} transition={curtain} onAnimationComplete={() => exit && onDone()} />
       <motion.div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10" animate={{ opacity: exit ? 0 : 1, scale: exit ? 1.04 : 1, filter: exit ? 'blur(10px)' : 'blur(0px)' }} transition={{ duration: 0.55, ease: EASE }}>
         <div className="flex items-start justify-between text-[11px] tracking-[0.3em] text-neutral-500">
-          <span><b className="font-display text-sm font-extrabold tracking-tight text-white">PlanIt</b> / CAREERS</span>
+          <span><b className="font-display text-sm font-extrabold tracking-tight text-ink">PlanIt</b> / CAREERS</span>
           <span>© {new Date().getFullYear()}</span>
         </div>
         <div className="mx-auto w-full max-w-3xl text-center">
-          <div className="font-display text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-white tabular-nums">
+          <div className="font-display text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-ink tabular-nums">
             {String(p).padStart(2, '0')}<span className="careers-shine inline-block pr-[0.14em] align-top text-[0.28em]">%</span>
           </div>
-          <div className="relative mx-auto mt-6 h-px w-full max-w-md bg-white/10">
-            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-pink-400 to-orange-400" style={{ width: `${p}%` }} />
+          <div className="relative mx-auto mt-6 h-px w-full max-w-md bg-lav">
+            <div className="absolute inset-y-0 left-0 bg-lav text-ink" style={{ width: `${p}%` }} />
             <span className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white" style={{ left: `${p}%` }} />
           </div>
           <div className="mt-5 h-4 text-[11px] uppercase tracking-[0.3em] text-indigo-300/80">{word}</div>
@@ -466,7 +395,7 @@ function ScrollChrome() {
     <>
       <motion.div
         style={{ scaleX: bar }}
-        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-violet-400 to-emerald-300"
+        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-lav text-ink"
       />
     </>
   );
@@ -481,21 +410,21 @@ function Nav({ onApply, openRoles, go }) {
   }, []);
   return (
     <motion.header
-      initial={{ opacity: 0, y: -24 }} animate={{ opacity: go ? 1 : 0, y: go ? 0 : -24 }} transition={{ duration: 0.9, delay: 0.5, ease: EASE }}
+       animate={{ opacity: go ? 1 : 0, y: go ? 0 : -24 }} transition={{ duration: 0.9, delay: 0.5, ease: EASE }}
       className="fixed inset-x-0 z-[70] flex items-center justify-between px-4 sm:px-8 lg:px-14"
       style={{ top: 'calc(1rem + 3px)' }}
     >
-      <a href="/" aria-label="PlanIt home" className="group flex items-center gap-3 text-white">
-        <span className="lq-glass flex items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
+      <a href="/" aria-label="PlanIt home" className="group flex items-center gap-3 text-ink">
+        <span className="bg-white border-2 border-ink shadow-hard-sm flex items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
           <span className="lq-display text-[26px] leading-none">P</span>
         </span>
         <span className="lq-display hidden text-2xl leading-none sm:block">PlanIt</span>
-        <span className="lq-glass hidden rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/80 sm:block">Careers</span>
+        <span className="bg-white border-2 border-ink shadow-hard-sm hidden rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-ink sm:block">Careers</span>
       </a>
-      <nav aria-label="Primary" className="lq-glass flex items-center rounded-full px-1.5 py-1.5" style={solid ? { background: 'rgba(8,8,16,0.55)' } : undefined}>
-        <a href="/about" className="hidden px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white sm:block">About</a>
-        <a href="/blog" className="hidden px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white sm:block">Blog</a>
-        <button onClick={onApply} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90">
+      <nav aria-label="Primary" className="bg-white border-2 border-ink shadow-hard-sm flex items-center rounded-full px-1.5 py-1.5" style={solid ? { background: '#ffffff' } : undefined}>
+        <a href="/about" className="hidden px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-ink sm:block">About</a>
+        <a href="/blog" className="hidden px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-ink sm:block">Blog</a>
+        <button onClick={onApply} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-white border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           {openRoles > 0 ? `${openRoles} open role${openRoles === 1 ? '' : 's'}` : 'Apply'}
           <ArrowUpRight className="h-4 w-4" />
         </button>
@@ -526,10 +455,10 @@ function FloatChip({ chip, mx, my, go }) {
   return (
     <motion.div style={{ left: chip.x, top: chip.y, x: px, y: py }} className="pointer-events-none absolute hidden xl:block">
       <motion.div
-        initial={{ opacity: 0, scale: 0.6 }} animate={go ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }} transition={{ duration: 0.9, delay: 1.2 + chip.d / 100, ease: EASE }}
+         animate={go ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }} transition={{ duration: 0.9, delay: 1.2 + chip.d / 100, ease: EASE }}
       >
         <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: chip.s, repeat: Infinity, ease: 'easeInOut' }}
-          className="flex items-center gap-2 rounded-full lq-glass px-3.5 py-1.5 text-[11px] text-white/90">
+          className="flex items-center gap-2 rounded-full bg-white border-2 border-ink shadow-hard-sm px-3.5 py-1.5 text-[11px] text-ink">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: chip.c, boxShadow: `0 0 10px ${chip.c}` }} />{chip.t}
         </motion.div>
       </motion.div>
@@ -567,15 +496,15 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
   return (
     <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0" style={{
-        backgroundImage: 'linear-gradient(180deg, rgba(5,5,15,.18) 0%, rgba(5,5,15,.28) 36%, rgba(5,5,15,.78) 74%, #05050f 100%), linear-gradient(90deg, rgba(5,5,15,.34) 0%, rgba(5,5,15,.08) 50%, rgba(5,5,15,.34) 100%), url("/media/planit-skyline.webp")',
+        backgroundImage: 'none',
         backgroundSize: 'cover', backgroundPosition: 'center 68%', transform: 'scale(1.015)',
       }} />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 opacity-30" style={{
-        backgroundImage: 'linear-gradient(rgba(199,210,254,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.045) 1px, transparent 1px)',
+        backgroundImage: 'none',
         backgroundSize: '76px 76px', maskImage: 'radial-gradient(ellipse at 50% 34%, black, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse at 50% 34%, black, transparent 78%)',
       }} />
       {/* depth layers */}
-      <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
+      <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'none', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
         <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300" />
         <span className="absolute bottom-[14%] right-[6%] h-1.5 w-1.5 rounded-full bg-indigo-300" />
@@ -589,45 +518,45 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
       <motion.div style={{ y, opacity: op }} className="relative mx-auto w-full max-w-5xl text-center">
         <Kinetic
           lines={HERO_LINES} go={go} delay={0.15}
-          className="font-display text-[clamp(2rem,5.6vw,4.8rem)] leading-[1.02] text-white"
+          className="font-display text-[clamp(2rem,5.6vw,4.8rem)] leading-[1.02] text-ink"
         />
 
         <motion.p
-          initial={reduce ? false : hide} animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.0, ease: EASE }}
-          className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg"
+           animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.0, ease: EASE }}
+          className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-neutral-500 sm:text-lg"
         >
           PlanIt is a live, growing event platform and we&apos;re building a volunteer crew around it. Real product, real users, real ownership.
           These roles are unpaid, flexible, and entirely remote.
         </motion.p>
 
         <motion.div
-          initial={reduce ? false : hide} animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.15, ease: EASE }}
+           animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.15, ease: EASE }}
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Magnetic>
-            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-100/45 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-lg px-7 py-3.5 text-sm font-extrabold text-white transition bg-ac">
+              <span className="absolute inset-0 -translate-x-full transition-transform duration-700 group-hover:translate-x-full bg-lav text-ink" />
               <span className="relative">See open roles</span>
               <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
           </Magnetic>
           {accepting && (
             <Magnetic>
-              <button onClick={onGeneral} className="flex items-center gap-2 lq-glass-strong rounded-full px-7 py-3.5 text-sm font-medium text-white">
-                Don&apos;t see yours? Pitch us <Sparkles className="h-4 w-4 text-indigo-300" />
+              <button onClick={onGeneral} className="flex items-center gap-2 bg-white border-2 border-ink shadow-hard-sm rounded-lg px-7 py-3.5 text-sm font-medium text-ink">
+                Don&apos;t see yours? Pitch us <Sparkles className="h-4 w-4 text-blue-700" />
               </button>
             </Magnetic>
           )}
         </motion.div>
 
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 30 }} animate={go ? show : { opacity: 0, y: 30 }} transition={{ duration: 1, delay: 1.35, ease: EASE }}
+           animate={go ? show : { opacity: 0, y: 30 }} transition={{ duration: 1, delay: 1.35, ease: EASE }}
           className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
         >
           {stats.map((x) => (
-            <div key={x.l} className="lq-glass lq-lift group relative rounded-[1.25rem] px-4 py-5 text-left">
-              <span className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-gradient-to-r from-pink-400 to-transparent transition-transform duration-500 group-hover:scale-x-100" />
-              <div className="font-display text-2xl whitespace-nowrap text-white">
+            <div key={x.l} className="bg-white border-2 border-ink shadow-hard-sm transition hover:-translate-y-0.5 group relative rounded-xl px-4 py-5 text-left">
+              <span className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100 bg-lav text-ink" />
+              <div className="font-display text-2xl whitespace-nowrap text-ink">
                 {x.alt ? <span className="text-lg sm:text-xl">{x.alt}</span> : <Counter to={x.n} suffix={x.s} run={go} />}
               </div>
               <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-500">{x.l}</div>
@@ -638,11 +567,11 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
 
       <motion.button
         onClick={onBrowse} aria-label="Scroll down"
-        initial={{ opacity: 0 }} animate={{ opacity: go ? 1 : 0 }} transition={{ delay: 2.1 }}
-        className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 text-neutral-500 transition hover:text-white sm:flex"
+         animate={{ opacity: go ? 1 : 0 }} transition={{ delay: 2.1 }}
+        className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 text-neutral-500 transition hover:text-ink sm:flex"
       >
         <span className="text-[10px] font-medium uppercase tracking-[0.4em]">Scroll</span>
-        <span className="relative block h-10 w-px overflow-hidden bg-white/15"><span className="careers-drip absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-transparent to-indigo-300" /></span>
+        <span className="relative block h-10 w-px overflow-hidden bg-lav"><span className="careers-drip absolute inset-x-0 top-0 h-4 bg-lav text-ink" /></span>
       </motion.button>
     </section>
   );
@@ -684,8 +613,8 @@ function Marquee({ words }) {
         <MarqueeRow words={words} dir={1} factor={factor} />
         <MarqueeRow words={[...words].reverse()} dir={-1} outline base={2.6} factor={factor} />
       </motion.div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#05050f] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#05050f] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-lav text-ink" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-lav text-ink" />
     </div>
   );
 }
@@ -704,19 +633,19 @@ function Terminal() {
     return () => clearInterval(id);
   }, [inView, reduce]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div ref={ref} className="mt-6 overflow-hidden rounded-xl border border-white/10 bg-black/40 text-[12px]">
+    <div ref={ref} className="mt-6 overflow-hidden rounded-xl border-2 border-ink bg-lav text-[12px] shadow">
       <div className="flex items-center gap-1.5 border-b border-white/[0.06] px-3 py-2">
-        <span className="h-2 w-2 rounded-full bg-rose-400/70" /><span className="h-2 w-2 rounded-full bg-amber-300/70" /><span className="h-2 w-2 rounded-full bg-emerald-400/70" />
+        <span className="h-2 w-2 rounded-full bg-red-50" /><span className="h-2 w-2 rounded-full bg-amber-50" /><span className="h-2 w-2 rounded-full bg-emerald-50" />
         <span className="ml-2 text-[10px] tracking-widest text-neutral-600">~/planit</span>
       </div>
       <div className="min-h-[132px] space-y-1 p-3.5">
         {LINES.slice(0, n).map(([k, t], i) => (
-          <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2">
-            <span className={k === '✓' ? 'text-emerald-300' : 'text-indigo-300'}>{k}</span>
-            <span className={k === '✓' ? 'text-emerald-200/90' : 'text-neutral-300'}>{t}</span>
+          <motion.div key={i}   className="flex gap-2">
+            <span className={k === '✓' ? 'text-emerald-700' : 'text-blue-700'}>{k}</span>
+            <span className={k === '✓' ? 'text-emerald-200/90' : 'text-neutral-600'}>{t}</span>
           </motion.div>
         ))}
-        {n < LINES.length && <span className="careers-blink inline-block h-3.5 w-1.5 translate-y-0.5 bg-pink-400/80" />}
+        {n < LINES.length && <span className="careers-blink inline-block h-3.5 w-1.5 translate-y-0.5 bg-pink-50" />}
       </div>
     </div>
   );
@@ -730,7 +659,7 @@ function WeekBars() {
     <div ref={ref} className="mt-5 flex h-16 items-end gap-1.5">
       {days.map(([d, h], i) => (
         <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-          <motion.div className="w-full rounded-md bg-gradient-to-t from-pink-400/20 to-pink-300/70" initial={{ height: 0 }} animate={inView ? { height: `${h}%` } : {}} transition={{ duration: 0.9, delay: 0.2 + i * 0.07, ease: EASE }} />
+          <motion.div className="w-full rounded-md bg-lav text-ink"  animate={inView ? { height: `${h}%` } : {}} transition={{ duration: 0.9, delay: 0.2 + i * 0.07, ease: EASE }} />
           <span className="text-[9px] text-neutral-600">{d}</span>
         </div>
       ))}
@@ -740,10 +669,10 @@ function WeekBars() {
 
 const WHY = [
   { icon: Rocket, title: 'Ship real software', body: 'PlanIt is live with real users. Work in a React + Node + MongoDB codebase that is actually deployed, not a tutorial project.', span: 'lg:col-span-2', color: 'rgba(99,102,241,0.22)', viz: 'terminal' },
-  { icon: Layers, title: 'Own something', body: 'Take a feature, campaign or area end to end. No busywork, no coffee runs.', span: '', color: 'rgba(34,211,238,0.18)' },
-  { icon: Award, title: 'Portfolio + references', body: 'Real shipped work to point at, plus LinkedIn recommendations and reference letters for people who deliver.', span: '', color: 'rgba(52,211,153,0.18)' },
-  { icon: Clock, title: 'Your schedule', body: 'A few hours a week, async-first, no mandatory meetings. Life comes first.', span: 'lg:col-span-2', color: 'rgba(244,114,182,0.18)', viz: 'week' },
-  { icon: Heart, title: 'Upside, if it happens', body: 'These roles are unpaid. If PlanIt starts making money, contributors may get a cut, agreed in writing first. No promises, just an honest seat at the table.', span: 'lg:col-span-2', color: 'rgba(251,191,36,0.18)' },
+  { icon: Layers, title: 'Own something', body: 'Take a feature, campaign or area end to end. No busywork, no coffee runs.', span: '', color: '#2236ff' },
+  { icon: Award, title: 'Portfolio + references', body: 'Real shipped work to point at, plus LinkedIn recommendations and reference letters for people who deliver.', span: '', color: '#0a7149' },
+  { icon: Clock, title: 'Your schedule', body: 'A few hours a week, async-first, no mandatory meetings. Life comes first.', span: 'lg:col-span-2', color: '#a82a74', viz: 'week' },
+  { icon: Heart, title: 'Upside, if it happens', body: 'These roles are unpaid. If PlanIt starts making money, contributors may get a cut, agreed in writing first. No promises, just an honest seat at the table.', span: 'lg:col-span-2', color: '#6e5400' },
 ];
 
 function Why() {
@@ -753,7 +682,7 @@ function Why() {
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-14 max-w-3xl">
           <Eyebrow n="01" className="mb-5">Why join</Eyebrow>
-          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-ink sm:text-5xl">
             <Words inView text="Small team. Real product. Zero fluff." accent={[5]} />
           </h2>
         </div>
@@ -763,13 +692,13 @@ function Why() {
               <Spotlight color={w.color} className="h-full">
                 <div className="flex h-full flex-col p-7">
                   <div className="mb-5 flex items-center justify-between">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
-                      <w.icon className="h-5 w-5 text-white" />
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-ink bg-white/[0.05] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
+                      <w.icon className="h-5 w-5 text-ink" />
                     </div>
                     <span className="text-[11px] tracking-[0.2em] text-neutral-600">0{i + 1}</span>
                   </div>
-                  <h3 className="font-display text-lg font-bold tracking-[-0.03em] text-white">{w.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-400">{w.body}</p>
+                  <h3 className="font-display text-lg font-bold tracking-[-0.03em] text-ink">{w.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-500">{w.body}</p>
                   {w.viz === 'terminal' && <Terminal />}
                   {w.viz === 'week' && <WeekBars />}
                 </div>
@@ -801,30 +730,30 @@ function How() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-16 flex flex-col items-center text-center">
           <Eyebrow n="02" className="mb-5">The process</Eyebrow>
-          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-ink sm:text-5xl">
             <Words inView text="From hello to shipping." accent={[2]} />
           </h2>
         </div>
         <div ref={ref} className="relative pl-12 sm:pl-0">
-          <div className="absolute bottom-3 left-[19px] top-3 w-px bg-white/10 sm:left-1/2" />
-          <motion.div style={{ scaleY: reduce ? 1 : line }} className="absolute bottom-3 left-[19px] top-3 w-px origin-top bg-gradient-to-b from-indigo-400 via-pink-400 to-orange-400 sm:left-1/2" />
+          <div className="absolute bottom-3 left-[19px] top-3 w-px bg-lav sm:left-1/2" />
+          <motion.div style={{ scaleY: reduce ? 1 : line }} className="absolute bottom-3 left-[19px] top-3 w-px origin-top sm:left-1/2 bg-lav text-ink" />
           <motion.span aria-hidden="true" style={{ top: head }} className="absolute left-[19px] z-10 hidden h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white sm:left-1/2 sm:block" />
           <div className="space-y-16">
             {STEPS.map((s, i) => (
               <motion.div
                 key={s.t}
-                initial={reduce ? false : { opacity: 0, x: i % 2 ? 50 : -50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: '-120px' }}
-                transition={{ duration: 0.9, ease: EASE }}
+                
+                
+                
+                
                 className={cx('relative sm:w-1/2', i % 2 ? 'sm:ml-auto sm:pl-14' : 'sm:pr-14 sm:text-right')}
               >
                 <span aria-hidden="true" className={cx('pointer-events-none absolute -top-10 select-none font-display text-[7rem] font-extrabold leading-none text-white/[0.05]', i % 2 ? 'right-0 sm:right-6' : 'right-0 sm:left-0 sm:right-auto')}>0{i + 1}</span>
-                <span className={cx('absolute top-1 flex h-10 w-10 items-center justify-center rounded-full border border-indigo-400/40 bg-[#07070f] text-sm font-medium text-indigo-200', '-left-12', i % 2 ? 'sm:-left-5' : 'sm:left-auto sm:-right-5')}>
+                <span className={cx('absolute top-1 flex h-10 w-10 items-center justify-center rounded-full border border-blue-700 bg-white text-sm font-medium text-indigo-200', '-left-12', i % 2 ? 'sm:-left-5' : 'sm:left-auto sm:-right-5')}>
                   {i + 1}
                 </span>
-                <h3 className="relative font-display text-xl font-bold tracking-[-0.03em] text-white sm:text-2xl">{s.t}</h3>
-                <p className="relative mt-2 text-sm leading-relaxed text-neutral-400 sm:text-base">{s.d}</p>
+                <h3 className="relative font-display text-xl font-bold tracking-[-0.03em] text-ink sm:text-2xl">{s.t}</h3>
+                <p className="relative mt-2 text-sm leading-relaxed text-neutral-500 sm:text-base">{s.d}</p>
               </motion.div>
             ))}
           </div>
@@ -860,46 +789,46 @@ function RoleCard({ job, index, onOpen }) {
   return (
     <motion.div
       layout
-      initial={reduce ? false : { opacity: 0, y: 40, scale: 0.97 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: '-60px' }}
+      
+      
+      
       exit={{ opacity: 0, scale: 0.94 }}
-      transition={{ duration: 0.7, delay: (index % 3) * 0.09, ease: EASE }}
+      
       style={{ rotateX: sx, rotateY: sy, transformPerspective: 1000 }}
       onMouseMove={onMove} onMouseLeave={reset}
     >
       <button
         onClick={() => onOpen(job.slug)} data-cursor={job.open ? 'Open' : 'View'}
         className={cx(
-          'group relative flex h-full w-full flex-col rounded-[1.5rem] p-6 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
-          job.open ? 'lq-glass' : 'lq-glass opacity-70 hover:opacity-100',
+          'group relative flex h-full w-full flex-col rounded-xl p-6 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
+          job.open ? 'bg-white border-2 border-ink shadow-hard-sm' : 'bg-white border-2 border-ink shadow-hard-sm opacity-70 hover:opacity-100',
           job.featured && job.open && 'ring-1 ring-indigo-400/40',
         )}
       >
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-700 ease-out group-hover:scale-x-100" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
         <span aria-hidden="true" className="pointer-events-none absolute right-4 -top-2 select-none font-display text-[4.5rem] font-extrabold leading-none text-white/[0.05] transition-colors duration-500 group-hover:text-white/[0.09]">{String(index + 1).padStart(2, '0')}</span>
         <div className="relative mb-5 flex items-center gap-2.5">
-          <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-300">
+          <span className="flex items-center gap-2 rounded-full border-2 border-ink bg-white/[0.05] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-600">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />{job.team}
           </span>
           {isNew && <span className="rounded-full bg-pink-400 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-neutral-900">New</span>}
         </div>
-        <h3 className="relative font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">{job.title}</h3>
-        {job.tagline && <p className="relative mt-2.5 line-clamp-2 text-sm leading-relaxed text-neutral-400">{job.tagline}</p>}
+        <h3 className="relative font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-ink">{job.title}</h3>
+        {job.tagline && <p className="relative mt-2.5 line-clamp-2 text-sm leading-relaxed text-neutral-500">{job.tagline}</p>}
         <div className="relative mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-neutral-500">
           <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
           <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{job.hoursPerWeek}</span>
         </div>
         {job.skills?.length > 0 && (
           <div className="relative mt-4 flex flex-wrap gap-1.5">
-            {job.skills.slice(0, 4).map((s) => <span key={s} className="rounded-md bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-neutral-300">{s}</span>)}
+            {job.skills.slice(0, 4).map((s) => <span key={s} className="rounded-md bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-neutral-600">{s}</span>)}
             {job.skills.length > 4 && <span className="rounded-md px-1 py-1 text-[11px] text-neutral-600">+{job.skills.length - 4}</span>}
           </div>
         )}
-        <div className="relative mt-auto flex items-center justify-between pt-6 text-sm font-bold text-white">
+        <div className="relative mt-auto flex items-center justify-between pt-6 text-sm font-bold text-ink">
           <span className="flex items-center gap-3">
             {job.open ? (
-              <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-300">
+              <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-700">
                 <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" /></span>
                 {left ? `${left}d left` : 'Open'}
               </span>
@@ -909,7 +838,7 @@ function RoleCard({ job, index, onOpen }) {
             <span className="text-neutral-500">·</span>
             <span>{job.open ? 'View & apply' : 'View details'}</span>
           </span>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition-all duration-300 group-hover:bg-white group-hover:text-neutral-900">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lav transition-all duration-300 group-hover:bg-white group-hover:text-neutral-900">
             <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
           </span>
         </div>
@@ -926,11 +855,11 @@ function GeneralCard({ onOpen, accepting }) {
         className="group relative h-full w-full overflow-hidden rounded-3xl p-px text-left disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="absolute inset-[-100%] careers-spin bg-[conic-gradient(from_0deg,transparent_0_60%,#6366f1_75%,#22d3ee_88%,transparent_100%)] opacity-70" />
-        <span className="relative flex h-full min-h-[18rem] flex-col rounded-[calc(1.5rem-1px)] bg-[#07070f] p-6">
-          <Sparkles className="mb-4 h-6 w-6 text-indigo-300 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" />
-          <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">Don&apos;t see <span className="careers-shine leading-none">your</span> role?</h3>
-          <p className="mt-3 text-sm leading-relaxed text-neutral-400">Tell us what you&apos;d build, write, design or grow. Some of our best ideas start as a pitch nobody posted a job for.</p>
-          <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-bold text-white">General application <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+        <span className="relative flex h-full min-h-[18rem] flex-col rounded-[calc(1.5rem-1px)] bg-white p-6">
+          <Sparkles className="mb-4 h-6 w-6 text-blue-700 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" />
+          <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-ink">Don&apos;t see <span className="careers-shine leading-none">your</span> role?</h3>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-500">Tell us what you&apos;d build, write, design or grow. Some of our best ideas start as a pitch nobody posted a job for.</p>
+          <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-bold text-ink">General application <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
         </span>
       </button>
     </Reveal>
@@ -956,19 +885,19 @@ function Roles({ state, onOpen, reload }) {
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <Eyebrow n="03" className="mb-5">Open roles</Eyebrow>
-            <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+            <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-ink sm:text-5xl">
               <Words inView text="Find your seat." accent={[2]} />
             </h2>
           </div>
           <Reveal delay={0.1} className="relative w-full md:w-72">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search roles or skills" aria-label="Search roles" className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-indigo-400/70" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search roles or skills" aria-label="Search roles" className="w-full rounded-xl border-2 border-ink bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-ink outline-none transition placeholder:text-neutral-600 focus:border-blue-700 focus:ring-[3px] focus:ring-ac" />
           </Reveal>
         </div>
 
         {!accepting && !loading && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/[0.07] p-4 text-sm text-amber-100">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-300" />
+          <motion.div   className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-700 bg-amber-400/[0.07] p-4 text-sm text-amber-100">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
             <div><b className="font-bold">Applications are paused.</b> {pausedMessage || 'Check back soon.'}</div>
           </motion.div>
         )}
@@ -976,7 +905,7 @@ function Roles({ state, onOpen, reload }) {
         {teams.length > 2 && (
           <div className="mb-3 flex flex-wrap gap-2">
             {teams.map((t) => (
-              <button key={t} onClick={() => setTeam(t)} className={cx('relative flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors', team === t ? 'text-neutral-900' : 'text-neutral-400 hover:text-white')}>
+              <button key={t} onClick={() => setTeam(t)} className={cx('relative flex items-center gap-2 rounded-lg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors', team === t ? 'text-neutral-900' : 'text-neutral-500 hover:text-ink')}>
                 {team === t && <motion.span layoutId="careers-team-pill" className="absolute inset-0 rounded-full bg-white" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
                 <span className="relative">{t}</span>
                 <span className={cx('relative text-[10px]', team === t ? 'text-neutral-500' : 'text-neutral-600')}>{counts[t] || 0}</span>
@@ -1000,9 +929,9 @@ function Roles({ state, onOpen, reload }) {
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center">
-            <p className="text-neutral-300">We couldn&apos;t load the roles right now.</p>
-            <button onClick={reload} className="mt-4 rounded-xl bg-white px-5 py-2 text-sm font-bold text-neutral-900">Try again</button>
+          <div className="rounded-3xl border-2 border-ink bg-white/[0.03] p-10 text-center shadow">
+            <p className="text-neutral-600">We couldn&apos;t load the roles right now.</p>
+            <button onClick={reload} className="mt-4 rounded-xl bg-white px-5 py-2 text-sm font-bold text-neutral-900 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Try again</button>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1014,7 +943,7 @@ function Roles({ state, onOpen, reload }) {
         )}
         {!loading && !error && jobs.length > 0 && shown.length === 0 && (
           <Reveal className="mt-6 text-center text-sm text-neutral-500">
-            Nothing matches that search. <button onClick={() => { setQ(''); setTeam('All'); }} className="font-bold text-indigo-300 hover:underline">Clear filters</button>
+            Nothing matches that search. <button onClick={() => { setQ(''); setTeam('All'); }} className="font-bold text-blue-700 hover:underline">Clear filters</button>
           </Reveal>
         )}
         {!loading && !error && jobs.length === 0 && (
@@ -1043,26 +972,26 @@ function Faq() {
       <div className="relative mx-auto max-w-3xl">
         <div className="mb-12 flex flex-col items-center text-center">
           <Eyebrow n="04" className="mb-5">Good to know</Eyebrow>
-          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-ink sm:text-5xl">
             <Words inView text="Straight answers." accent={[1]} />
           </h2>
         </div>
         <div className="space-y-3">
           {FAQ.map((f, i) => (
             <Reveal key={f.q} delay={i * 0.05}>
-              <div className={cx('lq-glass rounded-[1.25rem] transition-colors duration-300', open === i && 'ring-1 ring-white/10')}>
-                <motion.span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top bg-gradient-to-b from-indigo-400 to-pink-400" initial={false} animate={{ scaleY: open === i ? 1 : 0 }} transition={{ duration: 0.4, ease: EASE }} />
+              <div className={cx('bg-white border-2 border-ink shadow-hard-sm rounded-xl transition-colors duration-300', open === i && 'ring-1 ring-ink')}>
+                <motion.span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top bg-lav text-ink"  animate={{ scaleY: open === i ? 1 : 0 }} transition={{ duration: 0.4, ease: EASE }} />
                 <button onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 p-5 text-left" aria-expanded={open === i}>
                   <span className="flex items-baseline gap-4">
                     <span className="text-[11px] tracking-[0.2em] text-neutral-600">0{i + 1}</span>
-                    <span className="font-display text-sm font-bold tracking-[-0.02em] text-white sm:text-base">{f.q}</span>
+                    <span className="font-display text-sm font-bold tracking-[-0.02em] text-ink sm:text-base">{f.q}</span>
                   </span>
-                  <ChevronDown className={cx('h-5 w-5 flex-shrink-0 text-neutral-400 transition-transform duration-300', open === i && 'rotate-180 text-indigo-300')} />
+                  <ChevronDown className={cx('h-5 w-5 flex-shrink-0 text-neutral-500 transition-transform duration-300', open === i && 'rotate-180 text-blue-700')} />
                 </button>
                 <AnimatePresence initial={false}>
                   {open === i && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: EASE }}>
-                      <p className="px-5 pb-5 pl-14 text-sm leading-relaxed text-neutral-400 sm:text-base">{f.a}</p>
+                    <motion.div   exit={{ height: 0, opacity: 0 }} >
+                      <p className="px-5 pb-5 pl-14 text-sm leading-relaxed text-neutral-500 sm:text-base">{f.a}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1083,23 +1012,23 @@ function FinalCta({ onBrowse }) {
           <p className="lq-kicker mb-6">{'// Join the crew'}</p>
           <BlurText
             as="h2" justify="start" text={'Your next project\nstarts here.'} accent={[4]}
-            className="lq-display text-white leading-[0.97] text-5xl md:text-7xl lg:text-8xl"
+            className="lq-display text-ink leading-[0.97] text-5xl md:text-7xl lg:text-8xl"
           />
-          <p className="mt-6 max-w-[44ch] text-sm font-light leading-snug text-white/90 md:text-base">
+          <p className="mt-6 max-w-[44ch] text-sm font-light leading-snug text-ink md:text-base">
             Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-6">
-            <button onClick={onBrowse} data-cursor="Go" className="lq-glass-strong inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white">
+            <button onClick={onBrowse} data-cursor="Go" className="bg-white border-2 border-ink shadow-hard-sm inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-ink">
               Browse open roles <ArrowUpRight className="h-5 w-5" />
             </button>
-            <a href="/about" className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">About PlanIt <ArrowUpRight className="h-4 w-4" /></a>
+            <a href="/about" className="inline-flex items-center gap-2 text-sm font-medium text-ink transition-colors hover:text-ink">About PlanIt <ArrowUpRight className="h-4 w-4" /></a>
           </div>
         </div>
-        <footer className="flex flex-col items-center justify-between gap-4 border-t border-white/20 pt-6 text-xs text-white/80 sm:flex-row">
+        <footer className="flex flex-col items-center justify-between gap-4 border-t border-ink pt-6 text-xs text-ink sm:flex-row">
           <span>© {new Date().getFullYear()} PlanIt. Volunteer roles are unpaid.</span>
           <span className="flex gap-5">
-            <a href="/about" className="hover:text-white">About</a><a href="/blog" className="hover:text-white">Blog</a>
-            <a href="/privacy" className="hover:text-white">Privacy</a><a href="/terms" className="hover:text-white">Terms</a>
+            <a href="/about" className="hover:text-ink">About</a><a href="/blog" className="hover:text-ink">Blog</a>
+            <a href="/privacy" className="hover:text-ink">Privacy</a><a href="/terms" className="hover:text-ink">Terms</a>
           </span>
         </footer>
       </div>
@@ -1109,22 +1038,22 @@ function FinalCta({ onBrowse }) {
 
 /* ─── Apply form ───────────────────────────────────────────────────────────── */
 const inputCls = (err) => cx(
-  'w-full rounded-xl border bg-white/[0.04] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-neutral-600',
-  'focus:border-indigo-400/70 focus:bg-white/[0.07]',
-  err ? 'border-rose-500/60' : 'border-white/10',
+  'w-full rounded-xl border-2 bg-white/[0.04] px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-neutral-600 border-ink',
+  'focus:border-blue-700 focus:bg-white/[0.07]',
+  err ? 'border-red-700' : 'border-ink',
 );
 
 function Field({ label, hint, error, optional, children, as = 'label' }) {
   const Tag = as;
   return (
     <Tag className="block">
-      <span className="mb-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+      <span className="mb-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-500">
         {label}{optional && <span className="font-medium normal-case tracking-normal text-neutral-600">optional</span>}
       </span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-neutral-500">{hint}</span>}
       <AnimatePresence>
-        {error && <motion.span initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-1 block text-xs text-rose-400">{error}</motion.span>}
+        {error && <motion.span   exit={{ opacity: 0 }} className="mt-1 block text-xs text-red-700">{error}</motion.span>}
       </AnimatePresence>
     </Tag>
   );
@@ -1140,7 +1069,7 @@ function Segmented({ options, value, onChange }) {
     <div className="flex flex-wrap gap-2">
       {options.map(([k, l]) => (
         <button type="button" key={k} onClick={() => onChange(value === k ? '' : k)}
-          className={cx('rounded-lg border px-3.5 py-2 text-xs font-bold transition', value === k ? 'border-white bg-white text-neutral-900' : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:border-white/30')}>
+          className={cx('rounded-lg border-2 px-3.5 py-2 text-xs font-bold transition border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none', value === k ? 'border-ink bg-white text-neutral-900 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-ink bg-white/[0.03] text-neutral-600 hover:border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold')}>
           {l}
         </button>
       ))}
@@ -1159,7 +1088,7 @@ function SkillPicker({ value, onChange, suggestions }) {
     <div>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {value.map((s) => (
-          <motion.span layout key={s} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-1.5 rounded-lg bg-indigo-400/15 px-2.5 py-1 text-xs font-semibold text-indigo-100">
+          <motion.span layout key={s}   className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-indigo-100">
             {s}<button type="button" onClick={() => onChange(value.filter((x) => x !== s))} aria-label={`Remove ${s}`}><X className="h-3 w-3 opacity-70 hover:opacity-100" /></button>
           </motion.span>
         ))}
@@ -1171,7 +1100,7 @@ function SkillPicker({ value, onChange, suggestions }) {
       {suggestions.filter((s) => !value.includes(s)).length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {suggestions.filter((s) => !value.includes(s)).slice(0, 8).map((s) => (
-            <button type="button" key={s} onClick={() => add(s)} className="rounded-md border border-dashed border-white/15 px-2 py-1 text-[11px] text-neutral-400 transition hover:border-white/40 hover:text-white">+ {s}</button>
+            <button type="button" key={s} onClick={() => add(s)} className="rounded-md border-2 border-dashed border-ink px-2 py-1 text-[11px] text-neutral-500 transition hover:border-ink hover:text-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none font-bold">+ {s}</button>
           ))}
         </div>
       )}
@@ -1183,8 +1112,8 @@ function SourcePicker({ value, onChange, detected }) {
   return (
     <div>
       {detected && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-indigo-400/20 bg-pink-400/[0.06] px-3 py-2 text-xs text-indigo-100">
-          <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-indigo-300" />
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-blue-700 bg-pink-400/[0.06] px-3 py-2 text-xs text-indigo-100">
+          <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-blue-700" />
           Looks like you came from <b className="font-bold">{SOURCE_OPTIONS.find((s) => s.key === detected)?.label || detected}</b>. Change it below if that&apos;s wrong.
         </div>
       )}
@@ -1194,9 +1123,9 @@ function SourcePicker({ value, onChange, detected }) {
           return (
             <motion.button
               type="button" key={s.key} onClick={() => onChange(s.key)}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.015 }}
+                
               whileTap={{ scale: 0.96 }}
-              className={cx('relative flex items-center gap-2 overflow-hidden rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition', on ? 'border-transparent text-white' : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:border-white/30')}
+              className={cx('relative flex items-center gap-2 overflow-hidden rounded-xl border-2 px-3 py-2.5 text-left text-xs font-bold transition border-ink', on ? 'border-transparent text-ink' : 'border-ink bg-white/[0.03] text-neutral-600 hover:border-ink')}
               style={on ? { background: `linear-gradient(135deg, ${s.color}55, ${s.color}22)`, boxShadow: `0 0 0 1px ${s.color}99, 0 0 22px ${s.color}33` } : undefined}
             >
               <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: s.color, boxShadow: on ? `0 0 8px ${s.color}` : 'none' }} />
@@ -1227,7 +1156,7 @@ function Confetti() {
     <div className="pointer-events-none absolute left-1/2 top-24 h-0 w-0">
       {bits.map((b) => (
         <motion.span key={b.id} className="absolute rounded-[2px]" style={{ width: b.s, height: b.s * 0.5, background: b.c }}
-          initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+          
           animate={{ x: b.x, y: [0, b.y, b.y + 380], opacity: [1, 1, 0], rotate: b.r }}
           transition={{ duration: 1.9, ease: 'easeOut', times: [0, 0.4, 1] }} />
       ))}
@@ -1333,12 +1262,12 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
     <div className="mb-7">
       <div className="mb-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">
         <span>Step {step} of 3</span>
-        <span className="text-neutral-300">{['About you', 'Your work', 'Your fit'][step - 1]}</span>
+        <span className="text-neutral-600">{['About you', 'Your work', 'Your fit'][step - 1]}</span>
       </div>
       <div className="flex gap-1.5">
         {[1, 2, 3].map((n) => (
-          <div key={n} className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
-            <motion.div className="h-full bg-gradient-to-r from-indigo-400 to-pink-400" initial={false} animate={{ width: step >= n ? '100%' : '0%' }} transition={{ duration: 0.5, ease: EASE }} />
+          <div key={n} className="h-1 flex-1 overflow-hidden rounded-full bg-lav">
+            <motion.div className="h-full bg-lav text-ink"  animate={{ width: step >= n ? '100%' : '0%' }} transition={{ duration: 0.5, ease: EASE }} />
           </div>
         ))}
       </div>
@@ -1347,11 +1276,11 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
 
   return (
     <div>
-      <button onClick={onBack} className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-neutral-500 transition hover:text-white"><ArrowLeft className="h-3.5 w-3.5" />Back to role</button>
+      <button onClick={onBack} className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-neutral-500 transition hover:text-ink"><ArrowLeft className="h-3.5 w-3.5" />Back to role</button>
       {bar}
       <AnimatePresence mode="wait" custom={dir}>
         <motion.div key={step} custom={dir}
-          initial={{ opacity: 0, x: dir * 36 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -36 }} transition={{ duration: 0.3, ease: EASE }}
+            exit={{ opacity: 0, x: dir * -36 }} 
           className="space-y-5">
           {step === 1 && (<>
             <Field label="Full name" error={err.fullName}><input className={inputCls(err.fullName)} value={f.fullName} onChange={(e) => set('fullName', e.target.value)} autoComplete="name" placeholder="Ada Lovelace" /></Field>
@@ -1360,14 +1289,14 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
               <Field label="Location" optional><input className={inputCls()} value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="City, Country" autoComplete="address-level2" /></Field>
               <Field label="Phone" optional><input type="tel" className={inputCls()} value={f.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+1 555 000 0000" autoComplete="tel" /></Field>
             </div>
-            <label className={cx('flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-sm transition', f.ageConfirmed ? 'border-emerald-400/40 bg-emerald-400/[0.06]' : err.ageConfirmed ? 'border-rose-500/60' : 'border-white/10 bg-white/[0.03]')}>
+            <label className={cx('flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 text-sm transition border-ink shadow', f.ageConfirmed ? 'border-emerald-700 bg-emerald-400/[0.06]' : err.ageConfirmed ? 'border-red-700' : 'border-ink bg-white/[0.03]')}>
               <input type="checkbox" checked={f.ageConfirmed} onChange={(e) => set('ageConfirmed', e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-400" />
-              <span className="text-neutral-300">I&apos;m at least 13 years old.{err.ageConfirmed && <span className="ml-2 text-xs text-rose-400">{err.ageConfirmed}</span>}</span>
+              <span className="text-neutral-600">I&apos;m at least 13 years old.{err.ageConfirmed && <span className="ml-2 text-xs text-red-700">{err.ageConfirmed}</span>}</span>
             </label>
           </>)}
 
           {step === 2 && (<>
-            <p className="text-sm text-neutral-400">Show us what you&apos;ve done. At least one link helps a lot, but none are required.</p>
+            <p className="text-sm text-neutral-500">Show us what you&apos;ve done. At least one link helps a lot, but none are required.</p>
             <Field label="LinkedIn" optional error={err.linkedin}><div className="relative"><Linkedin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input className={cx(inputCls(err.linkedin), 'pl-10')} value={f.linkedin} onChange={(e) => set('linkedin', e.target.value)} placeholder="linkedin.com/in/you" /></div></Field>
             <Field label="GitHub" optional error={err.github}><div className="relative"><Github className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input className={cx(inputCls(err.github), 'pl-10')} value={f.github} onChange={(e) => set('github', e.target.value)} placeholder="github.com/you" /></div></Field>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -1410,14 +1339,14 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
               <label>Company<input tabIndex={-1} autoComplete="off" value={f.company} onChange={(e) => set('company', e.target.value)} /></label>
             </div>
 
-            <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <label className="flex cursor-pointer items-start gap-3 text-sm text-neutral-300">
+            <div className="space-y-2.5 rounded-2xl border-2 border-ink bg-white/[0.03] p-4 shadow">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-neutral-600">
                 <input type="checkbox" checked={f.ackVolunteer} onChange={(e) => set('ackVolunteer', e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-400" />
-                <span>I understand this is an <b className="text-white">unpaid volunteer role</b>. Any future revenue share isn&apos;t guaranteed and would be agreed in writing.{err.ackVolunteer && <span className="ml-2 text-xs text-rose-400">{err.ackVolunteer}</span>}</span>
+                <span>I understand this is an <b className="text-ink">unpaid volunteer role</b>. Any future revenue share isn&apos;t guaranteed and would be agreed in writing.{err.ackVolunteer && <span className="ml-2 text-xs text-red-700">{err.ackVolunteer}</span>}</span>
               </label>
-              <label className="flex cursor-pointer items-start gap-3 text-sm text-neutral-300">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-neutral-600">
                 <input type="checkbox" checked={f.ackDataUse} onChange={(e) => set('ackDataUse', e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-400" />
-                <span>I agree PlanIt may store my application and basic technical info (device, language, timezone, referral source, page activity) for recruiting. <a href="/privacy" target="_blank" rel="noreferrer" className="text-indigo-300 underline-offset-2 hover:underline">Privacy Policy</a>{err.ackDataUse && <span className="ml-2 text-xs text-rose-400">{err.ackDataUse}</span>}</span>
+                <span>I agree PlanIt may store my application and basic technical info (device, language, timezone, referral source, page activity) for recruiting. <a href="/privacy" target="_blank" rel="noreferrer" className="text-blue-700 underline-offset-2 hover:underline">Privacy Policy</a>{err.ackDataUse && <span className="ml-2 text-xs text-red-700">{err.ackDataUse}</span>}</span>
               </label>
             </div>
             <TurnstileWidget onToken={setTs} resetKey={tsKey} theme="dark" />
@@ -1425,14 +1354,14 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
         </motion.div>
       </AnimatePresence>
 
-      {serverErr && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-5 flex items-start gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{serverErr}</motion.div>}
+      {serverErr && <motion.div   className="mt-5 flex items-start gap-2 rounded-xl border border-red-700 bg-red-50 p-3 text-sm text-rose-200"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />{serverErr}</motion.div>}
 
       <div className="mt-7 flex items-center justify-between gap-3">
-        {step > 1 ? <button onClick={() => go(step - 1)} className="rounded-xl border border-white/10 px-5 py-3 text-sm font-bold text-neutral-300 transition hover:border-white/30 hover:text-white">Back</button> : <span />}
+        {step > 1 ? <button onClick={() => go(step - 1)} className="rounded-xl border-2 border-ink px-5 py-3 text-sm font-bold text-neutral-600 transition hover:border-ink hover:text-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">Back</button> : <span />}
         {step < 3 ? (
-          <button onClick={next} className="group flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200">Continue <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></button>
+          <button onClick={next} className="group flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">Continue <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></button>
         ) : (
-          <button onClick={submit} disabled={busy} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-400 to-pink-400 px-7 py-3 text-sm font-extrabold text-neutral-900 transition hover:brightness-110 disabled:opacity-60">
+          <button onClick={submit} disabled={busy} className="flex items-center gap-2 rounded-xl px-7 py-3 text-sm font-extrabold text-neutral-900 transition hover:brightness-110 disabled:opacity-60 bg-lav">
             {busy ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</> : <>Submit application <Zap className="h-4 w-4" /></>}
           </button>
         )}
@@ -1450,22 +1379,22 @@ function Done({ job, refCode, onClose }) {
   return (
     <div className="relative py-6 text-center">
       <Confetti />
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }} className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-400/15 ring-1 ring-emerald-300/40">
-        <CheckCircle2 className="h-10 w-10 text-emerald-300" />
+      <motion.div    className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-300/40">
+        <CheckCircle2 className="h-10 w-10 text-emerald-700" />
       </motion.div>
-      <h3 className="font-display text-3xl font-extrabold text-white">You&apos;re in the pile.</h3>
-      <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-neutral-400">Thanks for applying for <b className="text-white">{job.title}</b>. We read every application and will email you if it&apos;s a fit.</p>
-      {refCode && <div className="mx-auto mt-5 inline-block rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-xs tracking-widest text-neutral-300">REF {refCode}</div>}
-      <div className="mx-auto mt-8 max-w-sm space-y-2.5 text-left text-sm text-neutral-400">
+      <h3 className="font-display text-3xl font-extrabold text-ink">You&apos;re in the pile.</h3>
+      <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-neutral-500">Thanks for applying for <b className="text-ink">{job.title}</b>. We read every application and will email you if it&apos;s a fit.</p>
+      {refCode && <div className="mx-auto mt-5 inline-block rounded-lg border-2 border-ink bg-white/[0.04] px-4 py-2 text-xs tracking-widest text-neutral-600">REF {refCode}</div>}
+      <div className="mx-auto mt-8 max-w-sm space-y-2.5 text-left text-sm text-neutral-500">
         {['We review your application', 'If it fits, we email you for a quick chat', 'Then a small trial project, then you join'].map((t, i) => (
-          <motion.div key={t} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.12 }} className="flex items-center gap-3">
-            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white">{i + 1}</span>{t}
+          <motion.div key={t}    className="flex items-center gap-3">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-lav text-[11px] font-bold text-ink">{i + 1}</span>{t}
           </motion.div>
         ))}
       </div>
       <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-        <button onClick={share} className="flex items-center justify-center gap-2 rounded-xl border border-white/15 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/[0.06]"><Share2 className="h-4 w-4" />Tell a friend</button>
-        <button onClick={onClose} className="rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200">Back to roles</button>
+        <button onClick={share} className="flex items-center justify-center gap-2 rounded-xl border-2 border-ink px-5 py-3 text-sm font-bold text-ink transition hover:bg-white/[0.06] shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"><Share2 className="h-4 w-4" />Tell a friend</button>
+        <button onClick={onClose} className="rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">Back to roles</button>
       </div>
     </div>
   );
@@ -1479,8 +1408,8 @@ function Section({ title, items, icon: Icon = Check }) {
       <h4 className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">{title}</h4>
       <ul className="space-y-2.5">
         {items.map((t, i) => (
-          <motion.li key={i} initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: Math.min(i, 6) * 0.04 }} className="flex gap-3 text-sm leading-relaxed text-neutral-300">
-            <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-indigo-300" />{t}
+          <motion.li key={i}     className="flex gap-3 text-sm leading-relaxed text-neutral-600">
+            <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-700" />{t}
           </motion.li>
         ))}
       </ul>
@@ -1512,80 +1441,80 @@ function Drawer({ job, accepting, pausedMessage, attribution, engagement, onClos
   };
 
   return (
-    <motion.div className="fixed inset-0 z-[100]" initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 1 }}>
-      <motion.div className="absolute inset-0 bg-black/70 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+    <motion.div className="fixed inset-0 z-[100]"   exit={{ opacity: 1 }}>
+      <motion.div className="absolute inset-0 bg-ink/60"   exit={{ opacity: 0 }} onClick={onClose} />
       <motion.aside
         role="dialog" aria-modal="true" aria-label={job.title}
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-        className="absolute right-0 top-0 flex h-full w-full max-w-[640px] flex-col border-l border-white/10 bg-[#07070f]"
+          exit={{ x: '100%' }} 
+        className="absolute right-0 top-0 flex h-full w-full max-w-[640px] flex-col border-l border-ink bg-white"
       >
-        <motion.div style={{ scaleX: scrollYProgress }} className="absolute left-0 right-0 top-0 z-10 h-[2px] origin-left bg-gradient-to-r from-indigo-400 to-pink-400" />
+        <motion.div style={{ scaleX: scrollYProgress }} className="absolute left-0 right-0 top-0 z-10 h-[2px] origin-left bg-lav text-ink" />
         <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500">{mode === 'form' ? 'Application' : mode === 'done' ? 'Submitted' : job.team}</span>
           <div className="flex items-center gap-1.5">
-            <button onClick={copyLink} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-neutral-400 transition hover:bg-white/[0.06] hover:text-white">
-              {copied ? <><Check className="h-3.5 w-3.5 text-emerald-300" />Copied</> : <><Link2 className="h-3.5 w-3.5" />Share</>}
+            <button onClick={copyLink} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-neutral-500 transition hover:bg-white/[0.06] hover:text-ink">
+              {copied ? <><Check className="h-3.5 w-3.5 text-emerald-700" />Copied</> : <><Link2 className="h-3.5 w-3.5" />Share</>}
             </button>
-            <button onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-neutral-400 transition hover:bg-white/[0.06] hover:text-white"><X className="h-5 w-5" /></button>
+            <button onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-neutral-500 transition hover:bg-white/[0.06] hover:text-ink"><X className="h-5 w-5" /></button>
           </div>
         </div>
 
         <div ref={scroller} className="flex-1 overflow-y-auto overscroll-contain px-6 pb-10 pt-7">
           <AnimatePresence mode="wait">
             {mode === 'detail' && (
-              <motion.div key="detail" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+              <motion.div key="detail"   exit={{ opacity: 0 }} >
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   {job.open
-                    ? <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Accepting applications</span>
-                    : <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-neutral-400"><Lock className="h-3 w-3" />Closed{job.closedReason ? ` · ${job.closedReason}` : ''}</span>}
-                  {job.openings > 1 && job.open && <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-neutral-300">{job.openings} spots</span>}
+                    ? <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Accepting applications</span>
+                    : <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-neutral-500"><Lock className="h-3 w-3" />Closed{job.closedReason ? ` · ${job.closedReason}` : ''}</span>}
+                  {job.openings > 1 && job.open && <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-neutral-600">{job.openings} spots</span>}
                 </div>
-                <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-white">{job.title}</h2>
-                {job.tagline && <p className="mt-3 text-base leading-relaxed text-neutral-400">{job.tagline}</p>}
+                <h2 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-ink">{job.title}</h2>
+                {job.tagline && <p className="mt-3 text-base leading-relaxed text-neutral-500">{job.tagline}</p>}
                 <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                   {[[MapPin, 'Where', job.location], [Clock, 'Time', job.hoursPerWeek], [Calendar, 'Length', job.duration], [Briefcase, 'Type', 'Volunteer']].map(([I, l, v]) => (
                     <div key={l} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3.5">
                       <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500"><I className="h-3 w-3" />{l}</div>
-                      <div className="font-semibold text-white">{v}</div>
+                      <div className="font-semibold text-ink">{v}</div>
                     </div>
                   ))}
                 </div>
-                <div className="mt-5 flex gap-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] p-4 text-sm leading-relaxed text-amber-100/90">
-                  <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-300" />{job.compensationNote}
+                <div className="mt-5 flex gap-3 rounded-xl border border-amber-700 bg-amber-300/[0.05] p-4 text-sm leading-relaxed text-amber-100/90">
+                  <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />{job.compensationNote}
                 </div>
-                {job.description && <p className="mt-7 whitespace-pre-line text-[15px] leading-relaxed text-neutral-300">{job.description}</p>}
+                {job.description && <p className="mt-7 whitespace-pre-line text-[15px] leading-relaxed text-neutral-600">{job.description}</p>}
                 <Section title="What you'll do" items={job.responsibilities} />
                 <Section title="What we're looking for" items={job.requirements} />
                 <Section title="Bonus points" items={job.niceToHave} icon={Star} />
                 <Section title="What you get" items={job.perks} icon={Sparkles} />
                 {job.skills?.length > 0 && (
-                  <div className="mt-8 flex flex-wrap gap-2">{job.skills.map((s) => <span key={s} className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300">{s}</span>)}</div>
+                  <div className="mt-8 flex flex-wrap gap-2">{job.skills.map((s) => <span key={s} className="rounded-lg border-2 border-ink bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-600">{s}</span>)}</div>
                 )}
               </motion.div>
             )}
             {mode === 'form' && (
-              <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <h3 className="mb-1 font-display text-2xl font-extrabold text-white">Apply: {job.title}</h3>
+              <motion.div key="form"   exit={{ opacity: 0 }}>
+                <h3 className="mb-1 font-display text-2xl font-extrabold text-ink">Apply: {job.title}</h3>
                 <p className="mb-6 text-sm text-neutral-500">Your progress is saved on this device as you go.</p>
                 <ApplyForm job={job} attribution={attribution} engagement={engagement} onBack={() => setMode('detail')} onDone={(code) => { setRefCode(code); setMode('done'); }} />
               </motion.div>
             )}
             {mode === 'done' && (
-              <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Done job={job} refCode={refCode} onClose={onClose} /></motion.div>
+              <motion.div key="done"  ><Done job={job} refCode={refCode} onClose={onClose} /></motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {mode === 'detail' && (
-          <div className="border-t border-white/[0.06] bg-[#07070f]/95 px-6 py-4 backdrop-blur">
+          <div className="border-t border-white/[0.06] bg-white px-6 py-4">
             {canApply ? (
-              <button onClick={() => setMode('form')} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200">
+              <button onClick={() => setMode('form')} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 text-sm font-extrabold text-neutral-900 transition hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none">
                 Apply for this role <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             ) : (
-              <div className="text-center text-sm text-neutral-400">
+              <div className="text-center text-sm text-neutral-500">
                 {!accepting ? (pausedMessage || 'Applications are paused right now.') : 'This role is closed.'}
-                {!job.open && accepting && <button onClick={() => { onClose('general'); }} className="ml-2 font-bold text-indigo-300 hover:underline">Send a general application</button>}
+                {!job.open && accepting && <button onClick={() => { onClose('general'); }} className="ml-2 font-bold text-blue-700 hover:underline">Send a general application</button>}
               </div>
             )}
           </div>
@@ -1699,7 +1628,7 @@ export default function Careers() {
   }, [state.jobs]);
 
   return (
-    <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
+    <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-white font-sans text-ink selection:bg-pink-50">
       <style>{`
         .careers-root .font-display { font-family: var(--lq-display); font-style: normal; font-weight: 800; letter-spacing: -0.035em; }
         .careers-shine { background: linear-gradient(90deg, #a5b4fc 0%, #818cf8 46%, #6ee7b7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }

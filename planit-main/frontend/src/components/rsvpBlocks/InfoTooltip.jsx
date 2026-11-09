@@ -51,14 +51,14 @@ export default function InfoTooltip({ text, side = 'top' }) {
         onBlur={() => setOpen(false)}
         aria-label="More info"
         aria-expanded={open}
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white/35 hover:text-white/90 focus:text-white/90 hover:bg-white/10 focus:bg-white/10 outline-none transition-colors shrink-0"
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white/35 hover:text-white/90 focus:text-white/90 hover:bg-lav focus:bg-lav outline-none transition-colors shrink-0"
       >
         <Info size={12} strokeWidth={2.25} />
       </button>
       {open && (
         <span
           role="tooltip"
-          className={`absolute z-50 w-56 rounded-lg border border-white/10 bg-[#16161f] px-2.5 py-2 text-[11px] leading-relaxed text-white/75 shadow-2xl pointer-events-none ${SIDE_CLASSES[side] || SIDE_CLASSES.top}`}
+          className={`absolute z-50 w-56 rounded-lg border-2 border-ink bg-white px-2.5 py-2 text-[11px] leading-relaxed text-ink shadow-2xl pointer-events-none ${SIDE_CLASSES[side] || SIDE_CLASSES.top}`}
         >
           {text}
         </span>

@@ -41,8 +41,8 @@ export default function RSVPConfirmationScreen({ data, rsvpPage, event, accent, 
           <h1 className={`text-3xl mb-3 ${fonts.heading}`} style={{ color: isLight ? '#111' : '#fff' }}>
             {rsvpPage.confirmationTitle || (data.status === 'pending' ? 'Request Submitted' : data.waitlisted ? 'Added to Waitlist' : "You're on the list")}
           </h1>
-          {data.waitlisted && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#f59e0b22', border: '1px solid #f59e0b44', color: '#f59e0b' }}>Waitlisted</div>}
-          {data.isPending && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#6366f122', border: '1px solid #6366f144', color: '#a5b4fc' }}>Pending Approval</div>}
+          {data.waitlisted && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#fff6c2', border: '2px solid #6e5400', color: '#6e5400' }}>Waitlisted</div>}
+          {data.isPending && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#eceeff', border: '2px solid #2236ff', color: '#2236ff' }}>Pending Approval</div>}
           <p className="text-sm leading-relaxed opacity-70" style={{ color: isLight ? '#374151' : undefined }}>
             {rsvpPage.confirmationMessage || (data.status === 'pending' ? 'Your RSVP has been submitted and is awaiting approval from the organizer.' : data.waitlisted ? (rsvpPage.waitlistMessage || "You've been added to the waitlist. We'll notify you if a spot opens up.") : 'Your RSVP has been confirmed. We look forward to seeing you!')}
           </p>
@@ -54,12 +54,12 @@ export default function RSVPConfirmationScreen({ data, rsvpPage, event, accent, 
             </button>
           )}
           {rsvpPage.showEventSpaceButton && event.subdomain && (
-            <a href={`/e/${event.subdomain}`} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'inherit' }}>
+            <a href={`/e/${event.subdomain}`} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all" style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: 'inherit' }}>
               {rsvpPage.eventSpaceButtonLabel || 'View Event Details'} <ArrowRight className="w-4 h-4" />
             </a>
           )}
           {rsvpPage.showShareButton !== false && (
-            <button onClick={() => setShowShareCard(true)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'inherit' }}>
+            <button onClick={() => setShowShareCard(true)} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all" style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: 'inherit' }}>
               <Share2 className="w-4 h-4" /> Share Event
             </button>
           )}

@@ -155,7 +155,7 @@ export default function PiiLookupPanel() {
         </p>
         <form onSubmit={runLookup} className="flex gap-2 flex-wrap">
           <input
-            className="input text-sm flex-1 min-w-[240px] font-mono"
+            className="input text-sm flex-1 min-w-[240px] font-mono border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
             placeholder="s_lx3k2j_a8f2k1md  ·  v_…  ·  name@email.com  ·  +1 555 123 4567"
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -166,7 +166,7 @@ export default function PiiLookupPanel() {
           </button>
         </form>
         {error && (
-          <div className="mt-3 text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+          <div className="mt-3 text-xs bg-red-50 text-red-700 border-2 border-red-600 rounded-lg px-3 py-2">{error}</div>
         )}
         <p className="text-[11px] text-neutral-400 mt-3">
           Activity is retained for a limited time (90 days by default) and then deleted automatically, so older requests may return nothing.
@@ -208,10 +208,10 @@ export default function PiiLookupPanel() {
               <p className="text-sm font-semibold text-neutral-800">{totals.sessions} / {totals.events}</p>
             </div>
             <div className="ml-auto flex items-center gap-2 flex-wrap">
-              <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-xs">
+              <div className="flex rounded-lg border-2 border-ink overflow-hidden text-xs shadow">
                 {['local', 'utc'].map(m => (
                   <button key={m} onClick={() => setTzMode(m)}
-                    className={`px-3 py-1.5 font-semibold ${tzMode === m ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'}`}>
+                    className={`px-3 py-1.5 font-semibold ${tzMode === m ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white text-neutral-600 hover:bg-neutral-50 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
                     {m === 'local' ? 'My time' : 'UTC'}
                   </button>
                 ))}
@@ -222,7 +222,7 @@ export default function PiiLookupPanel() {
           </div>
 
           {(result.truncated || result.piiTruncated) && (
-            <div className="text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded-lg px-3 py-2 flex gap-2">
+            <div className="text-xs bg-amber-50 text-amber-800 border-2 border-amber-600 rounded-lg px-3 py-2 flex gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>
                 {result.truncated && 'This visitor has more activity than can be shown at once — only the earliest events are included. '}
@@ -245,7 +245,7 @@ export default function PiiLookupPanel() {
                     <p className="text-sm font-semibold text-neutral-900 truncate">{v.pii?.name || v.pii?.email || 'Anonymous visitor'}</p>
                     <p className="text-[11px] font-mono text-neutral-400 truncate">{v.visitorId}</p>
                   </div>
-                  {v.isSuspected && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200">FLAGGED</span>}
+                  {v.isSuspected && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border-2 border-red-600">FLAGGED</span>}
                 </div>
                 {v.pii && (
                   <div className="mt-2 text-xs text-neutral-600 space-y-0.5">
@@ -287,7 +287,7 @@ export default function PiiLookupPanel() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-neutral-800">
                         {fmtTs(s.start)}
-                        {s.matched && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 align-middle">MATCHED SESSION ID</span>}
+                        {s.matched && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border-2 border-red-600 align-middle">MATCHED SESSION ID</span>}
                       </p>
                       <p className="text-xs text-neutral-500 truncate">
                         <Clock className="w-3 h-3 inline -mt-0.5 mr-1" />{fmtMs(s.durationMs)} · {s.pageViews} page view{s.pageViews === 1 ? '' : 's'} · {s.events.length} events
@@ -315,14 +315,14 @@ export default function PiiLookupPanel() {
                           const desc = describe(ev);
                           return (
                             <li key={i} className="ml-4">
-                              <span className="absolute -left-[7px] mt-1 w-3.5 h-3.5 rounded-full bg-white border border-neutral-200 flex items-center justify-center">
+                              <span className="absolute -left-[7px] mt-1 w-3.5 h-3.5 rounded-full bg-white border-2 border-ink flex items-center justify-center">
                                 <Icon className={`w-2 h-2 ${meta.color}`} />
                               </span>
                               <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                                <span className="font-mono text-neutral-400">{fmtTs(ev.ts, false)}</span>
+                                <span className="font-mono text-neutral-500">{fmtTs(ev.ts, false)}</span>
                                 <span className={`font-semibold ${meta.color}`}>{meta.label}</span>
                                 <span className="font-mono text-neutral-700">{ev.page}</span>
-                                {ev.timeOnPageMs ? <span className="text-neutral-400">({fmtMs(ev.timeOnPageMs)} on page)</span> : null}
+                                {ev.timeOnPageMs ? <span className="text-neutral-500">({fmtMs(ev.timeOnPageMs)} on page)</span> : null}
                                 {ev.linkedEvent && (
                                   <span className="text-indigo-600">· event: {ev.linkedEvent.title || ev.linkedEvent.subdomain || ev.linkedEvent.id}</span>
                                 )}

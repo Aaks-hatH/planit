@@ -51,14 +51,14 @@ function ModelLoadingCard({ stage, error, onRetry }) {
     <div className="flex flex-col items-center justify-center text-center py-14 px-6">
       {error ? (
         <>
-          <AlertTriangle className="w-9 h-9 text-rose-400 mb-3" />
-          <p className="text-sm text-neutral-300 mb-5 max-w-xs">{error}</p>
-          <button onClick={onRetry} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Retry</button>
+          <AlertTriangle className="w-9 h-9 text-red-700 mb-3" />
+          <p className="text-sm text-neutral-600 mb-5 max-w-xs">{error}</p>
+          <button onClick={onRetry} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry</button>
         </>
       ) : (
         <>
           <Loader2 className="w-7 h-7 text-[#8B7FFF] animate-spin mb-3" />
-          <p className="font-mono text-xs text-neutral-400">{LOAD_LABELS[stage] || 'Loading\u2026'}</p>
+          <p className="font-mono text-xs text-neutral-500">{LOAD_LABELS[stage] || 'Loading\u2026'}</p>
         </>
       )}
     </div>
@@ -76,12 +76,12 @@ function Field({ label, children }) {
 
 function Pill({ tone = 'neutral', children }) {
   const tones = {
-    neutral: 'border-white/10 bg-white/[0.03] text-neutral-400',
-    teal: 'border-teal-400/25 bg-teal-400/10 text-teal-300',
-    amber: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
-    violet: 'border-[#8B7FFF]/25 bg-[#8B7FFF]/10 text-[#c4bcff]',
+    neutral: 'border-ink bg-white/[0.03] text-neutral-500',
+    teal: 'border-emerald-700 bg-emerald-50 text-emerald-700',
+    amber: 'border-amber-700 bg-amber-50 text-amber-700',
+    violet: 'border-[#8B7FFF]/25 bg-ac text-[#c4bcff]',
   }[tone];
-  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-wide ${tones}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[10px] font-mono uppercase tracking-wide border-ink ${tones}`}>{children}</span>;
 }
 
 const REQUIRE_QR_OPTIONS = [
@@ -112,7 +112,7 @@ function EventHub({ events, onNew, onOpen, onCheckIn, onDelete, onImport, onExit
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
-      <button onClick={onExit} className="flex items-center gap-1.5 text-neutral-500 hover:text-white text-xs mb-4 -ml-1">
+      <button onClick={onExit} className="flex items-center gap-1.5 text-neutral-500 hover:text-ink text-xs mb-4 -ml-1">
         <ChevronLeft className="w-3.5 h-3.5" /> Single-ticket Face Ticket
       </button>
       <div className="flex items-center gap-2 text-[#8B7FFF] text-sm mb-1.5">
@@ -127,11 +127,11 @@ function EventHub({ events, onNew, onOpen, onCheckIn, onDelete, onImport, onExit
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-10">
-        <button onClick={onNew} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm hover:bg-[#9d92ff] transition-colors">
+        <button onClick={onNew} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm hover:bg-ac transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-4 h-4" />
           New event
         </button>
-        <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-white/15 text-white font-semibold text-sm hover:bg-white/5 transition-colors">
+        <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border-2 border-ink text-ink font-semibold text-sm hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Upload className="w-4 h-4" />
           Import event file
         </button>
@@ -139,14 +139,14 @@ function EventHub({ events, onNew, onOpen, onCheckIn, onDelete, onImport, onExit
       </div>
 
       {events.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 py-12 text-center text-neutral-500 text-sm">
+        <div className="rounded-xl border-2 border-dashed border-ink py-12 text-center text-neutral-500 text-sm shadow">
           No events on this device yet.
         </div>
       ) : (
         <div className="space-y-3">
           {events.map((ev) => (
-            <div key={ev.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-[#8B7FFF]/10 flex items-center justify-center shrink-0">
+            <div key={ev.id} className="rounded-xl border-2 border-ink bg-white/[0.03] p-4 flex items-center gap-4 shadow">
+              <div className="w-10 h-10 rounded-lg bg-ac flex items-center justify-center shrink-0">
                 <ScanFace className="w-5 h-5 text-[#8B7FFF]" />
               </div>
               <div className="flex-1 min-w-0">
@@ -162,18 +162,18 @@ function EventHub({ events, onNew, onOpen, onCheckIn, onDelete, onImport, onExit
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button onClick={() => onCheckIn(ev.id, 'checkin')} disabled={ev.attendeeCount === 0}
-                  className="px-3 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="px-3 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   Check in
                 </button>
                 <button onClick={() => onCheckIn(ev.id, 'kiosk')} disabled={ev.attendeeCount === 0}
                   title="Kiosk mode — auto-scan, beta"
-                  className="p-2 rounded-lg border border-[#8B7FFF]/30 text-[#c4bcff] hover:bg-[#8B7FFF]/10 disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="p-2 rounded-lg border-2 border-[#8B7FFF]/30 text-[#c4bcff] hover:bg-ac disabled:opacity-30 disabled:cursor-not-allowed border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <Focus className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => onOpen(ev.id)} className="px-3 py-2 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
+                <button onClick={() => onOpen(ev.id)} className="px-3 py-2 rounded-lg border-2 border-ink text-xs text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   Manage
                 </button>
-                <button onClick={() => onDelete(ev.id)} className="p-2 rounded-lg border border-white/10 text-neutral-500 hover:text-rose-300 hover:border-rose-400/30">
+                <button onClick={() => onDelete(ev.id)} className="p-2 rounded-lg border-2 border-ink text-neutral-500 hover:text-red-700 hover:border-red-700 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -208,7 +208,7 @@ function NewEventForm({ onCreated, onCancel }) {
         <Field label="Event name">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
             placeholder="Founders' Night"
-            className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm" />
+            className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg" />
         </Field>
 
         <div>
@@ -216,11 +216,11 @@ function NewEventForm({ onCreated, onCancel }) {
           <div className="space-y-2.5">
             {REQUIRE_QR_OPTIONS.map((opt) => (
               <button key={opt.value} onClick={() => setRequireQR(opt.value)}
-                className={`w-full text-left rounded-xl border p-3.5 transition-colors ${
-                  requireQR === opt.value ? 'border-[#8B7FFF]/50 bg-[#8B7FFF]/[0.07]' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+                className={`w-full text-left rounded-xl border-2 p-3.5 transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${
+                  requireQR === opt.value ? 'border-[#8B7FFF]/50 bg-[#8B7FFF]/[0.07] border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-ink bg-white/[0.02] hover:bg-white/[0.04] border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
                 }`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${requireQR === opt.value ? 'border-[#8B7FFF] bg-[#8B7FFF]' : 'border-white/25'}`} />
+                  <div className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${requireQR === opt.value ? 'border-ink bg-ac' : 'border-ink'}`} />
                   <span className="font-semibold text-sm">{opt.label}</span>
                 </div>
                 <p className="text-xs text-neutral-500 leading-relaxed pl-5.5">{opt.body}</p>
@@ -231,11 +231,11 @@ function NewEventForm({ onCreated, onCancel }) {
         </div>
       </div>
 
-      <button onClick={create} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm mb-3">
+      <button onClick={create} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
         Create & start adding guests
         <ArrowRight className="w-4 h-4" />
       </button>
-      <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+      <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
     </div>
   );
 }
@@ -320,7 +320,7 @@ function AddAttendeeFlow({ event, onDone }) {
         <StepIndicator labels={ADD_STEP_LABELS} index={stepIdx} />
         <div className="max-w-md mx-auto px-5 py-8">
           {savedCount > 0 && (
-            <div className="flex items-center gap-2 text-teal-300 text-sm mb-4">
+            <div className="flex items-center gap-2 text-emerald-700 text-sm mb-4">
               <CheckCircle2 className="w-4 h-4" />
               {savedCount} guest{savedCount === 1 ? '' : 's'} added so far
             </div>
@@ -329,19 +329,19 @@ function AddAttendeeFlow({ event, onDone }) {
           <p className="text-neutral-500 text-sm mb-4">One face per guest. This never leaves the browser.</p>
           <FaceModeMobileNotice className="mb-4" />
 
-          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+          <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
             {camError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-                <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-                <p className="text-sm text-neutral-300 mb-4">{camError}</p>
-                <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+                <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+                <p className="text-sm text-neutral-600 mb-4">{camError}</p>
+                <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
               </div>
             ) : (
               <>
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-                <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+                <div className="absolute inset-8 border-2 border-dashed border-ink rounded-full pointer-events-none" />
                 {!models.ready && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
                     <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
                   </div>
                 )}
@@ -350,18 +350,18 @@ function AddAttendeeFlow({ event, onDone }) {
           </div>
 
           {captureError && (
-            <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+            <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               {captureError}
             </div>
           )}
 
           <button onClick={capture} disabled={!ready || !models.ready || capturing}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3">
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             {capturing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
             {capturing ? 'Reading face\u2026' : 'Capture'}
           </button>
-          <button onClick={() => onDone(savedCount)} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+          <button onClick={() => onDone(savedCount)} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
             {savedCount > 0 ? 'Done adding guests' : 'Cancel'}
           </button>
         </div>
@@ -374,7 +374,7 @@ function AddAttendeeFlow({ event, onDone }) {
       <>
         <StepIndicator labels={ADD_STEP_LABELS} index={stepIdx} />
         <div className="max-w-md mx-auto px-5 py-8">
-          <div className="flex items-center gap-2 text-teal-300 text-sm mb-4">
+          <div className="flex items-center gap-2 text-emerald-700 text-sm mb-4">
             <CheckCircle2 className="w-4 h-4" />
             Face captured
           </div>
@@ -383,16 +383,16 @@ function AddAttendeeFlow({ event, onDone }) {
             <Field label="Name">
               <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Guest name" maxLength={40} autoFocus
-                className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm" />
+                className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg" />
             </Field>
             <Field label="Seat / ticket ID (optional)">
               <input value={form.seatId} onChange={(e) => setForm((f) => ({ ...f, seatId: e.target.value }))}
                 maxLength={16} placeholder="FT-7042"
-                className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm font-mono" />
+                className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm font-mono focus:ring-[3px] focus:ring-ac rounded-lg" />
             </Field>
           </div>
           <button onClick={save} disabled={saving}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             Save guest
           </button>
@@ -406,19 +406,19 @@ function AddAttendeeFlow({ event, onDone }) {
     <>
       <StepIndicator labels={ADD_STEP_LABELS} index={stepIdx} />
       <div className="max-w-md mx-auto px-5 py-10 text-center">
-        <div className="w-16 h-16 rounded-full bg-teal-400/15 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-8 h-8 text-teal-300" />
+        <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-8 h-8 text-emerald-700" />
         </div>
         <h2 className="font-display font-bold text-2xl mb-1.5">{form.name} added</h2>
         <p className="text-neutral-500 text-sm mb-6">{savedCount} guest{savedCount === 1 ? '' : 's'} enrolled for {event.name} so far.</p>
 
         {lastAttendee && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-8">
+          <div className="rounded-xl border-2 border-ink bg-white/[0.03] p-4 mb-8 shadow">
             <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 mb-3">
               Fallback ticket &middot; beta
             </p>
             <div className="bg-white rounded-xl p-3 mb-3 flex items-center justify-center min-h-[160px]">
-              {lastQr ? <img src={lastQr} alt={`QR ticket for ${lastAttendee.name}`} className="w-full max-w-[200px]" /> : <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />}
+              {lastQr ? <img src={lastQr} alt={`QR ticket for ${lastAttendee.name}`} className="w-full max-w-[200px]" /> : <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />}
             </div>
             <p className="text-xs text-neutral-500 leading-relaxed">
               Only needed if face check-in can&rsquo;t confidently confirm {lastAttendee.name} at the door.
@@ -429,11 +429,11 @@ function AddAttendeeFlow({ event, onDone }) {
         )}
 
         <div className="flex flex-col gap-3">
-          <button onClick={addAnother} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
+          <button onClick={addAnother} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Plus className="w-4 h-4" />
             Add another guest
           </button>
-          <button onClick={() => onDone(savedCount)} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+          <button onClick={() => onDone(savedCount)} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
             Done for now
           </button>
         </div>
@@ -461,7 +461,7 @@ function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-sm mb-6 -ml-1">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-neutral-500 hover:text-ink text-sm mb-6 -ml-1">
         <ChevronLeft className="w-4 h-4" /> All events
       </button>
 
@@ -470,16 +470,16 @@ function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
         {event.attendees.length} enrolled &middot; {event.attendees.filter((a) => a.checkedIn).length} checked in
       </p>
 
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-6">
+      <div className="rounded-xl border-2 border-ink bg-white/[0.03] p-4 mb-6 shadow">
         <div className="flex items-center gap-2 mb-3 text-sm font-semibold">
-          <Settings2 className="w-4 h-4 text-neutral-400" />
+          <Settings2 className="w-4 h-4 text-neutral-500" />
           Door settings
         </div>
         <div className="flex flex-col gap-2">
           {REQUIRE_QR_OPTIONS.map((opt) => (
             <button key={opt.value} onClick={() => setRequireQR(opt.value)}
-              className={`text-left rounded-lg border px-3 py-2.5 text-xs transition-colors ${
-                event.settings?.requireQR === opt.value ? 'border-[#8B7FFF]/50 bg-[#8B7FFF]/[0.07] text-white' : 'border-white/10 text-neutral-400 hover:bg-white/[0.04]'
+              className={`text-left rounded-lg border-2 px-3 py-2.5 text-xs transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${
+                event.settings?.requireQR === opt.value ? 'border-[#8B7FFF]/50 bg-[#8B7FFF]/[0.07] text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-ink text-neutral-500 hover:bg-white/[0.04]'
               }`}>
               <span className="font-semibold">{opt.label}</span> &mdash; <span className="text-neutral-500">{opt.body}</span>
             </button>
@@ -488,45 +488,45 @@ function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-8">
-        <button onClick={onAddMore} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
+        <button onClick={onAddMore} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Plus className="w-4 h-4" /> Add guests
         </button>
         <button onClick={() => onCheckIn(event.id, 'checkin')} disabled={event.attendees.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-bold text-sm disabled:opacity-30">
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-bold text-sm disabled:opacity-30 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <LogIn className="w-4 h-4" /> Start check-in
         </button>
         <button onClick={() => onCheckIn(event.id, 'kiosk')} disabled={event.attendees.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#8B7FFF]/40 bg-[#8B7FFF]/10 text-[#c4bcff] font-semibold text-sm disabled:opacity-30">
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-[#8B7FFF]/40 bg-ac text-[#c4bcff] font-semibold text-sm disabled:opacity-30 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <Focus className="w-4 h-4" /> Kiosk mode <span className="text-[10px] font-mono uppercase text-[#c4bcff]/60">beta</span>
         </button>
         <button onClick={() => setShowAllTickets(true)} disabled={event.attendees.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5 disabled:opacity-30">
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav disabled:opacity-30 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <LayoutGrid className="w-4 h-4" /> View all QR codes
         </button>
-        <button onClick={() => exportEventFile(event)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+        <button onClick={() => exportEventFile(event)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <Download className="w-4 h-4" /> Export event file
         </button>
       </div>
 
       {event.attendees.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 py-12 text-center text-neutral-500 text-sm">
+        <div className="rounded-xl border-2 border-dashed border-ink py-12 text-center text-neutral-500 text-sm shadow">
           No guests enrolled yet.
         </div>
       ) : (
         <div className="space-y-2">
           {event.attendees.map((a) => (
-            <div key={a.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${a.checkedIn ? 'bg-teal-400' : 'bg-white/15'}`} />
+            <div key={a.id} className="rounded-xl border-2 border-ink bg-white/[0.02] p-3.5 flex items-center gap-3 shadow">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${a.checkedIn ? 'bg-teal-400' : 'bg-lav'}`} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{a.name}</div>
                 <div className="text-[11px] text-neutral-500 font-mono">
                   {a.seatId || 'no seat'} {a.checkedIn ? `\u00b7 checked in ${new Date(a.checkedInAt).toLocaleTimeString()}` : ''}
                 </div>
               </div>
-              <button onClick={() => setTicketFor(ticketFor === a.id ? null : a.id)} className="p-2 rounded-lg border border-white/10 text-neutral-400 hover:text-[#c4bcff] hover:border-[#8B7FFF]/30">
+              <button onClick={() => setTicketFor(ticketFor === a.id ? null : a.id)} className="p-2 rounded-lg border-2 border-ink text-neutral-500 hover:text-[#c4bcff] hover:border-[#8B7FFF]/30 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <QrCode className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => remove(a.id)} className="p-2 rounded-lg border border-white/10 text-neutral-500 hover:text-rose-300 hover:border-rose-400/30">
+              <button onClick={() => remove(a.id)} className="p-2 rounded-lg border-2 border-ink text-neutral-500 hover:text-red-700 hover:border-red-700 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -572,19 +572,19 @@ function AllTicketsPanel({ event, onClose }) {
   const readyCount = Object.keys(qrs).length;
 
   return (
-    <div className="fixed inset-0 bg-[#05050f] z-50 overflow-y-auto">
+    <div className="fixed inset-0 bg-ink/60 z-50 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-5 py-8 print:px-0 print:py-0">
         <div className="flex items-center justify-between mb-2 print:hidden">
-          <button onClick={onClose} className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-sm -ml-1">
+          <button onClick={onClose} className="flex items-center gap-1.5 text-neutral-500 hover:text-ink text-sm -ml-1">
             <ChevronLeft className="w-4 h-4" /> Back to manage
           </button>
           <button onClick={() => window.print()} disabled={readyCount < event.attendees.length}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-40">
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Printer className="w-3.5 h-3.5" /> Print all
           </button>
         </div>
         <h2 className="font-display font-bold text-2xl mb-1.5 print:text-black">{event.name} &mdash; all tickets</h2>
-        <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-6 print:hidden">
+        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-6 print:hidden">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             Beta demo tickets, not a real ticketing system &mdash; these QR codes are only a
@@ -595,14 +595,14 @@ function AllTicketsPanel({ event, onClose }) {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 print:grid-cols-2 print:gap-6">
           {event.attendees.map((a) => (
-            <div key={a.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center print:break-inside-avoid print:border-black/20">
+            <div key={a.id} className="rounded-xl border-2 border-ink bg-white/[0.03] p-3 text-center print:break-inside-avoid print:border-ink shadow">
               <div className="bg-white rounded-lg p-2 mb-2 flex items-center justify-center min-h-[140px]">
                 {qrs[a.id] && qrs[a.id] !== 'error' ? (
                   <img src={qrs[a.id]} alt={`QR ticket for ${a.name}`} className="w-full max-w-[160px]" />
                 ) : qrs[a.id] === 'error' ? (
-                  <XCircle className="w-6 h-6 text-rose-400" />
+                  <XCircle className="w-6 h-6 text-red-700" />
                 ) : (
-                  <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
                 )}
               </div>
               <div className="text-sm font-medium truncate print:text-black">{a.name}</div>
@@ -626,14 +626,14 @@ function AttendeeTicketPanel({ event, attendee, onClose }) {
   }, [event.id, event.name, attendee]);
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#0a0714] border border-white/10 rounded-2xl p-6 max-w-xs w-full text-center" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/60 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white border-2 border-ink rounded-2xl p-6 max-w-xs w-full text-center shadow-md transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg" onClick={(e) => e.stopPropagation()}>
         <p className="font-display font-bold text-lg mb-1">{attendee.name}</p>
         <p className="text-neutral-500 text-xs mb-4">Fallback ticket &middot; used only if face check-in is unsure</p>
         <div className="bg-white rounded-xl p-3 mb-4 flex items-center justify-center min-h-[180px]">
-          {qrDataUrl ? <img src={qrDataUrl} alt="Guest QR ticket" className="w-full max-w-[220px]" /> : <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />}
+          {qrDataUrl ? <img src={qrDataUrl} alt="Guest QR ticket" className="w-full max-w-[220px]" /> : <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />}
         </div>
-        <button onClick={onClose} className="w-full py-2.5 rounded-lg border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Close</button>
+        <button onClick={onClose} className="w-full py-2.5 rounded-lg border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Close</button>
       </div>
     </div>
   );
@@ -716,14 +716,14 @@ function EventQRScanStage({ event, onDecoded, onCancel }) {
       <p className="text-neutral-500 text-sm mb-4">The face check wasn\u2019t confident enough on its own \u2014 confirm with the QR ticket.</p>
       {error ? (
         <div className="text-center py-8">
-          <XCircle className="w-9 h-9 text-rose-400 mx-auto mb-3" />
-          <p className="text-sm text-neutral-300 mb-4">{error}</p>
-          <button onClick={startScanner} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Retry</button>
+          <XCircle className="w-9 h-9 text-red-700 mx-auto mb-3" />
+          <p className="text-sm text-neutral-600 mb-4">{error}</p>
+          <button onClick={startScanner} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry</button>
         </div>
       ) : (
-        <div id={containerId} className="rounded-2xl overflow-hidden border border-white/10 bg-black relative aspect-square w-full [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover [&_canvas]:!w-full" />
+        <div id={containerId} className="rounded-2xl overflow-hidden border border-white/10 bg-white relative aspect-square w-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_canvas]:w-full" />
       )}
-      <button onClick={onCancel} className="w-full mt-5 py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+      <button onClick={onCancel} className="w-full mt-5 py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
     </div>
   );
 }
@@ -740,16 +740,16 @@ function RosterSearch({ attendees, onPick }) {
 
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 mb-2">
+      <div className="flex items-center gap-2 rounded-lg border-2 border-ink bg-white/[0.02] px-3 py-2 mb-2 shadow">
         <Search className="w-3.5 h-3.5 text-neutral-500" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find by name or seat instead\u2026"
-          className="flex-1 bg-transparent outline-none text-sm" />
+          className="flex-1 bg-transparent outline-none text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac rounded-lg" />
       </div>
       {results.length > 0 && (
         <div className="space-y-1.5">
           {results.map((a) => (
             <button key={a.id} onClick={() => onPick(a)}
-              className="w-full text-left flex items-center justify-between rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">
+              className="w-full text-left flex items-center justify-between rounded-lg border-2 border-ink px-3 py-2 text-sm hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
               <span>{a.name} <span className="text-neutral-500 font-mono text-xs">{a.seatId}</span></span>
               {a.checkedIn && <Pill tone="teal">checked in</Pill>}
             </button>
@@ -873,8 +873,8 @@ function CheckInFlow({ event, onExit, onComplete }) {
     return (
       <div className="max-w-md mx-auto px-5 py-8">
         {outcome?.pendingCandidate && (
-          <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1 -mt-2">
-            Best guess so far: <span className="text-neutral-200 font-medium">{outcome.pendingCandidate.name}</span>
+          <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1 -mt-2">
+            Best guess so far: <span className="text-ink font-medium">{outcome.pendingCandidate.name}</span>
             <span className="font-mono">{formatConfidence(outcome.pendingSimilarity)}%</span>
           </div>
         )}
@@ -888,8 +888,8 @@ function CheckInFlow({ event, onExit, onComplete }) {
     return (
       <div className="max-w-md mx-auto px-5 py-8">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${outcome.noMatch ? 'bg-rose-400/15' : 'bg-teal-400/15'}`}>
-            {outcome.noMatch ? <XCircle className="w-8 h-8 text-rose-300" /> : <CheckCircle2 className="w-8 h-8 text-teal-300" />}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${outcome.noMatch ? 'bg-red-50' : 'bg-emerald-50'}`}>
+            {outcome.noMatch ? <XCircle className="w-8 h-8 text-red-700" /> : <CheckCircle2 className="w-8 h-8 text-emerald-700" />}
           </div>
           <h3 className="font-display font-bold text-2xl mb-1">
             {outcome.noMatch ? 'No confident match' : outcome.attendee.name}
@@ -902,7 +902,7 @@ function CheckInFlow({ event, onExit, onComplete }) {
         </div>
 
         {alreadyIn && !outcome.noMatch && (
-          <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             Already checked in at {new Date(outcome.attendee.checkedInAt).toLocaleTimeString()}.
           </div>
@@ -914,13 +914,13 @@ function CheckInFlow({ event, onExit, onComplete }) {
 
         {!outcome.noMatch && (
           <div className="flex flex-col gap-3 mt-2">
-            <button onClick={confirmCheckIn} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
+            <button onClick={confirmCheckIn} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               <CheckCircle2 className="w-4 h-4" />
               {alreadyIn ? 'Check in again' : 'Confirm check-in'}
             </button>
           </div>
         )}
-        <button onClick={resetForNext} className="w-full mt-3 py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
+        <button onClick={resetForNext} className="w-full mt-3 py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           {outcome.noMatch ? 'Try again' : 'Not them \u2014 rescan'}
         </button>
       </div>
@@ -941,25 +941,25 @@ function CheckInFlow({ event, onExit, onComplete }) {
       </p>
       <FaceModeMobileNotice className="mb-4" />
 
-      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
         {camError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-            <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-            <p className="text-sm text-neutral-300 mb-4">{camError}</p>
-            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+            <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+            <p className="text-sm text-neutral-600 mb-4">{camError}</p>
+            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
           </div>
         ) : (
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-            <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+            <div className="absolute inset-8 border-2 border-dashed border-ink rounded-full pointer-events-none" />
             {phase === 'liveness' && <LivenessPrompt challenge={challenge} />}
             {phase === 'liveness' && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                <div className="h-full bg-[#8B7FFF] transition-all duration-100" style={{ width: `${progress * 100}%` }} />
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-lav">
+                <div className="h-full bg-ac transition-all duration-100" style={{ width: `${progress * 100}%` }} />
               </div>
             )}
             {!models.ready && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
                 <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
               </div>
             )}
@@ -968,20 +968,20 @@ function CheckInFlow({ event, onExit, onComplete }) {
       </div>
 
       {issue && (
-        <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {issue}
         </div>
       )}
 
       <button onClick={runFaceCheck} disabled={!ready || !models.ready || phase === 'liveness' || phase === 'match'}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3">
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
         {(phase === 'liveness' || phase === 'match') ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
         {phase === 'liveness' ? 'Checking\u2026' : phase === 'match' ? 'Matching\u2026' : 'Start check'}
       </button>
       <button
         onClick={() => (checkinCount > 0 ? onComplete?.() : onExit())}
-        className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5"
+        className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
       >
         Exit check-in
       </button>
@@ -1238,8 +1238,8 @@ function KioskCheckInFlow({ event, onExit }) {
     return (
       <div className="max-w-lg mx-auto px-5 py-8">
         {qrModal.candidate && (
-          <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1 -mt-2">
-            Best guess so far: <span className="text-neutral-200 font-medium">{qrModal.candidate.name}</span>
+          <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1 -mt-2">
+            Best guess so far: <span className="text-ink font-medium">{qrModal.candidate.name}</span>
             {qrModal.similarity != null && <span className="font-mono">{formatConfidence(qrModal.similarity)}%</span>}
           </div>
         )}
@@ -1260,13 +1260,13 @@ function KioskCheckInFlow({ event, onExit }) {
         </div>
         <div className="flex items-center gap-2">
           <Pill tone="teal">{sessionCount} checked in this session</Pill>
-          <button onClick={onExit} className="px-3 py-2 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
+          <button onClick={onExit} className="px-3 py-2 rounded-lg border-2 border-ink text-xs text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
             Exit
           </button>
         </div>
       </div>
 
-      <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+      <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
         <span>
           Beta demo &mdash; this scans continuously and checks people in automatically with no one
@@ -1277,12 +1277,12 @@ function KioskCheckInFlow({ event, onExit }) {
       </div>
       <FaceModeMobileNotice className="mb-4" />
 
-      <div ref={stageRef} className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+      <div ref={stageRef} className="relative aspect-video rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
         {camError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-            <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-            <p className="text-sm text-neutral-300 mb-4">{camError}</p>
-            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+            <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+            <p className="text-sm text-neutral-600 mb-4">{camError}</p>
+            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
           </div>
         ) : (
           <>
@@ -1298,7 +1298,7 @@ function KioskCheckInFlow({ event, onExit }) {
                 boxShadow: b.focused ? '0 0 0 3px rgba(139,127,255,0.2)' : 'none',
               }}>
                 {b.focused && (
-                  <span className="absolute -top-7 left-0 whitespace-nowrap text-[11px] font-mono px-2 py-1 rounded-md bg-[#8B7FFF] text-[#0a0714] font-semibold">
+                  <span className="absolute -top-7 left-0 whitespace-nowrap text-[11px] font-mono px-2 py-1 rounded-md bg-ac text-[#0a0714] font-semibold">
                     {status.mode === 'confirmed' || status.mode === 'already' ? (status.attendee?.name || 'Checked in') :
                       status.mode === 'matching' ? `${status.attendee?.name || '\u2026'}?` :
                       status.mode === 'need-qr' ? 'Scan your ticket \u2193' : 'Scanning\u2026'}
@@ -1308,14 +1308,14 @@ function KioskCheckInFlow({ event, onExit }) {
             ))}
 
             {!models.ready && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
                 <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
               </div>
             )}
 
             {models.ready && overlayBoxes.length === 0 && (
               <div className="absolute inset-x-0 bottom-4 flex justify-center">
-                <span className="px-3 py-1.5 rounded-full bg-black/60 border border-white/10 text-xs text-neutral-300">
+                <span className="px-3 py-1.5 rounded-full bg-lav border-2 border-ink text-xs text-neutral-600">
                   Step up and look at the camera to check in
                 </span>
               </div>
@@ -1325,56 +1325,56 @@ function KioskCheckInFlow({ event, onExit }) {
       </div>
 
       {status.mode === 'liveness' && (
-        <div className="flex items-center gap-2 text-sm text-[#8B7FFF] bg-[#8B7FFF]/10 border border-[#8B7FFF]/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-center gap-2 text-sm text-[#8B7FFF] bg-ac border border-[#8B7FFF]/20 rounded-lg px-3 py-2.5 mb-4">
           <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
           {status.attendee?.name ? `${status.attendee.name}, ` : ''}follow the prompts on the screen to finish check-in.
         </div>
       )}
       {status.mode === 'confirmed' && (
-        <div className="flex items-center gap-2 text-sm text-teal-300 bg-teal-400/10 border border-teal-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-700 rounded-lg px-3 py-2.5 mb-4">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           {status.attendee.name} checked in
         </div>
       )}
       {status.mode === 'already' && (
-        <div className="flex items-center gap-2 text-sm text-neutral-300 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2.5 mb-4">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-300" />
+        <div className="flex items-center gap-2 text-sm text-neutral-600 bg-white/[0.04] border-2 border-ink rounded-lg px-3 py-2.5 mb-4 shadow">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700" />
           {status.attendee.name} was already checked in
           {status.attendee.checkedInAt ? ` at ${new Date(status.attendee.checkedInAt).toLocaleTimeString()}` : ''}.
         </div>
       )}
       {status.mode === 'need-qr' && (
-        <div className="flex items-center justify-between gap-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-center justify-between gap-3 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
           <span className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             {status.candidate ? `Can\u2019t confirm it\u2019s ${status.candidate.name} from face alone.` : 'Can\u2019t confidently match a face on the roster.'} Please scan your ticket.
           </span>
-          <button onClick={openQrModal} className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold">
+          <button onClick={openQrModal} className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <QrCode className="w-3.5 h-3.5" /> Scan ticket
           </button>
         </div>
       )}
       {status.mode === 'no-match' && (
-        <div className="flex items-center justify-between gap-3 text-sm text-neutral-300 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-center justify-between gap-3 text-sm text-neutral-600 bg-white/[0.04] border-2 border-ink rounded-lg px-3 py-2.5 mb-4 shadow">
           <span className="flex items-center gap-2">
-            <XCircle className="w-4 h-4 shrink-0 text-rose-300" />
+            <XCircle className="w-4 h-4 shrink-0 text-red-700" />
             No confident match on this roster &mdash; ask staff for help.
           </span>
-          <button onClick={() => setManualOpen(true)} className="shrink-0 px-3 py-1.5 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
+          <button onClick={() => setManualOpen(true)} className="shrink-0 px-3 py-1.5 rounded-lg border-2 border-ink text-xs text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
             Staff override
           </button>
         </div>
       )}
 
       {issue && (
-        <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           {issue}
         </div>
       )}
 
       {feed.length > 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+        <div className="rounded-xl border-2 border-ink bg-white/[0.02] p-3.5 shadow">
           <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 mb-2">Just checked in</p>
           <div className="flex flex-wrap gap-2">
             {feed.map((f, i) => (
@@ -1385,7 +1385,7 @@ function KioskCheckInFlow({ event, onExit }) {
       )}
 
       <div className="mt-4 text-center">
-        <button onClick={() => setManualOpen((o) => !o)} className="text-xs text-neutral-500 hover:text-neutral-300 underline underline-offset-2">
+        <button onClick={() => setManualOpen((o) => !o)} className="text-xs text-neutral-500 hover:text-neutral-600 underline underline-offset-2">
           {manualOpen ? 'Hide staff override' : 'Staff: find a guest manually instead'}
         </button>
         {manualOpen && (

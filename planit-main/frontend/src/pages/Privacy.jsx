@@ -38,8 +38,8 @@ export default function Privacy() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
-                <Shield className="w-5 h-5 text-white" />
+              <div className="bg-white p-2 rounded-xl">
+                <Shield className="w-5 h-5 text-ink" />
               </div>
               <h1 className="text-lg font-semibold text-neutral-900">Privacy Policy</h1>
             </div>
@@ -48,12 +48,12 @@ export default function Privacy() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-12">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-ink p-8 md:p-12">
 
           <div className="mb-10">
             <h1 className="text-3xl font-bold text-neutral-900 mb-3">Privacy Policy</h1>
             <p className="text-sm text-neutral-500">Last updated: {LAST_UPDATED}</p>
-            <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-600 leading-relaxed">
+            <div className="mt-4 p-4 bg-neutral-50 border-2 border-ink rounded-lg text-sm text-neutral-600 leading-relaxed shadow">
               This Privacy Policy describes how PlanIt ("we", "us", or "our") collects, uses, stores, and protects
               information when you use the PlanIt event planning platform, accessible at our website and as a
               Progressive Web App (collectively, the "Service"). Please read it carefully before using the Service.
@@ -524,7 +524,7 @@ export default function Privacy() {
               If you have any questions, concerns, or requests regarding this Privacy Policy or how we handle your
               personal information, please contact us:
             </p>
-            <div className="mt-3 p-4 bg-neutral-50 border border-neutral-200 rounded-lg space-y-2 text-sm">
+            <div className="mt-3 p-4 bg-neutral-50 border-2 border-ink rounded-lg space-y-2 text-sm shadow">
               <p><strong>Email:</strong>{' '}
                 <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 underline underline-offset-2">
                   planit.userhelp@gmail.com

@@ -16,7 +16,7 @@ const SAMPLE_GUEST_NAMES = ['Ava', 'Marcus', 'Jules', 'Priya', 'Dev'];
 
 function DemoBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10">
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 uppercase tracking-wider px-3 py-1 rounded-full border border-blue-700 bg-blue-50">
       <Sparkles className="w-3 h-3" /> Live demo
     </span>
   );
@@ -59,16 +59,16 @@ function RSVPForm({ onSubmit }) {
           <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" />
           <input
             value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required
-            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none border-2 border-ink focus:ring-[3px] focus:ring-ac bg-white"
+            style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: '#0d0e1c' }}
           />
         </div>
         <div className="relative">
           <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" />
           <input
             value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)" type="email"
-            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none border-2 border-ink focus:ring-[3px] focus:ring-ac bg-white"
+            style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: '#0d0e1c' }}
           />
         </div>
 
@@ -76,10 +76,10 @@ function RSVPForm({ onSubmit }) {
           {[['yes', 'Going'], ['maybe', 'Maybe'], ['no', "Can't go"]].map(([val, label]) => (
             <button
               type="button" key={val} onClick={() => setResponse(val)}
-              className="py-3 rounded-xl text-sm font-semibold border transition-all"
+              className="py-3 rounded-xl text-sm font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               style={response === val
                 ? { background: ACCENT, borderColor: ACCENT, color: '#fff' }
-                : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)', color: '#d4d4d4' }}
+                : { background: '#ffffff', borderColor: '#0d0e1c', color: '#5a5d70' }}
             >
               {label}
             </button>
@@ -90,9 +90,9 @@ function RSVPForm({ onSubmit }) {
           <div className="flex items-center justify-between px-1 pt-1">
             <span className="text-sm text-neutral-400">Bringing anyone?</span>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setPlusOnes((n) => Math.max(0, n - 1))} className="w-8 h-8 rounded-full border border-neutral-700 text-neutral-300">-</button>
+              <button type="button" onClick={() => setPlusOnes((n) => Math.max(0, n - 1))} className="w-8 h-8 rounded-full border-2 border-ink text-neutral-300">-</button>
               <span className="text-sm font-medium w-4 text-center">{plusOnes}</span>
-              <button type="button" onClick={() => setPlusOnes((n) => Math.min(5, n + 1))} className="w-8 h-8 rounded-full border border-neutral-700 text-neutral-300">+</button>
+              <button type="button" onClick={() => setPlusOnes((n) => Math.min(5, n + 1))} className="w-8 h-8 rounded-full border-2 border-ink text-neutral-300">+</button>
             </div>
           </div>
         )}
@@ -131,7 +131,7 @@ function DemoConfirmation({ guest, onReset }) {
         <button
           onClick={() => setShowShareCard(true)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'inherit' }}
+          style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: 'inherit' }}
         >
           <Share2 className="w-4 h-4" /> Share event
         </button>
@@ -159,9 +159,9 @@ export default function RSVPDemo() {
   const [guest, setGuest] = useState(null);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0a0a12' }}>
-      <div className="border-b border-neutral-800/40 px-6 h-16 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors">
+    <div className="min-h-screen flex flex-col" style={{ background: '#ffffff' }}>
+      <div className="border-b border-ink px-6 h-16 flex items-center justify-between">
+        <a href="/" className="flex items-center gap-2 text-sm text-neutral-500 hover:text-ink transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to PlanIt
         </a>
         <DemoBadge />
@@ -170,11 +170,11 @@ export default function RSVPDemo() {
       <div className="flex-1 flex items-center justify-center p-6">
         <AnimatePresence mode="wait">
           {!guest ? (
-            <motion.div key="form" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.4 }}>
+            <motion.div key="form"   exit={{ opacity: 0, y: -16 }} >
               <RSVPForm onSubmit={setGuest} />
             </motion.div>
           ) : (
-            <motion.div key="confirm" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <motion.div key="confirm"   >
               <DemoConfirmation guest={guest} onReset={() => setGuest(null)} />
             </motion.div>
           )}
@@ -182,10 +182,10 @@ export default function RSVPDemo() {
       </div>
 
       <div className="px-6 pb-10">
-        <div className="max-w-md mx-auto p-6 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 text-center">
-          <p className="text-white font-bold mb-1">This is the page every guest sees.</p>
+        <div className="max-w-md mx-auto p-6 rounded-2xl border border-blue-700 bg-blue-50 text-center">
+          <p className="text-ink font-bold mb-1">This is the page every guest sees.</p>
           <p className="text-sm text-neutral-500 mb-4">Custom colors, fonts, and background per event — password protection and waitlisting too.</p>
-          <a href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-200 transition-all">
+          <a href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-200 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Create your event <ExternalLink className="w-4 h-4" />
           </a>
         </div>

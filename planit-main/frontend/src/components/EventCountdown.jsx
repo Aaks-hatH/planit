@@ -31,7 +31,7 @@ export default function EventCountdown({ date, accent = '#e5e5e5', compact = fal
       {units.map(([k, lbl]) => (
         <div
           key={k}
-          className="text-center rounded-lg bg-neutral-900/70 border border-neutral-800"
+          className="text-center rounded-lg bg-white border-2 border-ink"
           style={{ padding: compact ? '6px 8px' : '10px 12px', minWidth: compact ? 44 : 56 }}
         >
           <div className="font-mono font-bold tabular-nums" style={{ color: accent, fontSize: compact ? 16 : 22 }}>

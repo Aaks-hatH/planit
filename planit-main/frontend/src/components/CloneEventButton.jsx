@@ -132,16 +132,16 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
     <button
       type="button"
       onClick={openModal}
-      className="w-full flex items-center gap-4 p-5 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left"
+      className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-ink bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left font-bold"
     >
       <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
         <Copy className="w-5 h-5 text-indigo-600" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-neutral-900">Clone Event</p>
-        <p className="text-xs text-neutral-400">Copy this event's setup to a new date and link</p>
+        <p className="text-xs text-neutral-500">Copy this event's setup to a new date and link</p>
       </div>
-      <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
+      <ChevronRight className="w-[18px] h-[18px] text-neutral-600" />
     </button>
   ) : (
     <button type="button" onClick={openModal} className="btn btn-secondary text-sm gap-1.5 w-full">
@@ -151,7 +151,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
 
   // ── Modal ──────────────────────────────────────────────────────────────────
   const modal = open && createPortal(
-    <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4" onClick={close}>
+    <div className="fixed inset-0 bg-ink/60 z-[70] flex items-center justify-center p-4" onClick={close}>
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -179,13 +179,13 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                 {' '}Log in with the username and password you just entered.
               </p>
               {recoveryCode && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <div className="p-3 rounded-xl bg-amber-50 border-2 border-amber-600">
                   <p className="text-xs font-medium text-amber-800 mb-1">Recovery code — save it now, it won't be shown again</p>
                   <p className="text-sm font-mono font-semibold text-amber-900 select-all break-all">{recoveryCode}</p>
                 </div>
               )}
               {created.map((ev) => (
-                <div key={ev.id} className="flex items-center justify-between gap-3 p-3 border border-neutral-200 rounded-xl">
+                <div key={ev.id} className="flex items-center justify-between gap-3 p-3 border-2 border-ink rounded-xl shadow">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-neutral-900 truncate">{ev.title}</p>
                     <p className="text-xs text-neutral-500 truncate">
@@ -224,11 +224,11 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
 
               <div>
                 <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                  Title <span className="font-normal text-neutral-400">(optional — defaults to the same title)</span>
+                  Title <span className="font-normal text-neutral-500">(optional — defaults to the same title)</span>
                 </label>
                 <input
                   type="text"
-                  className="input text-sm"
+                  className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                   placeholder={event.title}
                   maxLength={200}
                   value={title}
@@ -236,15 +236,15 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                 />
               </div>
 
-              <div className="border border-neutral-200 rounded-xl p-3.5 space-y-3">
+              <div className="border-2 border-ink rounded-xl p-3.5 space-y-3 shadow">
                 <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Organizer login for the new event</p>
                 <div>
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                    Username <span className="text-red-500">*</span>
+                    Username <span className="text-red-700">*</span>
                   </label>
                   <input
                     type="text"
-                    className="input text-sm"
+                    className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     maxLength={100}
                     autoComplete="off"
                     value={username}
@@ -253,11 +253,11 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                    Password <span className="text-red-500">*</span>
+                    Password <span className="text-red-700">*</span>
                   </label>
                   <input
                     type="password"
-                    className="input text-sm"
+                    className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -266,7 +266,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
               </div>
 
               {rows.map((row, i) => (
-                <div key={i} className="border border-neutral-200 rounded-xl p-3.5 space-y-3">
+                <div key={i} className="border-2 border-ink rounded-xl p-3.5 space-y-3 shadow">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
                       {rows.length > 1 ? `Clone ${i + 1}` : 'New event'}
@@ -275,7 +275,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                       <button
                         type="button"
                         onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
-                        className="text-neutral-400 hover:text-red-500 transition-colors"
+                        className="text-neutral-500 hover:text-red-700 transition-colors"
                         aria-label="Remove clone"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -284,24 +284,24 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                      Date & time <span className="text-red-500">*</span>
+                      Date & time <span className="text-red-700">*</span>
                     </label>
                     <input
                       type="datetime-local"
-                      className="input text-sm"
+                      className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                       value={row.date}
                       onChange={(e) => setRow(i, { date: e.target.value })}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                      Slug (link) <span className="text-red-500">*</span>
+                      Slug (link) <span className="text-red-700">*</span>
                     </label>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-neutral-400 flex-shrink-0">/e/</span>
+                      <span className="text-xs text-neutral-500 flex-shrink-0">/e/</span>
                       <input
                         type="text"
-                        className="input text-sm"
+                        className="input text-sm border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                         placeholder={`${event.subdomain || 'my-event'}-2`}
                         value={row.slug}
                         onChange={(e) => setRow(i, { slug: cleanSlug(e.target.value) })}
@@ -324,7 +324,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
           )}
 
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-xs text-red-600 bg-red-50 border-2 border-red-600 rounded-lg px-3 py-2">{error}</p>
           )}
         </div>
 
@@ -333,7 +333,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
             <button type="button" onClick={close} disabled={busy} className="btn btn-ghost text-sm flex-1">Cancel</button>
             <button type="button" onClick={submit} disabled={busy} className="btn btn-primary text-sm flex-1 gap-1.5">
               {busy
-                ? <><span className="spinner w-3.5 h-3.5 border-2 border-white/40 border-t-white" />Cloning…</>
+                ? <><span className="spinner w-3.5 h-3.5 border-2 border-ink border-t-white" />Cloning…</>
                 : `Create ${rows.length > 1 ? `${rows.length} clones` : 'clone'}`}
             </button>
           </div>

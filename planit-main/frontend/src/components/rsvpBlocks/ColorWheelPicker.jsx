@@ -114,10 +114,10 @@ export default function ColorWheelPicker({ value, defaultColor = '#6366f1', onCh
         >
           <div
             className="absolute inset-[22%] rounded-full pointer-events-none"
-            style={{ background: currentHex, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' }}
+            style={{ background: currentHex, boxShadow: '4px 4px 0 #0d0e1c' }}
           />
           <div
-            className="absolute w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full border-2 border-white shadow pointer-events-none"
+            className="absolute w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full border-2 border-ink shadow pointer-events-none"
             style={{ left: `${handleLeft}%`, top: `${handleTop}%`, background: currentHex }}
           />
         </div>
@@ -140,7 +140,7 @@ export default function ColorWheelPicker({ value, defaultColor = '#6366f1', onCh
             />
           </label>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded border border-white/20 shrink-0" style={{ background: currentHex }} />
+            <span className="w-5 h-5 rounded border-2 border-ink shrink-0" style={{ background: currentHex }} />
             <input
               type="text"
               placeholder={defaultColor}
@@ -154,7 +154,7 @@ export default function ColorWheelPicker({ value, defaultColor = '#6366f1', onCh
                   onChange(v);
                 }
               }}
-              className="flex-1 min-w-0 text-xs rounded bg-white/5 border border-white/10 px-2 py-1 font-mono"
+              className="flex-1 min-w-0 text-xs rounded bg-lav border-2 border-ink px-2 py-1 font-mono focus:ring-[3px] focus:ring-ac focus:outline-none"
             />
           </div>
         </div>

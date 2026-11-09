@@ -57,20 +57,20 @@ export default function InviteCard() {
 
   if (loading) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
-      fontFamily: 'system-ui', color: '#9ca3af' }}>
+      background: '#ffffff',
+      fontFamily: 'system-ui', color: '#5a5d70' }}>
       Loading…
     </div>
   );
 
   if (error) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
+      background: '#ffffff',
       fontFamily: 'system-ui', color: '#ef4444', textAlign: 'center', padding: 24 }}>
       <div>
         <div style={{ fontSize: 48, marginBottom: 12 }}>&#x2715;</div>
         <p style={{ fontSize: 16, fontWeight: 600 }}>Invite not found</p>
-        <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 6 }}>{error}</p>
+        <p style={{ fontSize: 13, color: '#5a5d70', marginTop: 6 }}>{error}</p>
       </div>
     </div>
   );
@@ -82,7 +82,7 @@ export default function InviteCard() {
         html, body { height: 100%; }
         body {
           font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-          background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+          background: #eceeff;
           min-height: 100dvh;
           display: flex;
           align-items: center;
@@ -94,30 +94,30 @@ export default function InviteCard() {
       <div style={{
         width: '100%',
         maxWidth: 400,
-        background: 'linear-gradient(145deg, #18181b 0%, #0f0f14 100%)',
-        borderRadius: 24,
+        background: '#ffffff',
+        borderRadius: 12,
         overflow: 'hidden',
-        boxShadow: '0 32px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06)',
+        boxShadow: '4px 4px 0 #0d0e1c',
         userSelect: 'none',
       }}>
 
         {/* ── Coloured top stripe ── */}
-        <div style={{ height: 4, background: `linear-gradient(90deg, ${cfg.accent}, ${cfg.accentDark})` }} />
+        <div style={{ height: 4, background: cfg.accent }} />
 
         {/* ── Header ── */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 5 }}>PLANIT</span>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #d9dbe8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: '#0d0e1c', fontSize: 13, fontWeight: 800, letterSpacing: 5 }}>PLANIT</span>
           {/* Role badge */}
           <span style={{
             display: 'inline-block',
             padding: '3px 10px',
             borderRadius: 999,
-            background: 'rgba(255,255,255,0.06)',
+            background: '#ffffff',
             border: `1px solid ${cfg.accent}44`,
             color: cfg.accent,
             fontSize: 10,
             fontWeight: 800,
-            letterSpacing: 2,
+            letterSpacing: 2, boxShadow: '4px 4px 0 #0d0e1c',
           }}>{cfg.label}</span>
         </div>
 
@@ -125,21 +125,21 @@ export default function InviteCard() {
         {event && (
           <div style={{ padding: '16px 24px 0' }}>
             <p style={{ color: '#6b7280', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Event</p>
-            <p style={{ color: '#f3f4f6', fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>{event.title}</p>
+            <p style={{ color: '#0d0e1c', fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>{event.title}</p>
             {event.date && (
               <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
                 <div>
                   <p style={{ color: '#6b7280', fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Date</p>
-                  <p style={{ color: '#d1d5db', fontSize: 12, fontWeight: 600 }}>{fmtDate(event.date)}</p>
+                  <p style={{ color: '#5a5d70', fontSize: 12, fontWeight: 600 }}>{fmtDate(event.date)}</p>
                 </div>
                 <div>
                   <p style={{ color: '#6b7280', fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Time</p>
-                  <p style={{ color: '#d1d5db', fontSize: 12, fontWeight: 600 }}>{fmtTime(event.date)}</p>
+                  <p style={{ color: '#5a5d70', fontSize: 12, fontWeight: 600 }}>{fmtTime(event.date)}</p>
                 </div>
                 {event.location && (
                   <div style={{ flex: 1 }}>
                     <p style={{ color: '#6b7280', fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Location</p>
-                    <p style={{ color: '#d1d5db', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</p>
+                    <p style={{ color: '#5a5d70', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</p>
                   </div>
                 )}
               </div>
@@ -154,20 +154,20 @@ export default function InviteCard() {
           display: 'flex',
           alignItems: 'center',
         }}>
-          <div style={{ position: 'absolute', left: -12, width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)', zIndex: 1 }} />
-          <div style={{ flex: 1, borderTop: '1.5px dashed rgba(255,255,255,0.08)' }} />
-          <div style={{ position: 'absolute', right: -12, width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)', zIndex: 1 }} />
+          <div style={{ position: 'absolute', left: -12, width: 24, height: 24, borderRadius: '50%', background: '#ffffff', zIndex: 1 }} />
+          <div style={{ flex: 1, borderTop: '1px dashed #d9dbe8' }} />
+          <div style={{ position: 'absolute', right: -12, width: 24, height: 24, borderRadius: '50%', background: '#ffffff', zIndex: 1 }} />
         </div>
 
         {/* ── Guest info + QR ── */}
         <div style={{ padding: '0 24px 24px', display: 'flex', alignItems: 'flex-start', gap: 16 }}>
           <div style={{ flex: 1 }}>
             <p style={{ color: '#6b7280', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Guest</p>
-            <p style={{ color: '#fff', fontSize: 22, fontWeight: 900, lineHeight: 1.15, wordBreak: 'break-word' }}>{invite?.guestName}</p>
+            <p style={{ color: '#0d0e1c', fontSize: 22, fontWeight: 900, lineHeight: 1.15, wordBreak: 'break-word' }}>{invite?.guestName}</p>
 
             {/* Group size */}
             {(invite?.adults > 1 || invite?.children > 0) && (
-              <p style={{ color: '#9ca3af', fontSize: 11, fontWeight: 600, marginTop: 6 }}>
+              <p style={{ color: '#5a5d70', fontSize: 11, fontWeight: 600, marginTop: 6 }}>
                 {invite.adults} adult{invite.adults !== 1 ? 's' : ''}
                 {invite.children > 0 ? ` + ${invite.children} child${invite.children !== 1 ? 'ren' : ''}` : ''}
               </p>
@@ -182,11 +182,11 @@ export default function InviteCard() {
                 gap: 6,
                 padding: '4px 10px',
                 borderRadius: 8,
-                background: 'rgba(16,185,129,0.12)',
-                border: '1px solid rgba(16,185,129,0.25)',
+                background: '#d6f7e8',
+                border: '2px solid #0a7149',
               }}>
-                <span style={{ fontSize: 10, color: "#34d399" }}>&#x25CF;</span>
-                <span style={{ color: '#34d399', fontSize: 11, fontWeight: 700 }}>{invite.tableLabel}</span>
+                <span style={{ fontSize: 10, color: "#0a7149" }}>&#x25CF;</span>
+                <span style={{ color: '#0a7149', fontSize: 11, fontWeight: 700 }}>{invite.tableLabel}</span>
               </div>
             )}
 
@@ -210,8 +210,8 @@ export default function InviteCard() {
 
         {/* ── Footer ── */}
         <div style={{
-          background: 'rgba(255,255,255,0.03)',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: '#ffffff',
+          borderTop: '1px solid #d9dbe8',
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -223,15 +223,15 @@ export default function InviteCard() {
           <button
             onClick={handleCopy}
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#ffffff',
+              border: '2px solid #0d0e1c',
               borderRadius: 8,
               padding: '5px 12px',
               color: copied ? '#34d399' : '#9ca3af',
               fontSize: 11,
               fontWeight: 700,
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.2s', boxShadow: '3px 3px 0 #0d0e1c',
             }}
           >
             {copied ? 'Copied' : 'Share'}

@@ -35,7 +35,7 @@ export default function QRPassPreview() {
   const frac = left / 30;
 
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
+    <div className="relative rounded-2xl border-2 border-ink bg-white/[0.03] p-6 shadow-md">
       <div className="flex items-center justify-between mb-5">
         <span className="font-mono text-[10px] tracking-widest text-neutral-500 uppercase">Live pass</span>
         <QrCode className="w-4 h-4 text-neutral-600" />
@@ -55,7 +55,7 @@ export default function QRPassPreview() {
         <div className="flex-1 min-w-0">
           <div className="font-display font-bold text-lg truncate">Maya Chen</div>
           <div className="text-neutral-500 text-xs mb-4">Founders&rsquo; Night &middot; signed pass</div>
-          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-2">
+          <div className="h-1.5 rounded-full bg-lav overflow-hidden mb-2">
             <div className="h-full" style={{ width: `${frac * 100}%`, background: frac < 0.25 ? '#FB7185' : '#5EEAD4' }} />
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-mono text-teal-400/80">
@@ -64,7 +64,7 @@ export default function QRPassPreview() {
           </div>
         </div>
       </div>
-      <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-neutral-500">
+      <div className="mt-5 pt-4 border-t border-ink flex items-center justify-between font-mono text-[10px] text-neutral-500">
         <span>HMAC(guest key, slot) &rarr; code</span>
         <span className="text-teal-400/80">screenshots expire</span>
       </div>

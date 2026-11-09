@@ -103,7 +103,7 @@ export default function Waitlist() {
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
         <div className="text-center max-w-sm">
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserX className="w-6 h-6 text-red-500" />
+            <UserX className="w-6 h-6 text-red-700" />
           </div>
           <h2 className="text-base font-semibold text-neutral-900 mb-1">Organizer access required</h2>
           <p className="text-sm text-neutral-500 mb-5">
@@ -147,7 +147,7 @@ export default function Waitlist() {
                 Waitlist
               </h1>
               {eventTitle && (
-                <p className="text-xs text-neutral-400 truncate">{eventTitle}</p>
+                <p className="text-xs text-neutral-500 truncate">{eventTitle}</p>
               )}
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function Waitlist() {
             <button
               onClick={() => load(true)}
               disabled={refreshing}
-              className="btn btn-ghost p-2 text-neutral-500"
+              className="btn btn-ghost p-2 !text-neutral-500"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -189,50 +189,50 @@ export default function Waitlist() {
       <main className="max-w-3xl mx-auto px-5 py-8">
         {/* Stats bar */}
         <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-2 px-4 py-3 bg-white border border-neutral-200 rounded-xl">
-            <Users className="w-4 h-4 text-amber-500" />
+          <div className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-ink rounded-xl shadow">
+            <Users className="w-4 h-4 text-amber-700" />
             <span className="text-sm font-semibold text-neutral-900">{waitlist.length}</span>
-            <span className="text-sm text-neutral-400">waiting</span>
+            <span className="text-sm text-neutral-500">waiting</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-3 bg-white border border-neutral-200 rounded-xl">
-            <Mail className="w-4 h-4 text-blue-500" />
+          <div className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-ink rounded-xl shadow">
+            <Mail className="w-4 h-4 text-blue-700" />
             <span className="text-sm font-semibold text-neutral-900">
               {waitlist.filter(w => w.email).length}
             </span>
-            <span className="text-sm text-neutral-400">with email</span>
+            <span className="text-sm text-neutral-500">with email</span>
           </div>
         </div>
 
         {/* Empty state */}
         {waitlist.length === 0 ? (
-          <div className="bg-white border border-neutral-200 rounded-2xl p-12 text-center">
+          <div className="bg-white border-2 border-ink rounded-2xl p-12 text-center shadow">
             <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ClipboardList className="w-6 h-6 text-neutral-400" />
+              <ClipboardList className="w-6 h-6 text-neutral-500" />
             </div>
             <h3 className="text-sm font-semibold text-neutral-900 mb-1">No one on the waitlist</h3>
-            <p className="text-sm text-neutral-400">
+            <p className="text-sm text-neutral-500">
               When your event is full, guests can join the waitlist and they'll appear here.
             </p>
           </div>
         ) : (
-          <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+          <div className="bg-white border-2 border-ink rounded-2xl overflow-hidden shadow">
             {/* Table header */}
             <div className="grid grid-cols-[2rem_1fr_1fr_auto] gap-4 px-5 py-3 bg-neutral-50 border-b border-neutral-100">
-              <span className="text-xs font-semibold text-neutral-400">#</span>
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Name</span>
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Email</span>
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Joined</span>
+              <span className="text-xs font-semibold text-neutral-500">#</span>
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Name</span>
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Email</span>
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Joined</span>
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-neutral-100">
+            <div className="divide-y divide-neutral-200">
               {waitlist.map((entry, idx) => (
                 <div
                   key={entry._id || entry.username}
                   className="grid grid-cols-[2rem_1fr_1fr_auto] gap-4 px-5 py-3.5 items-center hover:bg-neutral-50 transition-colors group"
                 >
                   {/* Position */}
-                  <span className="text-xs font-semibold text-neutral-400 tabular-nums">
+                  <span className="text-xs font-semibold text-neutral-500 tabular-nums">
                     {idx + 1}
                   </span>
 
@@ -256,20 +256,20 @@ export default function Waitlist() {
                         {entry.email}
                       </a>
                     ) : (
-                      <span className="text-sm text-neutral-300">—</span>
+                      <span className="text-sm text-neutral-600">—</span>
                     )}
                   </div>
 
                   {/* Joined + remove */}
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="flex items-center gap-1 text-xs text-neutral-400">
+                    <div className="flex items-center gap-1 text-xs text-neutral-500">
                       <Clock className="w-3 h-3" />
                       <span>{formatRelativeTime(entry.joinedAt)}</span>
                     </div>
                     <button
                       onClick={() => handleRemove(entry.username)}
                       disabled={removing === entry.username}
-                      className="btn btn-ghost p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                      className="btn btn-ghost p-1.5 !text-neutral-600 hover:!text-red-700 hover:!bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                       title={`Remove ${entry.username}`}
                     >
                       {removing === entry.username
@@ -283,7 +283,7 @@ export default function Waitlist() {
 
             {/* Footer note */}
             <div className="px-5 py-3 bg-neutral-50 border-t border-neutral-100">
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-neutral-500">
                 Removing a person from the waitlist is permanent. Use "Copy Emails" to reach out before freeing up spots.
               </p>
             </div>

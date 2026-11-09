@@ -22,12 +22,12 @@ export default function VenueMapPreview() {
   const [tx, ty] = TB[s.table];
 
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm overflow-hidden">
+    <div className="relative rounded-2xl border-2 border-ink bg-white/[0.03] p-6 overflow-hidden shadow-md">
       <div className="flex items-center justify-between mb-4">
         <span className="font-mono text-[10px] tracking-widest text-neutral-500 uppercase">I&rsquo;m at the {s.from}</span>
         <MapIcon className="w-4 h-4 text-neutral-600" />
       </div>
-      <svg viewBox="0 0 100 54" className="w-full rounded-xl border border-white/10 bg-[#0a0a18]" aria-hidden="true">
+      <svg viewBox="0 0 100 54" className="w-full rounded-xl border-2 border-ink bg-white" aria-hidden="true">
         <defs>
           <pattern id="vmp-grid" width="10" height="10" patternUnits="userSpaceOnUse">
             <path d="M10 0H0V10" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.3" />
@@ -58,8 +58,8 @@ export default function VenueMapPreview() {
           );
         })}
       </svg>
-      <p className="mt-4 text-[13px] text-neutral-200 leading-snug min-h-[2.5rem]">{s.text}</p>
-      <div className="mt-3 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-neutral-500">
+      <p className="mt-4 text-[13px] text-ink leading-snug min-h-[2.5rem]">{s.text}</p>
+      <div className="mt-3 pt-4 border-t border-ink flex items-center justify-between font-mono text-[10px] text-neutral-500">
         <span>landmark + table &rarr; directions</span>
         <span className="text-teal-400/80">no sensors</span>
       </div>

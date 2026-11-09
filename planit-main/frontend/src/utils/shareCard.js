@@ -17,11 +17,11 @@ function pickAccent(seed) {
 async function ensureFontsLoaded() {
   try {
     await Promise.all([
-      document.fonts.load("800 90px 'Syne'"),
-      document.fonts.load("700 90px 'Syne'"),
-      document.fonts.load("500 32px 'DM Sans'"),
-      document.fonts.load("400 28px 'DM Sans'"),
-      document.fonts.load("500 26px 'DM Mono'"),
+      document.fonts.load("800 90px 'Unbounded'"),
+      document.fonts.load("700 90px 'Unbounded'"),
+      document.fonts.load("500 32px 'Hanken Grotesk'"),
+      document.fonts.load("400 28px 'Hanken Grotesk'"),
+      document.fonts.load("500 26px 'Hanken Grotesk'"),
     ]);
     await document.fonts.ready;
   } catch { /* fonts API not fully supported — canvas falls back to system fonts */ }
@@ -73,7 +73,7 @@ export async function drawShareCard(canvas, info) {
 
   // Eyebrow: "I'm going to" / "You're invited to"
   ctx.fillStyle = '#8a8880';
-  ctx.font = "500 26px 'DM Mono', monospace";
+  ctx.font = "500 26px 'Hanken Grotesk', monospace";
   ctx.textBaseline = 'alphabetic';
   const eyebrow = guestName ? "I'M GOING TO" : "YOU'RE INVITED TO";
   ctx.fillText(eyebrow, padX, y);
@@ -82,7 +82,7 @@ export async function drawShareCard(canvas, info) {
 
   // Event title (Syne, wraps up to 3 lines)
   ctx.fillStyle = '#ffffff';
-  ctx.font = "800 82px 'Syne', sans-serif";
+  ctx.font = "800 82px 'Unbounded', sans-serif";
   const titleLines = wrapLines(ctx, eventTitle || 'Untitled event', CARD_W - padX * 2).slice(0, 3);
   for (const line of titleLines) {
     y += 84;
@@ -93,12 +93,12 @@ export async function drawShareCard(canvas, info) {
 
   // Date + location (DM Sans)
   ctx.fillStyle = '#c9c7bd';
-  ctx.font = "500 34px 'DM Sans', sans-serif";
+  ctx.font = "500 34px 'Hanken Grotesk', sans-serif";
   ctx.fillText(dateLabel || '', padX, y);
   if (location) {
     y += 46;
     ctx.fillStyle = '#8a8880';
-    ctx.font = "400 30px 'DM Sans', sans-serif";
+    ctx.font = "400 30px 'Hanken Grotesk', sans-serif";
     ctx.fillText(location, padX, y);
   }
 
@@ -116,7 +116,7 @@ export async function drawShareCard(canvas, info) {
       ctx.fill();
     }
     ctx.fillStyle = '#e8e6de';
-    ctx.font = "500 28px 'DM Sans', sans-serif";
+    ctx.font = "500 28px 'Hanken Grotesk', sans-serif";
     ctx.fillText(`${goingCount} going`, padX + 150, pillY + 47);
   }
 
@@ -130,16 +130,16 @@ export async function drawShareCard(canvas, info) {
 
   // Footer: guest name (if any) + PlanIt wordmark + url
   ctx.fillStyle = '#f5f4f0';
-  ctx.font = "500 32px 'DM Sans', sans-serif";
+  ctx.font = "500 32px 'Hanken Grotesk', sans-serif";
   if (guestName) ctx.fillText(guestName, padX, CARD_H - 128);
 
   ctx.fillStyle = '#5f5e58';
-  ctx.font = "400 24px 'DM Mono', monospace";
+  ctx.font = "400 24px 'Hanken Grotesk', monospace";
   ctx.fillText((siteUrl || 'planit.app').replace(/^https?:\/\//, ''), padX, CARD_H - 80);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#ffffff';
-  ctx.font = "700 30px 'Syne', sans-serif";
+  ctx.font = "700 30px 'Unbounded', sans-serif";
   ctx.fillText('PlanIt', CARD_W - padX, CARD_H - 78);
   ctx.textAlign = 'left';
 

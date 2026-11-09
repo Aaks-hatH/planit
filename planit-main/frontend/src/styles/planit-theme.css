@@ -1,0 +1,269 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * planit-theme.css — shared PlanIt design system (bright neo-brutalist, light only)
+ *
+ * Source of truth: src/pages/Home.jsx (its CSS string). Home keeps its own scoped
+ * copy (.pi …) and stays pixel-identical; every other page uses this file via
+ * the global tokens and the classes below. Tailwind picks up the same tokens
+ * through tailwind.config.js (palette, hard shadows, radii, fonts).
+ *
+ * Component classes (all global):
+ *   .btn  .btn-primary(.pri) .btn-dark(.dk) .btn-secondary .btn-danger .btn-ghost .btn-sm .btn-lg
+ *   .input(.inp) .label .field-error  .card .card-flat .card-hover
+ *   .badge .badge-green|amber|red|gray|pink|primary|blue  .pi-tag  .pi-eye
+ *   .pi-tabs > .pi-tab(.on)   .pi-ov > .pi-modal   .pi-nav   .pi-foot
+ *   .pi-table(-wrap)  .pi-empty  .pi-loading  .pi-error  .pi-ok  .pi-warn
+ *   .pi-sec(.lav|.yel|.ink|.ac|.pk)  .st-ok|hl|pk|er
+ * ───────────────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --ac: #2236ff;   /* primary blue   */
+  --hl: #ffe14d;   /* yellow         */
+  --ink: #0d0e1c;  /* text + borders */
+  --lav: #eceeff;  /* lavender       */
+  --pk: #ff7ac6;   /* pink           */
+  --mn: #6ff0c0;   /* mint           */
+  --ok: #0c8a5b;   /* done / checked in */
+  --er: #d12f2f;   /* blocked / error   */
+  --mu: #5a5d70;   /* muted text     */
+  --ln: #d9dbe8;   /* soft lines     */
+  --acs: #fff6c2;  /* soft yellow    */
+  --bg: #ffffff;
+  --sf: #ffffff;
+  /* soft state fills */
+  --ok-bg: #d6f7e8;
+  --er-bg: #ffe1de;
+  --pk-bg: #ffd6ee;
+  --hl-bg: #fff6c2;
+  --font-display: Unbounded, 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sh-sm: 3px 3px 0 var(--ink);
+  --sh-md: 4px 4px 0 var(--ink);
+  --sh-lg: 6px 6px 0 var(--ink);
+  --sh-xl: 10px 10px 0 var(--ink);
+}
+
+/* White-label: owner's primary colour becomes the chrome accent. */
+[data-wl] { --ac: var(--wl-primary, #2236ff); }
+
+html { background: #fff; color-scheme: light; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+h5, h6 { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+label, legend { font-weight: 600; }
+.font-display, .font-heading { font-family: var(--font-display); letter-spacing: -0.04em; }
+
+/* Keyboard focus: 3px yellow outline */
+:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; }
+:focus:not(:focus-visible) { outline: none; }
+::selection { background: var(--hl); color: var(--ink); }
+
+/* Neutral defaults for bare controls (zero specificity, utilities still win) */
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]), select, textarea) {
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--ink);
+}
+:where(input, select, textarea)::placeholder { color: #6d7086; opacity: 1; }
+:where(input[type=checkbox], input[type=radio]) { accent-color: var(--ac); }
+:where(a) { color: inherit; }
+:where(button) { cursor: pointer; }
+:where(button:disabled) { cursor: not-allowed; }
+:where(table) { border-collapse: collapse; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+/* Every variant sets its own text colour with :root specificity so it never
+ * inherits white from a blue nav / section / card (no white-on-white). */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 2px solid var(--ink); border-radius: 8px;
+  padding: 9px 16px; font-family: var(--font-body); font-weight: 700; font-size: 14.5px; line-height: 1.3;
+  letter-spacing: -0.005em; white-space: nowrap; text-decoration: none;
+  background: #fff; color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform .12s, box-shadow .12s, background-color .12s, color .12s;
+  cursor: pointer;
+}
+:root .btn { color: var(--ink); }
+:root .btn:hover:not(:disabled):not([aria-disabled=true]) { background: var(--ink); color: #fff; transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+:root .btn:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.btn:disabled, .btn[aria-disabled=true] { opacity: .55; cursor: not-allowed; box-shadow: none; }
+:root .btn:disabled, :root .btn[aria-disabled=true] { background: #f4f5fb; color: var(--mu); border-color: #9a9db3; }
+
+.btn-primary, .btn.pri { background: var(--hl); box-shadow: 4px 4px 0 var(--ink); }
+:root .btn.btn-primary, :root .btn.pri { background: var(--hl); color: var(--ink); }
+:root .btn.btn-primary:hover:not(:disabled), :root .btn.pri:hover:not(:disabled) { background: var(--hl); color: var(--ink); box-shadow: 2px 2px 0 var(--ink); }
+:root .btn.btn-primary:disabled, :root .btn.pri:disabled { background: #f4f5fb; color: var(--mu); }
+
+.btn-dark, .btn.dk { background: var(--ink); box-shadow: 4px 4px 0 var(--ac); }
+:root .btn.btn-dark, :root .btn.dk { background: var(--ink); color: #fff; }
+:root .btn.btn-dark:hover:not(:disabled), :root .btn.dk:hover:not(:disabled) { background: var(--ink); color: #fff; box-shadow: 2px 2px 0 var(--ac); }
+:root .btn.btn-dark:disabled, :root .btn.dk:disabled { background: #34364a; color: #c3c6d8; border-color: var(--ink); }
+
+/* Secondary = plain white */
+:root .btn.btn-secondary { background: #fff; color: var(--ink); }
+:root .btn.btn-secondary:hover:not(:disabled) { background: var(--ink); color: #fff; }
+
+.btn-danger { box-shadow: 3px 3px 0 var(--er); border-color: var(--er); }
+:root .btn.btn-danger { background: #fff; color: var(--er); border-color: var(--er); }
+:root .btn.btn-danger:hover:not(:disabled) { background: var(--er); color: #fff; box-shadow: 1px 1px 0 var(--er); }
+
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; }
+:root .btn.btn-ghost { background: transparent; color: var(--ink); }
+:root .btn.btn-ghost:hover:not(:disabled) { background: var(--lav); color: var(--ink); border-color: var(--ink); transform: none; box-shadow: none; }
+
+.btn-sm, .btn.sm { padding: 7px 12px; font-size: 13.5px; box-shadow: 3px 3px 0 var(--ink); }
+.btn-lg { padding: 14px 24px; font-size: 16px; }
+.btn.wide { width: 100%; }
+.btn svg { flex-shrink: 0; }
+
+/* Icon-only buttons keep a 40px tap target */
+.btn-icon { width: 40px; height: 40px; padding: 0; }
+
+/* Text link with the blue underline from Home (.lnk) */
+.lnk { background: none; border: 0; padding: 0 0 2px; font-weight: 700; border-bottom: 2px solid var(--ac); color: var(--ink); cursor: pointer; }
+:root .lnk { color: var(--ink); }
+.lnk:hover { background: var(--hl); }
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.input, .inp {
+  width: 100%; padding: 10px 12px; font-size: 14.5px; line-height: 1.4;
+  background: #fff; color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 8px; outline: none;
+  transition: box-shadow .15s;
+}
+.input:focus, .inp:focus, :where(input, select, textarea):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ac); }
+.input:disabled, .inp:disabled { background: #f4f5fb; color: var(--mu); border-color: #9a9db3; cursor: not-allowed; }
+.input.bad, .inp.bad, .input[aria-invalid=true], .inp[aria-invalid=true] { border-color: var(--er); }
+.input.bad:focus, .inp.bad:focus { box-shadow: 0 0 0 3px rgba(209, 47, 47, .35); }
+.label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.field-error, .err { display: flex; gap: 6px; align-items: center; color: var(--er); font-size: 13px; margin-top: 6px; font-weight: 500; }
+.field-hint { color: var(--mu); font-size: 13px; margin-top: 6px; }
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card, .planit-card {
+  background: #fff; color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink);
+  transition: transform .15s, box-shadow .15s;
+}
+.card-flat { box-shadow: none; }
+a.card:hover, button.card:hover, .card-hover:hover, .planit-card:hover { transform: translate(-3px, -3px); box-shadow: 7px 7px 0 var(--ink); }
+.card-panel { box-shadow: 10px 10px 0 var(--ink); }
+
+/* ── Tags / eyebrows / badges ────────────────────────────────────────────── */
+.pi-eye, .pi-tag {
+  display: inline-block; border: 2px solid var(--ink); background: var(--hl); color: var(--ink);
+  padding: 4px 10px; font: 700 11.5px var(--font-display); letter-spacing: .02em; text-transform: uppercase;
+  transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--ink);
+}
+.pi-tag { padding: 2px 8px; font-size: 10.5px; box-shadow: 2px 2px 0 var(--ink); }
+.pi-tag.flat, .pi-eye.flat { transform: none; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; line-height: 1.4;
+  border: 2px solid var(--ink); border-radius: 6px; background: var(--lav); color: var(--ink);
+}
+.badge-primary { background: var(--ink); color: #fff; }
+.badge-blue { background: var(--ac); color: #fff; }
+.badge-green { background: var(--ok-bg); color: #075a3a; }
+.badge-amber { background: var(--hl); color: var(--ink); }
+.badge-gray { background: var(--lav); color: var(--ink); }
+.badge-red { background: var(--er-bg); color: #861b1b; }
+.badge-pink { background: var(--pk); color: var(--ink); }
+
+/* Status surfaces: green = done / checked in, yellow = pending / flagged,
+ * pink = seated / occupied, red = blocked / error. */
+.st-ok   { background: var(--ok-bg); border-color: var(--ink); color: var(--ink); }
+.st-hl   { background: var(--hl-bg); border-color: var(--ink); color: var(--ink); }
+.st-pk   { background: var(--pk-bg); border-color: var(--ink); color: var(--ink); }
+.st-er   { background: var(--er-bg); border-color: var(--ink); color: var(--ink); }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.pi-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--ink); flex-wrap: wrap; }
+.pi-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; min-height: 40px;
+  border: 2px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; margin-bottom: -2px;
+  background: none; color: var(--mu); font-weight: 700; font-size: 14px; cursor: pointer;
+}
+:root .pi-tab { color: var(--mu); }
+:root .pi-tab:hover { color: var(--ink); background: var(--lav); }
+:root .pi-tab.on, :root .pi-tab[aria-selected=true] { background: var(--hl); border-color: var(--ink); color: var(--ink); }
+/* Underline variant (forms, modals) */
+.pi-seg { display: flex; gap: 22px; border-bottom: 2px solid var(--ln); flex-wrap: wrap; }
+.pi-seg button { border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; background: none; padding: 8px 0; font-weight: 600; color: var(--mu); }
+.pi-seg button.on { color: var(--ink); border-color: var(--ac); }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+.pi-ov { position: fixed; inset: 0; z-index: 100; background: rgba(13, 14, 28, .6); display: flex; padding: 20px; overflow: auto; }
+.pi-ov-ac { background: rgba(34, 54, 255, .94); }
+.pi-modal {
+  position: relative; width: 100%; max-width: 540px; margin: auto; background: #fff; color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 14px; padding: clamp(20px, 4vw, 32px); box-shadow: 10px 10px 0 var(--ink);
+}
+.pi-modal-x {
+  position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 8px;
+  background: var(--hl); color: var(--ink); font-size: 20px; font-weight: 700; line-height: 1; display: grid; place-items: center;
+}
+
+/* ── Nav / footer / sections ─────────────────────────────────────────────── */
+.pi-nav { position: sticky; top: 0; z-index: 40; background: var(--ac); color: #fff; border-bottom: 2px solid var(--ink); }
+.pi-nav a:not(.btn), .pi-nav button:not(.btn) { color: #fff; }
+.pi-nav-light { background: #fff; color: var(--ink); border-bottom: 2px solid var(--ink); position: sticky; top: 0; z-index: 40; }
+.pi-foot { background: var(--ink); color: #fff; padding: 56px 0 32px; border-top: 2px solid var(--ink); }
+.pi-foot h4 { color: var(--hl); font-size: 14px; }
+.pi-foot a:not(.btn) { color: rgba(255, 255, 255, .72); } .pi-foot a:not(.btn):hover { color: #fff; }
+.pi-sec { padding: 72px 0; border-top: 2px solid var(--ink); background: #fff; }
+.pi-sec.lav { background: var(--lav); } .pi-sec.yel { background: var(--hl); }
+.pi-sec.pk { background: var(--pk); } .pi-sec.mn { background: var(--mn); }
+.pi-sec.ink { background: var(--ink); color: #fff; }
+.pi-sec.ac { background: var(--ac) radial-gradient(rgba(255, 255, 255, .22) 1.6px, transparent 1.6px) 0 0 / 28px 28px; color: #fff; }
+.pi-wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+.pi-dots { background: var(--ac) radial-gradient(rgba(255, 255, 255, .22) 1.6px, transparent 1.6px) 0 0 / 28px 28px; color: #fff; }
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.pi-table-wrap { overflow-x: auto; border: 2px solid var(--ink); border-radius: 12px; background: #fff; box-shadow: 4px 4px 0 var(--ink); }
+.pi-table { width: 100%; font-size: 14px; }
+.pi-table th { background: var(--lav); color: var(--ink); text-align: left; font: 700 11.5px var(--font-display); letter-spacing: .02em; text-transform: uppercase; padding: 12px 14px; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+.pi-table td { padding: 12px 14px; border-top: 1px solid var(--ln); vertical-align: middle; color: var(--ink); }
+.pi-table tbody tr:first-child td { border-top: 0; }
+.pi-table tbody tr:hover td { background: #f7f8fd; }
+
+/* ── Empty / loading / error ─────────────────────────────────────────────── */
+.pi-empty { border: 2px dashed var(--ink); border-radius: 12px; background: var(--lav); color: var(--ink); padding: 32px 20px; text-align: center; }
+.pi-empty p { color: var(--mu); }
+.pi-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 20px; color: var(--mu); font-weight: 600; }
+.pi-skel { background: var(--lav); border: 2px solid var(--ln); border-radius: 8px; min-height: 16px; }
+.pi-error, .pi-ok, .pi-warn, .pi-info { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; border: 2px solid var(--ink); font-size: 14px; }
+.pi-error { background: var(--er-bg); color: #6b1616; border-color: var(--er); }
+.pi-ok { background: var(--ok-bg); color: #054229; border-color: var(--ok); }
+.pi-warn { background: var(--hl-bg); color: var(--ink); }
+.pi-info { background: var(--lav); color: var(--ink); }
+.spinner { animation: spin .75s linear infinite; border-radius: 50%; }
+.pi-spin { width: 18px; height: 18px; border: 2px solid rgba(13, 14, 28, .25); border-top-color: var(--ink); border-radius: 50%; animation: spin .7s linear infinite; }
+
+/* ── Stats, progress, misc ───────────────────────────────────────────────── */
+.pi-stat { border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 14px 16px; box-shadow: 3px 3px 0 var(--ink); }
+.pi-stat b { display: block; font: 800 24px var(--font-display); letter-spacing: -.04em; }
+.pi-stat small { color: var(--mu); font-size: 12.5px; }
+.pi-bar { height: 10px; border: 2px solid var(--ink); border-radius: 6px; background: #fff; overflow: hidden; }
+.pi-bar > i { display: block; height: 100%; background: var(--ok); transition: width .5s; }
+.pi-dotgrid { background-image: radial-gradient(rgba(13, 14, 28, .12) 1.4px, transparent 1.4px); background-size: 24px 24px; }
+
+/* Text colour contexts: text-white children of ink / blue / pink surfaces stay readable */
+.on-ink, .on-ac { color: #fff; }
+.on-ink .btn:not(.btn-primary):not(.pri):not(.btn-danger):not(.btn-ghost), .on-ac .btn:not(.btn-primary):not(.pri):not(.btn-danger):not(.btn-ghost) { border-color: var(--ink); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 960px) { .pi-sec { padding: 56px 0; } }
+@media (max-width: 600px) { .pi-wrap { padding: 0 18px; } .pi-modal { padding: 22px 18px; } }

@@ -52,7 +52,7 @@ export default function GuestSeatPicker({
   return (
     <div className="space-y-3">
       <div
-        className="rounded-xl overflow-hidden border"
+        className="rounded-xl overflow-hidden border-2 border-ink shadow"
         style={{ borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }}
       >
         <svg viewBox={`0 0 ${canvasW} ${canvasH}`} className="w-full h-auto" style={{ background: isLight ? '#fafafa' : '#0d0d16', display: 'block' }}>
@@ -127,7 +127,7 @@ export default function GuestSeatPicker({
           <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: accent }} /> Selected
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full inline-block border" style={{ borderColor: mutedText }} /> Open
+          <span className="w-2.5 h-2.5 rounded-full inline-block border-2 border-ink" style={{ borderColor: mutedText }} /> Open
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: mutedText, opacity: 0.4 }} /> Full

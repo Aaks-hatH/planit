@@ -112,7 +112,7 @@ function MaintenancePage({ message, eta, type = 's' }) {
   const remaining = fmtEta(eta);
 
   return (
-    <div className="font-sans" style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#05050f', color:'white', padding:'2rem', textAlign:'center' }}>
+    <div className="font-sans" style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#ffffff', color:'#0d0e1c', padding:'2rem', textAlign:'center' }}>
       {/* Grid */}
       <svg style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} aria-hidden="true">
         <defs><pattern id="mg" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255,255,255,0.022)" strokeWidth="1"/></pattern></defs>
@@ -125,13 +125,13 @@ function MaintenancePage({ message, eta, type = 's' }) {
 
       <div style={{ position:'relative', zIndex:1, maxWidth:480, width:'100%' }}>
         {/* Logo */}
-        <div style={{ width:64, height:64, borderRadius:18, margin:'0 auto 20px', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ width:64, height:64, borderRadius:12, margin:'0 auto 20px', background:'#ffffff', border:'2px solid #0d0e1c', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
         </div>
 
-        <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.25em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)', marginBottom:20 }}>PlanIt</div>
+        <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.25em', textTransform:'uppercase', color:'#5a5d70', marginBottom:20 }}>PlanIt</div>
 
         {/* Status pill */}
         <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 14px', borderRadius:999, background:cfg.pillBg, border:`1px solid ${cfg.pillBrd}`, marginBottom:24 }}>
@@ -141,28 +141,28 @@ function MaintenancePage({ message, eta, type = 's' }) {
 
         <h1 style={{ fontSize:'clamp(1.6rem,5vw,2.4rem)', fontWeight:900, margin:'0 0 14px', lineHeight:1.1, letterSpacing:-1 }}>{cfg.heading}</h1>
 
-        <p style={{ fontSize:15, color:'rgba(255,255,255,0.42)', lineHeight:1.7, margin:'0 0 28px' }}>
+        <p style={{ fontSize:15, color:'#5a5d70', lineHeight:1.7, margin:'0 0 28px' }}>
           {message || cfg.sub}
         </p>
 
         {/* ETA */}
         {remaining && (
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:12, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', marginBottom:28 }}>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'10px 18px', borderRadius:12, background:'#ffffff', border:'2px solid #0d0e1c', marginBottom:28 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>Back in</span>
-            <span style={{ fontSize:13, fontWeight:800, color:'white', fontVariantNumeric:'tabular-nums' }}>{remaining}</span>
+            <span style={{ fontSize:12, color:'#5a5d70' }}>Back in</span>
+            <span style={{ fontSize:13, fontWeight:800, color:'#0d0e1c', fontVariantNumeric:'tabular-nums' }}>{remaining}</span>
           </div>
         )}
 
         {/* Status link */}
         <div style={{ marginBottom:20 }}>
-          <a href="/status" style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.28)', textDecoration:'none', padding:'5px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,0.07)' }}>
+          <a href="/status" style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:'#5a5d70', textDecoration:'none', padding:'5px 12px', borderRadius:8, border:'2px solid #0d0e1c' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             View status page
           </a>
         </div>
 
-        <div style={{ fontSize:11, color:'rgba(255,255,255,0.12)', fontVariantNumeric:'tabular-nums', letterSpacing:'0.08em' }}>{now.toLocaleTimeString()} local time</div>
+        <div style={{ fontSize:11, color:'#5a5d70', fontVariantNumeric:'tabular-nums', letterSpacing:'0.08em' }}>{now.toLocaleTimeString()} local time</div>
       </div>
 
       <style>{`@keyframes mnt-pulse{0%,100%{opacity:1}50%{opacity:0.25}}`}</style>
@@ -174,9 +174,9 @@ function MaintenancePage({ message, eta, type = 's' }) {
 // Shown on all pages when s='upcoming' - slim top bar, dismissible per session.
 // Renders in normal document flow (NOT fixed) so it never overlaps page content.
 const BANNER_CFG = {
-  s: { bg:'#fffbeb', border:'#fde68a', text:'#92400e', dot:'#f59e0b', pill:'#fef3c7', pillText:'#b45309', label:'Scheduled Maintenance' },
-  i: { bg:'#fff1f2', border:'#fecdd3', text:'#9f1239', dot:'#f43f5e', pill:'#ffe4e6', pillText:'#be123c', label:'Service Disruption'    },
-  d: { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', dot:'#f97316', pill:'#ffedd5', pillText:'#c2410c', label:'Degraded Performance'  },
+  s: { bg:'#fff6c2', border:'#fde68a', text:'#92400e', dot:'#f59e0b', pill:'#fef3c7', pillText:'#b45309', label:'Scheduled Maintenance' },
+  i: { bg:'#ffe1de', border:'#fecdd3', text:'#9f1239', dot:'#f43f5e', pill:'#ffe4e6', pillText:'#be123c', label:'Service Disruption'    },
+  d: { bg:'#fff6c2', border:'#fed7aa', text:'#9a3412', dot:'#f97316', pill:'#ffedd5', pillText:'#c2410c', label:'Degraded Performance'  },
 };
 
 function MaintenanceBanner({ info }) {
@@ -330,13 +330,13 @@ function WLSuspendedPage() {
         {isNetworkError && (
           <button
             onClick={() => window.location.reload()}
-            style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'8px 20px', background:primary, color:'#fff', border:'none', borderRadius:'8px', fontSize:'0.875rem', fontWeight:500, cursor:'pointer', marginBottom:'2rem' }}
+            style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'8px 20px', background:primary, color:'#0d0e1c', border:'none', borderRadius:'8px', fontSize:'0.875rem', fontWeight:500, cursor:'pointer', marginBottom:'2rem' }}
           >
             Try Again
           </button>
         )}
         {!hidePoweredBy && (
-          <p style={{ fontSize:'0.75rem', color:'#d1d5db' }}>Powered by PlanIt</p>
+          <p style={{ fontSize:'0.75rem', color:'#5a5d70' }}>Powered by PlanIt</p>
         )}
       </div>
     </div>
@@ -397,7 +397,7 @@ function WhiteLabelTheme({ children }) {
 
   // Don't render anything until resolution is done — prevents flash of PlanIt branding
   if (!resolved) return (
-    <div style={{ minHeight:'100vh', background:'#05050f', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div style={{ minHeight:'100vh', background:'#ffffff', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
         <path d="M21 12a9 9 0 11-6.219-8.56" style={{ animation:'spin 1s linear infinite', transformOrigin:'center' }}/>
       </svg>

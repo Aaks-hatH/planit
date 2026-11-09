@@ -131,7 +131,7 @@ function WalkieError({ message, onDismiss }) {
 function PeerBadge({ count }) {
   if (count === 0) return null;
   return (
-    <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center text-[10px] font-black bg-emerald-400 text-neutral-900 rounded-full ring-2 ring-neutral-900 select-none">
+    <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center text-[10px] font-black bg-emerald-400 text-neutral-900 rounded-full ring-2 ring-ink select-none">
       {count > 9 ? '9+' : count}
     </span>
   );
@@ -251,8 +251,8 @@ export default function WalkieTalkieButton({ walkie }) {
               'shadow-lg transition-all duration-100 active:scale-95',
               'ring-4 focus:outline-none cursor-pointer touch-none',
               isSpeaking
-                ? 'bg-emerald-500 ring-emerald-300 scale-110 shadow-emerald-500/50 shadow-xl'
-                : 'bg-neutral-800 ring-neutral-600 hover:bg-neutral-700 hover:ring-neutral-500',
+                ? 'bg-emerald-500 ring-emerald-300 scale-110 shadow-xl'
+                : 'bg-lav ring-ink hover:bg-lav hover:ring-ink',
             ].join(' ')}
           >
             <Mic

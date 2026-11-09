@@ -4,7 +4,7 @@ import api from '../services/api';
 
 const inp = {
   width: '100%', boxSizing: 'border-box',
-  border: '1px solid #d1d5db', borderRadius: '6px',
+  border: '2px solid #0d0e1c', borderRadius: '6px',
   padding: '0.625rem 0.875rem', fontSize: '0.875rem',
   color: '#111827', background: '#fff', outline: 'none',
   transition: 'border-color 0.15s, box-shadow 0.15s',
@@ -58,7 +58,7 @@ export default function SetupFee() {
   return (
     <div className="font-sans" style={{ background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
       {/* Nav */}
-      <nav style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 2rem', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ background: '#fff', borderBottom: '1px solid #d9dbe8', padding: '0 2rem', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link to="/" style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', textDecoration: 'none' }}>PlanIt</Link>
         <Link to="/white-label" style={{ fontSize: '0.82rem', color: '#6b7280', textDecoration: 'none' }}>← Back to White Label</Link>
       </nav>
@@ -67,7 +67,7 @@ export default function SetupFee() {
 
         {/* Left — What you get */}
         <div>
-          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#2563eb', background: '#eff6ff', padding: '0.25rem 0.625rem', borderRadius: '4px', marginBottom: '1rem' }}>
+          <div style={{ display: 'inline-block', fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#2563eb', background: '#eceeff', padding: '0.25rem 0.625rem', borderRadius: '4px', marginBottom: '1rem' }}>
             One-time payment
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.03em', color: '#111827', margin: '0 0 0.5rem' }}>Setup Fee</h1>
@@ -84,27 +84,27 @@ export default function SetupFee() {
               { title: 'Onboarding walkthrough', body: 'A live session showing you how to manage events, reservations, and staff.' },
             ].map(({ title, body }) => (
               <div key={title} style={{ display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#eceeff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                     <path d="M1.5 5L4 7.5L8.5 2.5" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#111827', marginBottom: '0.1rem' }}>{title}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#9ca3af', lineHeight: 1.5 }}>{body}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#5a5d70', lineHeight: 1.5 }}>{body}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: '2rem', padding: '1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
+          <div style={{ marginTop: '2rem', padding: '1rem', background: '#d6f7e8', border: '2px solid #0a7149', borderRadius: '8px' }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803d', marginBottom: '0.25rem' }}>Pay with Bitcoin</div>
             <div style={{ fontSize: '0.75rem', color: '#16a34a' }}>No card details, no account. A unique address is generated for your order and funds go straight to PlanIt's wallet.</div>
           </div>
         </div>
 
         {/* Right — Payment form */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '2rem' }}>
+        <div style={{ background: '#fff', border: '2px solid #0d0e1c', borderRadius: '12px', padding: '2rem', boxShadow: '4px 4px 0 #0d0e1c' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#111827', margin: '0 0 1.5rem' }}>Your details</h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -131,14 +131,14 @@ export default function SetupFee() {
             marginTop: '1.5rem', width: '100%',
             fontWeight: 700, fontSize: '0.9rem', fontFamily: 'inherit',
             background: state === 'loading' ? '#93c5fd' : '#2563eb',
-            color: '#fff', border: 'none', borderRadius: '6px',
+            color: '#0d0e1c', border: 'none', borderRadius: '6px',
             padding: '0.875rem', cursor: state === 'loading' ? 'default' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
           }}>
             {state === 'loading' ? 'Creating your invoice...' : 'Pay $299 with Bitcoin'}
           </button>
 
-          <p style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', margin: '0.875rem 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.72rem', color: '#5a5d70', textAlign: 'center', margin: '0.875rem 0 0', lineHeight: 1.5 }}>
             You'll get a Bitcoin invoice with the amount locked at the current rate for 60 minutes. By paying you agree to our{' '}
             <Link to="/terms" style={{ color: '#6b7280' }}>Terms of Service</Link>.
           </p>

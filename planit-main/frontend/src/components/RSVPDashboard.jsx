@@ -27,13 +27,13 @@ const RESPONSE_META = {
 // disconnected components stacked on top of each other.
 function StatChip({ label, value, sub, dot, text }) {
   return (
-    <div className="flex-1 min-w-[110px] bg-white border border-neutral-200 rounded-xl px-3.5 py-3">
+    <div className="flex-1 min-w-[110px] bg-white border-2 border-ink rounded-xl px-3.5 py-3 shadow">
       <div className="flex items-center gap-1.5 mb-1">
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
-        <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide truncate">{label}</p>
+        <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide truncate">{label}</p>
       </div>
       <p className={`text-2xl font-black leading-none ${text || 'text-neutral-900'}`}>{value ?? '—'}</p>
-      {sub && <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>}
+      {sub && <p className="text-[11px] text-neutral-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -75,7 +75,7 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
 
   return (
     <>
-      <tr className={`border-t border-neutral-100 hover:bg-neutral-50 transition-colors ${selected ? 'bg-indigo-50/40' : ''}`}>
+      <tr className={`border-t border-neutral-100 hover:bg-neutral-50 transition-colors ${selected ? 'bg-blue-50' : ''}`}>
         {/* Checkbox */}
         <td className="px-4 py-3">
           <button type="button" onClick={() => onSelect(s._id)}
@@ -85,7 +85,7 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
         </td>
         {/* Star */}
         <td className="px-2 py-3">
-          <button onClick={toggleStar} className={`transition-colors ${s.starred ? 'text-amber-400' : 'text-neutral-200 hover:text-amber-300'}`}>
+          <button onClick={toggleStar} className={`transition-colors ${s.starred ? 'text-amber-700' : 'text-ink hover:text-amber-700'}`}>
             <Star className="w-4 h-4 fill-current" />
           </button>
         </td>
@@ -97,7 +97,7 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-900">{s.firstName} {s.lastName}</p>
-              {s.email && <p className="text-xs text-neutral-400">{s.email}</p>}
+              {s.email && <p className="text-xs text-neutral-500">{s.email}</p>}
             </div>
           </div>
         </td>
@@ -107,7 +107,7 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
             {resp.icon} {resp.label}
           </span>
           {s.plusOnes > 0 && (
-            <span className="ml-1.5 text-xs text-neutral-400">+{s.plusOnes}</span>
+            <span className="ml-1.5 text-xs text-neutral-500">+{s.plusOnes}</span>
           )}
         </td>
         {/* Status — a live segmented control, not a menu hidden behind a "⋮".
@@ -116,34 +116,34 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
             IS the current status, so there's no separate badge to reconcile
             it against. */}
         <td className="px-3 py-3">
-          <div className="inline-flex rounded-lg border border-neutral-200 overflow-hidden flex-shrink-0">
+          <div className="inline-flex rounded-lg border-2 border-ink overflow-hidden flex-shrink-0 shadow">
             <button type="button" title="Accept" onClick={() => changeStatus('confirmed')}
-              className={`p-1.5 transition-colors ${s.status === 'confirmed' ? 'bg-emerald-500 text-white' : 'text-neutral-300 hover:text-emerald-600 hover:bg-emerald-50'}`}>
+              className={`p-1.5 transition-colors ${s.status === 'confirmed' ? 'bg-emerald-500 text-white border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-300 hover:text-emerald-600 hover:bg-emerald-50'}`}>
               <Check className="w-3.5 h-3.5" />
             </button>
             <button type="button" title="Waitlist" onClick={() => changeStatus('waitlisted')}
-              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'waitlisted' ? 'bg-amber-500 text-white' : 'text-neutral-300 hover:text-amber-600 hover:bg-amber-50'}`}>
+              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'waitlisted' ? 'bg-amber-500 text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-600 hover:text-amber-600 hover:bg-amber-50'}`}>
               <Clock className="w-3.5 h-3.5" />
             </button>
             <button type="button" title="Decline" onClick={() => changeStatus('declined')}
-              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'declined' ? 'bg-red-500 text-white' : 'text-neutral-300 hover:text-red-500 hover:bg-red-50'}`}>
+              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'declined' ? 'bg-red-500 text-white border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-300 hover:text-red-500 hover:bg-red-50'}`}>
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          {s.status === 'pending' && <p className="text-[10px] text-indigo-500 font-semibold mt-1">Pending</p>}
+          {s.status === 'pending' && <p className="text-[10px] text-blue-700 font-semibold mt-1">Pending</p>}
         </td>
         {/* Check-in */}
         <td className="px-3 py-3">
           {s.response === 'yes' && (
             <button onClick={() => onCheckin(s._id, s.checkedIn)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${s.checkedIn ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${s.checkedIn ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
               <UserCheck className="w-3.5 h-3.5" />
               {s.checkedIn ? 'Checked In' : 'Check In'}
             </button>
           )}
         </td>
         {/* Date */}
-        <td className="px-3 py-3 text-xs text-neutral-400 whitespace-nowrap">
+        <td className="px-3 py-3 text-xs text-neutral-500 whitespace-nowrap">
           {new Date(s.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </td>
         {/* Actions — plain, always-visible controls; nothing hidden behind a
@@ -152,10 +152,10 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
           <div className="flex items-center gap-1">
             <button onClick={() => setExpanded(o => !o)} title="Guest details"
               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors">
-              <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-neutral-500 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </button>
             <button onClick={() => onDelete(s._id)} title="Delete"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-600 hover:text-red-700 hover:bg-red-50 transition-colors">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -168,23 +168,23 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
           <td colSpan={8} className="px-4 pb-4 pt-2">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3">
               {s.phone && (
-                <div><p className="font-semibold text-neutral-400 mb-0.5">Phone</p><p className="text-neutral-700">{s.phone}</p></div>
+                <div><p className="font-semibold text-neutral-500 mb-0.5">Phone</p><p className="text-neutral-700">{s.phone}</p></div>
               )}
               {s.plusOnes > 0 && (
-                <div><p className="font-semibold text-neutral-400 mb-0.5">Additional Guests</p><p className="text-neutral-700">{s.plusOnes}</p></div>
+                <div><p className="font-semibold text-neutral-500 mb-0.5">Additional Guests</p><p className="text-neutral-700">{s.plusOnes}</p></div>
               )}
               {s.dietaryRestrictions && (
-                <div className="col-span-2"><p className="font-semibold text-neutral-400 mb-0.5">Dietary</p><p className="text-neutral-700">{s.dietaryRestrictions}</p></div>
+                <div className="col-span-2"><p className="font-semibold text-neutral-500 mb-0.5">Dietary</p><p className="text-neutral-700">{s.dietaryRestrictions}</p></div>
               )}
               {s.accessibilityNeeds && (
-                <div className="col-span-2"><p className="font-semibold text-neutral-400 mb-0.5">Accessibility</p><p className="text-neutral-700">{s.accessibilityNeeds}</p></div>
+                <div className="col-span-2"><p className="font-semibold text-neutral-500 mb-0.5">Accessibility</p><p className="text-neutral-700">{s.accessibilityNeeds}</p></div>
               )}
               {s.guestNote && (
-                <div className="col-span-4"><p className="font-semibold text-neutral-400 mb-0.5">Guest Note</p><p className="text-neutral-700">{s.guestNote}</p></div>
+                <div className="col-span-4"><p className="font-semibold text-neutral-500 mb-0.5">Guest Note</p><p className="text-neutral-700">{s.guestNote}</p></div>
               )}
               {(s.customAnswers || []).map((a, i) => (
                 <div key={i} className="col-span-2">
-                  <p className="font-semibold text-neutral-400 mb-0.5">{a.question}</p>
+                  <p className="font-semibold text-neutral-500 mb-0.5">{a.question}</p>
                   <p className="text-neutral-700">{Array.isArray(a.answer) ? a.answer.join(', ') : a.answer}</p>
                 </div>
               ))}
@@ -201,30 +201,30 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
             {!editing ? (
               <div className="flex items-start gap-2">
                 {s.organizerNotes && (
-                  <div className="flex-1 text-xs text-neutral-500 bg-white border border-neutral-200 rounded-lg px-3 py-2">
+                  <div className="flex-1 text-xs text-neutral-500 bg-white border-2 border-ink rounded-lg px-3 py-2">
                     <span className="font-semibold text-neutral-600">Note: </span>{s.organizerNotes}
                   </div>
                 )}
                 <button onClick={() => setEditing(true)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 px-2.5 py-1.5 bg-indigo-50 rounded-lg transition-colors flex-shrink-0">
+                  className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 px-2.5 py-1.5 bg-indigo-50 rounded-lg transition-colors flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                   <Edit2 className="w-3.5 h-3.5" /> Notes / Tags
                 </button>
               </div>
             ) : (
-              <div className="space-y-2 bg-white border border-neutral-200 rounded-xl p-3">
+              <div className="space-y-2 bg-white border-2 border-ink rounded-xl p-3 shadow">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 mb-1">Organizer notes</label>
                   <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                    className="w-full px-2 py-1.5 text-xs rounded-lg border border-neutral-200 focus:border-indigo-400 focus:outline-none resize-none" />
+                    className="w-full px-2 py-1.5 text-xs rounded-lg border-2 border-ink focus:border-indigo-400 focus:outline-none resize-none focus:ring-[3px] focus:ring-ac bg-white" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-500 mb-1">Tags (comma-separated)</label>
                   <input value={tags} onChange={e => setTags(e.target.value)} placeholder="vip, speaker, sponsor"
-                    className="w-full px-2 py-1.5 text-xs rounded-lg border border-neutral-200 focus:border-indigo-400 focus:outline-none" />
+                    className="w-full px-2 py-1.5 text-xs rounded-lg border-2 border-ink focus:border-indigo-400 focus:outline-none focus:ring-[3px] focus:ring-ac bg-white" />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={saveNote} className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors">Save</button>
-                  <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-xs text-neutral-500 rounded-lg border border-neutral-200 hover:bg-neutral-50 transition-colors">Cancel</button>
+                  <button onClick={saveNote} className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Save</button>
+                  <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-xs text-neutral-500 rounded-lg border-2 border-ink hover:bg-neutral-50 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
                 </div>
               </div>
             )}
@@ -356,13 +356,13 @@ export default function RSVPDashboard({ event, eventId }) {
 
       {/* RSVP link */}
       {rsvpPageUrl && (
-        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-2 bg-indigo-50 border-2 border-blue-600 rounded-xl px-4 py-3">
           <p className="text-xs text-indigo-600 flex-1">
             <span className="font-semibold">Public RSVP link: </span>
-            <span className="text-indigo-500">{rsvpPageUrl}</span>
+            <span className="text-blue-700">{rsvpPageUrl}</span>
           </p>
           <button onClick={() => { navigator.clipboard.writeText(rsvpPageUrl); toast.success('Copied!'); }}
-            className="text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0">
+            className="text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Copy
           </button>
         </div>
@@ -374,11 +374,11 @@ export default function RSVPDashboard({ event, eventId }) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-sm border border-neutral-200 focus:border-indigo-400 focus:outline-none" />
+            className="w-full pl-9 pr-4 py-2 rounded-xl text-sm border-2 border-ink focus:border-indigo-400 focus:outline-none focus:ring-[3px] focus:ring-ac bg-white" />
         </div>
         {/* Filter toggle */}
         <button onClick={() => setShowFilters(o => !o)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-all ${showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'}`}>
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'}`}>
           <Filter className="w-4 h-4" /> Filters
           {(filterStatus || filterResponse || filterStarred) && (
             <span className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -386,22 +386,22 @@ export default function RSVPDashboard({ event, eventId }) {
         </button>
         {/* Export */}
         <button onClick={exportCsv}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm border border-neutral-200 text-neutral-600 hover:border-neutral-300 transition-all">
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm border-2 border-ink text-neutral-600 hover:border-neutral-300 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <Download className="w-4 h-4" /> Export CSV
         </button>
         {/* Refresh */}
-        <button onClick={() => load(page)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-neutral-200 hover:bg-neutral-50 transition-colors">
+        <button onClick={() => load(page)} className="w-9 h-9 flex items-center justify-center rounded-xl border-2 border-ink hover:bg-neutral-50 transition-colors">
           <RefreshCw className={`w-4 h-4 text-neutral-500 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-neutral-50 border-2 border-ink rounded-xl shadow">
           <div>
             <label className="block text-xs font-semibold text-neutral-500 mb-1 uppercase tracking-wide">Status</label>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-lg border border-neutral-200 focus:border-indigo-400 focus:outline-none">
+              className="w-full px-2 py-1.5 text-sm rounded-lg border-2 border-ink focus:border-indigo-400 focus:outline-none focus:ring-[3px] focus:ring-ac bg-white">
               <option value="">All statuses</option>
               {Object.entries(STATUS_META).map(([v, m]) => <option key={v} value={v}>{m.label}</option>)}
             </select>
@@ -409,7 +409,7 @@ export default function RSVPDashboard({ event, eventId }) {
           <div>
             <label className="block text-xs font-semibold text-neutral-500 mb-1 uppercase tracking-wide">Response</label>
             <select value={filterResponse} onChange={e => setFilterResponse(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-lg border border-neutral-200 focus:border-indigo-400 focus:outline-none">
+              className="w-full px-2 py-1.5 text-sm rounded-lg border-2 border-ink focus:border-indigo-400 focus:outline-none focus:ring-[3px] focus:ring-ac bg-white">
               <option value="">All responses</option>
               <option value="yes">Attending</option>
               <option value="maybe">Maybe</option>
@@ -419,7 +419,7 @@ export default function RSVPDashboard({ event, eventId }) {
           <div>
             <label className="block text-xs font-semibold text-neutral-500 mb-1 uppercase tracking-wide">Sort</label>
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm rounded-lg border border-neutral-200 focus:border-indigo-400 focus:outline-none">
+              className="w-full px-2 py-1.5 text-sm rounded-lg border-2 border-ink focus:border-indigo-400 focus:outline-none focus:ring-[3px] focus:ring-ac bg-white">
               <option value="-submittedAt">Newest first</option>
               <option value="submittedAt">Oldest first</option>
               <option value="firstName">Name A–Z</option>
@@ -440,31 +440,31 @@ export default function RSVPDashboard({ event, eventId }) {
         <div className="flex items-center gap-3 px-4 py-2.5 bg-indigo-600 text-white rounded-xl">
           <span className="text-sm font-semibold flex-1">{selected.size} selected</span>
           <button onClick={bulkApprove}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-lav hover:bg-white rounded-lg text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <ThumbsUp className="w-3.5 h-3.5" /> Approve
           </button>
           <button onClick={bulkDecline}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-lav hover:bg-white rounded-lg text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <ThumbsDown className="w-3.5 h-3.5" /> Decline
           </button>
-          <button onClick={() => setSelected(new Set())} className="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded-lg transition-colors">
+          <button onClick={() => setSelected(new Set())} className="w-6 h-6 flex items-center justify-center hover:bg-lav rounded-lg transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Table */}
-      <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
+      <div className="border-2 border-ink rounded-xl overflow-hidden bg-white shadow">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <RefreshCw className="w-5 h-5 text-neutral-400 animate-spin" />
+            <RefreshCw className="w-5 h-5 text-neutral-500 animate-spin" />
           </div>
         ) : submissions.length === 0 ? (
           <div className="text-center py-16 space-y-2">
-            <Users className="w-8 h-8 mx-auto text-neutral-200" />
-            <p className="text-sm text-neutral-400 font-medium">No RSVPs yet</p>
+            <Users className="w-8 h-8 mx-auto text-ink" />
+            <p className="text-sm text-neutral-500 font-medium">No RSVPs yet</p>
             {rsvpPageUrl && (
-              <p className="text-xs text-neutral-400">Share your RSVP link to start collecting responses.</p>
+              <p className="text-xs text-neutral-500">Share your RSVP link to start collecting responses.</p>
             )}
           </div>
         ) : (
@@ -479,11 +479,11 @@ export default function RSVPDashboard({ event, eventId }) {
                     </button>
                   </th>
                   <th className="px-2 py-2.5 w-6"></th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-400 uppercase tracking-wide">Guest</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-400 uppercase tracking-wide">Response</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-400 uppercase tracking-wide">Status</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-400 uppercase tracking-wide">Check-in</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-400 uppercase tracking-wide">Date</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Guest</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Response</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Status</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Check-in</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-bold text-neutral-500 uppercase tracking-wide">Date</th>
                   <th className="px-3 py-2.5 w-20"></th>
                 </tr>
               </thead>
@@ -512,14 +512,14 @@ export default function RSVPDashboard({ event, eventId }) {
           <p className="text-xs text-neutral-400">{total} total submissions</p>
           <div className="flex gap-1">
             <button disabled={page <= 1} onClick={() => { setPage(p => p - 1); load(page - 1); }}
-              className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 transition-all">
+              className="px-3 py-1.5 text-xs rounded-lg border-2 border-ink hover:bg-neutral-50 disabled:opacity-40 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
               Previous
             </button>
             <span className="px-3 py-1.5 text-xs text-neutral-500">
               {page} / {pages}
             </span>
             <button disabled={page >= pages} onClick={() => { setPage(p => p + 1); load(page + 1); }}
-              className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50 disabled:opacity-40 transition-all">
+              className="px-3 py-1.5 text-xs rounded-lg border-2 border-ink hover:bg-neutral-50 disabled:opacity-40 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
               Next
             </button>
           </div>

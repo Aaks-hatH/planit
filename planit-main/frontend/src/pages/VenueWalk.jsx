@@ -29,7 +29,7 @@ const PIXELS_PER_METER = 26;
 function PageChrome({ onBack, children }) {
   return (
     <div
-      className="min-h-screen bg-[#05050f] text-white flex flex-col"
+      className="min-h-screen bg-white text-ink flex flex-col"
       style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
     >
       <BetaBar
@@ -52,7 +52,7 @@ function PageChrome({ onBack, children }) {
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-neutral-400 hover:text-white active:text-white transition-colors text-sm -ml-2 px-2 py-1.5 rounded-lg"
+          className="flex items-center gap-2 text-neutral-500 hover:text-ink active:text-ink transition-colors text-sm -ml-2 px-2 py-1.5 rounded-lg"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -79,13 +79,13 @@ function CompassPreview() {
   }, []);
   const diff = relativeBearing(heading, 0);
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm overflow-hidden">
+    <div className="relative rounded-2xl border-2 border-ink bg-white/[0.03] p-6 overflow-hidden shadow-md">
       <div className="flex items-center justify-between mb-5">
         <span className="font-mono text-[10px] tracking-widest text-neutral-500 uppercase">Live readout</span>
         <Radar className="w-4 h-4 text-neutral-600" />
       </div>
       <div className="flex items-center gap-6">
-        <div className="relative w-24 h-24 rounded-full border border-white/10 bg-black/40 flex items-center justify-center shrink-0">
+        <div className="relative w-24 h-24 rounded-full border-2 border-ink bg-lav flex items-center justify-center shrink-0">
           <Navigation
             className="w-10 h-10 text-[#8B7FFF] transition-transform duration-500 ease-out"
             style={{ transform: `rotate(${diff}deg)` }}
@@ -101,7 +101,7 @@ function CompassPreview() {
           </div>
         </div>
       </div>
-      <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-[10px] text-neutral-500">
+      <div className="mt-5 pt-4 border-t border-ink flex items-center justify-between font-mono text-[10px] text-neutral-500">
         <span>step + heading &rarr; x, y</span>
         <span className="text-teal-400/80">no GPS</span>
       </div>
@@ -124,7 +124,7 @@ function LandingScreen({ onSetup, onFind }) {
           <h1 className="font-display font-extrabold text-[2.6rem] sm:text-6xl leading-[1.03] tracking-tight mb-5">
             Walk it once.<br />Guide every guest.
           </h1>
-          <p className="text-neutral-400 text-base sm:text-lg leading-relaxed max-w-md mb-8">
+          <p className="text-neutral-500 text-base sm:text-lg leading-relaxed max-w-md mb-8">
             Record your tables by walking the room one time &mdash; no floor plan software,
             no GPS, no server. Then hand guests a live arrow and distance readout that
             walks them straight to their seat.
@@ -132,7 +132,7 @@ function LandingScreen({ onSetup, onFind }) {
           <div className="flex flex-col sm:flex-row gap-3 mb-10">
             <button
               onClick={onSetup}
-              className="group flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm hover:bg-[#9d92ff] transition-colors"
+              className="group flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm hover:bg-ac transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Footprints className="w-4 h-4" />
               Set Up Tables
@@ -140,7 +140,7 @@ function LandingScreen({ onSetup, onFind }) {
             </button>
             <button
               onClick={onFind}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white font-semibold text-sm hover:bg-white/5 transition-colors"
+              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-ink text-ink font-semibold text-sm hover:bg-lav transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               <Navigation className="w-4 h-4" />
               Find My Table
@@ -153,7 +153,7 @@ function LandingScreen({ onSetup, onFind }) {
         </div>
 
         <div className="relative">
-          <div className="absolute -inset-6 bg-[#8B7FFF]/10 blur-3xl rounded-full" />
+          <div className="absolute -inset-6 bg-ac rounded-full" />
           <div className="relative">
             <CompassPreview />
           </div>
@@ -179,12 +179,12 @@ function LandingScreen({ onSetup, onFind }) {
       </div>
 
       {/* Disclaimer panel */}
-      <div className="mt-20 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-5 sm:p-6">
+      <div className="mt-20 rounded-xl border border-amber-700 bg-amber-400/[0.04] p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-3">
-          <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <ShieldAlert className="w-4 h-4 text-amber-700" />
           <span className="font-display font-bold text-sm">Read before you try it</span>
         </div>
-        <ul className="space-y-2 text-sm text-neutral-400 leading-relaxed">
+        <ul className="space-y-2 text-sm text-neutral-500 leading-relaxed">
           <li>&bull; This is dead-reckoning (steps + compass), not GPS and not true AR anchoring.</li>
           <li>&bull; Error compounds with distance walked &mdash; the farther from the start point, the less precise the arrow gets.</li>
           <li>&bull; Both directions start from the exact same spot &mdash; pick a fixed landmark (a door, a host stand) as your anchor.</li>
@@ -210,7 +210,7 @@ function Field({ label, children }) {
 
 function AnchorNotice() {
   return (
-    <div className="flex items-start gap-2 text-sm text-[#8B7FFF] bg-[#8B7FFF]/10 border border-[#8B7FFF]/20 rounded-lg px-3 py-2.5 mb-4">
+    <div className="flex items-start gap-2 text-sm text-[#8B7FFF] bg-ac border border-[#8B7FFF]/20 rounded-lg px-3 py-2.5 mb-4">
       <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
       Stand at your fixed start point (the door, the host stand) before you start tracking.
     </div>
@@ -224,8 +224,8 @@ function TableList({ tables, onDelete, onRename, emptyHint }) {
   return (
     <div className="space-y-2">
       {tables.map((t, i) => (
-        <div key={`${t.name}-${i}`} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5">
-          <span className="w-7 h-7 rounded-lg bg-[#8B7FFF]/15 flex items-center justify-center shrink-0">
+        <div key={`${t.name}-${i}`} className="flex items-center gap-3 rounded-xl border-2 border-ink bg-white/[0.03] px-3.5 py-2.5 shadow">
+          <span className="w-7 h-7 rounded-lg bg-ac flex items-center justify-center shrink-0">
             <MapPin className="w-3.5 h-3.5 text-[#8B7FFF]" />
           </span>
           <span className="flex-1 min-w-0 truncate text-sm font-medium">{t.name}</span>
@@ -233,12 +233,12 @@ function TableList({ tables, onDelete, onRename, emptyHint }) {
             {Math.round(t.x)}, {Math.round(t.y)}m
           </span>
           {onRename && (
-            <button onClick={() => onRename(i)} className="p-1.5 rounded-md text-neutral-500 hover:text-white hover:bg-white/5 shrink-0">
+            <button onClick={() => onRename(i)} className="p-1.5 rounded-md text-neutral-500 hover:text-ink hover:bg-lav shrink-0">
               <Pencil className="w-3.5 h-3.5" />
             </button>
           )}
           {onDelete && (
-            <button onClick={() => onDelete(i)} className="p-1.5 rounded-md text-neutral-500 hover:text-rose-300 hover:bg-rose-400/10 shrink-0">
+            <button onClick={() => onDelete(i)} className="p-1.5 rounded-md text-neutral-500 hover:text-red-700 hover:bg-red-50 shrink-0">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
@@ -257,10 +257,10 @@ function ArrowReadout({ heading, targetBearing, distanceM, big }) {
   return (
     <div className="flex flex-col items-center">
       <div className={`relative ${big ? 'w-40 h-40' : 'w-28 h-28'} rounded-full border-2 flex items-center justify-center mb-4 ${
-        arrived ? 'border-teal-400/60 bg-teal-400/10' : 'border-[#8B7FFF]/40 bg-[#8B7FFF]/5'
+        arrived ? 'border-emerald-700 bg-emerald-50' : 'border-[#8B7FFF]/40 bg-ac'
       }`}>
         {arrived ? (
-          <CheckCircle2 className={`${big ? 'w-16 h-16' : 'w-11 h-11'} text-teal-300 animate-[pulse_1.4s_ease-in-out_infinite]`} />
+          <CheckCircle2 className={`${big ? 'w-16 h-16' : 'w-11 h-11'} text-emerald-700 animate-[pulse_1.4s_ease-in-out_infinite]`} />
         ) : (
           <Navigation
             className={`${big ? 'w-16 h-16' : 'w-11 h-11'} text-[#8B7FFF] transition-transform duration-300 ease-out`}
@@ -377,7 +377,7 @@ function FloorPlanCanvas({ anchor, tables, highlightIndex, onCanvasClick, cursor
       <canvas
         ref={canvasRef}
         onClick={handleClick}
-        className={`w-full rounded-xl border border-white/10 bg-black/40 ${onCanvasClick ? 'cursor-crosshair' : ''}`}
+        className={`w-full rounded-xl border-2 border-ink bg-lav ${onCanvasClick ? 'cursor-crosshair' : ''}`}
       />
       {cursorLabel && <p className="text-center text-neutral-600 text-xs mt-2">{cursorLabel}</p>}
     </div>
@@ -419,7 +419,7 @@ function FloorPlanSetup({ venueName, onFinish, onCancel }) {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
-      <div className="flex items-center gap-2 text-neutral-400 text-xs mb-1.5 font-mono uppercase tracking-widest">
+      <div className="flex items-center gap-2 text-neutral-500 text-xs mb-1.5 font-mono uppercase tracking-widest">
         <Monitor className="w-3.5 h-3.5" />
         No motion sensors detected &middot; floor plan mode
       </div>
@@ -436,7 +436,7 @@ function FloorPlanSetup({ venueName, onFinish, onCancel }) {
       />
 
       {pendingPoint && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="mt-4 rounded-xl border-2 border-ink bg-white/[0.03] p-4 shadow">
           <Field label="Table name">
             <input
               autoFocus
@@ -444,12 +444,12 @@ function FloorPlanSetup({ venueName, onFinish, onCancel }) {
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && confirmTable()}
               maxLength={28}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm mb-3"
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm mb-3 focus:ring-[3px] focus:ring-ac rounded-lg"
             />
           </Field>
           <div className="flex gap-2">
-            <button onClick={confirmTable} className="flex-1 py-2.5 rounded-lg bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">Add table</button>
-            <button onClick={() => setPendingPoint(null)} className="px-4 py-2.5 rounded-lg border border-white/15 text-sm text-neutral-300">Cancel</button>
+            <button onClick={confirmTable} className="flex-1 py-2.5 rounded-lg bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Add table</button>
+            <button onClick={() => setPendingPoint(null)} className="px-4 py-2.5 rounded-lg border-2 border-ink text-sm text-neutral-600 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
           </div>
         </div>
       )}
@@ -463,11 +463,11 @@ function FloorPlanSetup({ venueName, onFinish, onCancel }) {
       </div>
 
       <div className="flex flex-col gap-3 mt-8">
-        <button onClick={finish} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
+        <button onClick={finish} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           <CheckCircle2 className="w-4 h-4" />
           Finish setup
         </button>
-        <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+        <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
       </div>
     </div>
   );
@@ -479,7 +479,7 @@ function FloorPlanFind({ layout, table, onExit }) {
   const bearing = bearingTo({ x: 0, y: 0 }, table);
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
-      <div className="flex items-center gap-2 text-neutral-400 text-xs mb-1.5 font-mono uppercase tracking-widest">
+      <div className="flex items-center gap-2 text-neutral-500 text-xs mb-1.5 font-mono uppercase tracking-widest">
         <Monitor className="w-3.5 h-3.5" />
         No motion sensors detected &middot; floor plan mode
       </div>
@@ -488,7 +488,7 @@ function FloorPlanFind({ layout, table, onExit }) {
         From the start point: {formatDistance(distanceM)}, bearing {Math.round(bearing)}&deg;.
       </p>
       <FloorPlanCanvas anchor={{ x: 0, y: 0 }} tables={layout.tables} highlightIndex={idx} />
-      <button onClick={onExit} className="w-full mt-8 py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Done</button>
+      <button onClick={onExit} className="w-full mt-8 py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Done</button>
     </div>
   );
 }
@@ -498,18 +498,18 @@ function FloorPlanFind({ layout, table, onExit }) {
 // ═══════════════════════════════════════════════════════════════════════════
 function CameraStage({ videoRef, ready, error, onRetry, overlay, modelBadge }) {
   return (
-    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-white/10 mb-4">
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-          <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
-          <p className="text-sm text-neutral-300 mb-4">{error}</p>
-          <button onClick={onRetry} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+          <CameraOff className="w-10 h-10 text-red-700 mb-3" />
+          <p className="text-sm text-neutral-600 mb-4">{error}</p>
+          <button onClick={onRetry} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Retry camera</button>
         </div>
       ) : (
         <>
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
           {!ready && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <div className="absolute inset-0 bg-ink/60 flex items-center justify-center">
               <Loader2 className="w-8 h-8 text-[#8B7FFF] animate-spin" />
             </div>
           )}
@@ -581,7 +581,7 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
         error={camera.error}
         onRetry={camera.start}
         overlay={started && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-4 py-3 flex items-center justify-between font-mono text-[11px] text-neutral-300">
+          <div className="absolute bottom-0 left-0 right-0 bg-lav px-4 py-3 flex items-center justify-between font-mono text-[11px] text-neutral-600">
             <span className="flex items-center gap-1.5"><Footprints className="w-3.5 h-3.5 text-[#8B7FFF]" />{tracker.stepCount} steps</span>
             <span>{tracker.heading == null ? 'no heading' : `${Math.round(tracker.heading)}\u00b0`}</span>
           </div>
@@ -589,7 +589,7 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
       />
 
       {tracker.error && (
-        <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-700 rounded-lg px-3 py-2.5 mb-4">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           Lost the motion sensors mid-walk. Switching to the floor plan fallback.
         </div>
@@ -599,7 +599,7 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
         <button
           onClick={begin}
           disabled={!camera.ready}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           <Radar className="w-4 h-4" />
           Start tracking
@@ -607,7 +607,7 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
       ) : (
         <button
           onClick={dropTable}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm mb-3"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           <Plus className="w-4 h-4" />
           Drop table here
@@ -623,16 +623,16 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
 
       <div className="flex flex-col gap-3">
         {started && (
-          <button onClick={finish} className="w-full py-3 rounded-xl border border-teal-400/30 bg-teal-400/10 text-teal-300 font-semibold text-sm">
+          <button onClick={finish} className="w-full py-3 rounded-xl border-2 border-emerald-700 bg-emerald-50 text-emerald-700 font-semibold text-sm shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             Finish setup
           </button>
         )}
-        <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+        <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
       </div>
 
       {naming && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0a0714] p-5">
+        <div className="fixed inset-0 z-50 bg-ink/60 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
             <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-500 block mb-3">Name this table</span>
             <input
               autoFocus
@@ -640,11 +640,11 @@ function SetupWalk({ venueName, onFinish, onCancel, onSensorsUnavailable }) {
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && confirmTable()}
               maxLength={28}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm mb-4"
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm mb-4 focus:ring-[3px] focus:ring-ac rounded-lg"
             />
             <div className="flex gap-2">
-              <button onClick={confirmTable} className="flex-1 py-2.5 rounded-lg bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">Add</button>
-              <button onClick={() => setNaming(false)} className="px-4 py-2.5 rounded-lg border border-white/15 text-sm text-neutral-300">Cancel</button>
+              <button onClick={confirmTable} className="flex-1 py-2.5 rounded-lg bg-ac text-[#0a0714] font-bold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Add</button>
+              <button onClick={() => setNaming(false)} className="px-4 py-2.5 rounded-lg border-2 border-ink text-sm text-neutral-600 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
             </div>
           </div>
         </div>
@@ -666,18 +666,18 @@ function VenueNameStep({ onNext, onCancel, title, subtitle }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Founders' Night"
           maxLength={40}
-          className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm mb-8"
+          className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm mb-8 focus:ring-[3px] focus:ring-ac rounded-lg"
         />
       </Field>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => name.trim() && onNext(name.trim())}
           disabled={!name.trim()}
-          className="w-full py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40"
+          className="w-full py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           Continue
         </button>
-        <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+        <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
       </div>
     </div>
   );
@@ -686,8 +686,8 @@ function VenueNameStep({ onNext, onCancel, title, subtitle }) {
 function SetupDone({ venueName, tables, onExit }) {
   return (
     <div className="max-w-md mx-auto px-5 py-10 text-center">
-      <div className="w-16 h-16 rounded-full bg-teal-400/15 flex items-center justify-center mx-auto mb-5">
-        <CheckCircle2 className="w-8 h-8 text-teal-300" />
+      <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-5">
+        <CheckCircle2 className="w-8 h-8 text-emerald-700" />
       </div>
       <h2 className="font-display font-bold text-2xl mb-1.5">Layout saved</h2>
       <p className="text-neutral-500 text-sm mb-8">{venueName} &middot; {tables.length} table{tables.length === 1 ? '' : 's'}</p>
@@ -696,7 +696,7 @@ function SetupDone({ venueName, tables, onExit }) {
         <Lock className="w-3.5 h-3.5" />
         Saved only on this device
       </div>
-      <button onClick={onExit} className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm">Done</button>
+      <button onClick={onExit} className="w-full py-3 rounded-xl bg-white text-black font-semibold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Done</button>
     </div>
   );
 }
@@ -766,8 +766,8 @@ function VenuePicker({ onPick, onCancel }) {
     return (
       <div className="max-w-md mx-auto px-5 py-10 text-center">
         <MapPinned className="w-10 h-10 text-neutral-700 mx-auto mb-4" />
-        <p className="text-neutral-400 text-sm mb-6">No table layouts saved on this device yet. Set up tables first.</p>
-        <button onClick={onCancel} className="px-5 py-2.5 rounded-lg border border-white/15 text-sm text-neutral-300">Back</button>
+        <p className="text-neutral-500 text-sm mb-6">No table layouts saved on this device yet. Set up tables first.</p>
+        <button onClick={onCancel} className="px-5 py-2.5 rounded-lg border-2 border-ink text-sm text-neutral-600 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Back</button>
       </div>
     );
   }
@@ -780,7 +780,7 @@ function VenuePicker({ onPick, onCancel }) {
           <button
             key={v.venueId}
             onClick={() => onPick(v.venueId)}
-            className="w-full flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 hover:bg-white/[0.06] text-left"
+            className="w-full flex items-center gap-3 rounded-xl border-2 border-ink bg-white/[0.03] px-3.5 py-3 hover:bg-white/[0.06] text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             <MapPinned className="w-4 h-4 text-[#8B7FFF] shrink-0" />
             <span className="flex-1 min-w-0 truncate text-sm font-medium">{v.venueId}</span>
@@ -789,7 +789,7 @@ function VenuePicker({ onPick, onCancel }) {
           </button>
         ))}
       </div>
-      <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+      <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
     </div>
   );
 }
@@ -804,7 +804,7 @@ function TablePicker({ layout, onPick, onCancel }) {
           <button
             key={`${t.name}-${i}`}
             onClick={() => onPick(t)}
-            className="w-full flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-3 hover:bg-white/[0.06] text-left"
+            className="w-full flex items-center gap-3 rounded-xl border-2 border-ink bg-white/[0.03] px-3.5 py-3 hover:bg-white/[0.06] text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             <MapPin className="w-4 h-4 text-[#8B7FFF] shrink-0" />
             <span className="flex-1 min-w-0 truncate text-sm font-medium">{t.name}</span>
@@ -812,7 +812,7 @@ function TablePicker({ layout, onPick, onCancel }) {
           </button>
         ))}
       </div>
-      <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Back</button>
+      <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Back</button>
     </div>
   );
 }
@@ -852,7 +852,7 @@ function FindWalk({ table, onDone, onCancel, onSensorsUnavailable }) {
         error={camera.error}
         onRetry={camera.start}
         overlay={started && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/25">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/60">
             <ArrowReadout heading={tracker.heading} targetBearing={bearing} distanceM={distanceM} big />
           </div>
         )}
@@ -862,18 +862,18 @@ function FindWalk({ table, onDone, onCancel, onSensorsUnavailable }) {
         <button
           onClick={begin}
           disabled={!camera.ready}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-40 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           <Radar className="w-4 h-4" />
           Start tracking
         </button>
       ) : arrived ? (
-        <button onClick={onDone} className="w-full py-3.5 rounded-xl bg-teal-400 text-[#0a0714] font-bold text-sm mb-3">
+        <button onClick={onDone} className="w-full py-3.5 rounded-xl bg-teal-400 text-[#0a0714] font-bold text-sm mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           You&rsquo;re here
         </button>
       ) : null}
 
-      <button onClick={onCancel} className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">Cancel</button>
+      <button onClick={onCancel} className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">Cancel</button>
     </div>
   );
 }

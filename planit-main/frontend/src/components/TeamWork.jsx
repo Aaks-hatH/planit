@@ -41,9 +41,9 @@ function useNow(ms = 5000) {
 }
 
 const Modal = ({ title, onClose, children, wide }) => (
-  <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/50 px-3" onClick={(e) => e.target === e.currentTarget && onClose()}>
+  <div className="fixed inset-0 z-[140] flex items-center justify-center bg-ink/60 px-3" onClick={(e) => e.target === e.currentTarget && onClose()}>
     <div className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ${wide ? 'max-w-xl' : 'max-w-md'}`}>
-      <div className="mb-4 flex items-center justify-between"><h3 className="font-bold text-neutral-900">{title}</h3><button onClick={onClose} className="text-neutral-400 hover:text-neutral-700"><X className="h-4 w-4" /></button></div>
+      <div className="mb-4 flex items-center justify-between"><h3 className="font-bold text-neutral-900">{title}</h3><button onClick={onClose} className="text-neutral-500 hover:text-neutral-700"><X className="h-4 w-4" /></button></div>
       {children}
     </div>
   </div>
@@ -52,7 +52,7 @@ const Modal = ({ title, onClose, children, wide }) => (
 const Label = ({ children }) => <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-neutral-400">{children}</label>;
 
 const DemoNote = ({ what }) => (
-  <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center text-sm text-neutral-400">{what} is not available in the sandbox account.</div>
+  <div className="rounded-xl border-2 border-dashed border-ink p-10 text-center text-sm text-neutral-400 shadow">{what} is not available in the sandbox account.</div>
 );
 
 /* ═════════════════════════════ Tasks ═════════════════════════════ */
@@ -121,7 +121,7 @@ function TaskModal({ task, people, onClose, onSaved }) {
       </div>
       <div className="mt-5 flex gap-3">
         <button onClick={onClose} className="btn btn-secondary flex-1 text-sm">Cancel</button>
-        <button onClick={save} disabled={busy} className="btn flex-1 bg-neutral-900 text-sm text-white disabled:opacity-50">{busy ? 'Saving…' : task ? 'Save changes' : 'Assign task'}</button>
+        <button onClick={save} disabled={busy} className="btn flex-1 !bg-white text-sm !text-ink disabled:opacity-50">{busy ? 'Saving…' : task ? 'Save changes' : 'Assign task'}</button>
       </div>
     </Modal>
   );
@@ -132,13 +132,13 @@ function TaskCard({ t, canAssign, mine, onMove, onEdit, onDelete }) {
   const due = dueLabel(t);
   const canMove = canAssign || mine;
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+    <div className="rounded-xl border-2 border-ink bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 text-sm font-bold text-neutral-900">{t.title}</div>
         {canAssign && (
           <div className="flex flex-shrink-0 gap-1">
-            <button onClick={() => onEdit(t)} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-            <button onClick={() => onDelete(t)} className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+            <button onClick={() => onEdit(t)} className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
+            <button onClick={() => onDelete(t)} className="rounded p-1 text-neutral-500 hover:bg-red-50 hover:text-red-600" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
         )}
       </div>
@@ -149,9 +149,9 @@ function TaskCard({ t, canAssign, mine, onMove, onEdit, onDelete }) {
         {t.prNumber && <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-800"><GitPullRequest className="h-3 w-3" />#{t.prNumber}</span>}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
-        <div className="min-w-0 truncate text-[11px] text-neutral-500">{t.assigneeName || 'Unassigned'}{t.createdByName ? <span className="text-neutral-300"> · from {t.createdByName}</span> : null}</div>
+        <div className="min-w-0 truncate text-[11px] text-neutral-500">{t.assigneeName || 'Unassigned'}{t.createdByName ? <span className="text-neutral-600"> · from {t.createdByName}</span> : null}</div>
         {canMove && (
-          <select value={t.status} onChange={(e) => onMove(t, e.target.value)} className="rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-[11px] font-semibold text-neutral-700 outline-none focus:border-neutral-900">
+          <select value={t.status} onChange={(e) => onMove(t, e.target.value)} className="rounded-md border-2 border-ink bg-white px-1.5 py-1 text-[11px] font-semibold text-neutral-700 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac">
             {COLUMNS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
         )}
@@ -203,23 +203,23 @@ export function TasksTab({ currentUser, isDemo, canAssign }) {
         {canAssign && (
           <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs font-bold">
             {[['all', 'Everyone'], ['mine', 'Mine']].map(([id, l]) => (
-              <button key={id} onClick={() => { setScope(id); setTasks(null); setWho(''); }} className={`rounded-md px-3 py-1.5 transition ${scope === id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>{l}</button>
+              <button key={id} onClick={() => { setScope(id); setTasks(null); setWho(''); }} className={`rounded-md px-3 py-1.5 transition ${scope === id ? 'bg-white text-neutral-900 shadow-sm border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>{l}</button>
             ))}
           </div>
         )}
         {hasPeople && (
-          <select value={who} onChange={(e) => setWho(e.target.value)} className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-neutral-900">
+          <select value={who} onChange={(e) => setWho(e.target.value)} className="rounded-lg border-2 border-ink bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-ink focus:ring-[3px] focus:ring-ac">
             <option value="">All people</option>
             {people.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
           </select>
         )}
-        {canAssign && <button onClick={() => setModal('new')} className="btn flex items-center gap-1.5 bg-neutral-900 px-3 py-1.5 text-sm text-white"><Plus className="h-4 w-4" />Assign task</button>}
+        {canAssign && <button onClick={() => setModal('new')} className="btn flex items-center gap-1.5 bg-hl px-3 py-1.5 text-sm !text-ink border-2 !border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Plus className="h-4 w-4" />Assign task</button>}
       </div>
 
-      {err && <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"><AlertTriangle className="h-4 w-4" />{err}</div>}
+      {err && <div className="flex items-center gap-2 rounded-xl border-2 border-red-600 bg-red-50 p-3 text-sm text-red-700"><AlertTriangle className="h-4 w-4" />{err}</div>}
 
       {tasks.length === 0 && !err ? (
-        <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center text-sm text-neutral-400">
+        <div className="rounded-xl border-2 border-dashed border-ink p-10 text-center text-sm text-neutral-400 shadow">
           {canAssign ? 'No tasks yet. Use "Assign task" to give someone their first one.' : 'Nothing assigned to you right now.'}
         </div>
       ) : (
@@ -228,10 +228,10 @@ export function TasksTab({ currentUser, isDemo, canAssign }) {
             const col = shown.filter((t) => t.status === id);
             return (
               <div key={id} className="rounded-2xl bg-neutral-50 p-2.5">
-                <div className="mb-2 flex items-center gap-2 px-1"><span className={`h-2 w-2 rounded-full ${dot}`} /><span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">{label}</span><span className="text-[11px] font-bold text-neutral-400">{col.length}</span></div>
+                <div className="mb-2 flex items-center gap-2 px-1"><span className={`h-2 w-2 rounded-full ${dot}`} /><span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">{label}</span><span className="text-[11px] font-bold text-neutral-500">{col.length}</span></div>
                 <div className="space-y-2">
                   {col.map((t) => <TaskCard key={t._id} t={t} canAssign={canAssign} mine={meId && t.assigneeId === meId} onMove={move} onEdit={setModal} onDelete={del} />)}
-                  {col.length === 0 && <div className="py-6 text-center text-[11px] text-neutral-300">Empty</div>}
+                  {col.length === 0 && <div className="py-6 text-center text-[11px] text-neutral-600">Empty</div>}
                 </div>
               </div>
             );
@@ -258,7 +258,7 @@ function ConnectCard({ isSuper, replacing, onDone, onCancel }) {
   const [busy, setBusy] = useState(false);
 
   if (!isSuper) {
-    return <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center text-sm text-neutral-400">GitHub is not connected yet. A super admin can connect it from this tab.</div>;
+    return <div className="rounded-xl border-2 border-dashed border-ink p-10 text-center text-sm text-neutral-400 shadow">GitHub is not connected yet. A super admin can connect it from this tab.</div>;
   }
   const go = async () => {
     setBusy(true);
@@ -267,7 +267,7 @@ function ConnectCard({ isSuper, replacing, onDone, onCancel }) {
     setBusy(false);
   };
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+    <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
       <div className="mb-1 flex items-center gap-2 text-base font-black text-neutral-900"><Github className="h-5 w-5" />{replacing ? 'Replace the GitHub connection' : 'Connect GitHub'}</div>
       <p className="mb-4 text-sm text-neutral-500">Paste the repository and a read-only access token. PlanIt checks them, then fetches pull requests live and shows them under the person who opened each one.</p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -279,10 +279,10 @@ function ConnectCard({ isSuper, replacing, onDone, onCancel }) {
         <li>Under <b>Repository access</b> choose only this repository.</li>
         <li>Under <b>Permissions</b> set <b>Pull requests: Read-only</b>. (Metadata read-only is added automatically.)</li>
       </ol>
-      <p className="mt-2 text-[11px] text-neutral-400">The token is stored encrypted and never sent back to the browser. It can only read.</p>
+      <p className="mt-2 text-[11px] text-neutral-500">The token is stored encrypted and never sent back to the browser. It can only read.</p>
       <div className="mt-4 flex gap-3">
         {replacing && <button onClick={onCancel} className="btn btn-secondary text-sm">Cancel</button>}
-        <button onClick={go} disabled={busy || !repo.trim() || !token.trim()} className="btn bg-neutral-900 text-sm text-white disabled:opacity-50">{busy ? 'Checking with GitHub…' : 'Connect'}</button>
+        <button onClick={go} disabled={busy || !repo.trim() || !token.trim()} className="btn !bg-white text-sm !text-ink disabled:opacity-50">{busy ? 'Checking with GitHub…' : 'Connect'}</button>
       </div>
     </div>
   );
@@ -305,16 +305,16 @@ function PersonLink({ person, canLink, onChanged }) {
   const c = person.counts;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-neutral-800 text-xs font-black text-white">{initials(person.name)}</div>
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-ink bg-white p-3 shadow">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-lav text-xs font-black text-ink">{initials(person.name)}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-bold text-neutral-900">{person.name}</div>
         {editing ? (
           <div className="mt-1 flex items-center gap-1.5">
-            <span className="text-xs text-neutral-400">@</span>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value.replace(/^@/, ''))} maxLength={39} placeholder="github-username" className="w-44 rounded-md border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-neutral-900" onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) save(name.trim()); if (e.key === 'Escape') setEditing(false); }} />
-            <button disabled={busy || !name.trim()} onClick={() => save(name.trim())} className="rounded-md bg-neutral-900 p-1 text-white disabled:opacity-40" title="Save">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}</button>
-            <button onClick={() => setEditing(false)} className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100" title="Cancel"><X className="h-3.5 w-3.5" /></button>
+            <span className="text-xs text-neutral-500">@</span>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value.replace(/^@/, ''))} maxLength={39} placeholder="github-username" className="w-44 rounded-md border-2 border-ink px-2 py-1 text-xs outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white" onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) save(name.trim()); if (e.key === 'Escape') setEditing(false); }} />
+            <button disabled={busy || !name.trim()} onClick={() => save(name.trim())} className="rounded-md bg-hl p-1 text-ink disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Save">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}</button>
+            <button onClick={() => setEditing(false)} className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100" title="Cancel"><X className="h-3.5 w-3.5" /></button>
           </div>
         ) : person.githubUsername
           ? <a href={`https://github.com/${person.githubUsername}`} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-500 hover:text-neutral-900">@{person.githubUsername}</a>
@@ -324,13 +324,13 @@ function PersonLink({ person, canLink, onChanged }) {
         <div className="flex gap-1.5 text-[11px] font-bold">
           {c.open + c.draft > 0 && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">{c.open + c.draft} open</span>}
           {c.merged > 0 && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-800">{c.merged} merged</span>}
-          {c.open + c.draft + c.merged + c.closed === 0 && <span className="text-neutral-300">no PRs yet</span>}
+          {c.open + c.draft + c.merged + c.closed === 0 && <span className="text-neutral-600">no PRs yet</span>}
         </div>
       )}
       {canLink && !editing && (
         <div className="flex gap-1">
-          <button onClick={() => { setName(person.githubUsername || ''); setEditing(true); }} className="rounded-md p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700" title={person.githubUsername ? 'Change GitHub account' : 'Link GitHub account'}><Link2 className="h-4 w-4" /></button>
-          {person.githubUsername && <button disabled={busy} onClick={() => window.confirm(`Unlink ${person.name} from @${person.githubUsername}?`) && save('')} className="rounded-md p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Unlink"><Unlink className="h-4 w-4" /></button>}
+          <button onClick={() => { setName(person.githubUsername || ''); setEditing(true); }} className="rounded-md p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700" title={person.githubUsername ? 'Change GitHub account' : 'Link GitHub account'}><Link2 className="h-4 w-4" /></button>
+          {person.githubUsername && <button disabled={busy} onClick={() => window.confirm(`Unlink ${person.name} from @${person.githubUsername}?`) && save('')} className="rounded-md p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600" title="Unlink"><Unlink className="h-4 w-4" /></button>}
         </div>
       )}
     </div>
@@ -375,7 +375,7 @@ export function GithubTab({ isDemo, isSuper }) {
   }, [feed]);
 
   if (isDemo) return <DemoNote what="GitHub" />;
-  if (!status) return err ? <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div> : <div className="flex justify-center py-16 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (!status) return err ? <div className="rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm text-red-700">{err}</div> : <div className="flex justify-center py-16 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   if (!status.connected || replacing) {
     return <ConnectCard isSuper={isSuper} replacing={replacing} onCancel={() => setReplacing(false)} onDone={async () => { setReplacing(false); await loadStatus(); loadFeed(); }} />;
   }
@@ -386,10 +386,10 @@ export function GithubTab({ isDemo, isSuper }) {
   return (
     <div className="space-y-4">
       {/* connection bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-ink bg-white p-4 shadow">
         <Github className="h-5 w-5 text-neutral-800" />
         <div className="min-w-0 flex-1">
-          <a href={`https://github.com/${status.repo}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 truncate text-sm font-black text-neutral-900 hover:underline">{status.repo}<ExternalLink className="h-3 w-3 text-neutral-400" /></a>
+          <a href={`https://github.com/${status.repo}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 truncate text-sm font-black text-neutral-900 hover:underline">{status.repo}<ExternalLink className="h-3 w-3 text-neutral-500" /></a>
           <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
             <span className={`h-1.5 w-1.5 rounded-full ${err || feed?.stale ? 'bg-amber-500' : 'bg-emerald-500'} ${refreshing ? 'animate-pulse' : ''}`} />
             {err || feed?.stale ? 'Showing the last data GitHub gave us' : 'Live'}{secs !== null ? ` · updated ${secs < 5 ? 'just now' : `${secs}s ago`}` : ''}
@@ -398,12 +398,12 @@ export function GithubTab({ isDemo, isSuper }) {
         <button onClick={loadFeed} disabled={refreshing} className="btn btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />Refresh</button>
         {isSuper && status.source === 'admin' && <>
           <button onClick={() => setReplacing(true)} className="btn btn-secondary px-3 py-1.5 text-xs">Replace token</button>
-          <button onClick={disconnect} className="btn btn-secondary px-3 py-1.5 text-xs text-red-600">Disconnect</button>
+          <button onClick={disconnect} className="btn btn-secondary px-3 py-1.5 text-xs !text-red-600">Disconnect</button>
         </>}
-        {isSuper && status.source === 'env' && <span className="text-[11px] text-neutral-400">Connected through server settings</span>}
+        {isSuper && status.source === 'env' && <span className="text-[11px] text-neutral-500">Connected through server settings</span>}
       </div>
 
-      {(err || feed?.warning) && <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />{err || feed.warning}</div>}
+      {(err || feed?.warning) && <div className="flex items-start gap-2 rounded-xl border-2 border-amber-600 bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />{err || feed.warning}</div>}
 
       {/* people */}
       {seesAll && feed.people && (
@@ -422,11 +422,11 @@ export function GithubTab({ isDemo, isSuper }) {
           <div className="flex-1" />
           <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs font-bold">
             {[['all', 'All'], ['open', 'Open'], ['merged', 'Merged'], ['closed', 'Closed']].map(([id, l]) => (
-              <button key={id} onClick={() => setFilter(id)} className={`rounded-md px-3 py-1.5 transition ${filter === id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>{l} <span className="text-neutral-400">{counts[id]}</span></button>
+              <button key={id} onClick={() => setFilter(id)} className={`rounded-md px-3 py-1.5 transition ${filter === id ? 'bg-white text-neutral-900 shadow-sm border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>{l} <span className="text-neutral-500">{counts[id]}</span></button>
             ))}
           </div>
           {seesAll && (
-            <select value={person} onChange={(e) => setPerson(e.target.value)} className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-neutral-900">
+            <select value={person} onChange={(e) => setPerson(e.target.value)} className="rounded-lg border-2 border-ink bg-white px-2 py-1.5 text-xs font-semibold outline-none focus:border-ink focus:ring-[3px] focus:ring-ac">
               <option value="">Everyone</option>
               {feed.people.filter((p) => p.githubUsername).map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
             </select>
@@ -435,18 +435,18 @@ export function GithubTab({ isDemo, isSuper }) {
 
         {!feed ? <div className="flex justify-center py-10 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
           : prs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
+            <div className="rounded-xl border-2 border-dashed border-ink p-8 text-center text-sm text-neutral-400 shadow-md">
               {seesAll ? 'No pull requests match.' : 'No pull requests are linked to your account yet. If you have opened some, ask a super admin to link your GitHub username.'}
             </div>
           ) : (
-            <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+            <div className="divide-y divide-neutral-200 overflow-hidden rounded-2xl border-2 border-ink bg-white shadow">
               {prs.map((p) => {
                 const [label, tone, Icon] = PR_STATE[p.state] || PR_STATE.open;
                 return (
                   <a key={`${p.repo}#${p.number}`} href={p.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 transition hover:bg-neutral-50">
                     <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${tone}`}><Icon className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-bold text-neutral-900">{p.title} <span className="font-normal text-neutral-400">#{p.number}</span></div>
+                      <div className="truncate text-sm font-bold text-neutral-900">{p.title} <span className="font-normal text-neutral-500">#{p.number}</span></div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-neutral-500">
                         {p.employee ? <span className="font-semibold text-neutral-700">{p.employee.name}</span> : <span className="font-semibold text-amber-600">@{p.author.login} · not linked</span>}
                         <span>{p.branch} → {p.base}</span>

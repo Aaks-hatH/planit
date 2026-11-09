@@ -72,11 +72,11 @@ function IdleScreen({ tableName, venueName, onBegin }) {
       {venueName && (
         <div style={{ fontSize: 13, color: '#78716c', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>{venueName}</div>
       )}
-      <div style={{ fontSize: 13, color: '#a8a29e', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>Table Service</div>
+      <div style={{ fontSize: 13, color: '#5a5d70', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>Table Service</div>
       <div style={{ fontSize: 44, fontWeight: 800, color: '#1c1917', marginBottom: 8, lineHeight: 1.1 }}>{tableName}</div>
-      <div style={{ fontSize: 15, color: '#a8a29e', marginBottom: 52 }}>Your server will be with you shortly.</div>
+      <div style={{ fontSize: 15, color: '#5a5d70', marginBottom: 52 }}>Your server will be with you shortly.</div>
       <button style={S.primaryBtn} onPointerDown={onBegin}>Tap to Begin</button>
-      <div style={{ marginTop: 20, fontSize: 11, color: '#d6d3d1', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+      <div style={{ marginTop: 20, fontSize: 11, color: '#5a5d70', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
         Payment is processed by your server at the table. This tablet does not handle payments.
       </div>
     </div>
@@ -115,14 +115,14 @@ function MenuBrowser({ restaurantMenu, accent, tableOrders }) {
 
   return (
     <div style={S.card}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Menu</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#5a5d70', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Menu</div>
 
       {/* Category tabs */}
       {cats.length > 1 && (
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12, paddingBottom: 2 }}>
           {cats.map((c, i) => (
             <button key={c.id} onPointerDown={() => setActiveCat(i)}
-              style={{ flexShrink: 0, padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${i === activeCat ? accent : '#e7e5e4'}`, background: i === activeCat ? accent + '18' : '#fafaf9', color: i === activeCat ? accent : '#78716c' }}>
+              style={{ flexShrink: 0, padding: '5px 11px', borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${i === activeCat ? accent : '#e7e5e4'}`, background: i === activeCat ? accent + '18' : '#fafaf9', color: i === activeCat ? accent : '#78716c' }}>
               {c.name}
             </button>
           ))}
@@ -144,7 +144,7 @@ function MenuBrowser({ restaurantMenu, accent, tableOrders }) {
                 {item.dietary?.length > 0 && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
                     {item.dietary.map(d => (
-                      <span key={d} style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4 }}>
+                      <span key={d} style={{ background: '#fff6c2', border: '2px solid #6e5400', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4 }}>
                         {DIETARY_DISPLAY[d] || d}
                       </span>
                     ))}
@@ -162,7 +162,7 @@ function MenuBrowser({ restaurantMenu, accent, tableOrders }) {
         })}
       </div>
 
-      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#fafaf9', border: '1px solid #e7e5e4', fontSize: 11, color: '#a8a29e', textAlign: 'center' }}>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#fafaf9', border: '2px solid #0d0e1c', fontSize: 11, color: '#5a5d70', textAlign: 'center', boxShadow: '4px 4px 0 #0d0e1c' }}>
         Your server will take your order at the table
       </div>
     </div>
@@ -176,10 +176,10 @@ function OrdersSummary({ tableOrders, accent }) {
   const STATUS_GUEST = { pending:'Sent to kitchen', acknowledged:'Kitchen received', preparing:'Being prepared 🔥', ready:'Ready — server bringing it!', delivered:'Served ✓' };
   return (
     <div style={S.card}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Your Order</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#5a5d70', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Your Order</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {active.map(o => (
-          <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #f5f5f4' }}>
+          <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #d9dbe8' }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{o.qty > 1 ? `×${o.qty} ` : ''}{o.itemName}</div>
               <div style={{ fontSize: 11, color: o.status === 'preparing' ? '#d97706' : o.status === 'ready' ? '#16a34a' : '#a8a29e', marginTop: 2 }}>
@@ -246,10 +246,10 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
 
       {alertPending && (
         <div style={S.alertBanner}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', flexShrink: 0, animation: 'pulse 1.5s infinite' }} />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffe14d', flexShrink: 0, animation: 'pulse 1.5s infinite' }} />
           <div>
             <div style={{ color: '#92400e', fontWeight: 700, fontSize: 13 }}>{getAlertLabel()}</div>
-            <div style={{ color: '#a8a29e', fontSize: 11, marginTop: 2 }}>Est. wait: {waitEst}</div>
+            <div style={{ color: '#5a5d70', fontSize: 11, marginTop: 2 }}>Est. wait: {waitEst}</div>
           </div>
         </div>
       )}
@@ -267,7 +267,7 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
             </svg>
           </div>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#1c1917' }}>Call Server</span>
-          <span style={{ fontSize: 11, color: '#a8a29e', marginTop: 3 }}>Need assistance</span>
+          <span style={{ fontSize: 11, color: '#5a5d70', marginTop: 3 }}>Need assistance</span>
         </button>
 
         <button
@@ -281,13 +281,13 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
             </svg>
           </div>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#1c1917' }}>Ready to Order</span>
-          <span style={{ fontSize: 11, color: '#a8a29e', marginTop: 3 }}>Notify your server</span>
+          <span style={{ fontSize: 11, color: '#5a5d70', marginTop: 3 }}>Notify your server</span>
         </button>
       </div>
 
       {/* Quick requests */}
       <div style={S.card}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Quick Requests</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#5a5d70', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Quick Requests</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {QUICK_REQUESTS.map(req => {
             const isActive = alert === `quick:${req.id}`;
@@ -313,7 +313,7 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
 
       {/* Party size */}
       <div style={S.card}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Party Size</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#5a5d70', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Party Size</div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input
             type="number"
@@ -341,7 +341,7 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
           onPointerDown={() => setDietOpen(p => !p)}
         >
           <span style={{ fontWeight: 700, fontSize: 14, color: '#1c1917' }}>Dietary Restrictions</span>
-          <span style={{ fontSize: 18, color: '#a8a29e', transform: dietOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>&#8964;</span>
+          <span style={{ fontSize: 18, color: '#5a5d70', transform: dietOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>&#8964;</span>
         </button>
 
         {diet.length > 0 && !dietOpen && (
@@ -394,7 +394,7 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
         ? <MenuBrowser restaurantMenu={restaurantMenu} accent={accent} tableOrders={tableOrders} />
         : menus && menus.length > 0 && (
         <div style={S.card}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menus</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#5a5d70', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menus</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {menus.map((menu, i) => {
               const ma = menu.clr || accent;
@@ -414,7 +414,7 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
                     </div>
                     {(menu.t === 'l' || menu.t === 'p') && menu.u
                       ? <a href={menu.u} target="_blank" rel="noopener noreferrer"
-                          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, background: ma, color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+                          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, background: ma, color: '#0d0e1c', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
                           {menu.t === 'p' ? 'Open PDF' : 'View'}
                         </a>
                       : menu.t === 'd' && (
@@ -460,15 +460,15 @@ function BillScreen({ tableState }) {
       <div style={S.tableTag}>{paid ? 'Paid' : 'Your Bill'}</div>
 
       {paid && (
-        <div style={{ ...S.alertBanner, borderColor: '#bbf7d0', background: '#f0fdf4' }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
+        <div style={{ ...S.alertBanner, borderColor: '#bbf7d0', background: '#d6f7e8' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0c8a5b', flexShrink: 0 }} />
           <span style={{ color: '#15803d', fontWeight: 700, fontSize: 13 }}>Thank you for dining with us. Your server will collect payment at the table.</span>
         </div>
       )}
 
       {/* Payment note */}
       {!paid && (
-        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fafaf9', border: '1px solid #e7e5e4', fontSize: 12, color: '#78716c', lineHeight: 1.5 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fafaf9', border: '2px solid #0d0e1c', fontSize: 12, color: '#78716c', lineHeight: 1.5, boxShadow: '4px 4px 0 #0d0e1c' }}>
           Your server will bring your check and collect payment at the table. Amounts shown are estimates from your server.
         </div>
       )}
@@ -483,7 +483,7 @@ function BillScreen({ tableState }) {
           <span style={{ color: '#78716c' }}>Tax</span>
           <span style={{ color: '#1c1917', fontWeight: 600 }}>{fmt$(tax)}</span>
         </div>
-        <div style={{ ...S.billRow, borderTop: '1px solid #e7e5e4', marginTop: 8, paddingTop: 12 }}>
+        <div style={{ ...S.billRow, borderTop: '1px solid #d9dbe8', marginTop: 8, paddingTop: 12 }}>
           <span style={{ color: '#78716c' }}>Tip ({activeTip}%)</span>
           <span style={{ color: '#d97706', fontWeight: 600 }}>{fmt$(tipAmt)}</span>
         </div>
@@ -492,7 +492,7 @@ function BillScreen({ tableState }) {
           <span style={{ color: '#1c1917', fontWeight: 800, fontSize: 22 }}>{fmt$(total)}</span>
         </div>
         {perPerson && (
-          <div style={{ ...S.billRow, marginTop: 4, paddingTop: 10, borderTop: '1px solid #e7e5e4' }}>
+          <div style={{ ...S.billRow, marginTop: 4, paddingTop: 10, borderTop: '1px solid #d9dbe8' }}>
             <span style={{ color: '#78716c', fontSize: 13 }}>Per person ({splitBy})</span>
             <span style={{ color: '#d97706', fontWeight: 700, fontSize: 16 }}>{fmt$(perPerson)}</span>
           </div>
@@ -503,7 +503,7 @@ function BillScreen({ tableState }) {
       {!paid && (
         <>
           <div style={S.card}>
-            <div style={{ fontSize: 11, color: '#a8a29e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Tip Suggestion</div>
+            <div style={{ fontSize: 11, color: '#5a5d70', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Tip Suggestion</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
               {TIP_PRESETS.map(p => (
                 <button
@@ -545,24 +545,24 @@ function BillScreen({ tableState }) {
                 />
               )}
             </div>
-            <div style={{ marginTop: 10, fontSize: 11, color: '#a8a29e' }}>
+            <div style={{ marginTop: 10, fontSize: 11, color: '#5a5d70' }}>
               Tip is a suggestion only. Your server handles all payments.
             </div>
           </div>
 
           <div style={S.card}>
-            <div style={{ fontSize: 11, color: '#a8a29e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Split Bill</div>
+            <div style={{ fontSize: 11, color: '#5a5d70', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Split Bill</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button
                 onPointerDown={() => setSplitBy(n => Math.max(1, n - 1))}
-                style={{ ...S.tipBtn, width: 40, flexShrink: 0, background: '#fafaf9', border: '1px solid #e7e5e4', color: '#57534e', fontSize: 18 }}
+                style={{ ...S.tipBtn, width: 40, flexShrink: 0, background: '#fafaf9', border: '2px solid #0d0e1c', color: '#57534e', fontSize: 18 }}
               >-</button>
               <span style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 16, color: '#1c1917' }}>
                 {splitBy === 1 ? 'No split' : `${splitBy} ways`}
               </span>
               <button
                 onPointerDown={() => setSplitBy(n => Math.min(20, n + 1))}
-                style={{ ...S.tipBtn, width: 40, flexShrink: 0, background: '#fafaf9', border: '1px solid #e7e5e4', color: '#57534e', fontSize: 18 }}
+                style={{ ...S.tipBtn, width: 40, flexShrink: 0, background: '#fafaf9', border: '2px solid #0d0e1c', color: '#57534e', fontSize: 18 }}
               >+</button>
             </div>
             {perPerson && (
@@ -593,13 +593,13 @@ function RatingScreen({ onSubmit, saving }) {
   if (done) {
     return (
       <div style={S.centerCol}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#f0fdf4', border: '2px solid #86efac', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#d6f7e8', border: '2px solid #0a7149', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
         <div style={{ fontSize: 24, fontWeight: 800, color: '#1c1917', marginBottom: 8 }}>Thank You</div>
-        <div style={{ fontSize: 14, color: '#a8a29e' }}>Your feedback means a lot to us.</div>
+        <div style={{ fontSize: 14, color: '#5a5d70' }}>Your feedback means a lot to us.</div>
       </div>
     );
   }
@@ -667,13 +667,13 @@ const S = {
   logoWrap: {
     width: 52, height: 52,
     borderRadius: 14,
-    background: '#fef3c7',
-    border: '1px solid #fde68a',
+    background: '#fff6c2',
+    border: '2px solid #6e5400',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     marginBottom: 20,
   },
   tableTag: {
-    fontSize: 11, fontWeight: 700, color: '#a8a29e',
+    fontSize: 11, fontWeight: 700, color: '#5a5d70',
     textTransform: 'uppercase', letterSpacing: 2,
     marginBottom: 4,
   },
@@ -681,43 +681,43 @@ const S = {
     display: 'flex', alignItems: 'flex-start', gap: 10,
     padding: '12px 14px',
     borderRadius: 12,
-    background: '#fffbeb',
-    border: '1px solid #fde68a',
+    background: '#fff6c2',
+    border: '2px solid #6e5400', boxShadow: '4px 4px 0 #0d0e1c',
   },
   primaryBtn: {
-    background: '#1c1917',
-    color: '#fff',
-    border: 'none',
+    background: '#ffffff',
+    color: '#0d0e1c',
+    border: '2px solid #0d0e1c',
     borderRadius: 12,
     padding: '14px 32px',
     fontSize: 15,
     fontWeight: 700,
     cursor: 'pointer',
     width: '100%',
-    letterSpacing: 0.2,
+    letterSpacing: 0.2, boxShadow: '3px 3px 0 #0d0e1c',
   },
   secondaryBtn: {
     background: '#f5f5f4',
     color: '#44403c',
-    border: '1px solid #e7e5e4',
+    border: '2px solid #0d0e1c',
     borderRadius: 10,
     padding: '10px 16px',
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap', boxShadow: '3px 3px 0 #0d0e1c',
   },
   actionBtn: {
     background: '#fff',
-    border: '1px solid #e7e5e4',
-    borderRadius: 16,
+    border: '2px solid #0d0e1c',
+    borderRadius: 8,
     padding: '18px 12px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     cursor: 'pointer',
     transition: 'border-color 0.15s, box-shadow 0.15s',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    boxShadow: '4px 4px 0 #0d0e1c',
   },
   quickBtn: {
     borderRadius: 10,
@@ -730,14 +730,14 @@ const S = {
   },
   card: {
     background: '#fff',
-    border: '1px solid #e7e5e4',
-    borderRadius: 16,
+    border: '2px solid #0d0e1c',
+    borderRadius: 8,
     padding: 18,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    boxShadow: '4px 4px 0 #0d0e1c',
   },
   tag: {
-    background: '#fef3c7',
-    border: '1px solid #fde68a',
+    background: '#fff6c2',
+    border: '2px solid #6e5400',
     color: '#92400e',
     fontSize: 11,
     fontWeight: 600,
@@ -755,19 +755,19 @@ const S = {
   input: {
     width: '100%',
     background: '#fafaf9',
-    border: '1px solid #e7e5e4',
+    border: '2px solid #0d0e1c',
     borderRadius: 10,
     color: '#1c1917',
     fontSize: 14,
     padding: '10px 12px',
     outline: 'none',
     fontFamily: 'inherit',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box', boxShadow: '4px 4px 0 #0d0e1c',
   },
   textarea: {
     width: '100%',
     background: '#fafaf9',
-    border: '1px solid #e7e5e4',
+    border: '2px solid #0d0e1c',
     borderRadius: 10,
     color: '#1c1917',
     fontSize: 14,
@@ -775,7 +775,7 @@ const S = {
     outline: 'none',
     resize: 'none',
     fontFamily: 'inherit',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box', boxShadow: '4px 4px 0 #0d0e1c',
   },
   billRow: {
     display: 'flex',
@@ -910,7 +910,7 @@ export default function GuestTablet() {
     return (
       <div style={{ height: '100dvh', background: '#fafaf9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 15, color: '#a8a29e' }}>{error}</div>
+          <div style={{ fontSize: 15, color: '#5a5d70' }}>{error}</div>
         </div>
       </div>
     );
@@ -920,7 +920,7 @@ export default function GuestTablet() {
   if (!tableState || !tableObj) {
     return (
       <div style={{ height: '100dvh', background: '#fafaf9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 24, height: 24, border: '2px solid #e7e5e4', borderTopColor: '#a8a29e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 24, height: 24, border: '2px solid #0d0e1c', borderTopColor: '#a8a29e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     );
   }
@@ -948,7 +948,7 @@ export default function GuestTablet() {
       <div style={{
         flexShrink: 0,
         height: 52,
-        borderBottom: '1px solid #e7e5e4',
+        borderBottom: '1px solid #d9dbe8',
         background: '#fff',
         display: 'flex',
         alignItems: 'center',
@@ -967,7 +967,7 @@ export default function GuestTablet() {
               transition: 'background 0.2s',
             }} />
           ))}
-          <span style={{ fontSize: 12, color: '#a8a29e', fontWeight: 600, marginLeft: 4 }}>
+          <span style={{ fontSize: 12, color: '#5a5d70', fontWeight: 600, marginLeft: 4 }}>
             {tableObj?.label || ''}
           </span>
         </div>

@@ -103,11 +103,11 @@ export default function FaceTicketTeaser() {
         onClick={go}
         onMouseEnter={() => setExpanded(true)}
         onTouchStart={() => setExpanded(true)}
-        className="group relative flex items-center gap-2.5 rounded-full border border-[#8B7FFF]/25 bg-[#0a0714]/95 backdrop-blur-sm pl-3 pr-4 py-2.5 shadow-[0_8px_30px_rgba(139,127,255,0.18)] hover:border-[#8B7FFF]/50 transition-colors text-left"
+        className="group relative flex items-center gap-2.5 rounded-lg border-2 border-[#8B7FFF]/25 bg-white pl-3 pr-4 py-2.5 hover:border-[#8B7FFF]/50 transition-colors text-left border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
       >
-        <span className="relative flex items-center justify-center w-7 h-7 rounded-full bg-[#8B7FFF]/15 shrink-0">
+        <span className="relative flex items-center justify-center w-7 h-7 rounded-full bg-ac shrink-0">
           <ScanFace className="w-3.5 h-3.5 text-[#8B7FFF]" />
-          <span className="absolute inset-0 rounded-full bg-[#8B7FFF]/30 animate-ping" />
+          <span className="absolute inset-0 rounded-full bg-ac animate-ping" />
         </span>
 
         {expanded ? (
@@ -116,7 +116,7 @@ export default function FaceTicketTeaser() {
               <Sparkles className="w-2.5 h-2.5" />
               New &middot; Beta
             </span>
-            <span className="text-white text-[13px] font-semibold leading-tight mt-0.5">
+            <span className="text-ink text-[13px] font-semibold leading-tight mt-0.5">
               Your face is the ticket
             </span>
             <span className="text-neutral-500 text-[11px] leading-snug mt-0.5">
@@ -124,7 +124,7 @@ export default function FaceTicketTeaser() {
             </span>
           </span>
         ) : (
-          <span className="text-white text-[13px] font-semibold whitespace-nowrap">
+          <span className="text-ink text-[13px] font-semibold whitespace-nowrap">
             Try Face Ticket
           </span>
         )}
@@ -133,7 +133,7 @@ export default function FaceTicketTeaser() {
           onClick={dismiss}
           role="button"
           aria-label="Dismiss"
-          className="ml-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-300 hover:bg-white/5"
+          className="ml-1 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-neutral-600 hover:text-neutral-600 hover:bg-lav"
         >
           <X className="w-3 h-3" />
         </span>

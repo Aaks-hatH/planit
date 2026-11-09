@@ -76,8 +76,8 @@ export default function RecoveryCodeBanner({ eventId, participantId }) {
 
       <div style={{
         width: '100%',
-        background: 'rgba(245,158,11,0.09)',
-        borderBottom: '1px solid rgba(245,158,11,0.25)',
+        background: '#fff6c2',
+        borderBottom: '1px solid #6e5400',
         padding: '0.6rem 1rem',
         display: 'flex',
         alignItems: 'center',
@@ -87,8 +87,8 @@ export default function RecoveryCodeBanner({ eventId, participantId }) {
         {/* Amber dot */}
         <span style={{
           width: '7px', height: '7px', borderRadius: '50%',
-          background: '#f59e0b', flexShrink: 0,
-          boxShadow: '0 0 6px #f59e0b',
+          background: '#ffe14d', flexShrink: 0,
+          boxShadow: 'none',
         }} />
 
         <p style={{
@@ -111,7 +111,7 @@ export default function RecoveryCodeBanner({ eventId, participantId }) {
           onClick={handleGenerate}
           disabled={generating}
           style={{
-            background: '#f59e0b',
+            background: '#ffe14d',
             border: 'none',
             borderRadius: '0.375rem',
             color: '#000',

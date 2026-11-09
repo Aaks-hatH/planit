@@ -59,14 +59,14 @@ export default function DemoFeedback({ demoLabel, onExit }) {
   if (done) {
     return (
       <div className="max-w-md mx-auto px-5 py-14 text-center">
-        <div className="w-16 h-16 rounded-full bg-teal-400/15 flex items-center justify-center mx-auto mb-5">
-          <CheckCircle2 className="w-8 h-8 text-teal-300" />
+        <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-5">
+          <CheckCircle2 className="w-8 h-8 text-emerald-700" />
         </div>
         <h2 className="font-display font-bold text-2xl mb-1.5">Thanks!</h2>
         <p className="text-neutral-500 text-sm mb-8">
           Your feedback on {demoLabel} just went straight to the team.
         </p>
-        <button onClick={onExit} className="w-full py-3.5 rounded-xl bg-white text-black font-semibold text-sm">
+        <button onClick={onExit} className="w-full py-3.5 rounded-xl bg-white text-black font-semibold text-sm border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
           Back to PlanIt
         </button>
       </div>
@@ -75,7 +75,7 @@ export default function DemoFeedback({ demoLabel, onExit }) {
 
   return (
     <div className="max-w-md mx-auto px-5 py-10">
-      <div className="flex items-center gap-2 text-teal-300 text-sm mb-1.5">
+      <div className="flex items-center gap-2 text-emerald-700 text-sm mb-1.5">
         <CheckCircle2 className="w-4 h-4" />
         Demo complete
       </div>
@@ -90,12 +90,12 @@ export default function DemoFeedback({ demoLabel, onExit }) {
             key={value}
             type="button"
             onClick={() => setRating(value)}
-            className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-sm font-medium transition-colors ${
+            className={`flex flex-col items-center gap-2 rounded-xl border-2 px-3 py-4 text-sm font-bold transition-colors border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${
               rating === value
                 ? tone === 'teal'
-                  ? 'border-teal-400/50 bg-teal-400/10 text-teal-300'
-                  : 'border-rose-400/50 bg-rose-400/10 text-rose-300'
-                : 'border-white/10 bg-white/[0.03] text-neutral-400 hover:bg-white/[0.06]'
+                  ? 'border-emerald-700 bg-emerald-50 text-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                  : 'border-red-700 bg-red-50 text-red-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                : 'border-ink bg-white/[0.03] text-neutral-500 hover:bg-white/[0.06] border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
             }`}
           >
             <Icon className="w-5 h-5" />
@@ -115,7 +115,7 @@ export default function DemoFeedback({ demoLabel, onExit }) {
             rows={4}
             maxLength={2000}
             placeholder="Tell us what worked, what was confusing, or what broke..."
-            className="w-full bg-white/[0.03] border border-white/10 focus:border-[#8B7FFF] outline-none rounded-lg px-3 py-2.5 text-sm resize-none"
+            className="w-full bg-white/[0.03] border-2 border-ink focus:border-ink outline-none rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-[3px] focus:ring-ac"
           />
         </div>
 
@@ -127,7 +127,7 @@ export default function DemoFeedback({ demoLabel, onExit }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Optional"
               maxLength={80}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm"
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg"
             />
           </div>
           <div>
@@ -137,13 +137,13 @@ export default function DemoFeedback({ demoLabel, onExit }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               maxLength={120}
-              className="w-full bg-transparent border-b border-white/15 focus:border-[#8B7FFF] outline-none py-2 text-sm"
+              className="w-full bg-transparent border-b border-ink focus:border-ink outline-none py-2 text-sm focus:ring-[3px] focus:ring-ac rounded-lg"
             />
           </div>
         </div>
 
         {error && (
-          <div className="text-xs text-rose-300 bg-rose-400/10 border border-rose-400/20 rounded-lg px-3 py-2.5">
+          <div className="text-xs text-red-700 bg-red-50 border border-red-700 rounded-lg px-3 py-2.5">
             {error}
           </div>
         )}
@@ -152,7 +152,7 @@ export default function DemoFeedback({ demoLabel, onExit }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-ac text-[#0a0714] font-bold text-sm disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquareText className="w-4 h-4" />}
             {loading ? 'Sending\u2026' : 'Send feedback'}
@@ -160,7 +160,7 @@ export default function DemoFeedback({ demoLabel, onExit }) {
           <button
             type="button"
             onClick={onExit}
-            className="w-full py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5"
+            className="w-full py-3 rounded-xl border-2 border-ink text-sm text-neutral-600 hover:bg-lav shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
           >
             Skip
           </button>

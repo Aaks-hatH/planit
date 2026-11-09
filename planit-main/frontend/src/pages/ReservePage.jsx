@@ -76,14 +76,14 @@ function isDayClosed(dateStr, config) {
 // ── Status pill ───────────────────────────────────────────────────────────────
 
 function SlotStatus({ status, freeCount, showCount }) {
-  if (status === 'full') return <span className="text-rose-400 text-xs font-semibold">Full</span>;
+  if (status === 'full') return <span className="text-red-700 text-xs font-semibold">Full</span>;
   if (status === 'limited') return (
-    <span className="text-amber-400 text-xs font-semibold">
+    <span className="text-amber-700 text-xs font-semibold">
       {showCount && freeCount != null ? `${freeCount} left` : 'Limited'}
     </span>
   );
   if (status === 'unavailable') return null;
-  return <span className="text-emerald-400 text-xs font-semibold">Available</span>;
+  return <span className="text-emerald-700 text-xs font-semibold">Available</span>;
 }
 
 // ── Confirmation screen ───────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
         </div>
 
         {/* Booking card */}
-        <div className="rounded-2xl border p-6 mb-6" style={{ background: config.backgroundStyle === 'light' ? '#fff' : '#111', borderColor: config.backgroundStyle === 'light' ? '#e5e7eb' : '#222' }}>
+        <div className="rounded-2xl border-2 p-6 mb-6 border-ink shadow-md" style={{ background: config.backgroundStyle === 'light' ? '#fff' : '#111', borderColor: config.backgroundStyle === 'light' ? '#e5e7eb' : '#222' }}>
           <div className="text-center mb-5">
             <div className="text-lg font-bold" style={{ color: config.backgroundStyle === 'light' ? '#111' : '#fff' }}>{config.name}</div>
             <div className="text-sm mt-1" style={{ color: config.backgroundStyle === 'light' ? '#666' : '#999' }}>
@@ -202,37 +202,37 @@ export function ReserveCancelPage() {
   };
 
   if (state === 'success') return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
       <div className="text-center max-w-sm">
-        <Check className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-white mb-2">Reservation Cancelled</h1>
-        <p className="text-neutral-400 text-sm">Your reservation has been cancelled. We hope to see you another time.</p>
-        <a href="/" className="inline-block mt-6 text-sm text-neutral-500 hover:text-neutral-300">← Back to {isWL ? (wl?.branding?.companyName || wl?.clientName || "Home") : "PlanIt"}</a>
+        <Check className="w-12 h-12 text-emerald-700 mx-auto mb-4" />
+        <h1 className="text-2xl font-black text-ink mb-2">Reservation Cancelled</h1>
+        <p className="text-neutral-500 text-sm">Your reservation has been cancelled. We hope to see you another time.</p>
+        <a href="/" className="inline-block mt-6 text-sm text-neutral-500 hover:text-neutral-600">← Back to {isWL ? (wl?.branding?.companyName || wl?.clientName || "Home") : "PlanIt"}</a>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
       <div className="text-center max-w-sm">
-        <div className="w-16 h-16 bg-neutral-800 border border-neutral-700 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <X className="w-8 h-8 text-neutral-400" />
+        <div className="w-16 h-16 bg-lav border-2 border-ink rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <X className="w-8 h-8 text-neutral-500" />
         </div>
-        <h1 className="text-2xl font-black text-white mb-2">Cancel Reservation</h1>
+        <h1 className="text-2xl font-black text-ink mb-2">Cancel Reservation</h1>
         {state === 'error' ? (
           <>
-            <p className="text-rose-400 text-sm mb-6">{msg}</p>
-            <a href="/" className="text-sm text-neutral-500 hover:text-neutral-300">← Back</a>
+            <p className="text-red-700 text-sm mb-6">{msg}</p>
+            <a href="/" className="text-sm text-neutral-500 hover:text-neutral-600">← Back</a>
           </>
         ) : (
           <>
-            <p className="text-neutral-400 text-sm mb-6">Are you sure you want to cancel your reservation? This cannot be undone.</p>
+            <p className="text-neutral-500 text-sm mb-6">Are you sure you want to cancel your reservation? This cannot be undone.</p>
             <button onClick={handleCancel} disabled={state === 'loading'}
-              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 mb-3">
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 mb-3 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {state === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
               Yes, cancel my reservation
             </button>
-            <a href="/" className="block text-sm text-neutral-500 hover:text-neutral-300">← Keep reservation</a>
+            <a href="/" className="block text-sm text-neutral-500 hover:text-neutral-600">← Keep reservation</a>
           </>
         )}
       </div>
@@ -376,27 +376,27 @@ export default function ReservePage() {
 
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-amber-700 animate-spin" />
     </div>
   );
 
   if (error === 'not_found') return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6 text-center">
       <div>
         <UtensilsCrossed className="w-10 h-10 text-neutral-500 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-white mb-2">Restaurant not found</h1>
+        <h1 className="text-2xl font-black text-ink mb-2">Restaurant not found</h1>
         <p className="text-neutral-500 text-sm">This reservation page doesn't exist or has been removed.</p>
       </div>
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6 text-center">
       <div>
-        <AlertCircle className="w-10 h-10 text-rose-400 mx-auto mb-4" />
-        <h1 className="text-xl font-black text-white mb-2">Something went wrong</h1>
-        <button onClick={() => window.location.reload()} className="text-sm text-orange-400 hover:underline">Try again</button>
+        <AlertCircle className="w-10 h-10 text-red-700 mx-auto mb-4" />
+        <h1 className="text-xl font-black text-ink mb-2">Something went wrong</h1>
+        <button onClick={() => window.location.reload()} className="text-sm text-amber-700 hover:underline">Try again</button>
       </div>
     </div>
   );
@@ -450,12 +450,12 @@ export default function ReservePage() {
         )}
         <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 flex flex-col items-center text-center">
           {config.logoUrl && <img src={config.logoUrl} alt={config.name} className="w-20 h-20 object-contain rounded-2xl mb-5 shadow-xl" />}
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-lg">{config.name}</h1>
-          {config.tagline && <p className="text-white/75 text-base mt-2 drop-shadow font-medium max-w-md">{config.tagline}</p>}
+          <h1 className="text-4xl md:text-5xl font-black text-ink mb-2 drop-shadow-lg">{config.name}</h1>
+          {config.tagline && <p className="text-ink text-base mt-2 drop-shadow font-medium max-w-md">{config.tagline}</p>}
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
-            {config.cuisine && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: accent + '44', border: `1px solid ${accent}66` }}>{config.cuisine}</span>}
-            {config.priceRange && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>{config.priceRange}</span>}
-            {config.dressCode && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>{config.dressCode}</span>}
+            {config.cuisine && <span className="px-3 py-1 rounded-full text-sm font-semibold text-ink" style={{ background: accent + '44', border: `1px solid ${accent}66` }}>{config.cuisine}</span>}
+            {config.priceRange && <span className="px-3 py-1 rounded-full text-sm font-semibold text-ink" style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>{config.priceRange}</span>}
+            {config.dressCode && <span className="px-3 py-1 rounded-full text-sm font-semibold text-ink" style={{ background: '#ffffff', border: '2px solid #0d0e1c' }}>{config.dressCode}</span>}
           </div>
         </div>
       </div>
@@ -489,7 +489,7 @@ export default function ReservePage() {
                     <div key={d} className="flex justify-between text-xs">
                       <span style={{ color: c.muted }}>{label}</span>
                       {dc.open === false
-                        ? <span className="text-rose-400 font-semibold">Closed</span>
+                        ? <span className="text-red-700 font-semibold">Closed</span>
                         : <span style={{ color: c.text }}>{dc.openTime || config.operatingHoursOpen} – {dc.closeTime || config.operatingHoursClose}</span>
                       }
                     </div>
@@ -516,7 +516,7 @@ export default function ReservePage() {
                 ].map(({ label, val }) => (
                   <div key={label} className="flex justify-between text-sm">
                     <span style={{ color: c.muted }}>{label}</span>
-                    <span className={`font-semibold ${val === 0 ? 'text-emerald-400' : val === null ? 'text-neutral-500' : val <= 15 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    <span className={`font-semibold ${val === 0 ? 'text-emerald-700' : val === null ? 'text-neutral-500' : val <= 15 ? 'text-amber-700' : 'text-red-700'}`}>
                       {val === 0 ? 'Seat now' : val === null ? 'No tables' : `~${val} min`}
                     </span>
                   </div>
@@ -619,8 +619,8 @@ export default function ReservePage() {
               )}
               {!config.acceptingReservations && (
                 <div className="flex items-center gap-2 mt-2">
-                  <AlertCircle className="w-4 h-4 text-rose-400" />
-                  <span className="text-sm text-rose-400 font-semibold">Online reservations are currently unavailable. Please call us.</span>
+                  <AlertCircle className="w-4 h-4 text-red-700" />
+                  <span className="text-sm text-red-700 font-semibold">Online reservations are currently unavailable. Please call us.</span>
                 </div>
               )}
             </div>
@@ -636,7 +636,7 @@ export default function ReservePage() {
                       <button key={sz} onClick={() => setPartySize(sz)}
                         className="w-11 h-11 rounded-xl text-sm font-bold transition-all"
                         style={partySize === sz
-                          ? { background: accent, color: '#fff', border: `2px solid ${accent}` }
+                          ? { background: accent, color: '#0d0e1c', border: `2px solid ${accent}` }
                           : { background: c.subtle, color: c.muted, border: `2px solid transparent` }
                         }>
                         {sz}
@@ -668,7 +668,7 @@ export default function ReservePage() {
                           <button key={d} onClick={() => !closed && setDateStr(d)} disabled={closed}
                             className="flex flex-col items-center py-2 px-1 rounded-xl transition-all disabled:opacity-30"
                             style={isSel
-                              ? { background: accent, color: '#fff' }
+                              ? { background: accent, color: '#0d0e1c' }
                               : { background: c.subtle, color: c.muted }
                             }>
                             <span className="text-[10px] font-semibold">{shortDay(d)}</span>
@@ -712,7 +712,7 @@ export default function ReservePage() {
                           <button key={slot.time} onClick={() => !isFull && setSelectedSlot(slot.time)} disabled={isFull}
                             className="py-2.5 rounded-xl text-center transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             style={isSel
-                              ? { background: accent, border: `2px solid ${accent}`, color: '#fff' }
+                              ? { background: accent, border: `2px solid ${accent}`, color: '#0d0e1c' }
                               : isFull
                               ? { background: c.subtle, border: `2px solid transparent`, color: c.muted }
                               : { background: c.inputBg, border: `2px solid ${c.inputBdr}`, color: c.text }
@@ -730,7 +730,7 @@ export default function ReservePage() {
                 {selectedSlot && step === 'pick' && (
                   <button onClick={() => setStep('form')}
                     className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:opacity-90"
-                    style={{ background: accent, color: '#fff' }}>
+                    style={{ background: accent, color: '#0d0e1c' }}>
                     Continue — {fmtTime(selectedSlot)} for {partySize} <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
@@ -757,7 +757,7 @@ export default function ReservePage() {
                     <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: c.text }}>Your Details</h3>
 
                     {formErrors._submit && (
-                      <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                      <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ background: '#ffe1de', color: '#dc2626' }}>
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         {formErrors._submit}
                       </div>
@@ -769,7 +769,7 @@ export default function ReservePage() {
                         onChange={e => setForm(p => ({ ...p, partyName: e.target.value }))}
                         onFocus={inputFocus} onBlur={inputBlur}
                         placeholder="First & last name" />
-                      {formErrors.partyName && <p className="text-rose-400 text-xs mt-1">{formErrors.partyName}</p>}
+                      {formErrors.partyName && <p className="text-red-700 text-xs mt-1">{formErrors.partyName}</p>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -782,7 +782,7 @@ export default function ReservePage() {
                             onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
                             onFocus={inputFocus} onBlur={inputBlur}
                             placeholder="+1 555 000 0000" />
-                          {formErrors.phone && <p className="text-rose-400 text-xs mt-1">{formErrors.phone}</p>}
+                          {formErrors.phone && <p className="text-red-700 text-xs mt-1">{formErrors.phone}</p>}
                         </div>
                       )}
                       <div>
@@ -793,7 +793,7 @@ export default function ReservePage() {
                           onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                           onFocus={inputFocus} onBlur={inputBlur}
                           placeholder="you@email.com" />
-                        {formErrors.email && <p className="text-rose-400 text-xs mt-1">{formErrors.email}</p>}
+                        {formErrors.email && <p className="text-red-700 text-xs mt-1">{formErrors.email}</p>}
                       </div>
                     </div>
 
@@ -853,7 +853,7 @@ export default function ReservePage() {
                     )}
                     <button onClick={handleSubmit} disabled={submitting}
                       className="w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 mt-2"
-                      style={{ background: accent, color: '#fff', boxShadow: `0 4px 24px ${accent}44` }}>
+                      style={{ background: accent, color: '#0d0e1c', boxShadow: `0 4px 24px ${accent}44` }}>
                       {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                       {config.confirmationMode === 'manual' ? 'Request Reservation' : 'Confirm Reservation'}
                     </button>
@@ -898,7 +898,7 @@ export default function ReservePage() {
                           const ma = menu.clr || accent;
                           const open = openMenu === gi;
                           return (
-                            <div key={idx} className="rounded-2xl border overflow-hidden transition-all"
+                            <div key={idx} className="rounded-2xl border-2 overflow-hidden transition-all border-ink shadow"
                               style={{ borderColor: open ? ma + '55' : c.border, background: c.card }}>
                               <div className="flex items-center gap-3 px-4 py-3.5"
                                 style={{ background: open ? ma + '10' : undefined }}>
@@ -931,7 +931,7 @@ export default function ReservePage() {
                                 )}
                                 {menu.t === 'd' && (
                                   <button onClick={() => setOpenMenu(open ? null : gi)}
-                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                                     style={{ borderColor: ma + '50', color: ma, background: open ? ma + '15' : 'transparent' }}>
                                     {open ? 'Close' : 'View'}
                                     <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />

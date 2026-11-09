@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const ROLE_STYLES = {
-  VIP:     { bg: '#fef3c7', text: '#92400e', border: '#fcd34d', label: 'VIP' },
-  SPEAKER: { bg: '#ede9fe', text: '#5b21b6', border: '#a78bfa', label: 'SPEAKER' },
+  VIP:     { bg: '#fff6c2', text: '#92400e', border: '#fcd34d', label: 'VIP' },
+  SPEAKER: { bg: '#eceeff', text: '#5b21b6', border: '#a78bfa', label: 'SPEAKER' },
   GUEST:   { bg: '#f3f4f6', text: '#374151', border: '#d1d5db', label: 'GUEST' },
 };
 
@@ -50,7 +50,7 @@ export default function InviteBadge() {
       {/* ── Global styles including print ── */}
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #f9fafb; font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+        body { background: #ffffff; font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
 
         .screen-wrapper {
           min-height: 100vh;
@@ -72,8 +72,8 @@ export default function InviteBadge() {
           align-items: center;
           gap: 8px;
           padding: 10px 20px;
-          background: #111827;
-          color: #fff;
+          background: #ffe14d; border: 2px solid #0d0e1c; box-shadow: 3px 3px 0 #0d0e1c;
+          color: #0d0e1c;
           border: none;
           border-radius: 10px;
           font-size: 14px;
@@ -81,30 +81,30 @@ export default function InviteBadge() {
           cursor: pointer;
           margin-top: 8px;
         }
-        .print-btn:hover { background: #000; }
+        .print-btn:hover { background: #0d0e1c; color: #fff; }
 
         /* ── Badge card ── */
         .badge {
           width: 148mm;    /* A6 width */
           min-height: 105mm;
           background: #fff;
-          border: 1.5px solid #e5e7eb;
+          border: 2px solid #0d0e1c;
           border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+          box-shadow: 6px 6px 0 #0d0e1c;
           display: flex;
           flex-direction: column;
         }
 
         .badge-header {
-          background: #111827;
+          background: #ffe14d; border: 2px solid #0d0e1c; box-shadow: 3px 3px 0 #0d0e1c;
           padding: 10px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
         .badge-brand {
-          color: #fff;
+          color: #0d0e1c;
           font-size: 11px;
           font-weight: 800;
           letter-spacing: 4px;
@@ -191,7 +191,7 @@ export default function InviteBadge() {
         }
 
         .badge-footer {
-          background: #f9fafb;
+          background: #ffffff;
           border-top: 1px solid #e5e7eb;
           padding: 7px 16px;
           font-size: 9px;

@@ -227,7 +227,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center">
         <div className="bg-white rounded-2xl p-8 shadow-2xl">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-neutral-600 text-center">Loading settings...</p>
@@ -248,10 +248,10 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={handleClose}>
+    <div className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={handleClose}>
       <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl my-8" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl p-6 text-white sticky top-0 z-10">
+        <div className="rounded-t-2xl p-6 text-white sticky top-0 z-10 bg-ac">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <Shield className="w-8 h-8" />
@@ -264,7 +264,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                 )}
               </div>
             </div>
-            <button onClick={handleClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+            <button onClick={handleClose} className="p-2 hover:bg-lav rounded-lg transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -280,21 +280,21 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                 Quick Security Presets
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button onClick={() => applyPreset('maximum')} className="p-4 border-2 border-red-300 rounded-xl hover:bg-red-50 transition-all text-left">
+                <button onClick={() => applyPreset('maximum')} className="p-4 border-2 border-red-300 rounded-xl hover:bg-red-50 transition-all text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldAlert className="w-5 h-5 text-red-600" />
                     <span className="font-bold text-red-900">Maximum Security</span>
                   </div>
                   <p className="text-sm text-neutral-600">Strictest fraud prevention. Best for high-security events.</p>
                 </button>
-                <button onClick={() => applyPreset('balanced')} className="p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50 transition-all text-left">
+                <button onClick={() => applyPreset('balanced')} className="p-4 border-2 border-blue-300 rounded-xl hover:bg-blue-50 transition-all text-left shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
                     <span className="font-bold text-blue-900">Balanced</span>
                   </div>
                   <p className="text-sm text-neutral-600">Good security with flexibility. Recommended for most events.</p>
                 </button>
-                <button onClick={() => applyPreset('minimal')} className="p-4 border-2 border-green-300 rounded-xl hover:bg-green-50 transition-all text-left">
+                <button onClick={() => applyPreset('minimal')} className="p-4 border-2 border-green-300 rounded-xl hover:bg-green-50 transition-all text-left border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <div className="flex items-center gap-2 mb-2">
                     <Shield className="w-5 h-5 text-green-600" />
                     <span className="font-bold text-green-900">Minimal</span>
@@ -379,7 +379,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
           {/* Staff Tab */}
           {activeTab === 'staff' && isOrganizer && (
             <div className="space-y-6 mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-900">
@@ -403,7 +403,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                         value={newStaffUsername}
                         onChange={e => setNewStaffUsername(e.target.value)}
                         placeholder="e.g. door-staff-1"
-                        className="w-full border-2 border-neutral-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full border-2 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
                         maxLength={50}
                       />
                     </div>
@@ -416,9 +416,9 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                           onChange={e => setNewStaffPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
                           placeholder="e.g. 1234"
                           inputMode="numeric"
-                          className="w-full border-2 border-neutral-200 rounded-xl px-3 py-2.5 pr-10 text-sm font-mono focus:outline-none focus:border-blue-500"
+                          className="w-full border-2 rounded-xl px-3 py-2.5 pr-10 text-sm font-mono focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
                         />
-                        <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                        <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                           {showNewPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
@@ -427,7 +427,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                   <button
                     type="submit"
                     disabled={staffSaving || !newStaffUsername.trim() || newStaffPin.length < 4}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                   >
                     {staffSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                     Create Staff Account
@@ -439,15 +439,15 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
               <div className="bg-white border-2 border-neutral-200 rounded-xl overflow-hidden">
                 <div className="px-5 py-3 border-b border-neutral-100 flex items-center justify-between">
                   <h3 className="text-sm font-bold text-neutral-900">Staff Accounts ({staff.length})</h3>
-                  {staffLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
+                  {staffLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />}
                 </div>
                 {staff.length === 0 ? (
-                  <div className="text-center py-8 text-neutral-400 text-sm">
+                  <div className="text-center py-8 text-neutral-500 text-sm">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     No staff accounts yet
                   </div>
                 ) : (
-                  <div className="divide-y divide-neutral-100">
+                  <div className="divide-y divide-neutral-200">
                     {staff.map(member => (
                       <div key={member.username} className="px-5 py-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center flex-shrink-0">
@@ -455,7 +455,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-neutral-900">{member.username}</p>
-                          <p className="text-xs text-neutral-400">
+                          <p className="text-xs text-neutral-500">
                             Created {new Date(member.createdAt).toLocaleDateString()}
                             {member.lastSeenAt && ` · Last seen ${new Date(member.lastSeenAt).toLocaleDateString()}`}
                           </p>
@@ -469,17 +469,17 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                                 onChange={e => setResetPinValue(e.target.value.replace(/\D/g, '').slice(0, 8))}
                                 placeholder="New PIN"
                                 inputMode="numeric"
-                                className="w-24 border border-neutral-200 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500"
+                                className="w-24 border-2 border-ink rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-ac bg-white"
                                 maxLength={8}
                               />
-                              <button onClick={() => handleResetPin(member.username)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">Save</button>
-                              <button onClick={() => { setResetPinFor(null); setResetPinValue(''); }} className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-lg font-semibold hover:bg-neutral-200">Cancel</button>
+                              <button onClick={() => handleResetPin(member.username)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Save</button>
+                              <button onClick={() => { setResetPinFor(null); setResetPinValue(''); }} className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-lg font-semibold hover:bg-neutral-200 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Cancel</button>
                             </div>
                           ) : (
                             <button
                               onClick={() => setResetPinFor(member.username)}
                               title="Reset PIN"
-                              className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                              className="p-1.5 text-neutral-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                             >
                               <Key className="w-4 h-4" />
                             </button>
@@ -487,7 +487,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                           <button
                             onClick={() => handleDeleteStaff(member.username)}
                             title="Remove staff"
-                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -505,7 +505,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
             <div className="space-y-4 mb-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-neutral-900">Manager Override Audit Log</h3>
-                <button onClick={loadOverrideHistory} className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 px-3 py-1.5 border border-neutral-200 rounded-lg">
+                <button onClick={loadOverrideHistory} className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 px-3 py-1.5 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
                   <RefreshCw className="w-3 h-3" /> Refresh
                 </button>
               </div>
@@ -515,13 +515,13 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                   <p className="text-sm text-neutral-500">Loading audit log...</p>
                 </div>
               ) : overrideHistory.length === 0 ? (
-                <div className="text-center py-8 text-neutral-400 text-sm bg-neutral-50 rounded-xl">
+                <div className="text-center py-8 text-neutral-500 text-sm bg-neutral-50 rounded-xl">
                   <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
                   No manager overrides have been used yet
                 </div>
               ) : (
-                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                  <div className="divide-y divide-neutral-100">
+                <div className="bg-white border-2 border-ink rounded-xl overflow-hidden shadow">
+                  <div className="divide-y divide-neutral-200">
                     {overrideHistory.map((entry, idx) => (
                       <div key={idx} className="p-4 hover:bg-neutral-50 transition-colors">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -538,9 +538,9 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                             <p className="text-xs text-neutral-600 mb-1">
                               <span className="font-semibold">Override by:</span> {entry.overrideBy} · <span className="font-semibold">Staff:</span> {entry.checkedInBy}
                             </p>
-                            <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-2 py-1 border border-neutral-100">{entry.overrideReason}</p>
+                            <p className="text-xs text-neutral-500 bg-neutral-50 rounded px-2 py-1 border-2 border-ink">{entry.overrideReason}</p>
                           </div>
-                          <div className="text-right text-xs text-neutral-400 flex-shrink-0">
+                          <div className="text-right text-xs text-neutral-500 flex-shrink-0">
                             <p className="font-semibold">{new Date(entry.checkedInAt).toLocaleDateString()}</p>
                             <p>{new Date(entry.checkedInAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
                             <p className="mt-1">{entry.actualAttendees} admitted</p>
@@ -576,7 +576,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                     value={settings.emergencyLockdownReason || ''}
                     onChange={(e) => updateSetting('emergencyLockdownReason', e.target.value)}
                     placeholder="Reason for emergency lockdown..."
-                    className="w-full border-2 border-red-300 rounded-xl px-4 py-2 focus:outline-none focus:border-red-500"
+                    className="w-full border-2 border-red-300 rounded-xl px-4 py-2 focus:outline-none focus:border-red-500 focus:ring-[3px] focus:ring-ac bg-white"
                   />
                 </div>
               )}
@@ -588,7 +588,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
             <div className="flex justify-end gap-4">
               <button
                 onClick={loadSettings}
-                className="px-6 py-3 border-2 border-neutral-300 text-neutral-700 font-semibold rounded-xl hover:bg-neutral-50 transition-all"
+                className="px-6 py-3 border-2 border-neutral-300 text-neutral-700 font-semibold rounded-xl hover:bg-neutral-50 transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <RefreshCw className="w-4 h-4 inline mr-2" />
                 Discard
@@ -596,7 +596,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
               <button
                 onClick={saveSettings}
                 disabled={saving || !hasUnsavedChanges}
-                className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg"
+                className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg border-2 border-ink"
               >
                 {saving ? (
                   <><RefreshCw className="w-4 h-4 inline mr-2 animate-spin" />Saving...</>
@@ -627,7 +627,7 @@ function ToggleSetting({ label, description, value, onChange, recommended, dange
       </div>
       <button
         onClick={() => onChange(!value)}
-        className={`ml-4 relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+        className={`ml-4 relative inline-flex h-6 w-11 items-center rounded-lg transition-colors flex-shrink-0 ${
           value ? danger ? 'bg-red-600' : 'bg-blue-600' : 'bg-neutral-300'
         }`}
       >
@@ -648,7 +648,7 @@ function NumberSetting({ label, description, value, onChange, min, max }) {
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
         min={min}
         max={max}
-        className="w-32 border-2 border-neutral-300 rounded-xl px-4 py-2 font-semibold focus:outline-none focus:border-blue-500"
+        className="w-32 border-2 rounded-xl px-4 py-2 font-semibold focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
       />
     </div>
   );
@@ -662,7 +662,7 @@ function SelectSetting({ label, description, value, onChange, options }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full max-w-md border-2 border-neutral-300 rounded-xl px-4 py-2 font-semibold focus:outline-none focus:border-blue-500"
+        className="w-full max-w-md border-2 rounded-xl px-4 py-2 font-semibold focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -682,7 +682,7 @@ function TextAreaSetting({ label, description, value, onChange, placeholder }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full border-2 border-neutral-300 rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500"
+        className="w-full border-2 rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 border-ink focus:ring-[3px] focus:ring-ac bg-white"
       />
     </div>
   );

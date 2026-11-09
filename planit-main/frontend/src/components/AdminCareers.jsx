@@ -52,19 +52,19 @@ const Pill = ({ children, className = '' }) => <span className={`inline-flex ite
 
 function Stat({ label, value, sub, accent }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4">
+    <motion.div   className="relative overflow-hidden rounded-2xl border-2 border-ink bg-white p-4">
       <div className={`absolute inset-x-0 top-0 h-0.5 ${accent}`} />
-      <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">{label}</div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">{label}</div>
       <div className="mt-1 text-2xl font-black text-neutral-900">{value}</div>
       {sub && <div className="mt-0.5 text-xs text-neutral-500">{sub}</div>}
     </motion.div>
   );
 }
 
-function Bar({ pct, color = 'bg-neutral-900', delay = 0 }) {
+function Bar({ pct, color = 'bg-white', delay = 0 }) {
   return (
     <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
-      <motion.div className={`h-full rounded-full ${color}`} initial={{ width: 0 }} animate={{ width: `${Math.max(2, pct)}%` }} transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }} />
+      <motion.div className={`h-full rounded-full ${color}`}  animate={{ width: `${Math.max(2, pct)}%` }} transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }} />
     </div>
   );
 }
@@ -77,7 +77,7 @@ function Spark({ series }) {
     <svg viewBox={`0 0 ${w} ${h}`} className="h-14 w-full">
       <defs><linearGradient id="spk" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#171717" stopOpacity="0.18" /><stop offset="1" stopColor="#171717" stopOpacity="0" /></linearGradient></defs>
       <polygon points={`0,${h} ${pts} ${w},${h}`} fill="url(#spk)" />
-      <motion.polyline points={pts} fill="none" stroke="#171717" strokeWidth="2" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2 }} />
+      <motion.polyline points={pts} fill="none" stroke="#171717" strokeWidth="2" strokeLinejoin="round"    />
     </svg>
   );
 }
@@ -108,7 +108,7 @@ function Input({ label, children, hint, className = '' }) {
     </label>
   );
 }
-const field = 'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10';
+const field = 'w-full rounded-lg border-2 border-ink bg-white px-3 py-2 text-sm outline-none transition focus:border-ink focus:ring-2 focus:ring-ink';
 
 function ListingEditor({ job, onClose, onSaved, isDemo }) {
   const [f, setF] = useState(() => toForm(job));
@@ -128,14 +128,14 @@ function ListingEditor({ job, onClose, onSaved, isDemo }) {
   };
 
   return (
-    <motion.div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div onClick={(e) => e.stopPropagation()} initial={{ y: 30, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="my-6 w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+    <motion.div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-ink/60 p-4"   exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div onClick={(e) => e.stopPropagation()}   exit={{ y: 20, opacity: 0 }}  className="my-6 w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
           <div>
             <h3 className="text-lg font-black text-neutral-900">{job?._id ? 'Edit listing' : 'New volunteer listing'}</h3>
             <p className="text-xs text-neutral-500">Volunteer roles only. The compensation note is shown to applicants.</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-100"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100"><X className="h-5 w-5" /></button>
         </div>
         <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
           <Input label="Title *" className="sm:col-span-2"><input className={field} value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Frontend Engineer" /></Input>
@@ -166,7 +166,7 @@ function ListingEditor({ job, onClose, onSaved, isDemo }) {
                 <div key={i} className="flex items-center gap-2">
                   <input className={field} value={q.label} placeholder="e.g. Link a React project you're proud of" onChange={(e) => set('questions', f.questions.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
                   <label className="flex flex-shrink-0 items-center gap-1 text-xs text-neutral-600"><input type="checkbox" checked={q.required} onChange={(e) => set('questions', f.questions.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)))} />Required</label>
-                  <button type="button" onClick={() => set('questions', f.questions.filter((_, j) => j !== i))} className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => set('questions', f.questions.filter((_, j) => j !== i))} className="rounded p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
                 </div>
               ))}
             </div>
@@ -179,8 +179,8 @@ function ListingEditor({ job, onClose, onSaved, isDemo }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-100">Cancel</button>
           <div className="flex gap-2">
-            <button disabled={busy} onClick={() => save('draft')} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-white">Save as draft</button>
-            <button disabled={busy} onClick={() => save('open')} className="flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-bold text-white hover:bg-neutral-700 disabled:opacity-60">
+            <button disabled={busy} onClick={() => save('draft')} className="rounded-lg border-2 border-ink px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-white shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Save as draft</button>
+            <button disabled={busy} onClick={() => save('open')} className="flex items-center gap-2 rounded-lg bg-hl px-5 py-2 text-sm font-bold text-ink hover:bg-hl disabled:opacity-60 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}{job?._id && job.status === 'open' ? 'Save changes' : 'Publish'}
             </button>
           </div>
@@ -211,10 +211,10 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo, onAddToTea
   const t = (k) => app.firstTouch?.[k] || app.lastTouch?.[k];
 
   return (
-    <motion.div className="fixed inset-0 z-[110]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <motion.aside initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 300, damping: 34 }} className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-neutral-100 bg-white/95 px-6 py-4 backdrop-blur">
+    <motion.div className="fixed inset-0 z-[110]"   exit={{ opacity: 0 }}>
+      <div className="absolute inset-0 bg-ink/60" onClick={onClose} />
+      <motion.aside   exit={{ x: '100%' }}  className="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-neutral-100 bg-white px-6 py-4">
           <div className="min-w-0">
             <h3 className="truncate text-lg font-black text-neutral-900">{app.fullName}</h3>
             <p className="truncate text-xs text-neutral-500">{app.jobTitle} · applied {ago(app.createdAt)}</p>
@@ -227,43 +227,43 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo, onAddToTea
 
         <div className="space-y-6 px-6 py-5">
           {onAddToTeam && (
-            <button onClick={() => onAddToTeam(app)} className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${app.status === 'accepted' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-neutral-300 text-neutral-800 hover:bg-neutral-50'}`}>
+            <button onClick={() => onAddToTeam(app)} className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${app.status === 'accepted' ? 'bg-emerald-600 text-white hover:bg-emerald-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'border-2 border-ink text-neutral-800 hover:bg-neutral-50 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
               <UserPlus className="h-4 w-4" />{app.status === 'accepted' ? 'Accepted: add to the team' : 'Add to the team'}
             </button>
           )}
           <div>
             <div className="mb-2 flex flex-wrap gap-1.5">
               {STATUSES.map((s) => (
-                <button key={s} onClick={() => patch({ status: s })} className={`rounded-full px-3 py-1 text-xs font-bold capitalize transition ${app.status === s ? `${STATUS_STYLE[s]} ring-2 ring-offset-1 ring-neutral-900/20` : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>{s}</button>
+                <button key={s} onClick={() => patch({ status: s })} className={`rounded-lg px-3 py-1 text-xs font-bold capitalize transition ${app.status === s ? `${STATUS_STYLE[s]} ring-2 ring-offset-1 ring-ink` : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>{s}</button>
               ))}
             </div>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} onClick={() => patch({ rating: app.rating === n ? 0 : n })} aria-label={`${n} stars`}>
-                  <Star className={`h-5 w-5 transition ${n <= app.rating ? 'fill-amber-400 text-amber-400' : 'text-neutral-300 hover:text-amber-300'}`} />
+                  <Star className={`h-5 w-5 transition ${n <= app.rating ? 'fill-amber-400 text-amber-700' : 'text-neutral-600 hover:text-amber-700'}`} />
                 </button>
               ))}
             </div>
           </div>
 
           <section>
-            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-400">Contact</h4>
+            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-500">Contact</h4>
             <Row k="Email" v={<a className="text-indigo-600 hover:underline" href={`mailto:${app.email}`}>{app.email}</a>} /><Row k="Phone" v={app.phone} /><Row k="Location" v={app.location} /><Row k="Timezone" v={app.timezone} />
             <Row k="LinkedIn" v={<Link href={app.linkedin} />} /><Row k="GitHub" v={<Link href={app.github} />} /><Row k="Portfolio" v={<Link href={app.portfolio} />} /><Row k="Resume" v={<Link href={app.resumeUrl} />} />
           </section>
 
           <section>
-            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-400">Fit</h4>
+            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-500">Fit</h4>
             <Row k="Status" v={[app.currentStatus, app.organization].filter(Boolean).join(' · ')} /><Row k="Experience" v={app.experienceLevel} />
             <Row k="Hours / week" v={app.hoursPerWeek} /><Row k="Can start" v={app.startDate} />
             <Row k="Skills" v={app.skills?.length ? <div className="flex flex-wrap gap-1">{app.skills.map((s) => <Pill key={s} className="bg-neutral-100 text-neutral-700">{s}</Pill>)}</div> : null} />
-            {app.whyYou && <div className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700"><b className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-400">Why PlanIt</b>{app.whyYou}</div>}
-            {app.proudestWork && <div className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700"><b className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-400">Proud of</b>{app.proudestWork}</div>}
-            {(app.answers || []).map((a) => <div key={a.label} className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm text-neutral-700"><b className="mb-1 block text-[11px] text-neutral-400">{a.label}</b>{a.answer}</div>)}
+            {app.whyYou && <div className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700"><b className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">Why PlanIt</b>{app.whyYou}</div>}
+            {app.proudestWork && <div className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700"><b className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">Proud of</b>{app.proudestWork}</div>}
+            {(app.answers || []).map((a) => <div key={a.label} className="mt-2 whitespace-pre-line rounded-xl bg-neutral-50 p-3 text-sm text-neutral-700"><b className="mb-1 block text-[11px] text-neutral-500">{a.label}</b>{a.answer}</div>)}
           </section>
 
           <section>
-            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-400">Where they came from</h4>
+            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-500">Where they came from</h4>
             <Row k="They said" v={<b>{SOURCE_LABEL[app.source] || app.source}{app.sourceDetail ? ` — ${app.sourceDetail}` : ''}</b>} />
             <Row k="We detected" v={app.detectedSource ? (SOURCE_LABEL[app.detectedSource] || app.detectedSource) : 'nothing (no referrer / link tag)'} />
             <Row k="First visit via" v={app.firstTouch?.referrer || app.firstTouch?.ref} /><Row k="Landing" v={app.firstTouch?.landing} />
@@ -272,7 +272,7 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo, onAddToTea
           </section>
 
           <section>
-            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-400">Behavior and device</h4>
+            <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-500">Behavior and device</h4>
             <Row k="Scroll depth" v={`${app.scrollDepthMax}%`} /><Row k="On page" v={mins(app.secondsOnPage)} /><Row k="On form" v={mins(app.secondsOnForm)} />
             <Row k="Roles viewed" v={(app.rolesViewed || []).join(', ')} /><Row k="Session page views" v={app.pageViewsInSession} /><Row k="Returning" v={app.returningVisitor ? 'Yes' : 'No'} />
             <Row k="Device" v={`${app.deviceType}${app.platform ? ` · ${app.platform}` : ''}`} /><Row k="Language" v={app.language} /><Row k="Country" v={app.country} />
@@ -282,17 +282,17 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo, onAddToTea
           </section>
 
           <section>
-            <h4 className="mb-2 text-[11px] font-black uppercase tracking-widest text-neutral-400">Notes and tags</h4>
+            <h4 className="mb-2 text-[11px] font-black uppercase tracking-widest text-neutral-500">Notes and tags</h4>
             <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => notes !== (app.adminNotes || '') && patch({ adminNotes: notes })} className={field} placeholder="Private notes (saved when you click away)" />
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {(app.tags || []).map((x) => <Pill key={x} className="bg-neutral-900 text-white">{x}<button className="ml-1" onClick={() => patch({ tags: app.tags.filter((y) => y !== x) })}><X className="h-3 w-3" /></button></Pill>)}
-              <input value={tag} onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && tag.trim()) { patch({ tags: [...(app.tags || []), tag.trim()] }); setTag(''); } }} placeholder="+ tag" className="w-24 rounded-md border border-dashed border-neutral-300 px-2 py-0.5 text-xs outline-none focus:border-neutral-900" />
+              {(app.tags || []).map((x) => <Pill key={x} className="bg-white text-ink">{x}<button className="ml-1" onClick={() => patch({ tags: app.tags.filter((y) => y !== x) })}><X className="h-3 w-3" /></button></Pill>)}
+              <input value={tag} onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && tag.trim()) { patch({ tags: [...(app.tags || []), tag.trim()] }); setTag(''); } }} placeholder="+ tag" className="w-24 rounded-md border-2 border-dashed border-ink px-2 py-0.5 text-xs outline-none focus:border-ink focus:ring-[3px] focus:ring-ac bg-white" />
             </div>
           </section>
 
           {app.statusHistory?.length > 1 && (
             <section>
-              <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-400">History</h4>
+              <h4 className="mb-1 text-[11px] font-black uppercase tracking-widest text-neutral-500">History</h4>
               {[...app.statusHistory].reverse().map((h, i) => <div key={i} className="flex justify-between py-1 text-xs text-neutral-500"><span className="font-semibold capitalize text-neutral-700">{h.status}</span><span>{h.by} · {dt(h.at)}</span></div>)}
             </section>
           )}
@@ -431,17 +431,17 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
           <p className="text-sm text-neutral-500">{canHiring ? 'Volunteer roles, applications, the org chart and where candidates come from.' : 'See who is on the team and which roles are open.'}</p>
         </div>
         {canHiring && <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => { loadAll(true); loadApps(); }} className="rounded-lg border border-neutral-200 p-2 text-neutral-500 hover:bg-neutral-50" title="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          <button onClick={testAlert} disabled={busy === 'alert'} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Bell className="h-4 w-4" />Test alert</button>
-          <button onClick={exportCsv} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={toggleAccepting} disabled={busy === 'toggle'} className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${accepting ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
+          <button onClick={() => { loadAll(true); loadApps(); }} className="rounded-lg border-2 border-ink p-2 text-neutral-500 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold" title="Refresh"><RefreshCw className="h-4 w-4" /></button>
+          <button onClick={testAlert} disabled={busy === 'alert'} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Bell className="h-4 w-4" />Test alert</button>
+          <button onClick={exportCsv} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={toggleAccepting} disabled={busy === 'toggle'} className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${accepting ? 'bg-emerald-600 text-white hover:bg-emerald-700 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-amber-500 text-ink hover:bg-amber-600 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}>
             {accepting ? <><Pause className="h-4 w-4" />Applications open · pause</> : <><Play className="h-4 w-4" />Paused · resume</>}
           </button>
         </div>}
       </div>
 
-      {canHiring && err && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
-      {canHiring && !accepting && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><b>Applications are paused.</b> Visitors can still read roles but cannot apply.</div>}
+      {canHiring && err && <div className="rounded-xl border-2 border-red-600 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+      {canHiring && !accepting && <div className="rounded-xl border-2 border-amber-600 bg-amber-50 p-3 text-sm text-amber-800"><b>Applications are paused.</b> Visitors can still read roles but cannot apply.</div>}
 
       {canHiring && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Total applicants" value={overview?.total ?? 0} accent="bg-neutral-900" />
@@ -461,52 +461,52 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
 
       <AnimatePresence mode="wait">
         {tab === 'org' && (
-          <motion.div key="org" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <motion.div key="org"   exit={{ opacity: 0 }}>
             <OrgChart isDemo={isDemo} />
           </motion.div>
         )}
 
         {canHiring && tab === 'applications' && (
-          <motion.div key="apps" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+          <motion.div key="apps"   exit={{ opacity: 0 }} className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <div className="relative min-w-[200px] flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" /><input value={filters.q} onChange={(e) => setF('q', e.target.value)} placeholder="Search name, email, school, skill" className={`${field} pl-9`} /></div>
-              <select className={`${field} w-auto`} value={filters.status} onChange={(e) => setF('status', e.target.value)}><option value="all">All statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-              <select className={`${field} w-auto`} value={filters.job} onChange={(e) => setF('job', e.target.value)}><option value="all">All roles</option><option value="general">General</option>{jobs.map((j) => <option key={j._id} value={j.slug}>{j.title}</option>)}</select>
-              <select className={`${field} w-auto`} value={filters.source} onChange={(e) => setF('source', e.target.value)}><option value="all">All sources</option>{Object.entries(SOURCE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-              <select className={`${field} w-auto`} value={filters.sort} onChange={(e) => setF('sort', e.target.value)}><option value="new">Newest</option><option value="rating">Top rated</option></select>
+              <select className={`${field} w-auto border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={filters.status} onChange={(e) => setF('status', e.target.value)}><option value="all">All statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+              <select className={`${field} w-auto border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={filters.job} onChange={(e) => setF('job', e.target.value)}><option value="all">All roles</option><option value="general">General</option>{jobs.map((j) => <option key={j._id} value={j.slug}>{j.title}</option>)}</select>
+              <select className={`${field} w-auto border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={filters.source} onChange={(e) => setF('source', e.target.value)}><option value="all">All sources</option>{Object.entries(SOURCE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              <select className={`${field} w-auto border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={filters.sort} onChange={(e) => setF('sort', e.target.value)}><option value="new">Newest</option><option value="rating">Top rated</option></select>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+            <div className="overflow-hidden rounded-2xl border-2 border-ink bg-white shadow">
               {apps.items.length === 0 ? (
-                <div className="p-12 text-center text-sm text-neutral-400"><Users className="mx-auto mb-2 h-8 w-8 opacity-30" />No applications match.</div>
+                <div className="p-12 text-center text-sm text-neutral-500"><Users className="mx-auto mb-2 h-8 w-8 opacity-30" />No applications match.</div>
               ) : apps.items.map((a, i) => (
-                <motion.button key={a._id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i, 10) * 0.025 }} onClick={() => setOpenApp(a)} className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition last:border-0 hover:bg-neutral-50">
-                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900 text-sm font-black text-white">{a.fullName.slice(0, 1).toUpperCase()}</div>
+                <motion.button key={a._id}    onClick={() => setOpenApp(a)} className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition last:border-0 hover:bg-neutral-50">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-ink">{a.fullName.slice(0, 1).toUpperCase()}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2"><span className="truncate text-sm font-bold text-neutral-900">{a.fullName}</span>{a.status === 'new' && <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />}</div>
                     <div className="truncate text-xs text-neutral-500">{a.jobTitle} · {a.location || a.email}</div>
                   </div>
-                  <div className="hidden items-center gap-1 sm:flex">{[1, 2, 3, 4, 5].map((n) => <Star key={n} className={`h-3 w-3 ${n <= a.rating ? 'fill-amber-400 text-amber-400' : 'text-neutral-200'}`} />)}</div>
+                  <div className="hidden items-center gap-1 sm:flex">{[1, 2, 3, 4, 5].map((n) => <Star key={n} className={`h-3 w-3 ${n <= a.rating ? 'fill-amber-400 text-amber-700' : 'text-ink'}`} />)}</div>
                   <Pill className="hidden bg-neutral-100 text-neutral-600 md:inline-flex">{SOURCE_LABEL[a.source] || a.source}</Pill>
                   <Pill className={`${STATUS_STYLE[a.status]} capitalize`}>{a.status}</Pill>
-                  <span className="hidden w-16 text-right text-xs text-neutral-400 lg:block">{ago(a.createdAt)}</span>
+                  <span className="hidden w-16 text-right text-xs text-neutral-500 lg:block">{ago(a.createdAt)}</span>
                 </motion.button>
               ))}
             </div>
             {apps.pages > 1 && (
               <div className="flex items-center justify-between text-xs text-neutral-500">
                 <span>{apps.total} total</span>
-                <div className="flex gap-2"><button disabled={apps.page <= 1} onClick={() => setF('page', apps.page - 1)} className="rounded-lg border px-3 py-1.5 font-bold disabled:opacity-40">Prev</button><span className="py-1.5">{apps.page} / {apps.pages}</span><button disabled={apps.page >= apps.pages} onClick={() => setF('page', apps.page + 1)} className="rounded-lg border px-3 py-1.5 font-bold disabled:opacity-40">Next</button></div>
+                <div className="flex gap-2"><button disabled={apps.page <= 1} onClick={() => setF('page', apps.page - 1)} className="rounded-lg border-2 px-3 py-1.5 font-bold disabled:opacity-40 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Prev</button><span className="py-1.5">{apps.page} / {apps.pages}</span><button disabled={apps.page >= apps.pages} onClick={() => setF('page', apps.page + 1)} className="rounded-lg border-2 px-3 py-1.5 font-bold disabled:opacity-40 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Next</button></div>
               </div>
             )}
           </motion.div>
         )}
 
         {canHiring && tab === 'listings' && (
-          <motion.div key="listings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-            <button onClick={() => setEditing({})} className="flex items-center gap-2 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-neutral-700"><Plus className="h-4 w-4" />Add job listing</button>
-            {jobs.length === 0 && <div className="rounded-2xl border border-dashed border-neutral-300 p-12 text-center text-sm text-neutral-400">No listings yet. Add your first volunteer role.</div>}
+          <motion.div key="listings"   exit={{ opacity: 0 }} className="space-y-3">
+            <button onClick={() => setEditing({})} className="flex items-center gap-2 rounded-xl bg-hl px-4 py-2.5 text-sm font-bold text-ink hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Plus className="h-4 w-4" />Add job listing</button>
+            {jobs.length === 0 && <div className="rounded-2xl border-2 border-dashed border-ink p-12 text-center text-sm text-neutral-400 shadow">No listings yet. Add your first volunteer role.</div>}
             {jobs.map((j, i) => (
-              <motion.div key={j._id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="rounded-2xl border border-neutral-200 bg-white p-4">
+              <motion.div key={j._id} layout    className="rounded-2xl border-2 border-ink bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -517,25 +517,25 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
                     </div>
                     <p className="mt-1 text-xs text-neutral-500">{j.hoursPerWeek} · {j.location} · {j.views || 0} views{j.deadline ? ` · closes ${new Date(j.deadline).toLocaleDateString()}` : ''}{j.status === 'closed' && j.closedReason ? ` · ${j.closedReason}` : ''}</p>
                   </div>
-                  <div className="text-right"><div className="text-2xl font-black text-neutral-900">{j.applications}</div><div className="text-[11px] text-neutral-400">{j.newApplications > 0 ? `${j.newApplications} new` : 'applicants'}</div></div>
+                  <div className="text-right"><div className="text-2xl font-black text-neutral-900">{j.applications}</div><div className="text-[11px] text-neutral-500">{j.newApplications > 0 ? `${j.newApplications} new` : 'applicants'}</div></div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button onClick={() => setEditing(j)} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Edit2 className="h-3.5 w-3.5" />Edit</button>
+                  <button onClick={() => setEditing(j)} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-1.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Edit2 className="h-3.5 w-3.5" />Edit</button>
                   {j.status === 'open' ? (
-                    <button onClick={() => closeJob(j)} className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"><Lock className="h-3.5 w-3.5" />Close</button>
+                    <button onClick={() => closeJob(j)} className="flex items-center gap-1.5 rounded-lg border-2 border-red-600 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Lock className="h-3.5 w-3.5" />Close</button>
                   ) : (
-                    <button onClick={() => reopenJob(j)} className="flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Unlock className="h-3.5 w-3.5" />{j.status === 'draft' ? 'Publish' : 'Reopen'}</button>
+                    <button onClick={() => reopenJob(j)} className="flex items-center gap-1.5 rounded-lg border-2 border-emerald-600 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Unlock className="h-3.5 w-3.5" />{j.status === 'draft' ? 'Publish' : 'Reopen'}</button>
                   )}
-                  <button onClick={() => setLinksFor(linksFor === j._id ? null : j._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Link2 className="h-3.5 w-3.5" />Tracking links<ChevronDown className={`h-3 w-3 transition ${linksFor === j._id ? 'rotate-180' : ''}`} /></button>
+                  <button onClick={() => setLinksFor(linksFor === j._id ? null : j._id)} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-1.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Link2 className="h-3.5 w-3.5" />Tracking links<ChevronDown className={`h-3 w-3 transition ${linksFor === j._id ? 'rotate-180' : ''}`} /></button>
                   <a href={`/careers/${j.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-900"><ExternalLink className="h-3.5 w-3.5" />View</a>
-                  <button onClick={() => deleteJob(j)} className="ml-auto rounded-lg p-1.5 text-neutral-300 hover:bg-red-50 hover:text-red-600" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => deleteJob(j)} className="ml-auto rounded-lg p-1.5 text-neutral-600 hover:bg-red-50 hover:text-red-600" title="Delete"><Trash2 className="h-4 w-4" /></button>
                 </div>
                 <AnimatePresence>
                   {linksFor === j._id && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <motion.div   exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                       <div className="mt-3 rounded-xl bg-neutral-50 p-3">
                         <p className="mb-2 text-xs text-neutral-500">Post the matching link on each site. Every applicant is then attributed to the exact channel, even when the site hides its referrer (LinkedIn app, Handshake, etc.).</p>
-                        <div className="flex flex-wrap gap-1.5">{CHANNELS.map((c) => <button key={c} onClick={() => copyLink(j, c)} className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-bold text-neutral-700 hover:border-neutral-900"><Copy className="h-3 w-3" />{SOURCE_LABEL[c]}</button>)}</div>
+                        <div className="flex flex-wrap gap-1.5">{CHANNELS.map((c) => <button key={c} onClick={() => copyLink(j, c)} className="flex items-center gap-1 rounded-md border-2 border-ink bg-white px-2 py-1 text-[11px] font-bold text-neutral-700 hover:border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Copy className="h-3 w-3" />{SOURCE_LABEL[c]}</button>)}</div>
                       </div>
                     </motion.div>
                   )}
@@ -546,24 +546,24 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
         )}
 
         {canHiring && tab === 'insights' && (
-          <motion.div key="insights" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 lg:col-span-2">
-              <div className="mb-1 flex items-center justify-between"><h3 className="text-sm font-black text-neutral-900">Applications, last 30 days</h3><span className="text-xs text-neutral-400">{(overview?.series || []).reduce((a, s) => a + s.n, 0)} total</span></div>
+          <motion.div key="insights"   exit={{ opacity: 0 }} className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border-2 border-ink bg-white p-5 lg:col-span-2 shadow-md">
+              <div className="mb-1 flex items-center justify-between"><h3 className="text-sm font-black text-neutral-900">Applications, last 30 days</h3><span className="text-xs text-neutral-500">{(overview?.series || []).reduce((a, s) => a + s.n, 0)} total</span></div>
               <Spark series={overview?.series || []} />
             </div>
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+            <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
               <h3 className="mb-4 text-sm font-black text-neutral-900">Where applicants came from</h3>
-              {(overview?.bySource || []).length === 0 && <p className="text-sm text-neutral-400">No applications yet.</p>}
+              {(overview?.bySource || []).length === 0 && <p className="text-sm text-neutral-500">No applications yet.</p>}
               <div className="space-y-3">
                 {(overview?.bySource || []).map((s, i) => (
                   <div key={s.source}>
                     <div className="mb-1 flex items-center justify-between text-xs"><span className="font-bold text-neutral-800">{SOURCE_LABEL[s.source] || s.source}</span><span className="text-neutral-500">{s.n} applied · {s.shortlisted} shortlisted{s.avgRating ? ` · ★${s.avgRating}` : ''}</span></div>
-                    <Bar pct={(s.n / maxSrc) * 100} delay={i * 0.05} color="bg-gradient-to-r from-neutral-900 to-neutral-600" />
+                    <Bar pct={(s.n / maxSrc) * 100} delay={i * 0.05} color="bg-ac" />
                   </div>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+            <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
               <h3 className="mb-4 text-sm font-black text-neutral-900">Funnel (unique visitors, 30 days)</h3>
               <div className="space-y-3">
                 {fSteps.map(([k, l], i) => {
@@ -573,18 +573,18 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
               </div>
               {funnel.apply_abandon?.visitors > 0 && <p className="mt-4 text-xs text-amber-700">{funnel.apply_abandon.visitors} visitor{funnel.apply_abandon.visitors === 1 ? '' : 's'} left the form mid-way.</p>}
             </div>
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+            <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
               <h3 className="mb-3 text-sm font-black text-neutral-900">Applicant behavior (averages)</h3>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div><div className="text-2xl font-black text-neutral-900">{overview?.engagement?.scroll || 0}%</div><div className="text-[11px] text-neutral-400">scroll depth</div></div>
-                <div><div className="flex items-center justify-center gap-1 text-2xl font-black text-neutral-900"><Clock className="h-4 w-4 text-neutral-300" />{mins(overview?.engagement?.secondsOnPage || 0)}</div><div className="text-[11px] text-neutral-400">on page</div></div>
-                <div><div className="text-2xl font-black text-neutral-900">{mins(overview?.engagement?.secondsOnForm || 0)}</div><div className="text-[11px] text-neutral-400">filling the form</div></div>
+                <div><div className="text-2xl font-black text-neutral-900">{overview?.engagement?.scroll || 0}%</div><div className="text-[11px] text-neutral-500">scroll depth</div></div>
+                <div><div className="flex items-center justify-center gap-1 text-2xl font-black text-neutral-900"><Clock className="h-4 w-4 text-neutral-600" />{mins(overview?.engagement?.secondsOnPage || 0)}</div><div className="text-[11px] text-neutral-500">on page</div></div>
+                <div><div className="text-2xl font-black text-neutral-900">{mins(overview?.engagement?.secondsOnForm || 0)}</div><div className="text-[11px] text-neutral-500">filling the form</div></div>
               </div>
             </div>
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+            <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
               <h3 className="mb-3 text-sm font-black text-neutral-900">Applicants per role</h3>
               {(overview?.perJob || []).map((j) => <div key={j.slug} className="flex justify-between py-1 text-sm"><span className="truncate text-neutral-700">{j.title}</span><b className="text-neutral-900">{j.n}</b></div>)}
-              {(overview?.perJob || []).length === 0 && <p className="text-sm text-neutral-400">Nothing yet.</p>}
+              {(overview?.perJob || []).length === 0 && <p className="text-sm text-neutral-500">Nothing yet.</p>}
             </div>
           </motion.div>
         )}

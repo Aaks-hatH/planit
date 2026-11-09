@@ -23,12 +23,12 @@ import toast from 'react-hot-toast';
 // ── Alert helpers ─────────────────────────────────────────────────────────────
 
 const ALERT_LABELS = {
-  'call':            { label: 'Needs assistance',     color: '#f59e0b', border: '#f59e0b40', bg: '#2d1c0060' },
-  'order':           { label: 'Ready to order',       color: '#22c55e', border: '#22c55e40', bg: '#05231260' },
-  'quick:water':     { label: 'Water refill requested', color: '#38bdf8', border: '#38bdf840', bg: '#08233660' },
-  'quick:napkins':   { label: 'Napkins requested',    color: '#a78bfa', border: '#a78bfa40', bg: '#1e123660' },
-  'quick:menu':      { label: 'Requesting menu',      color: '#fb923c', border: '#fb923c40', bg: '#2d150060' },
-  'quick:dessert':   { label: 'Dessert menu requested', color: '#f472b6', border: '#f472b640', bg: '#2d103060' },
+  'call':            { label: 'Needs assistance',     color: '#6e5400', border: '#f59e0b40', bg: '#ffffff' },
+  'order':           { label: 'Ready to order',       color: '#0a7149', border: '#22c55e40', bg: '#ffffff' },
+  'quick:water':     { label: 'Water refill requested', color: '#2236ff', border: '#38bdf840', bg: '#ffffff' },
+  'quick:napkins':   { label: 'Napkins requested',    color: '#2236ff', border: '#a78bfa40', bg: '#ffffff' },
+  'quick:menu':      { label: 'Requesting menu',      color: '#6e5400', border: '#fb923c40', bg: '#ffffff' },
+  'quick:dessert':   { label: 'Dessert menu requested', color: '#a82a74', border: '#f472b640', bg: '#ffffff' },
 };
 
 function AlertPopup({ alert, onGotIt, onDismiss }) {
@@ -40,11 +40,11 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+      style={{ background: '#ffffff',  }}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden"
-        style={{ background: '#111', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}
+        className="w-full max-w-sm rounded-2xl border-2 shadow-2xl overflow-hidden border-ink"
+        style={{ background: '#ffffff', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}
       >
         {/* Top accent bar */}
         <div style={{ height: 4, background: meta.color }} />
@@ -62,27 +62,27 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
               <div className="text-xs font-bold uppercase tracking-widest" style={{ color: meta.color }}>
                 Table Alert
               </div>
-              <div className="text-lg font-black text-white mt-0.5">{meta.label}</div>
+              <div className="text-lg font-black text-ink mt-0.5">{meta.label}</div>
             </div>
             <span className="ml-auto text-xs text-neutral-600 font-medium flex-shrink-0">{timeStr}</span>
           </div>
 
           {/* Details grid */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-5">
+          <div className="rounded-xl border-2 border-ink bg-white divide-y divide-neutral-200 mb-5">
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Table</span>
-              <span className="font-black text-white text-base">{alert.tableLabel}</span>
+              <span className="font-black text-ink text-base">{alert.tableLabel}</span>
             </div>
             {alert.partyName && (
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party</span>
-                <span className="font-semibold text-white">{alert.partyName}</span>
+                <span className="font-semibold text-ink">{alert.partyName}</span>
               </div>
             )}
             {alert.partySize > 0 && (
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Guests</span>
-                <span className="font-semibold text-white">{alert.partySize}</span>
+                <span className="font-semibold text-ink">{alert.partySize}</span>
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-3">
@@ -104,7 +104,7 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
             </button>
             <button
               onClick={onDismiss}
-              className="px-4 py-3 rounded-xl font-bold text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all"
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-white hover:bg-lav text-neutral-500 hover:text-ink transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Snooze
             </button>
@@ -126,11 +126,11 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const STATUS_META = {
-  available:   { label: 'Available',   color: '#22c55e', bg: 'bg-emerald-950/60', border: 'border-emerald-500/40', text: 'text-emerald-400' },
-  occupied:    { label: 'Occupied',    color: '#ef4444', bg: 'bg-rose-950/60',    border: 'border-rose-500/40',    text: 'text-rose-400'    },
-  reserved:    { label: 'Reserved',    color: '#f59e0b', bg: 'bg-amber-950/60',   border: 'border-amber-500/40',   text: 'text-amber-400'   },
-  cleaning:    { label: 'Cleaning',    color: '#8b5cf6', bg: 'bg-violet-950/60',  border: 'border-violet-500/40',  text: 'text-violet-400'  },
-  unavailable: { label: 'Unavailable', color: '#525252', bg: 'bg-neutral-900',    border: 'border-neutral-700',    text: 'text-neutral-500' },
+  available:   { label: 'Available',   color: '#0a7149', bg: 'bg-emerald-50', border: 'border-emerald-700', text: 'text-emerald-700' },
+  occupied:    { label: 'Occupied',    color: '#ef4444', bg: 'bg-red-50',    border: 'border-red-700',    text: 'text-red-700'    },
+  reserved:    { label: 'Reserved',    color: '#6e5400', bg: 'bg-amber-50',   border: 'border-amber-700',   text: 'text-amber-700'   },
+  cleaning:    { label: 'Cleaning',    color: '#8b5cf6', bg: 'bg-blue-50',  border: 'border-blue-700',  text: 'text-blue-700'  },
+  unavailable: { label: 'Unavailable', color: '#525252', bg: 'bg-white',    border: 'border-ink',    text: 'text-neutral-500' },
 };
 
 function fmtDuration(ms) {
@@ -253,7 +253,7 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
   };
 
   return (
-    <div className="relative w-full h-full bg-neutral-950 select-none" style={{ touchAction: 'none' }}>
+    <div className="relative w-full h-full bg-white select-none" style={{ touchAction: 'none' }}>
       <svg className="w-full h-full" style={{ display: 'block' }}>
         <defs>
           <pattern id="grid-sv" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -271,13 +271,13 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
         {Object.entries(STATUS_META).map(([k, v]) => (
           <div key={k} className="flex items-center gap-1.5 text-xs">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: v.color }} />
-            <span className="text-neutral-400">{v.label}</span>
+            <span className="text-neutral-500">{v.label}</span>
           </div>
         ))}
         {myServerName && (
           <div className="flex items-center gap-1.5 text-xs">
             <div className="w-2.5 h-2.5 rounded-full border-2 border-orange-500" />
-            <span className="text-orange-400">Your tables</span>
+            <span className="text-amber-700">Your tables</span>
           </div>
         )}
       </div>
@@ -340,20 +340,20 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-neutral-700 shadow-2xl overflow-hidden flex flex-col"
-        style={{ background: '#111', maxHeight: '90dvh' }}>
+      style={{ background: '#ffffff',  }}>
+      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border-2 border-ink shadow-2xl overflow-hidden flex flex-col"
+        style={{ background: '#ffffff', maxHeight: '90dvh' }}>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-orange-950/60 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
-            <ShoppingCart className="w-4 h-4 text-orange-400" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-ink flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-700 flex items-center justify-center flex-shrink-0">
+            <ShoppingCart className="w-4 h-4 text-amber-700" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Take Order</p>
-            <p className="text-sm font-black text-white">{obj.label} {state?.partyName ? `· ${state.partyName}` : ''}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-700">Take Order</p>
+            <p className="text-sm font-black text-ink">{obj.label} {state?.partyName ? `· ${state.partyName}` : ''}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-600 hover:text-ink"><X className="w-4 h-4" /></button>
         </div>
 
         {/* Category tabs */}
@@ -361,7 +361,7 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
           <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
             {cats.map((c, i) => (
               <button key={c.id} onClick={() => setActiveCat(i)}
-                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border"
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 style={{ background: i === activeCat ? '#f97316' : '#1a1a1a', borderColor: i === activeCat ? '#f97316' : '#333', color: i === activeCat ? '#000' : '#888' }}>
                 {c.name}
               </button>
@@ -378,10 +378,10 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
               const cartEntry = cart.find(c => c.item.id === item.id);
               const inCart    = cartEntry ? cartEntry.qty : 0;
               return (
-                <div key={item.id} className="flex items-start gap-3 py-2.5 border-b border-neutral-800/60 last:border-0">
+                <div key={item.id} className="flex items-start gap-3 py-2.5 border-b border-ink last:border-0">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-bold text-white">{item.name}</span>
+                      <span className="text-sm font-bold text-ink">{item.name}</span>
                       <span className="text-sm">{COURSE_ICONS[item.courseType]||''}</span>
                     </div>
                     {item.desc && <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{item.desc}</p>}
@@ -389,7 +389,7 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {item.dietary.map(d => (
                           <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                            style={{ background: '#451a03', color: '#fde68a', border: '1px solid #92400e' }}>
+                            style={{ background: '#ffffff', color: '#6e5400', border: '2px solid #6e5400' }}>
                             {DIETARY_LABELS[d]||d}
                           </span>
                         ))}
@@ -407,11 +407,11 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
                             value={cartEntry?.specialRequest || ''}
                             onChange={e => setReq(item.id, e.target.value)}
                             onBlur={() => setEditingReq(null)}
-                            className="w-full bg-neutral-900 border border-amber-800/60 text-white text-xs rounded-lg px-2 py-1.5 outline-none"
+                            className="w-full bg-white border-2 border-amber-700 text-ink text-xs rounded-lg px-2 py-1.5 outline-none border-ink focus:ring-[3px] focus:ring-ac"
                           />
                         ) : (
                           <button onClick={() => setEditingReq(item.id)}
-                            className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                            className="text-xs text-amber-700 hover:text-amber-700 flex items-center gap-1">
                             {cartEntry?.specialRequest
                               ? <><span>⚠️</span><span className="underline">{cartEntry.specialRequest}</span></>
                               : '+ Add special request'}
@@ -421,20 +421,20 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
                     )}
                   </div>
                   <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                    <span className="text-sm font-bold text-white">${(item.priceCents/100).toFixed(2)}</span>
+                    <span className="text-sm font-bold text-ink">${(item.priceCents/100).toFixed(2)}</span>
                     {inCart === 0 ? (
                       <button onClick={() => addToCart(item)}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
-                        style={{ background: '#1a1a1a', border: '1px solid #333', color: '#888' }}>
+                        style={{ background: '#ffffff', border: '2px solid #0d0e1c', color: '#888' }}>
                         <Plus className="w-3 h-3" /> Add
                       </button>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <button onClick={() => setQty(item.id, -1)} className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center">
+                        <button onClick={() => setQty(item.id, -1)} className="w-6 h-6 rounded-md bg-lav hover:bg-lav text-ink flex items-center justify-center">
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-sm font-black text-orange-400 w-5 text-center">{inCart}</span>
-                        <button onClick={() => setQty(item.id, +1)} className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center">
+                        <span className="text-sm font-black text-amber-700 w-5 text-center">{inCart}</span>
+                        <button onClick={() => setQty(item.id, +1)} className="w-6 h-6 rounded-md bg-lav hover:bg-lav text-ink flex items-center justify-center">
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
@@ -447,7 +447,7 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
         </div>
 
         {/* Cart summary + send */}
-        <div className="flex-shrink-0 border-t border-neutral-800 p-4">
+        <div className="flex-shrink-0 border-t border-ink p-4">
           {cart.length === 0 ? (
             <p className="text-center text-xs text-neutral-600 py-1">No items added yet</p>
           ) : (
@@ -455,18 +455,18 @@ function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClo
               <div className="space-y-1 mb-3 max-h-24 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
                 {cart.map(c => (
                   <div key={c.item.id} className="flex justify-between text-xs">
-                    <span className="text-neutral-400">×{c.qty} {c.item.name}{c.specialRequest ? ' ⚠️' : ''}</span>
-                    <span className="text-white font-semibold">${((c.item.priceCents * c.qty)/100).toFixed(2)}</span>
+                    <span className="text-neutral-500">×{c.qty} {c.item.name}{c.specialRequest ? ' ⚠️' : ''}</span>
+                    <span className="text-ink font-semibold">${((c.item.priceCents * c.qty)/100).toFixed(2)}</span>
                   </div>
                 ))}
-                <div className="flex justify-between text-sm font-black pt-1 border-t border-neutral-800">
-                  <span className="text-white">Subtotal</span>
-                  <span className="text-orange-400">${(cartTotal/100).toFixed(2)}</span>
+                <div className="flex justify-between text-sm font-black pt-1 border-t border-ink">
+                  <span className="text-ink">Subtotal</span>
+                  <span className="text-amber-700">${(cartTotal/100).toFixed(2)}</span>
                 </div>
               </div>
               <button onClick={placeOrder} disabled={placing}
                 className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                style={{ background: '#22c55e', color: '#000' }}>
+                style={{ background: '#0c8a5b', color: '#000' }}>
                 {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ChefHat className="w-4 h-4" />Send to Kitchen</>}
               </button>
             </>
@@ -575,34 +575,34 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
   const dietary = state?.guestDietary || [];
 
   return (
-    <div className="bg-neutral-900 border-t border-neutral-800 flex-shrink-0" style={{ maxHeight: '60%', overflow: 'auto' }}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+    <div className="bg-white border-t border-ink flex-shrink-0" style={{ maxHeight: '60%', overflow: 'auto' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-ink">
         <div>
-          <div className="font-bold text-white">{obj.label || `Table ${obj.id.slice(-3)}`}</div>
+          <div className="font-bold text-ink">{obj.label || `Table ${obj.id.slice(-3)}`}</div>
           <div className="text-xs text-neutral-500">Capacity {obj.capacity}</div>
         </div>
         <div className="flex items-center gap-2">
           {alert && (
-            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${alert === 'order' ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-amber-950/60 border-amber-500/40 text-amber-400'}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full border-2 border-ink ${alert === 'order' ? 'bg-emerald-50 border-emerald-700 text-emerald-700' : 'bg-amber-50 border-amber-700 text-amber-700'}`}>
               {alert === 'order' ? 'Ready to Order' : 'Call Server'}
             </span>
           )}
-          <span className={`text-xs font-bold px-2 py-1 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+          <span className={`text-xs font-bold px-2 py-1 rounded-full border-2 border-ink ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
+          <button onClick={onClose} className="p-1.5 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink"><X className="w-4 h-4" /></button>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         {/* Timing */}
         {state?.status === 'occupied' && occupiedMs !== null && (
-          <div className={`grid grid-cols-2 gap-3 p-3 rounded-xl border ${remaining !== null && remaining <= 10 ? 'bg-rose-950/30 border-rose-800/40' : 'bg-neutral-800/60 border-neutral-700'}`}>
+          <div className={`grid grid-cols-2 gap-3 p-3 rounded-xl border-2 border-ink shadow ${remaining !== null && remaining <= 10 ? 'bg-red-50 border-red-700' : 'bg-white border-ink'}`}>
             <div>
               <div className="text-xs text-neutral-500 mb-0.5">Seated for</div>
-              <div className="text-lg font-black text-white">{fmtDuration(occupiedMs)}</div>
+              <div className="text-lg font-black text-ink">{fmtDuration(occupiedMs)}</div>
             </div>
             <div>
               <div className="text-xs text-neutral-500 mb-0.5">Est. remaining</div>
-              <div className={`text-lg font-black ${remaining !== null && remaining <= 10 ? 'text-rose-400' : 'text-white'}`}>
+              <div className={`text-lg font-black ${remaining !== null && remaining <= 10 ? 'text-red-700' : 'text-ink'}`}>
                 {remaining !== null ? (remaining <= 0 ? 'Overdue' : `~${remaining}m`) : '—'}
               </div>
             </div>
@@ -612,41 +612,41 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
         {/* Party info */}
         {(state?.partyName || state?.partySize > 0) && (
           <div className="space-y-1.5 text-sm">
-            {state.partyName && <div className="flex justify-between"><span className="text-neutral-500">Party</span><span className="text-white font-semibold">{state.partyName}</span></div>}
-            {state.partySize > 0 && <div className="flex justify-between"><span className="text-neutral-500">Guests</span><span className="text-white font-semibold">{state.partySize}</span></div>}
-            {state.serverName && <div className="flex justify-between"><span className="text-neutral-500">Server</span><span className="text-white font-semibold">{state.serverName}</span></div>}
-            {state.notes && <div className="flex justify-between gap-4"><span className="text-neutral-500 flex-shrink-0">Notes</span><span className="text-neutral-300 text-right">{state.notes}</span></div>}
+            {state.partyName && <div className="flex justify-between"><span className="text-neutral-500">Party</span><span className="text-ink font-semibold">{state.partyName}</span></div>}
+            {state.partySize > 0 && <div className="flex justify-between"><span className="text-neutral-500">Guests</span><span className="text-ink font-semibold">{state.partySize}</span></div>}
+            {state.serverName && <div className="flex justify-between"><span className="text-neutral-500">Server</span><span className="text-ink font-semibold">{state.serverName}</span></div>}
+            {state.notes && <div className="flex justify-between gap-4"><span className="text-neutral-500 flex-shrink-0">Notes</span><span className="text-neutral-600 text-right">{state.notes}</span></div>}
           </div>
         )}
 
         {/* Dietary restrictions from guest */}
         {(dietary.length > 0 || state?.guestDietaryNotes) && (
-          <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/30 space-y-1.5">
-            <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">Guest Dietary</div>
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-700 space-y-1.5">
+            <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Guest Dietary</div>
             {dietary.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {dietary.map(d => (
-                  <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">{d}</span>
+                  <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-50 border border-amber-700 text-amber-700">{d}</span>
                 ))}
               </div>
             )}
-            {state.guestDietaryNotes && <div className="text-xs text-neutral-400">{state.guestDietaryNotes}</div>}
+            {state.guestDietaryNotes && <div className="text-xs text-neutral-500">{state.guestDietaryNotes}</div>}
           </div>
         )}
 
         {/* Guest alert — clear button */}
         {alert && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-800/60 border border-neutral-700">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white border-2 border-ink shadow">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-amber-400" />
-              <span className="text-sm text-white font-semibold">
+              <Bell className="w-4 h-4 text-amber-700" />
+              <span className="text-sm text-ink font-semibold">
                 {alert === 'order' ? 'Table is ready to order' : 'Table called for server'}
               </span>
             </div>
             <button
               onClick={() => guestAction({ guestAlert: null }, 'Alert cleared')}
               disabled={saving}
-              className="text-xs px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-neutral-300 font-semibold disabled:opacity-40"
+              className="text-xs px-3 py-1.5 rounded-lg bg-lav hover:bg-neutral-600 text-neutral-600 font-semibold disabled:opacity-40 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
             >
               Clear
             </button>
@@ -657,7 +657,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
         {(state?.orders?.length > 0) && (() => {
           const active = state.orders.filter(o => o.status !== 'cancelled');
           if (!active.length) return null;
-          const STATUS_COLOR = { pending:'text-amber-400', acknowledged:'text-blue-400', preparing:'text-orange-400', ready:'text-emerald-400', delivered:'text-neutral-500' };
+          const STATUS_COLOR = { pending:'text-amber-700', acknowledged:'text-blue-700', preparing:'text-amber-700', ready:'text-emerald-700', delivered:'text-neutral-500' };
           const STATUS_LABEL = { pending:'NEW', acknowledged:'Seen', preparing:'Cooking 🔥', ready:'READY ✓', delivered:'Served' };
           return (
             <div>
@@ -669,13 +669,13 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
               </div>
               <div className="space-y-1.5">
                 {active.map(o => (
-                  <div key={o.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-800/40 border border-neutral-800">
+                  <div key={o.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-lav border-2 border-ink shadow">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-white">
-                        {o.qty > 1 && <span className="text-amber-400 mr-1">×{o.qty}</span>}{o.itemName}
+                      <div className="text-xs font-semibold text-ink">
+                        {o.qty > 1 && <span className="text-amber-700 mr-1">×{o.qty}</span>}{o.itemName}
                       </div>
                       {o.specialRequest && (
-                        <div className="text-[10px] text-amber-400 mt-0.5">⚠️ {o.specialRequest}</div>
+                        <div className="text-[10px] text-amber-700 mt-0.5">⚠️ {o.specialRequest}</div>
                       )}
                     </div>
                     <span className={`text-[10px] font-bold uppercase ${STATUS_COLOR[o.status]||'text-neutral-500'}`}>
@@ -694,8 +694,8 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
             <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Take Order</div>
             <button
               onClick={() => setShowOrderModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
-              style={{ background: '#1a0a00', border: '1px solid #f9731650', color: '#f97316' }}>
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff', border: '2px solid #6e5400', color: '#6e5400' }}>
               <ShoppingCart className="w-4 h-4" />
               Open Menu &amp; Place Order
             </button>
@@ -715,7 +715,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                 key={screen}
                 onClick={() => guestAction({ guestScreen: screen }, `Guest screen: ${label}`)}
                 disabled={saving || state?.guestScreen === screen}
-                className={`px-2 py-2 rounded-lg text-xs font-semibold border transition-all ${state?.guestScreen === screen ? 'bg-neutral-700 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white disabled:opacity-40'}`}
+                className={`px-2 py-2 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${state?.guestScreen === screen ? 'bg-hl border-ink text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:bg-lav hover:text-ink disabled:opacity-40 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
               >
                 {label}
               </button>
@@ -723,32 +723,32 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
           </div>
 
           {/* Bill inputs */}
-          <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 space-y-2">
+          <div className="p-3 rounded-xl bg-white border-2 border-ink space-y-2 shadow">
             <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-2">
               <DollarSign className="w-3.5 h-3.5" /> Send Bill to Table
             </div>
 
             {/* Auto-calc from orders */}
             <button onClick={autoCalcBill} disabled={calcWorking}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40"
-              style={{ background: '#052e16', borderColor: '#15803d', color: '#4ade80' }}>
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold border-2 transition-all disabled:opacity-40 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff', borderColor: '#15803d', color: '#0a7149' }}>
               {calcWorking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
               Auto-Calculate from Orders + Tax + Gratuity
             </button>
 
             {/* Show breakdown if calculated */}
             {billBreakdown && (
-              <div className="rounded-lg bg-neutral-900 border border-neutral-700 p-2 text-[10px] space-y-1">
+              <div className="rounded-lg bg-white border-2 border-ink p-2 text-[10px] space-y-1">
                 {billBreakdown.lineItems?.slice(0,4).map((li,i) => (
-                  <div key={i} className="flex justify-between text-neutral-400">
+                  <div key={i} className="flex justify-between text-neutral-500">
                     <span>×{li.qty} {li.name}</span><span>${li.lineTotal}</span>
                   </div>
                 ))}
                 {billBreakdown.lineItems?.length > 4 && <div className="text-neutral-600">+ {billBreakdown.lineItems.length-4} more…</div>}
-                <div className="flex justify-between text-neutral-400 pt-1 border-t border-neutral-800">
+                <div className="flex justify-between text-neutral-500 pt-1 border-t border-ink">
                   <span>Subtotal</span><span>${billBreakdown.subtotal}</span>
                 </div>
-                <div className="flex justify-between text-neutral-400">
+                <div className="flex justify-between text-neutral-500">
                   <span>Tax ({billBreakdown.taxRate})</span><span>${billBreakdown.taxAmount}</span>
                 </div>
                 {billBreakdown.autoGratuity && (
@@ -756,11 +756,11 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                     <span>Auto-grat ({billBreakdown.autoGratuity.pct})</span><span>${billBreakdown.autoGratuity.amount}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-white font-black pt-1 border-t border-neutral-800">
+                <div className="flex justify-between text-ink font-black pt-1 border-t border-ink">
                   <span>Total</span><span>${billBreakdown.total}</span>
                 </div>
                 {billBreakdown.paymentNote && (
-                  <div className="text-amber-400/80 pt-1 border-t border-neutral-800">{billBreakdown.paymentNote}</div>
+                  <div className="text-amber-400/80 pt-1 border-t border-ink">{billBreakdown.paymentNote}</div>
                 )}
               </div>
             )}
@@ -775,7 +775,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                   value={billSub}
                   onChange={e => setBillSub(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none focus:border-neutral-500"
+                  className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-2 py-1.5 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac"
                 />
               </div>
               <div>
@@ -785,7 +785,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                   value={billTax}
                   onChange={e => setBillTax(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none focus:border-neutral-500"
+                  className="w-full bg-white border-2 border-ink text-ink text-sm rounded-lg px-2 py-1.5 outline-none focus:border-ink focus:ring-[3px] focus:ring-ac"
                 />
               </div>
             </div>
@@ -793,7 +793,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
               <button
                 onClick={sendBill}
                 disabled={saving}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white text-neutral-900 hover:bg-neutral-200 disabled:opacity-40 transition-all"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white text-neutral-900 hover:bg-neutral-200 disabled:opacity-40 transition-all border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
               >
                 <DollarSign className="w-3.5 h-3.5" />
                 Send Bill
@@ -801,7 +801,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
               <button
                 onClick={() => guestAction({ billPaid: !state?.billPaid }, state?.billPaid ? 'Marked unpaid' : 'Marked paid')}
                 disabled={saving || state?.guestScreen !== 'bill'}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40 ${state?.billPaid ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all disabled:opacity-40 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${state?.billPaid ? 'bg-emerald-50 border-emerald-700 text-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:bg-lav hover:text-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
               >
                 <CheckCircle className="w-3.5 h-3.5" />
                 {state?.billPaid ? 'Paid' : 'Mark Paid'}
@@ -811,27 +811,27 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
 
           {/* Guest rating (read-only) */}
           {state?.guestRating && (
-            <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 mt-2">
+            <div className="p-3 rounded-xl bg-white border-2 border-ink mt-2 shadow">
               <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Guest Rating</div>
               {['food', 'service', 'atmosphere'].map(k => (
                 <div key={k} className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-neutral-400 capitalize">{k}</span>
+                  <span className="text-xs text-neutral-500 capitalize">{k}</span>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} className={`w-3 h-3 ${i < state.guestRating[k] ? 'text-amber-400 fill-amber-400' : 'text-neutral-700'}`} />
+                      <Star key={i} className={`w-3 h-3 ${i < state.guestRating[k] ? 'text-amber-700 fill-amber-400' : 'text-neutral-700'}`} />
                     ))}
                   </div>
                 </div>
               ))}
-              {state.guestRating.comment && <div className="text-xs text-neutral-400 mt-2 pt-2 border-t border-neutral-700">{state.guestRating.comment}</div>}
+              {state.guestRating.comment && <div className="text-xs text-neutral-500 mt-2 pt-2 border-t border-ink">{state.guestRating.comment}</div>}
             </div>
           )}
 
           {/* Guest tablet link */}
           {guestUrl && (
-            <div className="mt-2 p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+            <div className="mt-2 p-2 rounded-lg bg-white border-2 border-ink shadow">
               <div className="text-xs text-neutral-500 mb-1">Guest tablet URL</div>
-              <div className="text-xs text-neutral-400 break-all font-mono">{guestUrl}</div>
+              <div className="text-xs text-neutral-500 break-all font-mono">{guestUrl}</div>
             </div>
           )}
           {showOrderModal && (
@@ -864,7 +864,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                   key={status}
                   onClick={() => changeStatus(status)}
                   disabled={saving || isCurrent}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${isCurrent ? `${m.bg} ${m.border} ${m.text}` : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white disabled:opacity-40'}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${isCurrent ? `${m.bg} ${m.border} ${m.text}` : 'bg-white border-ink text-neutral-500 hover:bg-lav hover:text-ink disabled:opacity-40 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
                   {label}
@@ -880,30 +880,30 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
           {!showResetConfirm ? (
             <button
               onClick={() => setShowResetConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
-              style={{ background: '#1a0000', borderColor: '#ef444450', color: '#ef4444' }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              style={{ background: '#ffffff', borderColor: '#ef444450', color: '#ef4444' }}
             >
               <RotateCcw className="w-4 h-4" />
               Reset Table for Next Party
             </button>
           ) : (
-            <div className="p-3 rounded-xl border space-y-2.5" style={{ background: '#1a050505', borderColor: '#ef444440' }}>
-              <div className="flex items-start gap-2 text-xs text-rose-300">
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-400" />
+            <div className="p-3 rounded-xl border-2 space-y-2.5 border-ink shadow" style={{ background: '#ffffff', borderColor: '#ef444440' }}>
+              <div className="flex items-start gap-2 text-xs text-red-700">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-red-700" />
                 <span>This clears <strong className="text-rose-200">all orders, bill info, and party details</strong> and marks the table Available. This cannot be undone.</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setShowResetConfirm(false)}
-                  className="py-2 text-xs font-semibold rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-all"
+                  className="py-2 text-xs font-semibold rounded-lg bg-white border-2 border-ink text-neutral-500 hover:bg-lav hover:text-ink transition-all shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={resetTable}
                   disabled={resetting}
-                  className="py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
-                  style={{ background: '#7f1d1d', borderColor: '#ef4444', color: '#fca5a5' }}
+                  className="py-2 text-xs font-semibold rounded-lg border-2 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                  style={{ background: '#ffffff', borderColor: '#ef4444', color: '#a82020' }}
                 >
                   {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
                   {resetting ? 'Resetting…' : 'Yes, Reset'}
@@ -1042,9 +1042,9 @@ export default function ServerView() {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="h-screen bg-neutral-950 flex items-center justify-center">
+      <div className="h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-neutral-500 mx-auto mb-4" />
           <p className="text-neutral-500 text-sm">Loading floor...</p>
         </div>
       </div>
@@ -1054,14 +1054,14 @@ export default function ServerView() {
   // ── Forbidden / not table-service ─────────────────────────────────────────
   if (forbidden) {
     return (
-      <div className="h-screen bg-neutral-950 flex items-center justify-center p-6">
+      <div className="h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center max-w-sm w-full">
-          <div className="w-14 h-14 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 bg-white border-2 border-ink rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Lock className="w-6 h-6 text-neutral-500" />
           </div>
-          <h2 className="text-white font-bold text-lg mb-2">Access Unavailable</h2>
+          <h2 className="text-ink font-bold text-lg mb-2">Access Unavailable</h2>
           <p className="text-neutral-500 text-sm mb-6 leading-relaxed">{forbidden.message}</p>
-          <button onClick={() => navigate('/')} className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700">Return Home</button>
+          <button onClick={() => navigate('/')} className="w-full py-2.5 bg-lav text-neutral-600 rounded-xl text-sm font-semibold hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Return Home</button>
         </div>
       </div>
     );
@@ -1089,7 +1089,7 @@ export default function ServerView() {
   const selectedState = tableStates.find(s => s.tableId === selectedId) || { status: 'available' };
 
   return (
-    <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white text-ink overflow-hidden">
 
       {/* Alert popup — shown for the front of the queue */}
       <AlertPopup
@@ -1105,13 +1105,13 @@ export default function ServerView() {
       />
 
       {/* Header */}
-      <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
+      <header className="flex-shrink-0 h-14 border-b border-ink bg-white flex items-center px-4 gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
             <Utensils className="w-4 h-4 text-neutral-900" />
           </div>
           <div className="min-w-0">
-            <span className="font-bold text-white text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
+            <span className="font-bold text-ink text-sm truncate">{floorData.restaurantName || 'Table Service'}</span>
             <span className="hidden sm:inline text-neutral-600 text-xs ml-2">Server View</span>
           </div>
         </div>
@@ -1122,25 +1122,25 @@ export default function ServerView() {
             <select
               value={myServer}
               onChange={e => { setMyServer(e.target.value); setSelectedId(null); }}
-              className="appearance-none bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg pl-3 pr-8 py-1.5 outline-none focus:border-orange-500/60 cursor-pointer"
+              className="appearance-none bg-lav border-2 border-ink text-ink text-sm rounded-lg pl-3 pr-8 py-1.5 outline-none focus:border-amber-700 cursor-pointer focus:ring-[3px] focus:ring-ac"
             >
               <option value="">-- Select your name --</option>
               {servers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               {servers.length === 0 && <option disabled>No servers configured</option>}
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
           </div>
         </div>
 
         {/* Refresh */}
-        <button onClick={loadFloor} className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors flex-shrink-0">
+        <button onClick={loadFloor} className="p-2 hover:bg-lav rounded-lg text-neutral-500 hover:text-ink transition-colors flex-shrink-0">
           <RefreshCw className="w-4 h-4" />
         </button>
 
         {/* Kitchen display link */}
         <button
           onClick={() => navigate(subdomain ? `/e/${subdomain}/kitchen` : `/event/${eid}/kitchen`)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all flex-shrink-0"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border-2 border-ink bg-white hover:bg-lav text-neutral-500 hover:text-ink transition-all flex-shrink-0 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
         >
           <ChefHat className="w-3.5 h-3.5" />
           Kitchen
@@ -1149,7 +1149,7 @@ export default function ServerView() {
         {/* Active alert count */}
         {tableStates.filter(s => s.guestAlert).length > 0 && (
           <div className="relative flex-shrink-0">
-            <Bell className="w-5 h-5 text-amber-400" />
+            <Bell className="w-5 h-5 text-amber-700" />
             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
               {tableStates.filter(s => s.guestAlert).length}
             </span>
@@ -1201,17 +1201,17 @@ export default function ServerView() {
         </div>
 
         {/* Right panel */}
-        <div className="w-72 xl:w-80 flex-shrink-0 border-l border-neutral-800 flex flex-col bg-neutral-900/50">
+        <div className="w-72 xl:w-80 flex-shrink-0 border-l border-ink flex flex-col bg-lav">
 
           {/* My tables */}
-          <div className="flex flex-col border-b border-neutral-800" style={{ maxHeight: '34%' }}>
+          <div className="flex flex-col border-b border-ink" style={{ maxHeight: '34%' }}>
             <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
-              <Users className="w-4 h-4 text-orange-400" />
-              <span className="font-bold text-white text-sm">
+              <Users className="w-4 h-4 text-amber-700" />
+              <span className="font-bold text-ink text-sm">
                 {myServer ? `${myServer}'s Tables` : 'My Tables'}
               </span>
               {myTables.length > 0 && (
-                <span className="px-2 py-0.5 bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-bold rounded-full">{myTables.length}</span>
+                <span className="px-2 py-0.5 bg-amber-50 border border-amber-700 text-amber-700 text-xs font-bold rounded-full">{myTables.length}</span>
               )}
             </div>
 
@@ -1230,20 +1230,20 @@ export default function ServerView() {
                       <button
                         key={t.id}
                         onClick={() => setSelectedId(prev => prev === t.id ? null : t.id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${selectedId === t.id ? 'bg-neutral-700 border-neutral-500' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold ${selectedId === t.id ? 'bg-lav border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-lav border-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
+                          <span className="font-bold text-ink text-sm">{t.label || `Table ${t.id.slice(-3)}`}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border-2 border-ink ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
                         </div>
                         {state.partyName && (
-                          <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+                          <div className="text-xs text-neutral-500 mt-1 flex items-center gap-2">
                             <span>{state.partyName}</span>
                             {state.partySize > 0 && <span><Users className="w-3 h-3 inline" /> {state.partySize}</span>}
                           </div>
                         )}
                         {remaining !== null && (
-                          <div className={`text-xs font-semibold mt-1 ${remaining <= 10 ? 'text-rose-400' : 'text-neutral-500'}`}>
+                          <div className={`text-xs font-semibold mt-1 ${remaining <= 10 ? 'text-red-700' : 'text-neutral-500'}`}>
                             {remaining <= 0 ? 'Overdue' : `~${remaining}m remaining`}
                           </div>
                         )}
@@ -1272,16 +1272,16 @@ export default function ServerView() {
                     <div
                       key={t.id}
                       onClick={() => setSelectedId(prev => prev === t.id ? null : t.id)}
-                      className={`px-3 py-2 rounded-xl border cursor-pointer transition-all ${isMine ? 'border-orange-500/40 bg-orange-950/20' : 'border-neutral-800 bg-neutral-800/30 hover:border-neutral-600'}`}
+                      className={`px-3 py-2 rounded-xl border-2 cursor-pointer transition-all border-ink shadow transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg ${isMine ? 'border-amber-700 bg-amber-50' : 'border-ink bg-lav hover:border-ink'}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-white">{t.label || `Table ${t.id.slice(-3)}`}</span>
+                        <span className="text-sm font-bold text-ink">{t.label || `Table ${t.id.slice(-3)}`}</span>
                         <div className="flex items-center gap-2">
                           {state.serverName && (
-                            <span className={`text-xs font-semibold ${isMine ? 'text-orange-400' : 'text-neutral-500'}`}>{state.serverName}</span>
+                            <span className={`text-xs font-semibold ${isMine ? 'text-amber-700' : 'text-neutral-500'}`}>{state.serverName}</span>
                           )}
                           {remaining !== null && (
-                            <span className={`text-xs font-bold ${remaining <= 10 ? 'text-rose-400' : 'text-neutral-500'}`}>
+                            <span className={`text-xs font-bold ${remaining <= 10 ? 'text-red-700' : 'text-neutral-500'}`}>
                               {remaining <= 0 ? 'OVER' : `${remaining}m`}
                             </span>
                           )}
@@ -1300,14 +1300,14 @@ export default function ServerView() {
           </div>
 
           {/* Tablet URLs panel */}
-          <div className="border-t border-neutral-800 flex-shrink-0">
+          <div className="border-t border-ink flex-shrink-0">
             <button
               onClick={() => setUrlPanelOpen(p => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-800/40 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-lav transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Tablet className="w-4 h-4 text-neutral-400" />
-                <span className="text-sm font-bold text-neutral-300">Tablet URLs</span>
+                <Tablet className="w-4 h-4 text-neutral-500" />
+                <span className="text-sm font-bold text-neutral-600">Tablet URLs</span>
                 <span className="text-xs text-neutral-600 font-medium">({tables.length})</span>
               </div>
               <ChevronDown className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${urlPanelOpen ? 'rotate-180' : ''}`} />
@@ -1323,9 +1323,9 @@ export default function ServerView() {
                     : `${base}/event/${eid}/table/${t.id}`;
                   const isCopied = copiedUrl === t.id;
                   return (
-                    <div key={t.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-2.5">
+                    <div key={t.id} className="bg-white border-2 border-ink rounded-xl p-2.5 shadow">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-white">{t.label || `Table ${t.id.slice(-3)}`}</span>
+                        <span className="text-xs font-bold text-ink">{t.label || `Table ${t.id.slice(-3)}`}</span>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(url).then(() => {
@@ -1333,7 +1333,7 @@ export default function ServerView() {
                               setTimeout(() => setCopiedUrl(null), 2000);
                             });
                           }}
-                          className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${isCopied ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+                          className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border-2 transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${isCopied ? 'bg-emerald-50 border-emerald-700 text-emerald-700 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white border-ink text-neutral-500 hover:text-ink hover:border-neutral-500 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
                         >
                           {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                           {isCopied ? 'Copied' : 'Copy'}

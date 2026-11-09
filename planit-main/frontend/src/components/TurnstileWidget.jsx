@@ -100,8 +100,8 @@ export default function TurnstileWidget({ onToken, theme = 'dark', resetKey = 0 
       <div style={{
         padding: '12px 16px',
         borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.15)',
-        background: 'rgba(255,255,255,0.05)',
+        border: '2px solid #0d0e1c',
+        background: '#ffffff',
         color: theme === 'light' ? '#555' : 'rgba(255,255,255,0.5)',
         fontSize: 13,
         textAlign: 'center',

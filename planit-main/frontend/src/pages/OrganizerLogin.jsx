@@ -92,38 +92,38 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
     }
   };
 
-  const inputCls = "w-full px-3.5 py-2.5 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-600 text-sm focus:outline-none focus:border-neutral-500 transition-colors";
+  const inputCls = "w-full px-3.5 py-2.5 bg-lav border-2 border-ink rounded-xl text-ink placeholder-neutral-400 text-sm focus:outline-none focus:border-neutral-500 transition-colors";
   const labelCls = "block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wide";
   const errBox   = (msg) => msg ? (
-    <div className="flex items-center gap-2 p-3 bg-rose-950/60 border border-rose-500/30 rounded-xl mt-1">
-      <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-      <p className="text-sm text-rose-300">{msg}</p>
+    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-700 rounded-xl mt-1">
+      <AlertCircle className="w-4 h-4 text-red-700 flex-shrink-0" />
+      <p className="text-sm text-red-700">{msg}</p>
     </div>
   ) : null;
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-4">
-            <Utensils className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white border-2 border-ink flex items-center justify-center mb-4">
+            <Utensils className="w-7 h-7 text-ink" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-1">
+          <h1 className="text-xl font-bold text-ink mb-1">
             {tab === 'staff' ? 'Staff Login' : 'Organizer Login'}
           </h1>
-          {eventTitle && <p className="text-sm text-neutral-400 font-medium">{eventTitle}</p>}
+          {eventTitle && <p className="text-sm text-neutral-500 font-medium">{eventTitle}</p>}
         </div>
 
         {/* Tab switcher */}
-        <div className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
+        <div className="flex bg-white border-2 border-ink rounded-xl p-1 mb-4 shadow">
           <button
             onClick={() => setTab('staff')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               tab === 'staff'
-                ? 'bg-white text-neutral-900'
-                : 'text-neutral-500 hover:text-neutral-300'
+                ? 'bg-white text-neutral-900 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                : 'text-neutral-500 hover:text-neutral-600'
             }`}
           >
             <Users className="w-3.5 h-3.5" />Staff
@@ -132,8 +132,8 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
             onClick={() => setTab('organizer')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
               tab === 'organizer'
-                ? 'bg-white text-neutral-900'
-                : 'text-neutral-500 hover:text-neutral-300'
+                ? 'bg-white text-neutral-900 border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'
+                : 'text-neutral-500 hover:text-neutral-600'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />Organizer
@@ -142,7 +142,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
 
         {/* ── Staff form ── */}
         {tab === 'staff' && (
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+          <div className="bg-white border-2 border-ink rounded-2xl p-6 shadow-md">
             <form onSubmit={handleStaffSubmit} className="space-y-4">
               <div>
                 <label className={labelCls}>Username</label>
@@ -163,14 +163,14 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
                     className={inputCls + ' pr-10'}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowPin(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                     {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               {errBox(staffErr)}
               <button type="submit" disabled={staffLoading}
-                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {staffLoading
                   ? <span className="w-4 h-4 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
                   : <>Sign In <ArrowRight className="w-4 h-4" /></>}
@@ -181,7 +181,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
 
         {/* ── Organizer form ── */}
         {tab === 'organizer' && (
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+          <div className="bg-white border-2 border-ink rounded-2xl p-6 shadow-md">
             <form onSubmit={handleOrgSubmit} className="space-y-4">
               <div>
                 <label className={labelCls}>Organizer Name</label>
@@ -205,7 +205,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
                       className={inputCls + ' pr-10'}
                     />
                     <button type="button" tabIndex={-1} onClick={() => setShowEvtPass(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                       {showEvtPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -225,7 +225,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
                     className={inputCls + ' pr-10'}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowAccPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                     {showAccPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -235,7 +235,7 @@ function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected
               {errBox(orgErr)}
 
               <button type="submit" disabled={orgLoading}
-                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                 {orgLoading
                   ? <span className="w-4 h-4 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
                   : <>Sign In <ArrowRight className="w-4 h-4" /></>}
@@ -379,7 +379,7 @@ export default function OrganizerLogin() {
 
   if (loadingEvent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-lav text-ink">
         <span className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin" />
       </div>
     );
@@ -391,22 +391,22 @@ export default function OrganizerLogin() {
 
   if (pendingApproval) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-lav text-ink">
         <div className="w-full max-w-md text-center">
-          <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-10">
+          <div className="bg-white rounded-2xl shadow-sm border-2 border-ink p-10">
             <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-5">
-              <Clock className="w-7 h-7 text-amber-500" />
+              <Clock className="w-7 h-7 text-amber-700" />
             </div>
             <h2 className="text-xl font-bold text-neutral-900 mb-2">Awaiting Organizer Approval</h2>
             <p className="text-sm text-neutral-500 leading-relaxed mb-5">
               Your request to join as <strong className="text-neutral-700">{formData.username || localStorage.getItem('username')}</strong> has been sent.
             </p>
-            <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 rounded-xl mb-5">
+            <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border-2 border-amber-600 rounded-xl mb-5">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-xs font-semibold text-amber-700">Checking every few seconds…</span>
             </div>
             <button onClick={() => { setPendingApproval(false); setError(''); }}
-              className="text-xs text-neutral-400 hover:text-neutral-700 underline underline-offset-2">
+              className="text-xs text-neutral-500 hover:text-neutral-700 underline underline-offset-2">
               ← Try a different name
             </button>
           </div>
@@ -416,28 +416,28 @@ export default function OrganizerLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-lav text-ink">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-neutral-900 flex items-center justify-center mb-4">
-            <Lock className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-white flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8 text-ink" />
           </div>
           <h1 className="font-display text-2xl font-bold text-neutral-900 mb-1">Organizer Login</h1>
           {eventTitle && <p className="text-sm text-neutral-600 font-medium mb-1">{eventTitle}</p>}
           <p className="text-sm text-neutral-500">Log back in to access your event</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-ink p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Your Organizer Name <span className="text-red-500">*</span>
+                Your Organizer Name <span className="text-red-700">*</span>
               </label>
               <input type="text" required autoFocus autoComplete="off"
                 placeholder="Enter your organizer name"
                 value={formData.username}
                 onChange={e => { handleChange('username')(e); setFieldErrors(p => ({ ...p, username: '' })); }}
-                className={`w-full px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${fieldErrors.username ? 'border-red-400 bg-red-50' : 'border-neutral-200'}`}
+                className={`w-full px-3.5 py-2.5 border-2 rounded-xl text-sm focus:outline-none focus:ring-[3px] focus:ring-ink border-ink focus:ring-ac bg-white ${fieldErrors.username ? 'border-red-400 bg-red-50 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
               />
               {fieldErrors.username && (
                 <p className="flex items-center gap-1.5 text-xs text-red-600 mt-1.5">
@@ -449,17 +449,17 @@ export default function OrganizerLogin() {
             {isPasswordProtected && (
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Event Password <span className="text-red-500">*</span>
+                  Event Password <span className="text-red-700">*</span>
                 </label>
                 <div className="relative">
                   <input type={showEventPass ? 'text' : 'password'} required
                     placeholder="The shared event password"
                     value={formData.eventPassword}
                     onChange={e => { handleChange('eventPassword')(e); setFieldErrors(p => ({ ...p, eventPassword: '' })); }}
-                    className={`w-full px-3.5 py-2.5 pr-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${fieldErrors.eventPassword ? 'border-red-400 bg-red-50' : 'border-neutral-200'}`}
+                    className={`w-full px-3.5 py-2.5 pr-10 border-2 rounded-xl text-sm focus:outline-none focus:ring-[3px] focus:ring-ink border-ink focus:ring-ac bg-white ${fieldErrors.eventPassword ? 'border-red-400 bg-red-50 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowEventPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                     {showEventPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -473,17 +473,17 @@ export default function OrganizerLogin() {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Account Password{needsAccountPassword && <span className="text-red-500 ml-1">*</span>}
+                Account Password{needsAccountPassword && <span className="text-red-700 ml-1">*</span>}
               </label>
               <div className="relative">
                 <input type={showAccountPass ? 'text' : 'password'} required={needsAccountPassword}
                   placeholder={needsAccountPassword ? 'Required — your personal account password' : 'Your personal account password (optional)'}
                   value={formData.accountPassword}
                   onChange={e => { handleChange('accountPassword')(e); setFieldErrors(p => ({ ...p, accountPassword: '' })); }}
-                  className={`w-full px-3.5 py-2.5 pr-10 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 ${fieldErrors.accountPassword ? 'border-red-400 bg-red-50' : 'border-neutral-200'}`}
+                  className={`w-full px-3.5 py-2.5 pr-10 border-2 rounded-xl text-sm focus:outline-none focus:ring-[3px] focus:ring-ink border-ink focus:ring-ac bg-white ${fieldErrors.accountPassword ? 'border-red-400 bg-red-50 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
                 />
                 <button type="button" tabIndex={-1} onClick={() => setShowAccountPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-600">
                   {showAccountPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -492,7 +492,7 @@ export default function OrganizerLogin() {
                   <AlertCircle className="w-3.5 h-3.5" />{fieldErrors.accountPassword}
                 </p>
               ) : (
-                <p className="text-xs text-neutral-400 mt-1.5">
+                <p className="text-xs text-neutral-500 mt-1.5">
                   The personal password you set when creating the event.{' '}
                   <a
                     href={`/forgot-password?event=${subdomain || ''}`}
@@ -505,22 +505,22 @@ export default function OrganizerLogin() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2 p-3 bg-red-50 border-2 border-red-600 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-neutral-900 text-white rounded-xl text-sm font-bold hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+              className="w-full py-3 bg-hl text-ink rounded-xl text-sm font-bold hover:bg-hl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
               {loading
-                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ? <span className="w-4 h-4 border-2 border-ink border-t-white rounded-full animate-spin" />
                 : <>Log In <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-neutral-500">
               <a
                 href={`/forgot-password?event=${subdomain || ''}`}
                 className="text-neutral-500 hover:text-neutral-700 underline transition-colors"

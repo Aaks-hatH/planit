@@ -59,7 +59,7 @@ function PasswordGate({ eventId, accent, bgStyle, fontStyle, onUnlocked }) {
         </div>
         <form onSubmit={submit} className="space-y-3">
           <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Enter password"
-            className="w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all"
+            className="w-full px-4 py-3 rounded-xl text-sm border-2 outline-none transition-all border-ink focus:ring-[3px] focus:ring-ac bg-white"
             style={{ background: 'rgba(255,255,255,0.06)', borderColor: err ? '#ef4444' : 'rgba(255,255,255,0.12)', color: 'inherit' }} autoFocus />
           {err && <p className="text-xs text-red-400">{err}</p>}
           <button type="submit" disabled={loading} className="w-full py-3 rounded-xl text-sm font-bold transition-all" style={{ background: accent, color: '#fff', opacity: loading ? 0.7 : 1 }}>
@@ -137,7 +137,7 @@ export default function RSVPPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a12' }}><div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a12' }}><div className="w-8 h-8 border-2 border-ink border-t-white/80 rounded-full animate-spin" /></div>;
   }
   if (error || !pageData) {
     return (
@@ -178,7 +178,7 @@ export default function RSVPPage() {
 
   if (submitResult) {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={bg}><div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" /></div>}>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={bg}><div className="w-8 h-8 border-2 border-ink border-t-white/80 rounded-full animate-spin" /></div>}>
         <RSVPConfirmationScreen data={submitResult} rsvpPage={rsvpPage} event={pageData} accent={accent} bgStyle={bgStyleKey} fontStyle={fontStyle} />
       </Suspense>
     );

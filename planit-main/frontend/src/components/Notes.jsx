@@ -118,14 +118,14 @@ export default function Notes({ eventId, socket }) {
               type="text"
               required
               placeholder="Note title"
-              className="input input-sm bg-white"
+              className="input input-sm bg-white border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
             <textarea
               required
               placeholder="Write your note..."
-              className="input input-sm resize-none bg-white"
+              className="input input-sm resize-none bg-white border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none rounded-lg"
               rows="6"
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -140,7 +140,7 @@ export default function Notes({ eventId, socket }) {
                     type="button"
                     onClick={() => setFormData({ ...formData, color })}
                     className={`w-8 h-8 rounded-lg border-2 transition-transform hover:scale-110 ${
-                      formData.color === color ? 'border-neutral-900 scale-110' : 'border-transparent'
+                      formData.color === color ? 'border-ink scale-110' : 'border-transparent'
                     }`}
                     style={{ backgroundColor: color }}
                   />
@@ -179,7 +179,7 @@ export default function Notes({ eventId, socket }) {
             {notes.map(note => (
               <div
                 key={note.id}
-                className="p-4 rounded-lg shadow-sm border border-neutral-200 hover:shadow-md transition-shadow"
+                className="p-4 rounded-lg shadow-sm border-2 border-ink hover:shadow-md transition-shadow"
                 style={{ backgroundColor: note.color }}
               >
                 <div className="flex items-start justify-between gap-2 mb-3">

@@ -89,7 +89,7 @@ export default function Analytics({ eventId }) {
 
         {/* Enterprise Check-in Stats */}
         {hasCheckins && (
-          <div className="card p-6 border-2 border-emerald-100 bg-emerald-50/30">
+          <div className="card p-6 border-2 border-emerald-100 bg-emerald-50">
             <h3 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-emerald-600" />
               Check-in Statistics
@@ -100,22 +100,22 @@ export default function Analytics({ eventId }) {
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-3xl font-bold text-emerald-600">{analytics.checkins.checkedInInvites}</div>
                 <div className="text-sm text-neutral-500 mt-1">Checked In</div>
-                <div className="text-xs text-neutral-400">of {analytics.checkins.totalInvites} invites</div>
+                <div className="text-xs text-neutral-500">of {analytics.checkins.totalInvites} invites</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-3xl font-bold text-amber-600">{analytics.checkins.pendingInvites}</div>
                 <div className="text-sm text-neutral-500 mt-1">Pending</div>
-                <div className="text-xs text-neutral-400">awaiting check-in</div>
+                <div className="text-xs text-neutral-500">awaiting check-in</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-3xl font-bold text-blue-600">{analytics.checkins.totalCheckedIn}</div>
                 <div className="text-sm text-neutral-500 mt-1">Guests Admitted</div>
-                <div className="text-xs text-neutral-400">of {analytics.checkins.totalExpectedGuests} expected</div>
+                <div className="text-xs text-neutral-500">of {analytics.checkins.totalExpectedGuests} expected</div>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <div className="text-3xl font-bold text-purple-600">{analytics.checkins.checkInRate}%</div>
                 <div className="text-sm text-neutral-500 mt-1">Check-in Rate</div>
-                <div className="text-xs text-neutral-400">invitation completion</div>
+                <div className="text-xs text-neutral-500">invitation completion</div>
               </div>
             </div>
 
@@ -129,7 +129,7 @@ export default function Analytics({ eventId }) {
               </div>
               <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
                 <div 
-                  className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
+                  className="h-full transition-all duration-500 bg-lav text-ink"
                   style={{ width: `${analytics.checkins.checkInRate}%` }}
                 />
               </div>
@@ -145,7 +145,7 @@ export default function Analytics({ eventId }) {
               </div>
               <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
                 <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                  className="h-full transition-all duration-500 bg-lav text-ink"
                   style={{ width: `${analytics.checkins.attendanceRate}%` }}
                 />
               </div>

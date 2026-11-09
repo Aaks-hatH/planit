@@ -22,15 +22,15 @@ import {
 
 const ACCENT = {
   slate:   { bar: 'bg-slate-500',   soft: 'bg-slate-100 text-slate-700',     border: 'border-slate-300',   wash: 'bg-slate-100/50',   hex: '#64748b' },
-  indigo:  { bar: 'bg-indigo-500',  soft: 'bg-indigo-100 text-indigo-700',   border: 'border-indigo-300',  wash: 'bg-indigo-100/40',  hex: '#6366f1' },
-  emerald: { bar: 'bg-emerald-500', soft: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-300', wash: 'bg-emerald-100/40', hex: '#10b981' },
-  amber:   { bar: 'bg-amber-500',   soft: 'bg-amber-100 text-amber-800',     border: 'border-amber-300',   wash: 'bg-amber-100/40',   hex: '#f59e0b' },
-  rose:    { bar: 'bg-rose-500',    soft: 'bg-rose-100 text-rose-700',       border: 'border-rose-300',    wash: 'bg-rose-100/40',    hex: '#f43f5e' },
-  sky:     { bar: 'bg-sky-500',     soft: 'bg-sky-100 text-sky-700',         border: 'border-sky-300',     wash: 'bg-sky-100/40',     hex: '#0ea5e9' },
-  violet:  { bar: 'bg-violet-500',  soft: 'bg-violet-100 text-violet-700',   border: 'border-violet-300',  wash: 'bg-violet-100/40',  hex: '#8b5cf6' },
-  teal:    { bar: 'bg-teal-500',    soft: 'bg-teal-100 text-teal-700',       border: 'border-teal-300',    wash: 'bg-teal-100/40',    hex: '#14b8a6' },
+  indigo:  { bar: 'bg-indigo-500',  soft: 'bg-indigo-100 text-indigo-700',   border: 'border-indigo-300',  wash: 'bg-blue-50',  hex: '#6366f1' },
+  emerald: { bar: 'bg-emerald-500', soft: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-300', wash: 'bg-emerald-50', hex: '#10b981' },
+  amber:   { bar: 'bg-amber-500',   soft: 'bg-amber-100 text-amber-800',     border: 'border-amber-300',   wash: 'bg-amber-50',   hex: '#f59e0b' },
+  rose:    { bar: 'bg-rose-500',    soft: 'bg-rose-100 text-rose-700',       border: 'border-rose-300',    wash: 'bg-red-50',    hex: '#f43f5e' },
+  sky:     { bar: 'bg-sky-500',     soft: 'bg-sky-100 text-sky-700',         border: 'border-sky-300',     wash: 'bg-blue-50',     hex: '#0ea5e9' },
+  violet:  { bar: 'bg-violet-500',  soft: 'bg-violet-100 text-violet-700',   border: 'border-violet-300',  wash: 'bg-blue-50',  hex: '#8b5cf6' },
+  teal:    { bar: 'bg-teal-500',    soft: 'bg-teal-100 text-teal-700',       border: 'border-teal-300',    wash: 'bg-emerald-50',    hex: '#14b8a6' },
 };
-const field = 'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10';
+const field = 'w-full rounded-lg border-2 border-ink bg-white px-3 py-2 text-sm outline-none transition focus:border-ink focus:ring-2 focus:ring-ink';
 
 const DEMO_NODES = [
   { _id: 'd1', title: 'Founder & CEO', department: 'Leadership', status: 'filled', level: 0, parentId: null, order: 0, personName: 'Alex Morgan', personEmail: 'alex@example.com', bio: 'Sets direction and keeps the roadmap honest.', skills: ['Strategy', 'Product'], links: [], accent: 'indigo', location: 'New Jersey' },
@@ -79,8 +79,7 @@ const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, o
       role="button" tabIndex={0}
       aria-label={`${open ? 'Open position' : node.personName}, ${node.title}`}
       style={{ boxShadow: multi ? '5px 5px 0 -1px #fff, 5px 5px 0 0 #d4d4d4, 10px 10px 0 -1px #fff, 10px 10px 0 0 #e5e5e5' : undefined, position: 'absolute', left: 0, top: 0, width: CARD_W, height: CARD_H, transform: `translate3d(${x}px, ${y}px, 0)${ghost ? ' scale(1.05) rotate(-1.2deg)' : ''}`, zIndex: ghost ? 50 : hot ? 20 : 10, willChange: 'transform', touchAction: 'manipulation' }}
-      className={`group select-none overflow-hidden rounded-2xl border text-left outline-none transition-[box-shadow,opacity,border-color] duration-150
-        ${dark ? 'border-neutral-900 bg-neutral-900 text-white' : `bg-white ${open ? 'border-dashed border-neutral-300' : 'border-neutral-200'}`}
+      className={`group select-none overflow-hidden rounded-2xl border-2 text-left outline-none transition-[box-shadow,opacity,border-color] duration-150 border-ink shadow transition hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg ${dark ? 'border-ink bg-white text-ink' : `bg-white ${open ? 'border-dashed border-neutral-300' : 'border-neutral-200'}`}
         ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${dim ? 'opacity-30' : ''} ${placeholder ? 'opacity-40' : ''}
         ${ghost ? (invalid ? 'border-red-400 shadow-2xl' : 'border-emerald-400 shadow-2xl') : 'shadow-sm hover:shadow-lg'}
         ${selected ? 'ring-2 ring-indigo-500' : ''} ${match ? 'ring-2 ring-amber-400' : ''} ${hot ? 'ring-2 ring-emerald-500 shadow-lg' : ''} focus-visible:ring-2 focus-visible:ring-indigo-500`}
@@ -89,20 +88,20 @@ const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, o
       <div className="flex items-start gap-3 px-3.5 pt-3">
         <Avatar node={node} size={46} />
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-[16px] font-black leading-tight ${dark ? 'text-white' : 'text-neutral-900'}`}>{open ? 'Open position' : node.personName}</div>
-          <div className={`mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug ${dark ? 'text-neutral-200' : 'text-neutral-600'}`}>{node.title}</div>
+          <div className={`truncate text-[16px] font-black leading-tight ${dark ? 'text-ink' : 'text-neutral-900'}`}>{open ? 'Open position' : node.personName}</div>
+          <div className={`mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug ${dark ? 'text-ink' : 'text-neutral-600'}`}>{node.title}</div>
         </div>
-        {canEdit && <span data-grip className={`-mr-1 -mt-0.5 flex-shrink-0 cursor-grab rounded p-1 ${dark ? 'text-neutral-500 hover:text-white' : 'text-neutral-300 hover:text-neutral-600'}`} style={{ touchAction: 'none' }} title="Drag"><GripVertical className="h-4 w-4" /></span>}
+        {canEdit && <span data-grip className={`-mr-1 -mt-0.5 flex-shrink-0 cursor-grab rounded p-1 ${dark ? 'text-neutral-500 hover:text-ink' : 'text-neutral-600 hover:text-neutral-600'}`} style={{ touchAction: 'none' }} title="Drag"><GripVertical className="h-4 w-4" /></span>}
       </div>
       <div className="absolute inset-x-3.5 bottom-2.5 flex items-center gap-1.5">
         {open
           ? <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">{multi ? `${seats} openings` : 'Hiring'}{typeof node.applicants === 'number' ? ` · ${node.applicants} applied` : ''}</span>
           : lead
-            ? <span className="flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[11px] font-bold text-indigo-200"><Crown className="h-3 w-3" />Super admin</span>
+            ? <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-200"><Crown className="h-3 w-3" />Super admin</span>
             : <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">{sameRole > 1 ? `${sameRole} in this role` : 'Filled'}</span>}
         {isMe && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${dark ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'}`}>You</span>}
-        {node.department && !lead && <span className="min-w-0 truncate text-[11px] text-neutral-400">{node.department}</span>}
-        {reports > 0 && <span className={`ml-auto flex flex-shrink-0 items-center gap-1 text-[12px] font-bold ${dark ? 'text-neutral-300' : 'text-neutral-500'}`}><Users className="h-3.5 w-3.5" />{reports}</span>}
+        {node.department && !lead && <span className="min-w-0 truncate text-[11px] text-neutral-500">{node.department}</span>}
+        {reports > 0 && <span className={`ml-auto flex flex-shrink-0 items-center gap-1 text-[12px] font-bold ${dark ? 'text-neutral-600' : 'text-neutral-500'}`}><Users className="h-3.5 w-3.5" />{reports}</span>}
       </div>
       {canEdit && !ghost && !placeholder && (
         <button data-nodrag onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onAdd(node._id); }} title="Add a position that reports here"
@@ -170,11 +169,11 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
   const Row = ({ icon: I, children }) => (children ? <div className="flex items-start gap-2 text-sm text-neutral-700"><I className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400" /><div className="min-w-0 break-words">{children}</div></div> : null);
 
   return (
-    <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+    <motion.aside   exit={{ x: 40, opacity: 0 }} 
       className="fixed inset-y-0 right-0 z-[130] flex w-full max-w-md flex-col border-l border-neutral-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">{isNew ? 'New position' : editing ? 'Edit profile' : 'Profile'}</div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100" aria-label="Close"><X className="h-5 w-5" /></button>
+        <div className="text-xs font-bold uppercase tracking-wider text-neutral-500">{isNew ? 'New position' : editing ? 'Edit profile' : 'Profile'}</div>
+        <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100" aria-label="Close"><X className="h-5 w-5" /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -201,15 +200,15 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
               </div>
             )}
             {node.status === 'filled' && node.hasAccount && (
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
-                <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-neutral-400"><span>Account</span>{node.accountRole && <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-neutral-600 ring-1 ring-neutral-200">{String(node.accountRole).replace(/_/g, ' ')}</span>}</div>
+              <div className="rounded-xl border-2 border-ink bg-neutral-50 p-3 text-sm shadow">
+                <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-neutral-500"><span>Account</span>{node.accountRole && <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-neutral-600 ring-1 ring-ink">{String(node.accountRole).replace(/_/g, ' ')}</span>}</div>
                 {node.loginVisible
                   ? <div className="space-y-0.5 text-neutral-700"><div>Last sign-in: <b>{node.lastLogin ? `${when(node.lastLogin)} (${ago(node.lastLogin)})` : 'never'}</b></div>{node.previousLogin && <div className="text-xs text-neutral-500">Before that: {when(node.previousLogin)}</div>}<div className="text-xs text-neutral-500">{node.loginCount || 0} sign-in{node.loginCount === 1 ? '' : 's'} in total</div></div>
-                  : <div className="text-xs text-neutral-400">Sign-in activity is visible to this person, their managers and super admins.</div>}
+                  : <div className="text-xs text-neutral-500">Sign-in activity is visible to this person, their managers and super admins.</div>}
                 {node.accountStatus && node.accountStatus !== 'active' && <div className="mt-1 text-xs font-semibold text-red-600">Account {node.accountStatus}</div>}
               </div>
             )}
-            {node.status === 'filled' && !node.hasAccount && canEdit && <div className="rounded-xl border border-dashed border-neutral-300 p-3 text-xs text-neutral-500">No login account is linked to this person. Link one under Edit, or add them from the Team page.</div>}
+            {node.status === 'filled' && !node.hasAccount && canEdit && <div className="rounded-xl border-2 border-dashed border-ink p-3 text-xs text-neutral-500 shadow">No login account is linked to this person. Link one under Edit, or add them from the Team page.</div>}
             {node.status === 'filled' && node.bio && <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{node.bio}</p>}
             {node.status === 'open' && (
               <div className="space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
@@ -222,18 +221,18 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
             {!!node.links?.length && <div className="space-y-1">{node.links.map((l, i) => <a key={i} href={l.url} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 text-sm text-indigo-600 hover:underline"><Globe className="h-3.5 w-3.5" />{l.label || l.url.replace(/^https?:\/\/(www\.)?/, '')}</a>)}</div>}
 
             <div>
-              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Reports to</div>
-              {mgr ? <button onClick={() => onSelect(mgr._id)} className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 p-2 text-left hover:bg-neutral-50"><Avatar node={mgr} size={28} /><span className="min-w-0 truncate text-sm font-semibold">{mgr.status === 'open' ? 'Open position' : mgr.personName}<span className="font-normal text-neutral-400"> · {mgr.title}</span></span></button> : <div className="text-sm text-neutral-400">Nobody (top of chart)</div>}
+              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Reports to</div>
+              {mgr ? <button onClick={() => onSelect(mgr._id)} className="flex w-full items-center gap-2 rounded-xl border-2 border-ink p-2 text-left hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Avatar node={mgr} size={28} /><span className="min-w-0 truncate text-sm font-semibold">{mgr.status === 'open' ? 'Open position' : mgr.personName}<span className="font-normal text-neutral-500"> · {mgr.title}</span></span></button> : <div className="text-sm text-neutral-500">Nobody (top of chart)</div>}
             </div>
             {reports.length > 0 && (
               <div>
-                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Direct reports ({reports.length})</div>
-                <div className="space-y-1.5">{reports.map((r) => <button key={r._id} onClick={() => onSelect(r._id)} className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 p-2 text-left hover:bg-neutral-50"><Avatar node={r} size={28} /><span className="min-w-0 truncate text-sm font-semibold">{r.status === 'open' ? 'Open position' : r.personName}<span className="font-normal text-neutral-400"> · {r.title}</span></span></button>)}</div>
+                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Direct reports ({reports.length})</div>
+                <div className="space-y-1.5">{reports.map((r) => <button key={r._id} onClick={() => onSelect(r._id)} className="flex w-full items-center gap-2 rounded-xl border-2 border-ink p-2 text-left hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><Avatar node={r} size={28} /><span className="min-w-0 truncate text-sm font-semibold">{r.status === 'open' ? 'Open position' : r.personName}<span className="font-normal text-neutral-500"> · {r.title}</span></span></button>)}</div>
               </div>
             )}
             {canEdit && (node.privatePhone || node.privateNotes) && (
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
-                <div className="mb-1 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-neutral-400"><Lock className="h-3 w-3" />Super admins only</div>
+              <div className="rounded-xl border-2 border-ink bg-neutral-50 p-3 text-sm shadow">
+                <div className="mb-1 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-neutral-500"><Lock className="h-3 w-3" />Super admins only</div>
                 {node.privatePhone && <div className="text-neutral-700">Phone: {node.privatePhone}</div>}
                 {node.privateNotes && <p className="mt-1 whitespace-pre-wrap text-neutral-700">{node.privateNotes}</p>}
               </div>
@@ -242,7 +241,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex gap-1 rounded-xl bg-neutral-100 p-1 sm:col-span-2">
-              {['filled', 'open'].map((s) => <button key={s} type="button" onClick={() => set('status', s)} className={`flex-1 rounded-lg py-1.5 text-sm font-bold capitalize transition ${f.status === s ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>{s === 'open' ? 'Open (hiring)' : 'Filled'}</button>)}
+              {['filled', 'open'].map((s) => <button key={s} type="button" onClick={() => set('status', s)} className={`flex-1 rounded-lg py-1.5 text-sm font-bold capitalize transition ${f.status === s ? 'bg-white text-neutral-900 shadow-sm border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>{s === 'open' ? 'Open (hiring)' : 'Filled'}</button>)}
             </div>
             {f.status === 'open' && !isNew && node.status === 'filled' && <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 sm:col-span-2">Saving as open removes {node.personName}'s profile details from this position.</p>}
             <Lbl t="Position title *" className="sm:col-span-2"><input className={field} value={f.title} maxLength={120} onChange={(e) => set('title', e.target.value)} placeholder="Head of Engineering" /></Lbl>
@@ -267,9 +266,9 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
                 <div className="mb-1 flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Links (max 5)</span>{f.links.length < 5 && <button type="button" onClick={() => set('links', [...f.links, { label: '', url: '' }])} className="flex items-center gap-1 text-xs font-bold text-neutral-700"><Plus className="h-3 w-3" />Add</button>}</div>
                 <div className="space-y-2">{f.links.map((l, i) => (
                   <div key={i} className="flex gap-2">
-                    <input className={`${field} w-28 flex-shrink-0`} placeholder="Label" value={l.label} onChange={(e) => set('links', f.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+                    <input className={`${field} w-28 flex-shrink-0 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} placeholder="Label" value={l.label} onChange={(e) => set('links', f.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
                     <input className={field} placeholder="https://…" value={l.url} onChange={(e) => set('links', f.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
-                    <button type="button" onClick={() => set('links', f.links.filter((_, j) => j !== i))} className="rounded p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => set('links', f.links.filter((_, j) => j !== i))} className="rounded p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600"><X className="h-4 w-4" /></button>
                   </div>))}</div>
               </div>
             </>)}
@@ -282,7 +281,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
               </Lbl>
             </>)}
             <Lbl t="Colour" className="sm:col-span-2">
-              <div className="flex flex-wrap gap-2">{Object.entries(ACCENT).map(([k, v]) => <button key={k} type="button" onClick={() => set('accent', k)} aria-label={k} className={`h-7 w-7 rounded-full ${v.bar} ${f.accent === k ? 'ring-2 ring-neutral-900 ring-offset-2' : ''}`} />)}</div>
+              <div className="flex flex-wrap gap-2">{Object.entries(ACCENT).map(([k, v]) => <button key={k} type="button" onClick={() => set('accent', k)} aria-label={k} className={`h-7 w-7 rounded-full ${v.bar} ${f.accent === k ? 'ring-2 ring-ink ring-offset-2' : ''}`} />)}</div>
             </Lbl>
             {f.status === 'filled' && (<>
               <Lbl t="Private phone" hint="Super admins only"><input className={field} value={f.privatePhone} maxLength={30} onChange={(e) => set('privatePhone', e.target.value)} /></Lbl>
@@ -297,15 +296,15 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
         <div className="flex items-center justify-between gap-2 border-t border-neutral-100 bg-neutral-50 px-5 py-3">
           {editing ? (<>
             <button onClick={() => (isNew ? onClose() : setEditing(false))} className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-100">Cancel</button>
-            <button disabled={busy} onClick={save} className="flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-bold text-white hover:bg-neutral-700 disabled:opacity-60">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{isNew ? 'Create' : 'Save'}</button>
+            <button disabled={busy} onClick={save} className="flex items-center gap-2 rounded-lg bg-hl px-5 py-2 text-sm font-bold text-ink hover:bg-hl disabled:opacity-60 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}{isNew ? 'Create' : 'Save'}</button>
           </>) : (<>
-            <button onClick={() => onDeleted(node)} className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Delete position"><Trash2 className="h-4 w-4" /></button>
+            <button onClick={() => onDeleted(node)} className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600" title="Delete position"><Trash2 className="h-4 w-4" /></button>
             <div className="flex gap-2">
-              {node.status === 'open' && ctx.fillOpen && <button onClick={() => ctx.fillOpen(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700"><UserPlus className="h-4 w-4" />Add person</button>}
-              {node.status === 'filled' && !node.owner && ctx.addAnother && <button onClick={() => ctx.addAnother(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700" title="Add another person to this same role"><UserPlus className="h-4 w-4" />Add another</button>}
-              <button onClick={() => ctx.duplicate(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white" title="Add another of this role"><Users className="h-4 w-4" />Duplicate</button>
-              <button onClick={() => ctx.addUnder(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white"><Plus className="h-4 w-4" />Add report</button>
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white hover:bg-neutral-700"><Edit2 className="h-4 w-4" />Edit</button>
+              {node.status === 'open' && ctx.fillOpen && <button onClick={() => ctx.fillOpen(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><UserPlus className="h-4 w-4" />Add person</button>}
+              {node.status === 'filled' && !node.owner && ctx.addAnother && <button onClick={() => ctx.addAnother(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title="Add another person to this same role"><UserPlus className="h-4 w-4" />Add another</button>}
+              <button onClick={() => ctx.duplicate(node._id)} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title="Add another of this role"><Users className="h-4 w-4" />Duplicate</button>
+              <button onClick={() => ctx.addUnder(node._id)} className="flex items-center gap-1.5 rounded-lg border-2 border-ink px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Plus className="h-4 w-4" />Add report</button>
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-hl px-4 py-2 text-sm font-bold text-ink hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Edit2 className="h-4 w-4" />Edit</button>
             </div>
           </>)}
         </div>
@@ -663,9 +662,9 @@ export default function OrgChart({ isDemo = false }) {
   const rootIds = useMemo(() => new Set(viewNodes.filter((n) => !n.parentId || !byId.has(n.parentId)).filter((n) => n.level === 0).map((n) => n._id)), [viewNodes, byId]);
 
   if (loading) return <div className="flex items-center justify-center py-24 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading org chart…</div>;
-  if (err) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err} <button onClick={() => { setLoading(true); load(); }} className="ml-2 font-bold underline">Retry</button></div>;
+  if (err) return <div className="rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm text-red-700">{err} <button onClick={() => { setLoading(true); load(); }} className="ml-2 font-bold underline">Retry</button></div>;
 
-  const tbtn = 'rounded-lg border border-neutral-200 bg-white p-2 text-neutral-600 hover:bg-neutral-50';
+  const tbtn = 'rounded-lg border-2 border-ink bg-white p-2 text-neutral-600 hover:bg-neutral-50';
   return (
     <div className={full ? 'fixed inset-0 z-[120] flex flex-col gap-2 bg-white p-3 sm:p-4' : 'space-y-3'}>
       <style>{`
@@ -678,40 +677,40 @@ export default function OrgChart({ isDemo = false }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[180px] flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people, roles, skills…" className={`${field} pl-9`} />
         </div>
         <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs font-bold">
-          {[['all', `All ${nodes.length}`], ['filled', `Filled ${counts.filled}`], ['open', `Open ${counts.open}`]].map(([k, l]) => <button key={k} onClick={() => setFilter(k)} className={`rounded-md px-3 py-1.5 ${filter === k ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>{l}</button>)}
+          {[['all', `All ${nodes.length}`], ['filled', `Filled ${counts.filled}`], ['open', `Open ${counts.open}`]].map(([k, l]) => <button key={k} onClick={() => setFilter(k)} className={`rounded-md px-3 py-1.5 ${filter === k ? 'bg-white text-neutral-900 shadow-sm border-2 border-ink rounded-lg font-bold' : 'text-neutral-500'}`}>{l}</button>)}
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="hidden items-center gap-1.5 text-[11px] font-semibold text-neutral-400 md:flex"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />{isDemo ? 'Sandbox' : `Live${updatedAt ? ' · synced' : ''}`}</span>
+          <span className="hidden items-center gap-1.5 text-[11px] font-semibold text-neutral-500 md:flex"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />{isDemo ? 'Sandbox' : `Live${updatedAt ? ' · synced' : ''}`}</span>
           <button onClick={() => setScale((x) => Math.max(0.3, +(x - 0.1).toFixed(2)))} className={tbtn} title="Zoom out"><ZoomOut className="h-4 w-4" /></button>
           <span className="w-10 text-center text-xs font-bold text-neutral-500">{Math.round(scale * 100)}%</span>
           <button onClick={() => setScale((x) => Math.min(1.5, +(x + 0.1).toFixed(2)))} className={tbtn} title="Zoom in"><ZoomIn className="h-4 w-4" /></button>
           <button onClick={fit} className={tbtn} title="Fit everything on screen"><Maximize2 className="h-4 w-4" /></button>
           <button onClick={() => load()} className={tbtn} title="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          {canEdit && !isDemo && <button onClick={() => tidy(false)} disabled={busy} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50" title="Put me at the top and connect any loose positions"><Sparkles className="h-4 w-4" />Tidy</button>}
-          {canEdit && <button onClick={importAll} disabled={busy} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50" title="Add employees and open listings that are not on the chart yet"><Download className="h-4 w-4" />Import</button>}
-          {canEdit && <button onClick={() => addUnder(null)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-neutral-700"><Plus className="h-4 w-4" />Position</button>}
-          <button onClick={() => setFull((f) => !f)} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700" title={full ? 'Exit full screen (Esc)' : 'Full screen'}>{full ? <><Minimize2 className="h-4 w-4" />Exit</> : <><Maximize2 className="h-4 w-4" />Full screen</>}</button>
+          {canEdit && !isDemo && <button onClick={() => tidy(false)} disabled={busy} className="flex items-center gap-1.5 rounded-lg border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title="Put me at the top and connect any loose positions"><Sparkles className="h-4 w-4" />Tidy</button>}
+          {canEdit && <button onClick={importAll} disabled={busy} className="flex items-center gap-1.5 rounded-lg border-2 border-ink bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title="Add employees and open listings that are not on the chart yet"><Download className="h-4 w-4" />Import</button>}
+          {canEdit && <button onClick={() => addUnder(null)} className="flex items-center gap-1.5 rounded-lg bg-hl px-3.5 py-2 text-xs font-bold text-ink hover:bg-hl border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Plus className="h-4 w-4" />Position</button>}
+          <button onClick={() => setFull((f) => !f)} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition" title={full ? 'Exit full screen (Esc)' : 'Full screen'}>{full ? <><Minimize2 className="h-4 w-4" />Exit</> : <><Maximize2 className="h-4 w-4" />Full screen</>}</button>
         </div>
       </div>
 
       <p className="text-xs text-neutral-500">
         {canEdit
-          ? <><b>Drag</b> a card onto someone to make them report to that person, or onto a teammate to reorder. Hold <kbd className="rounded border border-neutral-300 bg-white px-1">Shift</kbd> to move only that person (their team stays). <kbd className="rounded border border-neutral-300 bg-white px-1">Esc</kbd> cancels. Click a card to open the profile.</>
+          ? <><b>Drag</b> a card onto someone to make them report to that person, or onto a teammate to reorder. Hold <kbd className="rounded border-2 border-ink bg-white px-1">Shift</kbd> to move only that person (their team stays). <kbd className="rounded border-2 border-ink bg-white px-1">Esc</kbd> cancels. Click a card to open the profile.</>
           : <>Click anyone to see their profile. Only super admins can edit the chart.</>}
       </p>
 
-      <div className={`relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 ${full ? 'min-h-0 flex-1' : ''}`}
+      <div className={`relative overflow-hidden rounded-2xl border-2 border-ink bg-neutral-50 shadow ${full ? 'min-h-0 flex-1' : ''}`}
         style={full ? undefined : { height: 'max(560px, calc(100vh - 250px))' }}>
-        <div ref={scrollRef} onPointerDown={onPanDown} className="h-full w-full overflow-auto" style={{ cursor: drag ? 'grabbing' : undefined, backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+        <div ref={scrollRef} onPointerDown={onPanDown} className="h-full w-full overflow-auto" style={{ cursor: drag ? 'grabbing' : undefined, backgroundImage: 'none', backgroundSize: '22px 22px' }}>
           <div style={{ width: layout.width * scale, height: layout.height * scale, margin: '0 auto' }}>
             <div ref={innerRef} style={{ width: layout.width, height: layout.height, transform: `scale(${scale})`, transformOrigin: '0 0', position: 'relative' }}>
               {/* team bands */}
               {bands.map((b) => (
-                <div key={b.key} style={{ position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h, zIndex: 1 }} className={`rounded-3xl border border-dashed ${b.tone.border} ${b.tone.wash}`} />
+                <div key={b.key} style={{ position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h, zIndex: 1 }} className={`rounded-3xl border-2 border-dashed border-ink ${b.tone.border} ${b.tone.wash}`} />
               ))}
 
               {/* connector lines (same animated positions as the cards) */}
@@ -747,23 +746,23 @@ export default function OrgChart({ isDemo = false }) {
 
               {!nodes.length && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 text-center">
-                  <Users className="h-8 w-8 text-neutral-300" />
+                  <Users className="h-8 w-8 text-neutral-600" />
                   <p className="max-w-sm text-sm text-neutral-500">{canEdit ? 'No org chart yet. Import your employees and open listings to start, then drag people into place.' : 'The org chart has not been set up yet.'}</p>
-                  {canEdit && <div className="flex gap-2"><button onClick={importAll} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white">Import team & open roles</button><button onClick={() => addUnder(null)} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-bold text-neutral-700">Add manually</button></div>}
+                  {canEdit && <div className="flex gap-2"><button onClick={importAll} className="rounded-lg bg-hl px-4 py-2 text-sm font-bold text-ink border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Import team & open roles</button><button onClick={() => addUnder(null)} className="rounded-lg border-2 border-ink px-4 py-2 text-sm font-bold text-neutral-700 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">Add manually</button></div>}
                 </div>
               )}
             </div>
           </div>
         </div>
         <AnimatePresence>
-          {drag && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`pointer-events-none absolute left-1/2 top-3 z-[60] max-w-[90%] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg ${drag.plan.ok ? 'bg-emerald-600' : drag.plan.quiet ? 'bg-neutral-700' : 'bg-red-600'}`}>{hint}</motion.div>}
+          {drag && <motion.div   exit={{ opacity: 0 }} className={`pointer-events-none absolute left-1/2 top-3 z-[60] max-w-[90%] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg ${drag.plan.ok ? 'bg-emerald-600' : drag.plan.quiet ? 'bg-neutral-700' : 'bg-red-600'}`}>{hint}</motion.div>}
         </AnimatePresence>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-[11px] text-neutral-500">
-        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-neutral-900 bg-neutral-900" />Super admin</span>
-        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-neutral-300 bg-white" />Filled</span>
-        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-dashed border-neutral-400 bg-white" />Open position</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border-2 border-ink bg-white" />Super admin</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border-2 border-ink bg-white" />Filled</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border-2 border-dashed border-ink bg-white" />Open position</span>
         <span className="flex items-center gap-1.5"><span className="h-3 w-6 rounded-full border-2 border-indigo-300 bg-white" />Team</span>
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-neutral-400" />Reports to</span>
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-indigo-500" />Highlighted chain of command</span>

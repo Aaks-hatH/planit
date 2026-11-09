@@ -170,7 +170,7 @@ export default function Tasks({ eventId, socket }) {
             </div>
             <div className="flex gap-2">
               <select
-                className="input input-sm flex-1"
+                className="input input-sm flex-1 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
@@ -203,7 +203,7 @@ export default function Tasks({ eventId, socket }) {
           sortedTasks.map(task => (
             <div
               key={task.id}
-              className={`p-3 rounded-lg border ${
+              className={`p-3 rounded-lg border-2 border-ink shadow ${
                 task.completed ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-neutral-200'
               } hover:shadow-sm transition-shadow`}
             >
@@ -215,18 +215,18 @@ export default function Tasks({ eventId, socket }) {
                   {task.completed ? (
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   ) : (
-                    <Circle className="w-5 h-5 text-neutral-300" />
+                    <Circle className="w-5 h-5 text-neutral-600" />
                   )}
                 </button>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className={`font-medium ${task.completed ? 'line-through text-neutral-400' : 'text-neutral-900'}`}>
+                    <h4 className={`font-medium ${task.completed ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
                       {task.title}
                     </h4>
                     <button
                       onClick={() => deleteTask(task.id)}
-                      className="flex-shrink-0 text-neutral-400 hover:text-red-600 transition-colors"
+                      className="flex-shrink-0 text-neutral-500 hover:text-red-600 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -255,7 +255,7 @@ export default function Tasks({ eventId, socket }) {
                   </div>
 
                   {task.completed && task.completedBy && (
-                    <p className="text-xs text-neutral-400 mt-2">
+                    <p className="text-xs text-neutral-500 mt-2">
                       Completed by {task.completedBy} • {new Date(task.completedAt).toLocaleString()}
                     </p>
                   )}

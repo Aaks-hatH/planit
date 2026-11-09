@@ -27,8 +27,8 @@ function Avatar({ name, tone = 'slate', size = 40 }) {
 }
 
 const Section = ({ title, children, right }) => (
-  <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-    <div className="mb-3 flex items-center justify-between"><h3 className="text-[11px] font-black uppercase tracking-widest text-neutral-400">{title}</h3>{right}</div>
+  <div className="rounded-2xl border-2 border-ink bg-white p-5 shadow-md">
+    <div className="mb-3 flex items-center justify-between"><h3 className="text-[11px] font-black uppercase tracking-widest text-neutral-500">{title}</h3>{right}</div>
     {children}
   </div>
 );
@@ -37,7 +37,7 @@ const Section = ({ title, children, right }) => (
 function PersonRow({ n, catalog, showLogin }) {
   const open = n.status === 'open';
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-neutral-200 p-3">
+    <div className="flex items-center gap-3 rounded-xl border-2 border-ink p-3 shadow">
       <Avatar name={open ? '+' : n.personName} tone={open ? 'slate' : (n.accent === 'slate' ? 'indigo' : n.accent)} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-bold text-neutral-900">{open ? 'Open position' : n.personName}</div>
@@ -62,15 +62,15 @@ function MyTeam({ catalog, isDemo, onNavigate }) {
     adminAPI.getMyTeam().then((r) => setD(r.data)).catch((e) => setErr(e?.response?.data?.error || 'Could not load your team'));
   }, [isDemo]);
 
-  if (err) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
+  if (err) return <div className="rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm text-red-700">{err}</div>;
   if (!d) return <div className="flex justify-center py-16 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
-  if (d.demo) return <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center text-sm text-neutral-400">The sandbox account is not part of the org chart.</div>;
+  if (d.demo) return <div className="rounded-xl border-2 border-dashed border-ink p-10 text-center text-sm text-neutral-400 shadow">The sandbox account is not part of the org chart.</div>;
 
   const me = d.me;
   return (
     <div className="space-y-4">
       {!d.onChart && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl border-2 border-amber-600 bg-amber-50 p-4 text-sm text-amber-900">
           You are not on the org chart yet, so there is no manager or team to show. A super admin can place you from the org chart or by editing your profile.
         </div>
       )}
@@ -84,9 +84,9 @@ function MyTeam({ catalog, isDemo, onNavigate }) {
               <div className="text-sm text-neutral-500">{me.title}{me.department ? ` · ${me.department}` : ''}</div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.chain.length ? d.chain.length : 0}</div><div className="text-[10px] font-bold uppercase text-neutral-400">levels up</div></div>
-              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.reports.length}</div><div className="text-[10px] font-bold uppercase text-neutral-400">direct reports</div></div>
-              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.teamSize}</div><div className="text-[10px] font-bold uppercase text-neutral-400">in your team</div></div>
+              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.chain.length ? d.chain.length : 0}</div><div className="text-[10px] font-bold uppercase text-neutral-500">levels up</div></div>
+              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.reports.length}</div><div className="text-[10px] font-bold uppercase text-neutral-500">direct reports</div></div>
+              <div className="rounded-lg bg-neutral-50 px-3 py-2"><div className="text-lg font-black">{d.teamSize}</div><div className="text-[10px] font-bold uppercase text-neutral-500">in your team</div></div>
             </div>
           </div>
         </Section>
@@ -115,12 +115,12 @@ function MyTeam({ catalog, isDemo, onNavigate }) {
 
       <Section title="Your sign-in activity">
         <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-400">This session</div><div className="text-sm font-bold">{when(d.login?.lastLogin)}</div></div>
-          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-400">Time before that</div><div className="text-sm font-bold">{when(d.login?.previousLogin)}</div></div>
-          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-400">Total sign-ins</div><div className="text-sm font-bold">{d.login?.loginCount ?? 0}</div></div>
+          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-500">This session</div><div className="text-sm font-bold">{when(d.login?.lastLogin)}</div></div>
+          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-500">Time before that</div><div className="text-sm font-bold">{when(d.login?.previousLogin)}</div></div>
+          <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-500">Total sign-ins</div><div className="text-sm font-bold">{d.login?.loginCount ?? 0}</div></div>
         </div>
         {d.login?.recent?.length > 0 && (
-          <div className="mt-3 divide-y divide-neutral-100 rounded-lg border border-neutral-100">
+          <div className="mt-3 divide-y divide-neutral-200 rounded-lg border-2 border-ink">
             {d.login.recent.map((l, i) => (
               <div key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
                 <span className="font-semibold text-neutral-700">{when(l.at)}</span>
@@ -132,7 +132,7 @@ function MyTeam({ catalog, isDemo, onNavigate }) {
         <p className="mt-2 text-[11px] text-neutral-400">If you see a sign-in you do not recognise, change your password under My Account and tell a super admin.</p>
       </Section>
 
-      <button onClick={() => onNavigate?.('careers')} className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-bold text-neutral-800 hover:bg-neutral-50"><Network className="h-4 w-4" />Open the full org chart</button>
+      <button onClick={() => onNavigate?.('careers')} className="flex items-center gap-2 rounded-xl border-2 border-ink bg-white px-4 py-2.5 text-sm font-bold text-neutral-800 hover:bg-neutral-50 shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"><Network className="h-4 w-4" />Open the full org chart</button>
     </div>
   );
 }
@@ -169,15 +169,15 @@ function EditModal({ emp, catalog, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-ink/60 px-3" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div><h3 className="font-bold text-neutral-900">Edit {emp.name}</h3><p className="text-xs text-neutral-500">Role, access and profile</p></div>
-          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-neutral-100"><X className="h-4 w-4 text-neutral-400" /></button>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-neutral-100"><X className="h-4 w-4 text-neutral-500" /></button>
         </div>
         <div className="flex border-b px-6">
           {[['profile', 'Profile'], ['access', 'Role & access'], ['security', 'Security']].map(([id, l]) => (
-            <button key={id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-4 py-3 text-xs font-semibold ${tab === id ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-400 hover:text-neutral-600'}`}>{l}</button>
+            <button key={id} onClick={() => setTab(id)} className={`-mb-px border-b-2 px-4 py-3 text-xs font-semibold ${tab === id ? 'border-ink text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-600'}`}>{l}</button>
           ))}
         </div>
         <div className="flex-1 overflow-y-auto p-6">
@@ -208,30 +208,30 @@ function EditModal({ emp, catalog, onClose, onSaved }) {
               </div>
               {role && <p className="rounded-lg bg-neutral-50 p-3 text-xs text-neutral-600">{role.desc}</p>}
               {roleChanged && !role?.super && (
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border-2 border-amber-600 bg-amber-50 p-3 text-sm text-amber-900">
                   <input type="checkbox" className="mt-0.5" checked={f.applyRoleDefaults} onChange={(e) => set('applyRoleDefaults', e.target.checked)} />
                   <span><b>Reset permissions to {role?.label} defaults.</b> Untick to keep their current individual permissions.</span>
                 </label>
               )}
               {f.role === 'super_admin' ? (
-                <div className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-xs font-medium text-purple-700">Super admin bypasses every permission check.</div>
+                <div className="rounded-xl border-2 border-blue-600 bg-purple-50 p-3 text-xs font-medium text-purple-700">Super admin bypasses every permission check.</div>
               ) : f.role === 'demo' ? (
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-700">Demo accounts are read-only sandboxes. Permissions are ignored.</div>
+                <div className="rounded-xl border-2 border-amber-600 bg-orange-50 p-3 text-xs text-orange-700">Demo accounts are read-only sandboxes. Permissions are ignored.</div>
               ) : (
                 <>
                   <div>
-                    <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-neutral-400">Pages they will see</div>
+                    <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Pages they will see</div>
                     <div className="flex flex-wrap gap-1.5">{sections.map((id) => <span key={id} className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700">{SECTION_LABEL[id] || id}</span>)}</div>
                   </div>
                   {catalog.groups.map((g) => (
                     <div key={g.id}>
-                      <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-neutral-400">{g.label}</div>
+                      <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-neutral-500">{g.label}</div>
                       <div className="grid gap-1.5 sm:grid-cols-2">
                         {g.perms.map((p) => (
                           <div key={p.key} title={p.desc} onClick={() => setF((x) => { const base = x.applyRoleDefaults ? preset : x.permissions; return { ...x, permissions: { ...base, [p.key]: !base[p.key] }, applyRoleDefaults: false }; })}
-                            className={`flex cursor-pointer select-none items-center gap-2.5 rounded-lg border p-2.5 transition ${eff[p.key] ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'}`}>
-                            <div className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2 ${eff[p.key] ? 'border-white bg-white' : 'border-neutral-300'}`}>{eff[p.key] && <Check className="h-3 w-3 text-neutral-900" strokeWidth={3} />}</div>
-                            <span className={`text-xs ${eff[p.key] ? 'font-medium text-white' : 'text-neutral-700'}`}>{p.label}{p.risk && <span className={`ml-1 ${eff[p.key] ? 'text-amber-300' : 'text-amber-500'}`}>●</span>}</span>
+                            className={`flex cursor-pointer select-none items-center gap-2.5 rounded-lg border-2 p-2.5 transition border-ink shadow hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-lg ${eff[p.key] ? 'border-ink bg-white' : 'border-neutral-200 hover:bg-neutral-50'}`}>
+                            <div className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2 ${eff[p.key] ? 'border-ink bg-white' : 'border-neutral-300'}`}>{eff[p.key] && <Check className="h-3 w-3 text-neutral-900" strokeWidth={3} />}</div>
+                            <span className={`text-xs ${eff[p.key] ? 'font-medium text-ink' : 'text-neutral-700'}`}>{p.label}{p.risk && <span className={`ml-1 ${eff[p.key] ? 'text-amber-700' : 'text-amber-700'}`}>●</span>}</span>
                           </div>
                         ))}
                       </div>
@@ -244,22 +244,22 @@ function EditModal({ emp, catalog, onClose, onSaved }) {
 
           {tab === 'security' && (
             <div className="space-y-4">
-              <label className="block"><span className="mb-1 block text-xs font-medium text-neutral-600">New password <span className="font-normal text-neutral-400">(leave blank to keep)</span></span>
+              <label className="block"><span className="mb-1 block text-xs font-medium text-neutral-600">New password <span className="font-normal text-neutral-500">(leave blank to keep)</span></span>
                 <input type="password" autoComplete="new-password" className={FIELD} value={f.password} onChange={(e) => set('password', e.target.value)} />
-                <span className="mt-1 block text-[11px] text-neutral-400">10+ characters with an uppercase letter, a number and a special character.</span></label>
+                <span className="mt-1 block text-[11px] text-neutral-500">10+ characters with an uppercase letter, a number and a special character.</span></label>
               {[['forcePasswordReset', 'Force password reset on next sign-in'], ['isDemo', 'Sandbox / demo account (all writes simulated)']].map(([k, l]) => (
                 <label key={k} className="flex cursor-pointer items-center gap-2 text-sm text-neutral-700"><input type="checkbox" checked={f[k]} onChange={(e) => set(k, e.target.checked)} />{l}</label>
               ))}
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-400">Last sign-in</div><div className="font-bold">{when(emp.lastLogin)}</div></div>
-                <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-400">Total sign-ins</div><div className="font-bold">{emp.loginCount || 0}</div></div>
+                <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-500">Last sign-in</div><div className="font-bold">{when(emp.lastLogin)}</div></div>
+                <div className="rounded-lg bg-neutral-50 p-3"><div className="text-[10px] font-bold uppercase text-neutral-500">Total sign-ins</div><div className="font-bold">{emp.loginCount || 0}</div></div>
               </div>
             </div>
           )}
         </div>
         <div className="flex gap-3 border-t px-6 py-4">
           <button onClick={onClose} className="btn btn-secondary flex-1 text-sm">Cancel</button>
-          <button onClick={save} disabled={busy} className="btn flex-1 gap-2 bg-neutral-900 text-sm text-white hover:bg-neutral-800 disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save changes</button>
+          <button onClick={save} disabled={busy} className="btn flex-1 gap-2 !bg-white text-sm !text-ink hover:bg-lav disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}Save changes</button>
         </div>
       </div>
     </div>
@@ -270,12 +270,12 @@ function LoginsModal({ emp, onClose }) {
   const [rows, setRows] = useState(null);
   useEffect(() => { adminAPI.getTeamLogins(emp._id).then((r) => setRows(r.data.logins)).catch((e) => { toast.error(e?.response?.data?.error || 'Could not load'); onClose(); }); }, [emp._id]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/50 px-3" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-ink/60 px-3" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b px-5 py-3"><h3 className="font-bold">Sign-ins · {emp.name || emp.personName}</h3><button onClick={onClose}><X className="h-4 w-4 text-neutral-400" /></button></div>
+        <div className="flex items-center justify-between border-b px-5 py-3"><h3 className="font-bold">Sign-ins · {emp.name || emp.personName}</h3><button onClick={onClose}><X className="h-4 w-4 text-neutral-500" /></button></div>
         <div className="max-h-[60vh] overflow-y-auto p-4">
-          {!rows ? <Loader2 className="mx-auto h-5 w-5 animate-spin text-neutral-400" />
-            : rows.length === 0 ? <p className="text-center text-sm text-neutral-400">No sign-ins recorded yet.</p>
+          {!rows ? <Loader2 className="mx-auto h-5 w-5 animate-spin text-neutral-500" />
+            : rows.length === 0 ? <p className="text-center text-sm text-neutral-500">No sign-ins recorded yet.</p>
               : rows.map((l, i) => <div key={i} className="flex justify-between gap-2 border-b border-neutral-100 py-2 text-xs"><span className="font-semibold">{when(l.at)}</span><span className="text-neutral-500">{l.device}{l.ip ? ` · ${l.ip}` : ''}</span></div>)}
         </div>
       </div>
@@ -347,22 +347,22 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
       </div>
 
       {isSuper && missing.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-amber-600 bg-amber-50 p-4">
           <div className="flex gap-2 text-sm text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><b>{missing.length} account{missing.length === 1 ? ' is' : 's are'} missing permission flags</b> that were added after they were created ({missing.map((m) => m.name).slice(0, 3).join(', ')}{missing.length > 3 ? '…' : ''}). Until fixed, those flags count as "off".</span></div>
-          <button onClick={sync} disabled={syncing} className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-60">{syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Fill in from role defaults</button>
+          <button onClick={sync} disabled={syncing} className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-ink hover:bg-amber-700 disabled:opacity-60 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">{syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}Fill in from role defaults</button>
         </div>
       )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" /><input className={`${FIELD} pl-8`} placeholder="Search by name, email, department…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <select className={`${FIELD} sm:w-40`} value={fRole} onChange={(e) => setFRole(e.target.value)}><option value="all">All roles</option>{catalog.roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select>
-        <select className={`${FIELD} sm:w-36`} value={fStatus} onChange={(e) => setFStatus(e.target.value)}><option value="all">All statuses</option>{['active', 'inactive', 'suspended'].map((s) => <option key={s}>{s}</option>)}</select>
+        <select className={`${FIELD} sm:w-40 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={fRole} onChange={(e) => setFRole(e.target.value)}><option value="all">All roles</option>{catalog.roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select>
+        <select className={`${FIELD} sm:w-36 border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg`} value={fStatus} onChange={(e) => setFStatus(e.target.value)}><option value="all">All statuses</option>{['active', 'inactive', 'suspended'].map((s) => <option key={s}>{s}</option>)}</select>
       </div>
 
       {loading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div> : (
         <div className="grid gap-3 lg:grid-cols-2">
           {root && !q && fRole === 'all' && fStatus === 'all' && (
-            <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4">
+            <div className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4">
               <div className="flex items-center gap-3"><Avatar name="Super Admin" tone="purple" /><div className="min-w-0 flex-1"><div className="flex items-center gap-2 text-sm font-bold">Super Admin <Crown className="h-3.5 w-3.5 text-purple-600" /> <span className="rounded-full bg-purple-100 px-2 text-[11px] font-semibold text-purple-800">You · owner login</span></div>
                 <div className="text-xs text-neutral-500">Last sign-in {when(root.lastLogin)} · {root.loginCount} total</div></div>
                 <button onClick={() => setLogins({ _id: 'root', name: 'Super Admin' })} className="rounded-lg p-1.5 text-neutral-500 hover:bg-white" title="Sign-in history"><History className="h-4 w-4" /></button></div>
@@ -373,7 +373,7 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
             const total = catalog.keys.length;
             const granted = catalog.keys.filter((k) => e.permissions?.[k]).length;
             return (
-              <div key={e._id} className={`rounded-2xl border border-neutral-200 bg-white p-4 ${e.status !== 'active' ? 'opacity-60' : ''}`}>
+              <div key={e._id} className={`rounded-2xl border-2 border-ink bg-white p-4 shadow ${e.status !== 'active' ? 'opacity-60' : ''}`}>
                 <div className="flex items-start gap-3">
                   <Avatar name={e.name} tone={roleOf(catalog, e.role)?.tone || 'slate'} />
                   <div className="min-w-0 flex-1">
@@ -383,13 +383,13 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
                       {e.forcePasswordReset && <span className="rounded-full bg-red-100 px-2 text-[11px] font-semibold text-red-600">pw reset</span>}
                       {e.missingPermissions?.length > 0 && <span className="rounded-full bg-amber-100 px-2 text-[11px] font-semibold text-amber-800" title={e.missingPermissions.join(', ')}>{e.missingPermissions.length} flags missing</span>}</div>
                     <div className="text-xs text-neutral-500">{e.email}</div>
-                    <div className="mt-1 text-xs text-neutral-400">{e.position ? e.position.title : <span className="text-amber-600">Not on the org chart</span>}{e.department ? ` · ${e.department}` : ''}</div>
+                    <div className="mt-1 text-xs text-neutral-500">{e.position ? e.position.title : <span className="text-amber-600">Not on the org chart</span>}{e.department ? ` · ${e.department}` : ''}</div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-neutral-500">
                       <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{e.manager ? <>Reports to <b className="text-neutral-700">{e.manager.open ? 'open position' : e.manager.name}</b></> : 'No manager'}</span>
                       <span className="flex items-center gap-1"><Users className="h-3 w-3" />{e.reportCount} report{e.reportCount === 1 ? '' : 's'}</span>
                       {!e.loginHidden && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{e.lastLogin ? `Signed in ${ago(e.lastLogin)}` : 'Never signed in'}{e.loginCount ? ` · ${e.loginCount}×` : ''}</span>}
                     </div>
-                    {isSuper && e.role !== 'super_admin' && <div className="mt-1.5 text-[11px] text-neutral-400">{e.isDemo ? 'Sandbox' : `${granted} / ${total} permissions`}</div>}
+                    {isSuper && e.role !== 'super_admin' && <div className="mt-1.5 text-[11px] text-neutral-500">{e.isDemo ? 'Sandbox' : `${granted} / ${total} permissions`}</div>}
                   </div>
                   <div className="flex flex-shrink-0 flex-wrap justify-end gap-1.5">
                     {!e.loginHidden && <button onClick={() => setLogins(e)} className="btn btn-secondary p-1.5" title="Sign-in history"><History className="h-3.5 w-3.5" /></button>}
@@ -397,8 +397,8 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
                       <button disabled={self} onClick={() => setEdit(e)} className={`btn btn-secondary p-1.5 ${self ? 'opacity-30' : ''}`} title={self ? 'Use My Account for your own profile' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
                       <button disabled={self} onClick={() => { setCp(e); setCpNew(''); }} className={`btn btn-secondary p-1.5 ${self ? 'opacity-30' : ''}`} title="Set password"><Key className="h-3.5 w-3.5" /></button>
                       <button disabled={self} onClick={() => force(e)} className={`btn btn-secondary p-1.5 text-amber-600 ${self ? 'opacity-30' : ''}`} title="Force password reset"><RotateCcw className="h-3.5 w-3.5" /></button>
-                      <button disabled={self} onClick={() => suspend(e)} className={`btn btn-secondary p-1.5 ${e.status === 'suspended' ? 'text-emerald-600' : 'text-orange-500'} ${self ? 'opacity-30' : ''}`} title={e.status === 'suspended' ? 'Unsuspend' : 'Suspend'}><Power className="h-3.5 w-3.5" /></button>
-                      <button disabled={self} onClick={() => del(e)} className={`btn btn-secondary p-1.5 text-red-500 ${self ? 'opacity-30' : ''}`} title="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button disabled={self} onClick={() => suspend(e)} className={`btn btn-secondary p-1.5 ${e.status === 'suspended' ? 'text-emerald-600' : 'text-amber-700'} ${self ? 'opacity-30' : ''}`} title={e.status === 'suspended' ? 'Unsuspend' : 'Suspend'}><Power className="h-3.5 w-3.5" /></button>
+                      <button disabled={self} onClick={() => del(e)} className={`btn btn-secondary p-1.5 text-red-700 ${self ? 'opacity-30' : ''}`} title="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
                     </>)}
                   </div>
                 </div>
@@ -413,12 +413,12 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
       {logins && <LoginsModal emp={logins} onClose={() => setLogins(null)} />}
       {wizard && <AddPersonWizard onClose={() => setWizard(false)} onCreated={() => load()} />}
       {cp && (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/50 px-3" onClick={(e) => e.target === e.currentTarget && setCp(null)}>
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-ink/60 px-3" onClick={(e) => e.target === e.currentTarget && setCp(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h3 className="font-bold">Set a new password for {cp.name}</h3>
             <input type="password" autoFocus autoComplete="new-password" className={`${FIELD} mt-4`} placeholder="New password" value={cpNew} onChange={(e) => setCpNew(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setPw()} />
-            <p className="mt-1 text-[11px] text-neutral-400">10+ characters with an uppercase letter, a number and a special character. Their sessions end.</p>
-            <div className="mt-4 flex gap-3"><button onClick={() => setCp(null)} className="btn btn-secondary flex-1 text-sm">Cancel</button><button onClick={setPw} disabled={!cpNew} className="btn flex-1 bg-neutral-900 text-sm text-white disabled:opacity-50">Set password</button></div>
+            <p className="mt-1 text-[11px] text-neutral-500">10+ characters with an uppercase letter, a number and a special character. Their sessions end.</p>
+            <div className="mt-4 flex gap-3"><button onClick={() => setCp(null)} className="btn btn-secondary flex-1 text-sm">Cancel</button><button onClick={setPw} disabled={!cpNew} className="btn flex-1 !bg-white text-sm !text-ink disabled:opacity-50">Set password</button></div>
           </div>
         </div>
       )}
@@ -433,33 +433,33 @@ function RolesMatrix({ catalog, employees }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-500">Every role and every permission that exists, with what each role gets by default. A role is a starting point; individual flags can be changed per person.</p>
-      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border-2 border-ink bg-white">
         <table className="w-full min-w-[720px] text-xs">
           <thead className="bg-neutral-50">
             <tr>
-              <th className="sticky left-0 bg-neutral-50 px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-neutral-400">Permission</th>
-              {roles.map((r) => <th key={r.id} className="px-2 py-2 text-center"><span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${TONE[r.tone] || TONE.slate}`}>{r.label}</span><div className="mt-0.5 text-[10px] font-normal text-neutral-400">{counts[r.id] || 0} people</div></th>)}
+              <th className="sticky left-0 bg-neutral-50 px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-neutral-500">Permission</th>
+              {roles.map((r) => <th key={r.id} className="px-2 py-2 text-center"><span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${TONE[r.tone] || TONE.slate}`}>{r.label}</span><div className="mt-0.5 text-[10px] font-normal text-neutral-500">{counts[r.id] || 0} people</div></th>)}
             </tr>
           </thead>
           <tbody>
             {catalog.groups.map((g) => (
               <React.Fragment key={g.id}>
-                <tr><td colSpan={roles.length + 1} className="bg-neutral-50/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-neutral-400">{g.label}</td></tr>
+                <tr><td colSpan={roles.length + 1} className="bg-neutral-50/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-neutral-500">{g.label}</td></tr>
                 {g.perms.map((p) => (
                   <tr key={p.key} className="border-t border-neutral-100">
-                    <td className="sticky left-0 bg-white px-3 py-1.5" title={p.desc}><span className="font-semibold text-neutral-700">{p.label}</span>{p.risk && <span className="ml-1 text-amber-500">●</span>}</td>
-                    {roles.map((r) => <td key={r.id} className="px-2 py-1.5 text-center">{r.perms.includes(p.key) ? <Check className="mx-auto h-3.5 w-3.5 text-emerald-600" strokeWidth={3} /> : <span className="text-neutral-200">–</span>}</td>)}
+                    <td className="sticky left-0 bg-white px-3 py-1.5" title={p.desc}><span className="font-semibold text-neutral-700">{p.label}</span>{p.risk && <span className="ml-1 text-amber-700">●</span>}</td>
+                    {roles.map((r) => <td key={r.id} className="px-2 py-1.5 text-center">{r.perms.includes(p.key) ? <Check className="mx-auto h-3.5 w-3.5 text-emerald-600" strokeWidth={3} /> : <span className="text-ink">–</span>}</td>)}
                   </tr>
                 ))}
               </React.Fragment>
             ))}
-            <tr><td colSpan={roles.length + 1} className="bg-neutral-50/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-neutral-400">Pages in the sidebar</td></tr>
+            <tr><td colSpan={roles.length + 1} className="bg-neutral-50/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-neutral-500">Pages in the sidebar</td></tr>
             {catalog.sections.map((s) => (
               <tr key={s.id} className="border-t border-neutral-100">
                 <td className="sticky left-0 bg-white px-3 py-1.5 font-semibold text-neutral-700">{SECTION_LABEL[s.id] || s.id}</td>
                 {roles.map((r) => {
                   const ok = sectionsFrom(catalog, Object.fromEntries(r.perms.map((k) => [k, true])), r.id).includes(s.id);
-                  return <td key={r.id} className="px-2 py-1.5 text-center">{ok ? <Check className="mx-auto h-3.5 w-3.5 text-emerald-600" strokeWidth={3} /> : <span className="text-neutral-200">–</span>}</td>;
+                  return <td key={r.id} className="px-2 py-1.5 text-center">{ok ? <Check className="mx-auto h-3.5 w-3.5 text-emerald-600" strokeWidth={3} /> : <span className="text-ink">–</span>}</td>;
                 })}
               </tr>
             ))}
@@ -505,7 +505,7 @@ export default function TeamPage({ currentUser, isDemo = false, demoEmployees = 
       {tabs.length > 1 && (
         <div className="flex gap-1 rounded-xl bg-neutral-100 p-1">
           {tabs.map(([id, label, I]) => (
-            <button key={id} onClick={() => setTab(id)} className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition ${tab === id ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-800'}`}><I className="h-4 w-4" />{label}</button>
+            <button key={id} onClick={() => setTab(id)} className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition ${tab === id ? 'bg-white text-neutral-900 shadow-sm border-2 border-ink rounded-lg font-bold' : 'text-neutral-500 hover:text-neutral-800'}`}><I className="h-4 w-4" />{label}</button>
           ))}
         </div>
       )}

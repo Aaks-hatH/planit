@@ -51,7 +51,7 @@ export default function Countdown({ eventDate }) {
 
   if (timeLeft.isPast) {
     return (
-      <div className="card p-6 bg-gradient-to-br from-emerald-50 to-green-50 text-center">
+      <div className="card p-6 text-center bg-lav">
         <div className="flex items-center justify-center gap-2 text-emerald-700 mb-2">
           <Calendar className="w-5 h-5" />
           <span className="font-semibold">Event is Live!</span>
@@ -64,7 +64,7 @@ export default function Countdown({ eventDate }) {
   }
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="card p-6 bg-lav text-ink">
       <div className="flex items-center justify-center gap-2 text-neutral-700 mb-4">
         <Clock className="w-5 h-5" />
         <span className="font-semibold">Time Until Event</span>

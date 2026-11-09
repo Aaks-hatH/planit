@@ -118,16 +118,16 @@ const Dot = ({ color = '#22c55e', pulse }) => (
     animation: pulse ? 'pd 2s ease-in-out infinite' : 'none' }} />
 );
 const Stat = ({ label, value, sub, accent }) => (
-  <div style={{ background:'#111827', borderRadius:8, padding:'10px 14px', flex:1, minWidth:90 }}>
+  <div style={{ background:'#ffffff', borderRadius:8, padding:'10px 14px', flex:1, minWidth:90 }}>
     <div style={{ fontSize:22, fontWeight:800, color: accent || '#e2e8f0', fontVariantNumeric:'tabular-nums' }}>{value ?? '—'}</div>
     <div style={{ fontSize:10, textTransform:'uppercase', letterSpacing:'0.1em', color:'#4b5563', marginTop:2 }}>{label}</div>
     {sub && <div style={{ fontSize:10, color:'#6b7280', marginTop:3 }}>{sub}</div>}
   </div>
 );
 const Panel = ({ title, children, right, col, row }) => (
-  <div style={{ background:'#0d0d14', border:'1px solid #1a1a2a', borderRadius:10, overflow:'hidden', display:'flex', flexDirection:'column', gridColumn: col, gridRow: row }}>
+  <div style={{ background:'#ffffff', border:'2px solid #0d0e1c', borderRadius:10, overflow:'hidden', display:'flex', flexDirection:'column', gridColumn: col, gridRow: row }}>
     {title && (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 8px', borderBottom:'1px solid #111827', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 14px 8px', borderBottom:'1px solid #2236ff', flexShrink:0 }}>
         <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'#6b7280' }}>{title}</span>
         {right}
       </div>
@@ -136,7 +136,7 @@ const Panel = ({ title, children, right, col, row }) => (
   </div>
 );
 const KV = ({ k, v, mono, accent }) => (
-  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 0', borderBottom:'1px solid #111827', fontSize:12 }}>
+  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 0', borderBottom:'1px solid #2236ff', fontSize:12 }}>
     <span style={{ color:'#6b7280' }}>{k}</span>
     <span style={{ color: accent || '#d1d5db', fontWeight:500, fontFamily: mono ? 'monospace' : undefined }}>{v ?? '—'}</span>
   </div>
@@ -178,12 +178,12 @@ function OverviewView() {
         {backends.length === 0
           ? <div style={{ color:'#374151', fontSize:12, padding:'8px 0' }}>No data</div>
           : backends.map((b, i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:'1px solid #111827', fontSize:12 }}>
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:'1px solid #2236ff', fontSize:12 }}>
               <Dot color={b.alive ? (b.circuitTripped ? '#fbbf24' : '#22c55e') : '#f87171'} pulse={!b.alive} />
-              <span style={{ color:'#e2e8f0', fontWeight:600, flex:1 }}>{b.name}</span>
-              <span style={{ fontFamily:'monospace', color:'#60a5fa', fontSize:11 }}>{b.latencyMs != null ? b.latencyMs + 'ms' : '—'}</span>
+              <span style={{ color:'#2236ff', fontWeight:600, flex:1 }}>{b.name}</span>
+              <span style={{ fontFamily:'monospace', color:'#2236ff', fontSize:11 }}>{b.latencyMs != null ? b.latencyMs + 'ms' : '—'}</span>
               <span style={{ fontFamily:'monospace', color:'#4b5563', fontSize:11 }}>{b.requests ?? 0} req</span>
-              {b.circuitTripped && <span style={{ fontSize:9, color:'#fbbf24', background:'rgba(251,191,36,0.1)', padding:'1px 5px', borderRadius:3 }}>TRIP</span>}
+              {b.circuitTripped && <span style={{ fontSize:9, color:'#6e5400', background:'#fff6c2', padding:'1px 5px', borderRadius:3 }}>TRIP</span>}
             </div>
           ))}
       </Panel>
@@ -191,11 +191,11 @@ function OverviewView() {
       {/* Auth failures */}
       <Panel title="Auth Failures" col="3 / 5">
         {(sec?.failedLogins || []).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ None recorded</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ None recorded</div>
           : [...(sec.failedLogins)].reverse().slice(0, 7).map((f, i) => (
-            <div key={i} style={{ display:'flex', gap:8, padding:'3px 0 3px 8px', borderLeft:'2px solid #f87171', marginBottom:3, fontSize:11 }}>
+            <div key={i} style={{ display:'flex', gap:8, padding:'3px 0 3px 8px', borderLeft:'1px solid #a82020', marginBottom:3, fontSize:11 }}>
               <span style={{ fontFamily:'monospace', color:'#4b5563', flexShrink:0 }}>{ts(f.ts)}</span>
-              <span style={{ color:'#fca5a5', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
+              <span style={{ color:'#a82020', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
             </div>
           ))}
       </Panel>
@@ -203,11 +203,11 @@ function OverviewView() {
       {/* Top errors */}
       <Panel title="Top Error Patterns" col="1 / 3">
         {(sec?.topErrors || []).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ No errors</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ No errors</div>
           : sec.topErrors.slice(0, 6).map((e, i) => (
-            <div key={i} style={{ display:'flex', gap:10, padding:'4px 0', borderBottom:'1px solid #111827', fontSize:11, alignItems:'flex-start' }}>
-              <span style={{ color:'#f87171', fontFamily:'monospace', fontWeight:700, flexShrink:0 }}>{String(e.count).padStart(3,'0')}×</span>
-              <span style={{ color:'#9ca3af' }}>{e.msg}</span>
+            <div key={i} style={{ display:'flex', gap:10, padding:'4px 0', borderBottom:'1px solid #2236ff', fontSize:11, alignItems:'flex-start' }}>
+              <span style={{ color:'#a82020', fontFamily:'monospace', fontWeight:700, flexShrink:0 }}>{String(e.count).padStart(3,'0')}×</span>
+              <span style={{ color:'#5a5d70' }}>{e.msg}</span>
             </div>
           ))}
       </Panel>
@@ -215,11 +215,11 @@ function OverviewView() {
       {/* Rate limits */}
       <Panel title="Rate Limit Hits" col="3 / 5">
         {(sec?.rateLimitHits || []).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ None</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ None</div>
           : [...(sec.rateLimitHits)].reverse().slice(0, 7).map((f, i) => (
-            <div key={i} style={{ display:'flex', gap:8, padding:'3px 0 3px 8px', borderLeft:'2px solid #fbbf24', marginBottom:3, fontSize:11 }}>
+            <div key={i} style={{ display:'flex', gap:8, padding:'3px 0 3px 8px', borderLeft:'1px solid #6e5400', marginBottom:3, fontSize:11 }}>
               <span style={{ fontFamily:'monospace', color:'#4b5563', flexShrink:0 }}>{ts(f.ts)}</span>
-              <span style={{ color:'#fde68a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
+              <span style={{ color:'#6e5400', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
             </div>
           ))}
       </Panel>
@@ -237,7 +237,7 @@ function OverviewView() {
               <span style={{ color:'#374151', flexShrink:0 }}>{ts(l.ts)}</span>
               <span style={{ color: levelColor(l.level), fontWeight:700, width:36, flexShrink:0 }}>{(l.level||'LOG').toUpperCase()}</span>
               <span style={{ color:'#4b5563', width:60, flexShrink:0 }}>{(l.source||'backend').slice(0,8)}</span>
-              <span style={{ color:'#9ca3af', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.msg}</span>
+              <span style={{ color:'#5a5d70', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.msg}</span>
             </div>
           ))}
           {logs.length === 0 && <div style={{ color:'#374151', fontSize:12 }}>Waiting for events…</div>}
@@ -270,8 +270,8 @@ function LiveFeedView() {
 
   const TB = {
     display:'flex', alignItems:'center', justifyContent:'space-between',
-    padding:'7px 12px', background:'#0d0d14', border:'1px solid #1a1a2a',
-    borderRadius:'8px 8px 0 0', flexShrink:0
+    padding:'7px 12px', background:'#ffffff', border:'2px solid #0d0e1c',
+    borderRadius:'8px 8px 0 0', flexShrink:0, boxShadow: '4px 4px 0 #0d0e1c'
   };
   const Btn = ({ children, active, color, onClick }) => (
     <button onClick={onClick} style={{
@@ -298,14 +298,14 @@ function LiveFeedView() {
             </Btn>
           ))}
           <input
-            style={{ background:'#111827', border:'1px solid #1f2937', borderRadius:5, padding:'3px 8px', fontSize:11, color:'#9ca3af', outline:'none', fontFamily:'monospace', width:140 }}
+            style={{ background:'#ffffff', border:'2px solid #0d0e1c', borderRadius:5, padding:'3px 8px', fontSize:11, color:'#5a5d70', outline:'none', fontFamily:'monospace', width:140 }}
             placeholder="filter…" value={filter} onChange={e => setFilter(e.target.value)}
           />
           <Btn active={paused} onClick={() => setPaused(v => !v)}>{paused ? '▶ RESUME' : '⏸ PAUSE'}</Btn>
           <Btn active={autoscroll} onClick={() => setAutoscroll(v => !v)}>AUTO↓</Btn>
         </div>
       </div>
-      <div ref={ref} style={{ flex:1, overflowY:'auto', background:'#050508', border:'1px solid #1a1a2a', borderTop:'none', borderRadius:'0 0 8px 8px', padding:'2px 0' }}>
+      <div ref={ref} style={{ flex:1, overflowY:'auto', background:'#ffffff', border:'2px solid #0d0e1c', borderTop:'none', borderRadius:'0 0 8px 8px', padding:'2px 0' }}>
         {visible.map((l, i) => (
           <div key={l._k || i} style={{
             display:'flex', gap:10, padding:'2px 10px 2px 8px',
@@ -347,12 +347,12 @@ function ThreatsView() {
       {/* Failed logins */}
       <Panel title="Failed Login Attempts" col="1 / 3">
         {(sec?.failedLogins||[]).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ None</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ None</div>
           : <div style={{ maxHeight:240, overflowY:'auto', display:'flex', flexDirection:'column', gap:3 }}>
               {[...(sec.failedLogins)].reverse().map((f, i) => (
-                <div key={i} style={{ display:'flex', gap:8, padding:'4px 8px', background:'rgba(248,113,113,0.05)', borderLeft:'2px solid rgba(248,113,113,0.3)', borderRadius:3, fontSize:11 }}>
+                <div key={i} style={{ display:'flex', gap:8, padding:'4px 8px', background:'#ffe1de', borderLeft:'1px solid #a82020', borderRadius:3, fontSize:11 }}>
                   <span style={{ fontFamily:'monospace', color:'#4b5563', flexShrink:0 }}>{ts(f.ts)}</span>
-                  <span style={{ color:'#fca5a5', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
+                  <span style={{ color:'#a82020', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
                 </div>
               ))}
             </div>}
@@ -361,12 +361,12 @@ function ThreatsView() {
       {/* Rate limits */}
       <Panel title="Rate Limit Events" col="3 / 5">
         {(sec?.rateLimitHits||[]).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ None</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ None</div>
           : <div style={{ maxHeight:240, overflowY:'auto', display:'flex', flexDirection:'column', gap:3 }}>
               {[...(sec.rateLimitHits)].reverse().map((f, i) => (
-                <div key={i} style={{ display:'flex', gap:8, padding:'4px 8px', background:'rgba(251,191,36,0.05)', borderLeft:'2px solid rgba(251,191,36,0.3)', borderRadius:3, fontSize:11 }}>
+                <div key={i} style={{ display:'flex', gap:8, padding:'4px 8px', background:'#fff6c2', borderLeft:'1px solid #6e5400', borderRadius:3, fontSize:11 }}>
                   <span style={{ fontFamily:'monospace', color:'#4b5563', flexShrink:0 }}>{ts(f.ts)}</span>
-                  <span style={{ color:'#fde68a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
+                  <span style={{ color:'#6e5400', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.msg}</span>
                 </div>
               ))}
             </div>}
@@ -375,11 +375,11 @@ function ThreatsView() {
       {/* Top errors */}
       <Panel title="Top Error Patterns" col="1 / 3">
         {(sec?.topErrors||[]).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ No errors</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ No errors</div>
           : (sec.topErrors).map((e, i) => (
-            <div key={i} style={{ display:'flex', gap:12, padding:'5px 0', borderBottom:'1px solid #111827', fontSize:11, alignItems:'flex-start' }}>
-              <span style={{ color:'#f87171', fontFamily:'monospace', fontWeight:700, flexShrink:0 }}>{String(e.count).padStart(3,'0')}×</span>
-              <span style={{ color:'#9ca3af' }}>{e.msg}</span>
+            <div key={i} style={{ display:'flex', gap:12, padding:'5px 0', borderBottom:'1px solid #2236ff', fontSize:11, alignItems:'flex-start' }}>
+              <span style={{ color:'#a82020', fontFamily:'monospace', fontWeight:700, flexShrink:0 }}>{String(e.count).padStart(3,'0')}×</span>
+              <span style={{ color:'#5a5d70' }}>{e.msg}</span>
             </div>
           ))}
       </Panel>
@@ -387,11 +387,11 @@ function ThreatsView() {
       {/* Suspicious */}
       <Panel title="Suspicious Accounts" col="3 / 5">
         {(sec?.suspiciousParticipants||[]).length === 0
-          ? <div style={{ color:'#22c55e', fontSize:12 }}>✓ None detected</div>
+          ? <div style={{ color:'#0a7149', fontSize:12 }}>✓ None detected</div>
           : (sec.suspiciousParticipants).map((u, i) => (
-            <div key={i} style={{ display:'flex', padding:'4px 8px', background:'rgba(251,191,36,0.05)', borderLeft:'2px solid rgba(251,191,36,0.3)', borderRadius:3, marginBottom:3, fontSize:11, justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontFamily:'monospace', color:'#fde68a', fontWeight:700 }}>{u._id}</span>
-              <span style={{ color:'#fbbf24' }}>{u.count} joins</span>
+            <div key={i} style={{ display:'flex', padding:'4px 8px', background:'#fff6c2', borderLeft:'1px solid #6e5400', borderRadius:3, marginBottom:3, fontSize:11, justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontFamily:'monospace', color:'#6e5400', fontWeight:700 }}>{u._id}</span>
+              <span style={{ color:'#6e5400' }}>{u.count} joins</span>
             </div>
           ))}
       </Panel>
@@ -404,18 +404,18 @@ function ThreatsView() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>{['Type','Value','Reason','Added'].map(h => (
-                    <th key={h} style={{ textAlign:'left', padding:'6px 10px', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em', color:'#4b5563', borderBottom:'1px solid #1f2937' }}>{h}</th>
+                    <th key={h} style={{ textAlign:'left', padding:'6px 10px', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em', color:'#4b5563', borderBottom:'1px solid #d9dbe8' }}>{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody>
                   {blocklist.slice(0, 40).map((b, i) => (
                     <tr key={i}>
-                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #111827' }}>
-                        <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#a78bfa', background:'rgba(167,139,250,0.1)', padding:'2px 6px', borderRadius:4 }}>{b.type||'—'}</span>
+                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #2236ff' }}>
+                        <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#2236ff', background:'#eceeff', padding:'2px 6px', borderRadius:4 }}>{b.type||'—'}</span>
                       </td>
-                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', fontSize:11, color:'#e2e8f0' }}>{b.value}</td>
-                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #111827', color:'#6b7280' }}>{b.reason||'—'}</td>
-                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #111827', color:'#4b5563', fontSize:11 }}>{ago(b.createdAt)}</td>
+                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', fontSize:11, color:'#2236ff' }}>{b.value}</td>
+                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #2236ff', color:'#6b7280' }}>{b.reason||'—'}</td>
+                      <td style={{ padding:'6px 10px', borderBottom:'1px solid #2236ff', color:'#4b5563', fontSize:11 }}>{ago(b.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -455,8 +455,8 @@ function InfraView() {
         <KV k="RSS" v={fmtMB(proc?.memMB?.rss)} />
         {heapPct != null && <>
           <KV k="Usage" v={heapPct + '%'} />
-          <div style={{ margin:'8px 0 0', height:4, background:'#1f2937', borderRadius:2, overflow:'hidden' }}>
-            <div style={{ height:'100%', width: heapPct + '%', background:'#60a5fa', borderRadius:2, transition:'width 0.5s ease' }} />
+          <div style={{ margin:'8px 0 0', height:4, background:'#ffffff', borderRadius:2, overflow:'hidden' }}>
+            <div style={{ height:'100%', width: heapPct + '%', background:'#2236ff', borderRadius:2, transition:'width 0.5s ease' }} />
           </div>
         </>}
       </Panel>
@@ -483,7 +483,7 @@ function InfraView() {
 
       <Panel title="Config Checklist" col="1 / 3">
         {(ws?.config || []).map((c, i) => (
-          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', borderBottom:'1px solid #111827', fontSize:12 }}>
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', borderBottom:'1px solid #2236ff', fontSize:12 }}>
             <span style={{ color: c.set ? '#22c55e' : '#f87171', fontSize:14 }}>{c.set ? '✓' : '✗'}</span>
             <span style={{ color: c.set ? '#d1d5db' : '#6b7280' }}>{c.label}</span>
           </div>
@@ -491,7 +491,7 @@ function InfraView() {
         {ws?.configScore != null && (
           <div style={{ marginTop:10 }}>
             <div style={{ fontSize:11, color:'#6b7280', marginBottom:4 }}>Score: {ws.configScore}%</div>
-            <div style={{ height:4, background:'#1f2937', borderRadius:2, overflow:'hidden' }}>
+            <div style={{ height:4, background:'#ffffff', borderRadius:2, overflow:'hidden' }}>
               <div style={{ height:'100%', width: ws.configScore + '%', background: ws.configScore > 80 ? '#22c55e' : ws.configScore > 60 ? '#fbbf24' : '#f87171', borderRadius:2 }} />
             </div>
           </div>
@@ -517,30 +517,30 @@ function InfraView() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>{['Name','Status','Latency','Requests','Window','Connections','Memory','Circuit','Last Ping'].map(h => (
-                    <th key={h} style={{ textAlign:'left', padding:'6px 10px', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em', color:'#4b5563', borderBottom:'1px solid #1f2937', whiteSpace:'nowrap' }}>{h}</th>
+                    <th key={h} style={{ textAlign:'left', padding:'6px 10px', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em', color:'#4b5563', borderBottom:'1px solid #d9dbe8', whiteSpace:'nowrap' }}>{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody>
                   {backends.map((b, i) => (
                     <tr key={i}>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontWeight:600, color:'#e2e8f0' }}>{b.name}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827' }}>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontWeight:600, color:'#2236ff' }}>{b.name}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff' }}>
                         <div style={{ display:'flex', alignItems:'center', gap:5 }}>
                           <Dot color={b.alive ? '#22c55e' : '#f87171'} pulse={!b.alive} />
                           <span style={{ fontSize:11, color: b.alive ? '#22c55e' : '#f87171' }}>{b.alive ? 'ALIVE' : 'DOWN'}</span>
                         </div>
                       </td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', color: (b.latencyMs||0) > 1000 ? '#fbbf24' : '#60a5fa' }}>{b.latencyMs != null ? b.latencyMs + 'ms' : '—'}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', color:'#9ca3af' }}>{b.requests ?? 0}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', color:'#9ca3af' }}>{b.windowRequests ?? 0}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', color:'#9ca3af' }}>{b.activeConnections ?? 0}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', fontFamily:'monospace', color:'#9ca3af' }}>{b.memoryPct != null ? b.memoryPct + '%' : '—'}</td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827' }}>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', color: (b.latencyMs||0) > 1000 ? '#fbbf24' : '#60a5fa' }}>{b.latencyMs != null ? b.latencyMs + 'ms' : '—'}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', color:'#5a5d70' }}>{b.requests ?? 0}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', color:'#5a5d70' }}>{b.windowRequests ?? 0}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', color:'#5a5d70' }}>{b.activeConnections ?? 0}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', fontFamily:'monospace', color:'#5a5d70' }}>{b.memoryPct != null ? b.memoryPct + '%' : '—'}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff' }}>
                         {b.circuitTripped
-                          ? <span style={{ fontSize:9, fontWeight:700, color:'#fbbf24', background:'rgba(251,191,36,0.1)', padding:'2px 6px', borderRadius:4 }}>TRIPPED</span>
-                          : <span style={{ fontSize:11, color:'#22c55e' }}>OK</span>}
+                          ? <span style={{ fontSize:9, fontWeight:700, color:'#6e5400', background:'#fff6c2', padding:'2px 6px', borderRadius:4 }}>TRIPPED</span>
+                          : <span style={{ fontSize:11, color:'#0a7149' }}>OK</span>}
                       </td>
-                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #111827', color:'#4b5563', fontSize:11 }}>{ago(b.lastPing)}</td>
+                      <td style={{ padding:'7px 10px', borderBottom:'1px solid #2236ff', color:'#4b5563', fontSize:11 }}>{ago(b.lastPing)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -576,7 +576,7 @@ function LogsView() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 130px)' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 12px', background:'#0d0d14', border:'1px solid #1a1a2a', borderRadius:'8px 8px 0 0', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 12px', background:'#ffffff', border:'2px solid #0d0e1c', borderRadius:'8px 8px 0 0', flexShrink:0, boxShadow: '4px 4px 0 #0d0e1c' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontFamily:'monospace', fontSize:11, color:'#6b7280' }}>{loading ? 'Loading…' : logs.length + ' entries'}</span>
           {['error','warn','info'].map(l => counts[l] > 0 && (
@@ -589,12 +589,12 @@ function LogsView() {
           <Btn id="warn">WARN</Btn>
           <Btn id="info">INFO</Btn>
           <input
-            style={{ background:'#111827', border:'1px solid #1f2937', borderRadius:5, padding:'3px 8px', fontSize:11, color:'#9ca3af', outline:'none', fontFamily:'monospace', width:160 }}
+            style={{ background:'#ffffff', border:'2px solid #0d0e1c', borderRadius:5, padding:'3px 8px', fontSize:11, color:'#5a5d70', outline:'none', fontFamily:'monospace', width:160 }}
             placeholder="search logs…" value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
       </div>
-      <div style={{ flex:1, overflowY:'auto', background:'#050508', border:'1px solid #1a1a2a', borderTop:'none', borderRadius:'0 0 8px 8px' }}>
+      <div style={{ flex:1, overflowY:'auto', background:'#ffffff', border:'2px solid #0d0e1c', borderTop:'none', borderRadius:'0 0 8px 8px' }}>
         {filtered.map((l, i) => (
           <div key={i} style={{ display:'flex', gap:10, padding:'2px 10px 2px 8px', fontSize:11, fontFamily:'monospace', alignItems:'baseline', borderLeft:'2px solid ' + levelColor(l.level) }}>
             <span style={{ color:'#374151', flexShrink:0, width:75 }}>{ts(l.ts)}</span>
@@ -622,37 +622,37 @@ export default function SecurityDashboard() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
 
   if (auth === null) return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ width:28, height:28, border:'2px solid #1e293b', borderTopColor:'#60a5fa', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+    <div style={{ minHeight:'100vh', background:'#ffffff', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ width:28, height:28, border:'2px solid #2236ff', borderTopColor:'#60a5fa', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
   if (!auth) return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+    <div style={{ minHeight:'100vh', background:'#ffffff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ color:'#f87171', fontFamily:'monospace', fontSize:14 }}>⚠ NOT AUTHENTICATED</div>
-      <a href="/admin" style={{ color:'#60a5fa', fontFamily:'monospace', fontSize:12 }}>← Return to Admin</a>
+      <div style={{ color:'#a82020', fontFamily:'monospace', fontSize:14 }}>⚠ NOT AUTHENTICATED</div>
+      <a href="/admin" style={{ color:'#2236ff', fontFamily:'monospace', fontSize:12 }}>← Return to Admin</a>
     </div>
   );
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#d1d5db', fontFamily:'ui-sans-serif, system-ui, sans-serif', display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100vh', background:'#ffffff', color:'#5a5d70', fontFamily:'ui-sans-serif, system-ui, sans-serif', display:'flex', flexDirection:'column' }}>
       <style>{`
         * { box-sizing: border-box; margin:0; padding:0; }
-        body { background:#0a0a0f; }
+        body { background:#ffffff; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pd { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
         ::-webkit-scrollbar { width:4px; height:4px; }
         ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:#1f2937; border-radius:2px; }
+        ::-webkit-scrollbar-thumb { background:#0d0e1c; border-radius:2px; }
       `}</style>
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 20px', height:48, background:'#0d0d14', borderBottom:'1px solid #1a1a2a', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 20px', height:48, background:'#ffffff', borderBottom:'1px solid #d9dbe8', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           <a href="/admin" style={{ fontSize:11, color:'#4b5563', textDecoration:'none' }}>← Admin</a>
-          <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'#e2e8f0' }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', background:'#60a5fa', boxShadow:'0 0 8px #60a5fa' }} />
+          <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'#2236ff' }}>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:'#2236ff', boxShadow:'none' }} />
             PlanIt Security
           </div>
         </div>
@@ -665,7 +665,7 @@ export default function SecurityDashboard() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display:'flex', gap:2, padding:'7px 16px', background:'#0d0d14', borderBottom:'1px solid #111827', flexShrink:0 }}>
+      <div style={{ display:'flex', gap:2, padding:'7px 16px', background:'#ffffff', borderBottom:'1px solid #2236ff', flexShrink:0 }}>
         {VIEWS.map(v => (
           <button key={v.id} onClick={() => setView(v.id)} style={{
             padding:'5px 14px', fontSize:11, fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase',

@@ -14,12 +14,7 @@ function useReveal(threshold = 0.08) {
   return [ref, vis];
 }
 function Reveal({ children, delay = 0 }) {
-  const [ref, vis] = useReveal();
-  return (
-    <div ref={ref} style={{ opacity: vis ? 1 : 0, transform: vis ? 'none' : 'translateY(18px)', transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms` }}>
-      {children}
-    </div>
-  );
+  return <div>{children}</div>;
 }
 
 const si = slug   => `https://cdn.simpleicons.org/${slug}`;
@@ -113,7 +108,7 @@ const SECTIONS = [
       {name:'ntfy.sh',logo:si('ntfy'),url:'https://ntfy.sh',note:'Push notifications (watchdog alerts)'},
       {name:'Discord Webhooks',logo:si('discord'),url:'https://discord.com/developers/docs/resources/webhook',note:'Alert routing'},
       {name:'Render',logo:si('render'),url:'https://render.com',note:'Cloud hosting'},
-      {name:'Google Fonts',logo:si('googlefonts'),url:'https://fonts.google.com',note:'Syne & DM Sans typefaces'},
+      {name:'Google Fonts',logo:si('googlefonts'),url:'https://fonts.google.com',note:'Unbounded & Hanken Grotesk typefaces'},
       {name:'Google Analytics 4',logo:si('googleanalytics'),url:'https://analytics.google.com',note:'Web analytics (consent-gated)'},
     ],
   },
@@ -124,7 +119,7 @@ function Logo({ src, name, size = 32 }) {
   const initial = (name || '?')[0].toUpperCase();
   const hue = [...(name || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
   return (
-    <div style={{ width:size, height:size, borderRadius:size*0.28, flexShrink:0, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background: status==='ok'?'rgba(255,255,255,0.07)':`hsl(${hue},32%,20%)`, border:'1px solid rgba(255,255,255,0.08)', transition:'background 0.2s' }}>
+    <div style={{ width:size, height:size, borderRadius:size*0.28, flexShrink:0, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', background: status==='ok'?'rgba(255,255,255,0.07)':`hsl(${hue},32%,20%)`, border:'2px solid #0d0e1c', transition:'background 0.2s' }}>
       {status !== 'error' && <img src={src} alt={name} onLoad={()=>setStatus('ok')} onError={()=>setStatus('error')} style={{ width:size*0.59, height:size*0.59, objectFit:'contain', display:status==='ok'?'block':'none', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }} />}
       {status !== 'ok' && <span style={{ fontSize:size*0.38, fontWeight:800, color:`hsl(${hue},55%,68%)`, lineHeight:1 }}>{initial}</span>}
     </div>
@@ -134,14 +129,14 @@ function Logo({ src, name, size = 32 }) {
 function CreditCard({ name, url, note, logo }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={url} target="_blank" rel="noreferrer noopener" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, border:`1px solid ${hovered?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.055)'}`, background:hovered?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.02)', textDecoration:'none', transition:'border-color 0.18s ease,background 0.18s ease,transform 0.14s ease', transform:hovered?'translateY(-1px)':'none', cursor:'pointer', minWidth:0 }}>
+    <a href={url} target="_blank" rel="noreferrer noopener" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, border:`1px solid ${hovered?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.055)'}`, background:hovered?'rgba(255,255,255,0.04)':'rgba(255,255,255,0.02)', textDecoration:'none', transition:'border-color 0.18s ease,background ease,transform 0.14s ease', transform:hovered?'translateY(-1px)':'none', cursor:'pointer', minWidth:0 }}>
       <Logo src={logo} name={name} />
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
           <span style={{ fontSize:13.5, fontWeight:600, letterSpacing:'-0.01em', color:hovered?'#fff':'rgba(255,255,255,0.82)', transition:'color 0.18s ease', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{name}</span>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={hovered?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.15)'} strokeWidth="2" strokeLinecap="round" style={{ flexShrink:0 }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
         </div>
-        <p style={{ margin:'2px 0 0', fontSize:11.5, color:'rgba(255,255,255,0.32)', lineHeight:1.4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{note}</p>
+        <p style={{ margin:'2px 0 0', fontSize:11.5, color:'#5a5d70', lineHeight:1.4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{note}</p>
       </div>
     </a>
   );
@@ -153,8 +148,8 @@ function CreditSection({ section, sectionIndex }) {
       <Reveal delay={sectionIndex*60}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
           <span style={{ width:8, height:8, borderRadius:'50%', background:section.dot, boxShadow:`0 0 10px ${section.dot}`, flexShrink:0 }}/>
-          <h2 style={{ margin:0, fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.4)' }}>{section.label}</h2>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.18)', fontVariantNumeric:'tabular-nums' }}>{section.items.length}</span>
+          <h2 style={{ margin:0, fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'#5a5d70' }}>{section.label}</h2>
+          <span style={{ fontSize:11, color:'#5a5d70', fontVariantNumeric:'tabular-nums' }}>{section.items.length}</span>
         </div>
       </Reveal>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(270px, 1fr))', gap:8, marginBottom:52 }}>
@@ -177,15 +172,15 @@ function ComponentCard({ comp, index }) {
           display:'flex', flexDirection:'column', textDecoration:'none', height:'100%',
           border:`1px solid ${hovered?`rgba(${comp.rgb},0.3)`:`rgba(${comp.rgb},0.12)`}`,
           background: hovered ? `rgba(${comp.rgb},0.05)` : 'rgba(255,255,255,0.025)',
-          borderRadius:16,
-          transition:'border-color 0.2s ease,background 0.2s ease,transform 0.15s ease,box-shadow 0.2s ease',
+          borderRadius:8,
+          transition:'border-color 0.2s ease,background ease,transform 0.15s ease,box-shadow ease',
           transform: hovered ? 'translateY(-3px)' : 'none',
           boxShadow: hovered ? `0 8px 32px rgba(${comp.rgb},0.12)` : 'none',
           position:'relative', overflow:'hidden',
         }}
       >
         {/* top accent */}
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${comp.dot} 0%, transparent 100%)`, opacity: hovered?1:0.5, transition:'opacity 0.2s ease' }}/>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:comp.dot, opacity: hovered?1:0.5, transition:'opacity 0.2s ease' }}/>
 
         {/* header */}
         <div style={{ padding:'20px 20px 16px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
@@ -194,7 +189,7 @@ function ComponentCard({ comp, index }) {
               <span style={{ fontSize:18, fontWeight:900, color:comp.dot }}>{comp.letter}</span>
             </div>
             <div style={{ minWidth:0 }}>
-              <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)', marginBottom:2 }}>Component {comp.letter}</p>
+              <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'#5a5d70', marginBottom:2 }}>Component {comp.letter}</p>
               <p style={{ margin:0, fontSize:14, fontWeight:700, color: hovered?'#fff':'rgba(255,255,255,0.88)', letterSpacing:'-0.02em', lineHeight:1.25 }}>{comp.legalName}</p>
             </div>
           </div>
@@ -205,25 +200,25 @@ function ComponentCard({ comp, index }) {
         </div>
 
         {/* divider */}
-        <div style={{ height:'1px', background:`linear-gradient(90deg, rgba(${comp.rgb},0.15) 0%, transparent 80%)`, margin:'0 20px' }}/>
+        <div style={{ height:'1px', background:'#d9dbe8', margin:'0 20px' }}/>
 
         {/* metadata */}
         <div style={{ padding:'14px 20px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px 16px', flex:1 }}>
           <div>
-            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:4 }}>Package</p>
-            <p style={{ margin:0, fontSize:12, color:'rgba(255,255,255,0.6)', fontFamily:'ui-monospace,"Cascadia Code",monospace', lineHeight:1.4 }}>{comp.codeName}{comp.packageVersion?` v${comp.packageVersion}`:''}</p>
+            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'#5a5d70', marginBottom:4 }}>Package</p>
+            <p style={{ margin:0, fontSize:12, color:'#5a5d70', fontFamily:'ui-monospace,"Cascadia Code",monospace', lineHeight:1.4 }}>{comp.codeName}{comp.packageVersion?` v${comp.packageVersion}`:''}</p>
           </div>
           <div>
-            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:4 }}>Effective</p>
-            <p style={{ margin:0, fontSize:12, color:'rgba(255,255,255,0.6)', lineHeight:1.4 }}>{comp.licenseDate}</p>
+            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'#5a5d70', marginBottom:4 }}>Effective</p>
+            <p style={{ margin:0, fontSize:12, color:'#5a5d70', lineHeight:1.4 }}>{comp.licenseDate}</p>
           </div>
           <div style={{ gridColumn:'1 / -1' }}>
-            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:4 }}>License</p>
-            <p style={{ margin:0, fontSize:11.5, color:'rgba(255,255,255,0.48)', lineHeight:1.5 }}>{comp.licenseTitle}</p>
+            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'#5a5d70', marginBottom:4 }}>License</p>
+            <p style={{ margin:0, fontSize:11.5, color:'#5a5d70', lineHeight:1.5 }}>{comp.licenseTitle}</p>
           </div>
           <div style={{ gridColumn:'1 / -1' }}>
-            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:4 }}>Defined as</p>
-            <p style={{ margin:0, fontSize:11.5, color:'rgba(255,255,255,0.35)', fontStyle:'italic', lineHeight:1.4 }}>{comp.alias}</p>
+            <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'#5a5d70', marginBottom:4 }}>Defined as</p>
+            <p style={{ margin:0, fontSize:11.5, color:'#5a5d70', fontStyle:'italic', lineHeight:1.4 }}>{comp.alias}</p>
           </div>
         </div>
 
@@ -291,11 +286,11 @@ function VerificationSeal({ serial }) {
           </svg>
           <div style={{ width:64, height:64, borderRadius:'50%', background:isDone?'rgba(134,239,172,0.1)':isRunning?'rgba(167,139,250,0.1)':'rgba(167,139,250,0.07)', border:`1.5px solid ${isDone?'rgba(134,239,172,0.45)':'rgba(167,139,250,0.35)'}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, transition:'all 0.4s ease', animation:isRunning?'sealPulse 1s ease-in-out infinite':'none' }}>
             {isDone ? (
-              <><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span style={{ fontSize:6.5, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(134,239,172,0.75)' }}>VERIFIED</span></>
+              <><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span style={{ fontSize:6.5, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#0a7149' }}>VERIFIED</span></>
             ) : isRunning ? (
-              <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span style={{ fontSize:6, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(167,139,250,0.7)' }}>CHECKING</span></>
+              <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><span style={{ fontSize:6, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#2236ff' }}>CHECKING</span></>
             ) : (
-              <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span style={{ fontSize:6.5, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(167,139,250,0.65)' }}>GENUINE</span></>
+              <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span style={{ fontSize:6.5, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:'#2236ff' }}>GENUINE</span></>
             )}
           </div>
         </div>
@@ -305,19 +300,19 @@ function VerificationSeal({ serial }) {
       <div style={{ flex:1, minWidth:200 }}>
         <div style={{ marginBottom:12, minHeight:26, display:'flex', alignItems:'center', gap:8 }}>
           {state === 'idle' && (
-            <button onClick={runVerification} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:8, border:'1px solid rgba(167,139,250,0.3)', background:'rgba(167,139,250,0.08)', color:'#a78bfa', fontSize:11.5, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s ease' }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,0.14)';e.currentTarget.style.borderColor='rgba(167,139,250,0.5)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,0.08)';e.currentTarget.style.borderColor='rgba(167,139,250,0.3)'}}>
+            <button onClick={runVerification} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:8, border:'2px solid #2236ff', background:'#eceeff', color:'#2236ff', fontSize:11.5, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s ease', boxShadow: '3px 3px 0 #0d0e1c' }} onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,0.14)';e.currentTarget.style.borderColor='rgba(167,139,250,0.5)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,0.08)';e.currentTarget.style.borderColor='rgba(167,139,250,0.3)'}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               Verify this installation
             </button>
           )}
           {isRunning && step >= 0 && (
-            <span style={{ fontSize:12, color:'rgba(167,139,250,0.7)', fontFamily:'ui-monospace,monospace', display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#a78bfa', animation:'sealPulse 0.7s ease-in-out infinite' }}/>
+            <span style={{ fontSize:12, color:'#2236ff', fontFamily:'ui-monospace,monospace', display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#2236ff', animation:'sealPulse 0.7s ease-in-out infinite' }}/>
               {VERIFY_STEPS[step].label}
             </span>
           )}
           {isDone && (
-            <span style={{ fontSize:12, color:'#86efac', display:'flex', alignItems:'center', gap:6, fontWeight:600 }}>
+            <span style={{ fontSize:12, color:'#0a7149', display:'flex', alignItems:'center', gap:6, fontWeight:600 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               All {VERIFY_STEPS.length - 1} integrity checks passed
             </span>
@@ -327,14 +322,14 @@ function VerificationSeal({ serial }) {
         {(isRunning || isDone) && (
           <div style={{ display:'flex', gap:4, marginBottom:14 }}>
             {VERIFY_STEPS.slice(0,-1).map((s,i) => (
-              <div key={s.id} style={{ height:3, flex:1, borderRadius:99, background: i < step ? (isDone?'rgba(134,239,172,0.7)':'rgba(167,139,250,0.7)') : i === step && !isDone ? 'rgba(167,139,250,0.4)' : 'rgba(255,255,255,0.08)', transition:`background 0.3s ease ${i*80}ms` }}/>
+              <div key={s.id} style={{ height:3, flex:1, borderRadius:12, background: i < step ? (isDone?'rgba(134,239,172,0.7)':'rgba(167,139,250,0.7)') : i === step && !isDone ? 'rgba(167,139,250,0.4)' : 'rgba(255,255,255,0.08)', transition:`background 0.3s ease ${i*80}ms` }}/>
             ))}
           </div>
         )}
 
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-            <p style={{ margin:0, fontSize:9, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>Serial</p>
+            <p style={{ margin:0, fontSize:9, fontWeight:700, letterSpacing:'0.15em', textTransform:'uppercase', color:'#5a5d70' }}>Serial</p>
             <code style={{ fontSize:11.5, color:isDone?'rgba(134,239,172,0.7)':'rgba(255,255,255,0.35)', fontFamily:'ui-monospace,monospace', transition:'color 0.4s ease', letterSpacing:'0.05em' }}>{serial}</code>
           </div>
           <button onClick={handleCopy} title="Copy serial number" style={{ background:copied?'rgba(134,239,172,0.1)':'rgba(255,255,255,0.04)', border:`1px solid ${copied?'rgba(134,239,172,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:6, padding:'4px 8px', cursor:'pointer', color:copied?'#86efac':'rgba(255,255,255,0.3)', fontSize:10, fontWeight:600, fontFamily:'inherit', transition:'all 0.2s ease', display:'flex', alignItems:'center', gap:4 }}>
@@ -358,7 +353,7 @@ function CertificationPlaque() {
 
   return (
     <Reveal delay={60}>
-      <div style={{ position:'relative', borderRadius:18, overflow:'hidden', border:'1px solid rgba(167,139,250,0.18)', background:'rgba(255,255,255,0.018)', marginBottom:72 }}>
+      <div style={{ position:'relative', borderRadius:12, overflow:'hidden', border:'2px solid #2236ff', background:'#ffffff', marginBottom:72 }}>
         {[
           { top:0,    left:0,  bt:'1.5px solid rgba(167,139,250,0.35)', bl:'1.5px solid rgba(167,139,250,0.35)', br:'none', bb:'none' },
           { top:0,    right:0, bt:'1.5px solid rgba(167,139,250,0.35)', br:'1.5px solid rgba(167,139,250,0.35)', bl:'none', bb:'none' },
@@ -369,44 +364,44 @@ function CertificationPlaque() {
         ))}
 
         {/* header strip */}
-        <div style={{ padding:'12px clamp(20px,4vw,36px)', borderBottom:'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, background:'rgba(167,139,250,0.03)' }}>
+        <div style={{ padding:'12px clamp(20px,4vw,36px)', borderBottom:'1px solid #d9dbe8', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, background:'#eceeff' }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'#a78bfa', boxShadow:'0 0 6px #a78bfa' }}/>
-            <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'rgba(255,255,255,0.28)' }}>Certificate of Authentic Deployment</span>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#2236ff', boxShadow:'none' }}/>
+            <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'#5a5d70' }}>Certificate of Authentic Deployment</span>
           </div>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,0.16)', fontVariantNumeric:'tabular-nums' }}>{issued}</span>
+          <span style={{ fontSize:10, color:'#5a5d70', fontVariantNumeric:'tabular-nums' }}>{issued}</span>
         </div>
 
         {/* main body */}
         <div style={{ padding:'clamp(24px,4vw,36px)' }}>
-          <h2 style={{ margin:'0 0 6px', fontSize:'clamp(1.1rem,2.5vw,1.4rem)', fontWeight:800, letterSpacing:'-0.03em', color:'#fff', lineHeight:1.2 }}>This is a genuine PlanIt instance.</h2>
-          <p style={{ margin:'0 0 24px', fontSize:13, color:'rgba(255,255,255,0.38)', lineHeight:1.7, maxWidth:560 }}>
+          <h2 style={{ margin:'0 0 6px', fontSize:'clamp(1.1rem,2.5vw,1.4rem)', fontWeight:800, letterSpacing:'-0.03em', color:'#0d0e1c', lineHeight:1.2 }}>This is a genuine PlanIt instance.</h2>
+          <p style={{ margin:'0 0 24px', fontSize:13, color:'#5a5d70', lineHeight:1.7, maxWidth:560 }}>
             This deployment is an authentic, unmodified distribution of PlanIt, comprised of the four licensed software components listed below (A–D), operated in full accordance with the governing license agreements.
           </p>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'8px 28px', marginBottom:28 }}>
             {[{label:'Components',value:'4 (A – D)'},{label:'Dependencies',value:`${totalDeps} packages`}].map(({label,value}) => (
               <div key={label}>
-                <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>{label}</p>
-                <p style={{ margin:'3px 0 0', fontSize:13, color:'rgba(255,255,255,0.6)', fontVariantNumeric:'tabular-nums', lineHeight:1.4 }}>{value}</p>
+                <p style={{ margin:0, fontSize:9.5, fontWeight:700, letterSpacing:'0.13em', textTransform:'uppercase', color:'#5a5d70' }}>{label}</p>
+                <p style={{ margin:'3px 0 0', fontSize:13, color:'#5a5d70', fontVariantNumeric:'tabular-nums', lineHeight:1.4 }}>{value}</p>
               </div>
             ))}
           </div>
-          <div style={{ height:'1px', background:'rgba(167,139,250,0.1)', marginBottom:24 }}/>
+          <div style={{ height:'1px', background:'#eceeff', marginBottom:24 }}/>
           <VerificationSeal serial={serial} totalDeps={totalDeps}/>
         </div>
 
         {/* version strip footer */}
-        <div style={{ borderTop:'1px solid rgba(255,255,255,0.04)', padding:'12px clamp(20px,4vw,36px)', display:'flex', alignItems:'center', flexWrap:'wrap', gap:6, background:'rgba(255,255,255,0.01)' }}>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,0.18)', marginRight:6 }}>Component versions:</span>
+        <div style={{ borderTop:'1px solid #d9dbe8', padding:'12px clamp(20px,4vw,36px)', display:'flex', alignItems:'center', flexWrap:'wrap', gap:6, background:'#ffffff' }}>
+          <span style={{ fontSize:10, color:'#5a5d70', marginRight:6 }}>Component versions:</span>
           {COMPONENTS.map(c => (
             <div key={c.id} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'3px 9px', borderRadius:6, border:`1px solid rgba(${c.rgb},0.2)`, background:`rgba(${c.rgb},0.06)` }}>
               <span style={{ fontSize:10, fontWeight:800, color:c.dot }}>{c.letter}</span>
               <div style={{ width:'0.5px', height:10, background:`${c.dot}40` }}/>
-              <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>{c.licenseVersion}</span>
+              <span style={{ fontSize:10, color:'#5a5d70', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>{c.licenseVersion}</span>
             </div>
           ))}
           <div style={{ flex:1 }}/>
-          <a href="/license" style={{ fontSize:10.5, color:'rgba(255,255,255,0.25)', textDecoration:'underline', textUnderlineOffset:3, transition:'color 0.15s ease' }} onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.55)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.25)'}>Full license agreements →</a>
+          <a href="/license" style={{ fontSize:10.5, color:'#5a5d70', textDecoration:'underline', textUnderlineOffset:3, transition:'color 0.15s ease' }} onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.55)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.25)'}>Full license agreements →</a>
         </div>
       </div>
     </Reveal>
@@ -425,22 +420,22 @@ export default function Credits() {
   }, []);
 
   return (
-    <div style={{ minHeight:'100vh', background:'#05050f', color:'white', fontFamily:"'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ minHeight:'100vh', background:'#ffffff', color:'#0d0e1c', fontFamily:"'Hanken Grotesk', system-ui, sans-serif" }}>
 
       <svg style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} aria-hidden="true">
         <defs><pattern id="cg" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M 72 0 L 0 0 0 72" fill="none" stroke="rgba(255,255,255,0.018)" strokeWidth="1"/></pattern></defs>
         <rect width="100%" height="100%" fill="url(#cg)"/>
       </svg>
-      <div style={{ position:'fixed', top:-200, left:'50%', transform:'translateX(-50%)', width:700, height:400, background:'radial-gradient(ellipse at center, rgba(124,58,237,0.07) 0%, transparent 70%)', pointerEvents:'none', zIndex:0 }}/>
+      <div style={{ position:'fixed', top:-200, left:'50%', transform:'translateX(-50%)', width:700, height:400, background:'#eceeff', pointerEvents:'none', zIndex:0 }}/>
 
       {/* nav */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:scrolled?'rgba(5,5,15,0.92)':'transparent', borderBottom:scrolled?'1px solid rgba(255,255,255,0.06)':'1px solid transparent', backdropFilter:scrolled?'blur(16px)':'none', transition:'all 0.3s ease', padding:'0 clamp(16px,5vw,48px)' }}>
+      <div style={{ position:'sticky', top:0, zIndex:50, background:scrolled?'rgba(5,5,15,0.92)':'transparent', borderBottom:scrolled?'1px solid rgba(255,255,255,0.06)':'1px solid transparent',  transition:'all 0.3s ease', padding:'0 clamp(16px,5vw,48px)' }}>
         <div style={{ maxWidth:1000, margin:'0 auto', height:56, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <button onClick={()=>navigate('/')} style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', padding:'6px 0', color:'rgba(255,255,255,0.5)', fontSize:13, fontWeight:500, transition:'color 0.2s', fontFamily:'inherit' }} onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.85)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.5)'}>
+          <button onClick={()=>navigate('/')} style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', padding:'6px 0', color:'#5a5d70', fontSize:13, fontWeight:500, transition:'color 0.2s', fontFamily:'inherit' }} onMouseEnter={e=>e.currentTarget.style.color='rgba(255,255,255,0.85)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.5)'}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             PlanIt
           </button>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,0.2)', fontVariantNumeric:'tabular-nums' }}>{totalCount} dependencies · 4 components</span>
+          <span style={{ fontSize:12, color:'#5a5d70', fontVariantNumeric:'tabular-nums' }}>{totalCount} dependencies · 4 components</span>
         </div>
       </div>
 
@@ -450,22 +445,22 @@ export default function Credits() {
         {/* hero */}
         <div style={{ marginBottom:56 }}>
           <Reveal>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'5px 12px', borderRadius:999, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.04)', marginBottom:24 }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background:'#a78bfa', boxShadow:'0 0 8px #a78bfa' }}/>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.5)' }}>Open Acknowledgements</span>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'5px 12px', borderRadius:999, border:'2px solid #0d0e1c', background:'#ffffff', marginBottom:24 }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:'#2236ff', boxShadow:'none' }}/>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'#5a5d70' }}>Open Acknowledgements</span>
             </div>
           </Reveal>
-          <Reveal delay={60}><h1 style={{ margin:'0 0 16px', fontSize:'clamp(2rem,6vw,3.2rem)', fontWeight:900, letterSpacing:'-0.04em', lineHeight:1.05, color:'#fff' }}>Credits</h1></Reveal>
-          <Reveal delay={100}><p style={{ margin:0, fontSize:16, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:560 }}>PlanIt is built on the shoulders of great open-source libraries and reliable external services. Every dependency listed here plays a direct role in making the platform work.</p></Reveal>
+          <Reveal delay={60}><h1 style={{ margin:'0 0 16px', fontSize:'clamp(2rem,6vw,3.2rem)', fontWeight:900, letterSpacing:'-0.04em', lineHeight:1.05, color:'#0d0e1c' }}>Credits</h1></Reveal>
+          <Reveal delay={100}><p style={{ margin:0, fontSize:16, color:'#5a5d70', lineHeight:1.7, maxWidth:560 }}>PlanIt is built on the shoulders of great open-source libraries and reliable external services. Every dependency listed here plays a direct role in making the platform work.</p></Reveal>
         </div>
 
         <CertificationPlaque/>
 
         <Reveal>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-            <span style={{ width:8, height:8, borderRadius:'50%', background:'rgba(255,255,255,0.25)', flexShrink:0 }}/>
-            <h2 style={{ margin:0, fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.4)' }}>Licensed Components</h2>
-            <span style={{ fontSize:11, color:'rgba(255,255,255,0.18)' }}>A – D</span>
+            <span style={{ width:8, height:8, borderRadius:'50%', background:'#ffffff', flexShrink:0 }}/>
+            <h2 style={{ margin:0, fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'#5a5d70' }}>Licensed Components</h2>
+            <span style={{ fontSize:11, color:'#5a5d70' }}>A – D</span>
           </div>
         </Reveal>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:14, marginBottom:72 }}>
@@ -475,7 +470,7 @@ export default function Credits() {
         <Reveal delay={40}>
           <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:64 }}>
             {SECTIONS.map(s => (
-              <a key={s.id} href={`#${s.id}`} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, border:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.03)', fontSize:12, fontWeight:500, color:'rgba(255,255,255,0.45)', textDecoration:'none', transition:'all 0.15s ease' }} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.15)';e.currentTarget.style.color='rgba(255,255,255,0.75)';e.currentTarget.style.background='rgba(255,255,255,0.06)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.45)';e.currentTarget.style.background='rgba(255,255,255,0.03)'}}>
+              <a key={s.id} href={`#${s.id}`} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:8, border:'2px solid #0d0e1c', background:'#ffffff', fontSize:12, fontWeight:500, color:'#5a5d70', textDecoration:'none', transition:'all 0.15s ease' }} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.15)';e.currentTarget.style.color='rgba(255,255,255,0.75)';e.currentTarget.style.background='rgba(255,255,255,0.06)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.45)';e.currentTarget.style.background='rgba(255,255,255,0.03)'}}>
                 <span style={{ width:5, height:5, borderRadius:'50%', background:s.dot }}/>
                 {s.label}
               </a>
@@ -486,10 +481,10 @@ export default function Credits() {
         {SECTIONS.map((section,i) => <CreditSection key={section.id} section={section} sectionIndex={i}/>)}
 
         <Reveal>
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:40, marginTop:16 }}>
-            <p style={{ margin:0, fontSize:13, color:'rgba(255,255,255,0.22)', lineHeight:1.7 }}>
+          <div style={{ borderTop:'1px solid #d9dbe8', paddingTop:40, marginTop:16 }}>
+            <p style={{ margin:0, fontSize:13, color:'#5a5d70', lineHeight:1.7 }}>
               All trademarks and logos are the property of their respective owners. PlanIt is proprietary software — see the{' '}
-              <a href="/license" style={{ color:'rgba(255,255,255,0.4)', textDecoration:'underline', textUnderlineOffset:3 }}>license page</a> for full terms.
+              <a href="/license" style={{ color:'#5a5d70', textDecoration:'underline', textUnderlineOffset:3 }}>license page</a> for full terms.
             </p>
           </div>
         </Reveal>

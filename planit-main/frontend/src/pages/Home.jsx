@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock, ArrowRight, ArrowUpRight,
   Eye, EyeOff, Zap, ListChecks, AlertCircle, UtensilsCrossed, QrCode, Bot, CheckSquare,
-  CornerDownRight, Menu, X, Layers, MapPin, Clock, CheckCircle2, Share2,
+  CornerDownRight, Menu, X, Layers, MapPin, Clock, CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
@@ -16,1252 +16,339 @@ import TurnstileWidget from '../components/TurnstileWidget';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 /*
-================================================================================
-================================================================================
-================================================================================
-
-                     PLANIT PLATFORM — MASTER LICENSE AGREEMENT
-                    CONSOLIDATED INTELLECTUAL PROPERTY DECLARATION
-
-================================================================================
-================================================================================
-================================================================================
-
-                           PlanIt Platform License — Version 2.0
-                                     March 2026
-
-              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
-
-                          planit.userhelp@gmail.com
-                        https://planitapp.onrender.com
-
-================================================================================
-================================================================================
-
-                       IMPORTANT — READ BEFORE PROCEEDING
-
-================================================================================
-================================================================================
-
-This Master License Agreement ("Master Agreement") is the single authoritative
-legal instrument governing all intellectual property rights in and to the PlanIt
-platform, a proprietary event management and white-label SaaS platform created,
-owned, and operated solely by Aakshat Hariharan ("Author").
-
-The PlanIt platform is not a single application. It is a multi-service
-distributed system comprising four distinct software components, each of which
-is separately developed, separately deployed, and separately owned by the Author.
-This Master Agreement consolidates the four individual component license
-agreements into a single document and establishes the overarching legal framework
-that governs all of them.
-
-This document serves three purposes:
-
-   FIRST:   It explains in plain terms what each component of the PlanIt platform
-            is, what it does, and why it is protected.
-
-   SECOND:  It sets out the overarching licensing terms that apply across all
-            components of the platform as a unified whole.
-
-   THIRD:   It reproduces in full each individual component license agreement,
-            so that the complete legal terms for every part of the platform
-            are accessible in a single place.
-
-BY ACCESSING THE REPOSITORY CONTAINING ANY COMPONENT OF THE PLANIT PLATFORM,
-VIEWING ANY SOURCE CODE FILE, CLONING OR FORKING THE REPOSITORY, RUNNING ANY
-COMPONENT LOCALLY, OR USING THE HOSTED SERVICE AT PLANITAPP.ONRENDER.COM, YOU
-AGREE TO BE LEGALLY BOUND BY THIS MASTER AGREEMENT AND BY EACH INDIVIDUAL
-COMPONENT LICENSE THAT APPLIES TO THE PORTION OF THE SOFTWARE YOU ARE ACCESSING.
-
-IF YOU DO NOT AGREE TO THESE TERMS, IMMEDIATELY CEASE ALL INTERACTION WITH THE
-PLANIT PLATFORM IN ANY FORM.
-
-================================================================================
-================================================================================
-
-                  PART ONE: THE PLANIT PLATFORM — AN OVERVIEW
-          (Understanding What You Are Licensing Before Reading the Terms)
-
-================================================================================
-================================================================================
-
-The purpose of this section is to give You context. A software license is
-meaningless without understanding what is being licensed and why. The following
-describes each component of the PlanIt platform, what it does, and what makes
-it proprietary — before the formal legal terms begin.
-
-────────────────────────────────────────────────────────────────────────────────
-COMPONENT A: THE FRONTEND APPLICATION
-────────────────────────────────────────────────────────────────────────────────
-
-The PlanIt Frontend Application is the client-side web application that users
-interact with directly. It is built with React and Vite and is served as a
-single-page application at planitapp.onrender.com. It encompasses:
-
-  THE PUBLIC-FACING EXPERIENCE: The PlanIt homepage (event creation form, venue
-  mode, branch selector), the event discovery page, and all publicly accessible
-  marketing and informational pages.
-
-  THE EVENT MANAGEMENT INTERFACE: The EventSpace — the rich, real-time event
-  dashboard through which organizers manage attendees, run chat, conduct polls,
-  share files, manage seating charts, track budgets, post announcements, and
-  view analytics.
-
-  THE ADMIN PANEL: A password-protected multi-section administrative interface
-  through which the Author manages all events, white-label clients, billing,
-  employees, incident reporting, system settings, and security monitoring across
-  the entire platform.
-
-  THE WHITE-LABEL CLIENT PORTAL: A self-service portal (/dashboard) accessible
-  on white-label custom domains, allowing paying white-label clients to customize
-  their platform's branding, page content, feature flags, and security settings.
-
-  THE WHITE-LABEL THEMING SYSTEM: A dynamic CSS variable injection architecture
-  that transforms the application's visual identity at runtime based on a white-
-  label client's branding configuration (colors, fonts, logo, company name),
-  allowing a single React application to serve hundreds of differently-branded
-  instances.
-
-  THE WHITE-LABEL HOME PAGE (WLHome): A branded landing page served at the root
-  URL of white-label custom domains, showing the client's own hero content, event
-  discovery feed scoped to their tenant, and contact information — without any
-  PlanIt branding where the client has configured hidePoweredBy.
-
-  THE RESERVATION SYSTEM: The ReservePage and associated flows through which
-  guests discover, reserve, and receive confirmation for event spots, with
-  white-label customizable messaging throughout.
-
-  ADDITIONAL FLOWS: Public ticket pages, waitlist signup, organizer login,
-  table service interfaces for venue mode, check-in kiosks, QR-code-based
-  guest invite flows, invitation badge and card generators, and support flows.
-
-  THE DESIGN SYSTEM: A complete, proprietary visual language — dark-mode first,
-  built on a near-black (#080810) base, with blue-to-indigo gradients, ambient
-  radial glow orbs as decorative backgrounds, glassmorphism card treatments, and
-  a distinctive micro-interaction vocabulary — that constitutes protectable trade
-  dress and a commercial differentiator for the Author.
-
-  THE WHITE-LABEL CONTEXT: A React context provider (WhiteLabelContext) that
-  wraps the entire application, performing domain detection, branding resolution
-  via the /api/whitelabel/resolve endpoint, cryptographic heartbeat verification
-  via /api/whitelabel/heartbeat, and periodic re-enforcement — all at application
-  startup and continuously while the app is running — to enforce white-label
-  licensing terms in the browser without requiring any user action.
-
-What makes the Frontend Application proprietary:
-
-  The Frontend Application is the product of an enormous amount of creative
-  design and engineering work. Its value lies not just in the code, but in
-  the decisions: which components to build, how they interact, what the user
-  experience flows feel like, how the white-label system works architecturally,
-  and what the visual design language communicates. Taken as a whole, the
-  Frontend Application constitutes both a copyrighted work and protectable
-  trade dress. Individual components, when extracted, still carry the Author's
-  copyright and may not be used without permission.
-
-────────────────────────────────────────────────────────────────────────────────
-COMPONENT B: THE BACKEND APPLICATION
-────────────────────────────────────────────────────────────────────────────────
-
-The PlanIt Backend Application is the server-side engine of the platform,
-built on Node.js and Express.js and deployed as a fleet of five identical
-instances (named Maverick, Goose, Iceman, Slider, and Viper). It encompasses:
-
-  THE EVENT MANAGEMENT ENGINE: All API endpoints for creating, reading,
-  updating, and deleting events; managing participants; handling RSVP flows;
-  processing file uploads to Cloudinary; managing real-time chat via Socket.IO;
-  conducting polls; and executing all other event-related business operations.
-
-  THE AUTHENTICATION AND AUTHORIZATION SYSTEM: JWT-based authentication with
-  per-role authorization (organizer, staff, guest, admin), bcrypt password
-  hashing, secure token generation, and the admin credential verification
-  system.
-
-  THE WHITE-LABEL MANAGEMENT API: All endpoints for creating, managing,
-  suspending, renewing, and configuring white-label client accounts, including
-  the /resolve endpoint (which identifies a custom domain and returns its
-  branding configuration) and the /heartbeat endpoint (which verifies that a
-  white-label license is currently valid and active).
-
-  THE CRYPTOGRAPHIC LICENSE KEY SYSTEM: A proprietary HMAC-SHA256-based license
-  key generation and verification system with the format
-  WL-{TIER}-{DOMAIN_HASH_8}-{EXPIRY_HEX}-{HMAC_12}. This system allows the
-  backend to issue tamper-evident license keys to white-label clients and to
-  verify their authenticity without a database lookup. The key format, hash
-  algorithm, domain hash derivation, expiry encoding, and HMAC construction are
-  all proprietary inventions of the Author.
-
-  THE WHITE-LABEL CLIENT PORTAL API: Authenticated endpoints (/api/wl-portal/*)
-  for white-label clients to log in to their self-service portal, update their
-  branding configuration, customize page content, toggle feature flags, change
-  their portal password, and review their login audit log.
-
-  THE SECURITY MIDDLEWARE LAYER (trafficGuard): A comprehensive request
-  inspection and traffic management middleware that provides: IP-based rate
-  limiting; suspicious request pattern detection; automated attack mitigation;
-  honeypot endpoint detection; bot signature identification; and integration
-  with the platform's security monitoring system.
-
-  THE EMAIL SERVICE: Integration with Brevo (primary) and Mailjet (fallback)
-  for transactional email delivery, including event confirmation emails,
-  participant join notifications, organizer alerts, and white-label billing
-  communications.
-
-  THE MAINTENANCE SYSTEM: A distributed maintenance mode implementation that
-  coordinates across the Router Service and all Backend instances to enforce
-  platform-wide maintenance windows, with carefully engineered exemptions that
-  keep white-label client sites, uptime monitoring, and UptimeRobot health
-  checks functioning even during PlanIt maintenance.
-
-  THE DATA MODELS: A comprehensive set of Mongoose schemas defining the Event,
-  WhiteLabel, WLLead, EventParticipant, Incident, and MaintenanceSchedule
-  entities, with carefully designed indexes, validation rules, and field-level
-  access controls.
-
-  THE REAL-TIME LAYER: Socket.IO integration providing room-based event
-  broadcasting, live participant state synchronization, real-time chat delivery,
-  table service order notifications, and organizer announcements.
-
-What makes the Backend Application proprietary:
-
-  The Backend Application's value lies in three things: (1) the completeness
-  and correctness of its data models, which encode all the Author's thinking
-  about what an event management platform needs to track and how; (2) the
-  security architecture, particularly the trafficGuard middleware and the
-  white-label license enforcement system; and (3) the Cryptographic License
-  Key System, which is a novel invention that enables offline-verifiable,
-  tamper-evident license enforcement at scale. None of these may be copied,
-  adapted, or used as a reference implementation without the Author's permission.
-
-────────────────────────────────────────────────────────────────────────────────
-COMPONENT C: THE ROUTER SERVICE
-────────────────────────────────────────────────────────────────────────────────
-
-The PlanIt Router Service is the intelligent HTTP traffic orchestration layer
-deployed at planit-router.onrender.com. It sits between the public internet
-and the Backend Fleet, and is responsible for:
-
-  INTELLIGENT LOAD DISTRIBUTION: Routing incoming HTTP requests to the most
-  appropriate backend instance using a proprietary scoring algorithm that
-  factors in: real-time health status; consecutive alive/dead transitions;
-  request history; and configured backend weights — not simple round-robin.
-
-  HEALTH-AWARE ORCHESTRATION: Continuously polling all backend instances,
-  maintaining their alive/dead state, and dynamically removing unhealthy
-  instances from the routing pool without dropping in-flight requests.
-
-  ADAPTIVE SCALING: A boost mode system that temporarily expands the active
-  backend count during high-traffic periods, with configurable thresholds,
-  duration, and reversion logic.
-
-  MAINTENANCE COORDINATION: A distributed maintenance enforcement system that
-  returns appropriate 503 responses during maintenance windows, with a carefully
-  engineered list of exemptions that keep critical paths (white-label resolution,
-  uptime monitoring, UptimeRobot health checks) accessible at all times.
-
-  CORS MANAGEMENT: Dynamic CORS header injection that allows the Router to
-  serve the PlanIt frontend, all white-label custom domains, and authorized
-  development origins, pulling the current list of white-label domains from
-  the Backend Fleet periodically.
-
-  MESH AUTHENTICATION: An HMAC-based mutual authentication protocol for all
-  inter-service communication (between the Router and the Backend Fleet),
-  preventing unauthorized services from calling internal mesh endpoints.
-
-  RESPONSE CACHING: A short-TTL response cache for frequently-requested
-  read-only API endpoints, reducing Backend Fleet load for common data fetches.
-
-  WEBSOCKET PROXYING: Pass-through of WebSocket upgrade requests and Socket.IO
-  long-polling connections to the appropriate backend instance with sticky
-  session behavior.
-
-What makes the Router Service proprietary:
-
-  The Router Service's value is entirely in its Routing Intelligence — the
-  specific algorithm by which it selects backend instances. This is not publicly
-  known and is not reproducible from first principles without the Author's
-  specific engineering decisions. It also contains the Mesh Protocol, which
-  is a custom security protocol designed specifically for the PlanIt platform.
-  Both constitute trade secrets in addition to copyrighted works.
-
-────────────────────────────────────────────────────────────────────────────────
-COMPONENT D: THE WATCHDOG SERVICE
-────────────────────────────────────────────────────────────────────────────────
-
-The PlanIt Watchdog Service is an autonomous infrastructure monitoring daemon
-that operates independently of all other platform components. It is responsible
-for:
-
-  REAL-TIME HEALTH MONITORING: Continuously polling the PlanIt Router Service,
-  Backend Fleet instances, and all other monitored infrastructure components
-  at configurable intervals, interpreting their health responses, and maintaining
-  a live operational status picture.
-
-  INCIDENT LIFECYCLE MANAGEMENT: Detecting incidents (service degradations or
-  outages) based on consecutive health check failures, creating incident records,
-  tracking their progression through open/investigating/resolved states, and
-  auto-resolving incidents when services recover.
-
-  ALERT ROUTING AND DELIVERY: Sending real-time push notifications via ntfy.sh
-  and Discord webhooks when incidents are detected, when severity changes, and
-  when incidents resolve — with alert deduplication and suppression logic to
-  prevent notification flooding.
-
-  UPTIME HISTORY AGGREGATION: Computing and storing rolling uptime percentages
-  for all monitored services, providing historical availability data to the
-  public PlanIt status page at planitapp.onrender.com/status.
-
-  STATUS PAGE DATA API: Providing the /watchdog/status endpoint (mesh-
-  authenticated) and the /api/uptime/status endpoint (public) through which
-  the frontend status page retrieves current platform health information.
-
-  AUTO-PROMOTION OF SCHEDULED MAINTENANCE: Polling for upcoming maintenance
-  windows defined in the database and automatically promoting them to active
-  maintenance mode at the correct time, coordinating across all Router and
-  Backend instances.
-
-What makes the Watchdog Service proprietary:
-
-  The Watchdog Service's value lies in its Monitoring Intelligence — the
-  specific configuration of polling intervals, failure thresholds, incident
-  severity rules, alert routing logic, and uptime aggregation methodology
-  that the Author has developed through operational experience running the
-  PlanIt platform. These are not publicly known, are not derivable from
-  generic monitoring best practices, and constitute trade secrets.
-
-================================================================================
-================================================================================
-
-            PART TWO: OVERARCHING TERMS APPLICABLE TO ALL COMPONENTS
-
-================================================================================
-================================================================================
-
-The following terms apply to the PlanIt platform as a unified whole, in
-addition to the individual component license terms set out in Parts Three
-through Six below.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 1 — UNIFIED OWNERSHIP DECLARATION
-────────────────────────────────────────────────────────────────────────────────
-
-M-1.1  The Author is the sole and exclusive owner of all intellectual property
-       rights in and to the PlanIt platform as a whole and in each individual
-       component thereof, including all copyrights, trade secrets, trade dress,
-       and any other proprietary rights recognized under applicable law.
-
-M-1.2  The PlanIt platform, considered as a whole, constitutes a collective
-       work under copyright law in addition to the individual copyrights
-       subsisting in each component. The Author owns the copyright in the
-       collective work in addition to the component copyrights.
-
-M-1.3  The architectural decisions that govern how the four components interact
-       — the CORS scheme, the mesh authentication protocol, the white-label
-       domain flow from frontend resolution through backend heartbeat to Router-
-       level CORS registration, the maintenance exemption hierarchy — together
-       constitute a proprietary system design that is itself a trade secret and
-       copyrighted work of the Author, separate from and in addition to the
-       individual component copyrights.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 2 — SCOPE OF THE MASTER AGREEMENT
-────────────────────────────────────────────────────────────────────────────────
-
-M-2.1  This Master Agreement governs any and all access to and use of the
-       PlanIt platform, regardless of which component or components You interact
-       with.
-
-M-2.2  Where a more specific individual component license agreement addresses
-       a particular topic (e.g., the Cryptographic License System in the Backend
-       License, or the Routing Intelligence in the Router License), that
-       specific provision takes precedence over any general provision in this
-       Master Agreement with respect to that specific topic.
-
-M-2.3  Interaction with any single component of the PlanIt platform (e.g.,
-       reading only the Router source code) subjects You to the Master Agreement
-       AND to the individual license agreement for that component.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 3 — UNIFIED GRANT OF LIMITED LICENSE
-────────────────────────────────────────────────────────────────────────────────
-
-M-3.1  Subject to Your full and continuous compliance with this Master
-       Agreement and all applicable individual component license agreements,
-       the Author grants You a limited, personal, non-exclusive, non-
-       transferable, non-sublicensable, revocable license to:
-
-       (a)  View the source code of any component of the PlanIt platform
-            solely for personal, non-commercial educational and reference
-            purposes; and
-
-       (b)  Access and use the Hosted Service as an end-user for its intended
-            purpose of event planning and event management, subject to the
-            Terms of Service at planitapp.onrender.com.
-
-M-3.2  White-label clients with executed white-label agreements hold additional
-       rights as specified in those agreements only.
-
-M-3.3  All rights not expressly granted are reserved by the Author.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 4 — UNIFIED RESTRICTIONS
-────────────────────────────────────────────────────────────────────────────────
-
-M-4.1  Across the entire PlanIt platform, without explicit prior written
-       permission from the Author, You must NOT:
-
-       (a)  Deploy any component of the platform on any infrastructure;
-       (b)  Copy, clone, or reproduce any component in any form;
-       (c)  Distribute any component to any third party;
-       (d)  Create any Derivative Work from any component;
-       (e)  Use any component for any Commercial Use;
-       (f)  Reverse engineer any security or enforcement mechanism;
-       (g)  Use any component's source code in any ML training dataset;
-       (h)  Remove any copyright notice or proprietary marking.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 5 — NO OPEN SOURCE
-────────────────────────────────────────────────────────────────────────────────
-
-M-5.1  The PlanIt platform is NOT open source software. No component of the
-       platform is released under any open-source license, including but not
-       limited to the MIT License, Apache 2.0, GNU GPL, GNU LGPL, BSD licenses,
-       Creative Commons licenses, or any other license that would permit
-       copying, modification, or redistribution.
-
-M-5.2  The presence of this source code in a publicly accessible repository
-       does not, under any interpretation, constitute: (a) an open-source
-       release; (b) a public domain dedication; (c) an implied license of any
-       kind; (d) a waiver of any copyright or other proprietary right; or
-       (e) consent to any use beyond viewing for educational reference.
-
-M-5.3  The Author has chosen to make this source code publicly visible solely
-       to demonstrate technical capability and for reference purposes. This
-       choice is made expressly without waiving any intellectual property right.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 6 — UNIFIED DISCLAIMERS AND LIMITATIONS
-────────────────────────────────────────────────────────────────────────────────
-
-M-6.1  THE ENTIRE PLANIT PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-       ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR DISCLAIMS ALL WARRANTIES
-       TO THE MAXIMUM EXTENT PERMITTED BY LAW.
-
-M-6.2  THE AUTHOR'S TOTAL LIABILITY UNDER THIS MASTER AGREEMENT AND ALL
-       INDIVIDUAL COMPONENT LICENSES COMBINED SHALL NOT EXCEED USD $100.00.
-
-M-6.3  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL,
-       INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES ARISING FROM ANY COMPONENT OF
-       THE PLATFORM.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 7 — GOVERNING LAW AND DISPUTE RESOLUTION
-────────────────────────────────────────────────────────────────────────────────
-
-M-7.1  This Master Agreement and all individual component license agreements
-       shall be governed by the laws of the jurisdiction in which the Author
-       resides, without regard to conflict of law principles.
-
-M-7.2  Any dispute arising under this Master Agreement that cannot be resolved
-       by direct negotiation between the parties shall be submitted to binding
-       arbitration under rules mutually agreed by the parties, except that the
-       Author shall always be entitled to seek emergency injunctive relief from
-       any court of competent jurisdiction without first submitting to
-       arbitration.
-
-M-7.3  Each party irrevocably waives any objection to the venue or personal
-       jurisdiction of courts in the Author's jurisdiction for any proceeding
-       that escapes arbitration.
-
-────────────────────────────────────────────────────────────────────────────────
-MASTER SECTION 8 — CONTACT AND PERMISSIONS
-────────────────────────────────────────────────────────────────────────────────
-
-M-8.1  All requests for permissions beyond those granted in this Master
-       Agreement — including commercial license inquiries, white-label
-       partnership inquiries, academic use requests, and security vulnerability
-       reports — must be directed to:
-
-                    Email: planit.userhelp@gmail.com
-                    Web:   https://planitapp.onrender.com (Support page)
-
-M-8.2  Permission requests must be made in writing, must identify the
-       requestor and their intended use in detail, and will be evaluated
-       at the Author's sole discretion. Permission is never implied, deemed,
-       or constructively granted.
-
-================================================================================
-================================================================================
-
-             PART THREE: PLANIT FRONTEND APPLICATION LICENSE (FULL TEXT)
-
-================================================================================
-================================================================================
-
-The following is the complete, unabridged text of the PlanIt Frontend
-Application License Agreement, which governs all access to and use of the
-PlanIt client-side React application. This component license is set out in
-full below and is also available as the file LICENSE-FRONTEND in the root
-of the frontend repository directory.
-
-This license covers every .jsx, .tsx, .css, .html, .json, and .js file in
-the /frontend/src/ directory and its subdirectories, the Vite configuration,
-the PWA configuration, all design assets, and the complete Visual Design System
-of the PlanIt platform.
-
-────────────────────────────────────────────────────────────────────────────────
-
-================================================================================
-================================================================================
-
-              PLANIT FRONTEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
-                         EXCLUSIVE RIGHTS RESERVED
-
-================================================================================
-================================================================================
-
-                     PlanIt Frontend Interface License Agreement
-                              Version 2.0 — January 2026
-
-              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
-
-                          planit.userhelp@gmail.com
-                        https://planitapp.onrender.com
-
-================================================================================
-                            PREAMBLE AND LEGAL NOTICE
-================================================================================
-
-IMPORTANT — READ THIS ENTIRE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
-DOWNLOADING, CLONING, FORKING, INSPECTING, COMPILING, EXECUTING, OR OTHERWISE
-INTERACTING WITH THE PLANIT FRONTEND APPLICATION OR ANY PORTION THEREOF.
-
-This License Agreement ("Agreement") is a binding legal contract between You
-and Aakshat Hariharan ("Author") governing all access to and use of the PlanIt
-frontend application, its source code, compiled assets, design system, visual
-components, and all related materials. This Agreement takes effect at the
-earliest moment You interact with this software in any form — including the
-act of reading this source code.
-
-The public availability of this source code on a version control platform does
-NOT constitute an open-source release, a public domain dedication, an implied
-license, or consent to use, copy, fork, adapt, or build upon this work for any
-purpose beyond the narrow rights expressly granted in Section 2.
-
-================================================================================
-SECTION 1 — DEFINITIONS
-================================================================================
-
-1.1   "Frontend Application" or "Software" means the PlanIt client-side web
-      application in its entirety, encompassing all React component source files,
-      all context providers and consumer hooks, all service modules and API client
-      files, all UI components, design tokens, Tailwind CSS configuration, custom
-      CSS stylesheets, animation definitions, the Vite build configuration, PWA
-      manifest, public/ directory assets, the complete Visual Design System,
-      the white-label theming architecture, and all documentation and code
-      comments.
-
-1.2   "Author" means Aakshat Hariharan, the sole designer, architect, developer,
-      and intellectual property owner of the Frontend Application.
-
-1.3   "You" or "Licensee" means any individual, developer, designer, engineer,
-      researcher, student, company, organization, or other legal or natural
-      person that accesses, views, reads, downloads, clones, compiles, executes,
-      deploys, or otherwise interacts with the Frontend Application.
-
-1.4   "Hosted Service" means the production deployment at planitapp.onrender.com
-      and all associated white-label custom domains.
-
-1.5   "Visual Design System" means the complete proprietary visual language
-      including dark color palette, gradient definitions, glassmorphism
-      treatments, ambient glow patterns, typography hierarchy, micro-interaction
-      patterns, icon usage conventions, and overall aesthetic system.
-
-1.6   "Derivative Work" means any work derived from, copying, adapting, or
-      substantially similar to the Frontend Application in code, design,
-      architecture, or user experience.
-
-1.7   "Commercial Use" means any use in connection with any revenue-generating
-      activity.
-
-1.8   "Deploy" means to serve, host, publish, or make operational the Frontend
-      Application on any infrastructure.
-
-1.9   "Distribute" means to share, transfer, publish, or make available the
-      Frontend Application to any third party.
-
-================================================================================
-SECTION 2 — GRANT OF LIMITED LICENSE
-================================================================================
-
-2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
-      non-sublicensable, revocable license to: (a) view the source code for
-      personal educational reference; and (b) access and use the Hosted Service
-      as an end-user.
-
-2.2   White-label clients with executed agreements hold additional rights per
-      those agreements only.
-
-2.3   All rights not expressly granted are reserved by the Author.
-
-2.4   The Author may revoke this license at any time without notice.
-
-================================================================================
-SECTION 3 — RESTRICTIONS ON USE
-================================================================================
-
-3.1   Without prior explicit written permission from the Author, You will NOT:
-
-      (a)  Copy, clone, mirror, or reproduce the Frontend Application;
-      (b)  Deploy the Frontend Application on any infrastructure;
-      (c)  Distribute the Frontend Application to any third party;
-      (d)  Modify or create any Derivative Work;
-      (e)  Reverse engineer any compiled or minified portion;
-      (f)  Use the Visual Design System for any other product's design;
-      (g)  Use any portion for Commercial Use;
-      (h)  Remove any copyright notices, license notices, or attributions;
-      (i)  Use "PlanIt" or "Aakshat Hariharan" without written consent;
-      (j)  Use automated tools to extract source code or content at scale;
-      (k)  Use source code in ML training datasets or code generation models;
-      (l)  Frame or embed the Hosted Service to misrepresent its origin;
-      (m)  Circumvent any technical enforcement mechanism.
-
-3.2   Restrictions apply to the whole and to every individual component,
-      file, function, style, and design choice within the Frontend Application.
-
-================================================================================
-SECTION 4 — INTELLECTUAL PROPERTY OWNERSHIP
-================================================================================
-
-4.1   The Frontend Application and all constituent elements are the sole and
-      exclusive property of the Author.
-
-4.2   The Visual Design System constitutes protectable trade dress and
-      confidential trade secret information.
-
-4.3   The white-label theming architecture, including the WhiteLabelContext,
-      heartbeat verification, and CSS variable injection, constitutes a
-      proprietary technical system and trade secret.
-
-4.4   Any feedback or input You provide is assigned to the Author in full
-      without compensation.
-
-4.5   Third-party open-source dependency copyrights remain with their respective
-      owners. The Author's rights extend to original creative expression in
-      how those dependencies are assembled and used.
-
-================================================================================
-SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
-TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
-================================================================================
-
-5.1   You agree to treat the source code, design decisions, component
-      architecture, and all non-public aspects as strictly confidential.
-
-5.2   You agree not to disclose any Confidential Information to any third party.
-
-6.1   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
-
-6.2   THE AUTHOR DISCLAIMS ALL WARRANTIES TO THE MAXIMUM EXTENT PERMITTED BY LAW.
-
-7.1   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
-      SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
-
-7.2   THE AUTHOR'S TOTAL LIABILITY SHALL NOT EXCEED USD $100.00.
-
-8.1   You agree to indemnify and hold harmless the Author from any claims
-      arising from Your breach of this Agreement.
-
-9.1   This Agreement is effective from first access and continues until
-      terminated. Breach results in immediate termination without notice.
-
-9.3   Upon termination, You must cease all use and permanently delete all copies.
-
-10.1  The Author is entitled to seek injunctive relief without bond for any
-      unauthorized use.
-
-11.1  Governing Law: jurisdiction of the Author's residence.
-11.2  Entire Agreement: supersedes all prior agreements.
-11.3  Severability: invalid provisions severed, remainder continues.
-11.5  No assignment without Author's written consent.
-11.7  Contact: planit.userhelp@gmail.com
-
-================================================================================
-
-                  Copyright (c) 2026 Aakshat Hariharan.
-                         All Rights Reserved.
-
-================================================================================
-
-────────────────────────────────────────────────────────────────────────────────
+PLANIT SOFTWARE LICENSE AGREEMENT
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 
-               [END OF PLANIT FRONTEND APPLICATION LICENSE — PART THREE]
+PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+OR USING THIS SOFTWARE. BY ACCESSING THE REPOSITORY, VIEWING THE SOURCE
+CODE, OR USING THE HOSTED SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ
+THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS. IF
+YOU DO NOT AGREE TO THESE TERMS, YOU MUST IMMEDIATELY CEASE ALL ACCESS
+TO AND USE OF THIS SOFTWARE.
 
 ================================================================================
+SECTION 1 -- DEFINITIONS
 ================================================================================
 
-              PART FOUR: PLANIT BACKEND APPLICATION LICENSE (FULL TEXT)
+1.1  "Software" means the PlanIt application in its entirety, including but
+     not limited to all source code, object code, compiled binaries, scripts,
+     configuration files, database schemas, API definitions, frontend
+     components, backend services, routing infrastructure, watchdog services,
+     documentation, design assets, visual layouts, user interface elements,
+     architectural decisions, and all related materials made available in this
+     repository or through the hosted service.
 
-================================================================================
-================================================================================
-
-The following is the complete, unabridged text of the PlanIt Backend Application
-License Agreement, which governs all access to and use of the PlanIt server-side
-Node.js/Express application. This component license is set out in full below
-and is also available as the file LICENSE-BACKEND in the backend repository.
-
-This license covers every .js file in the /backend/ directory and its
-subdirectories, including all route handlers, data models, middleware, service
-modules, configuration files, and the proprietary Cryptographic License
-Key System.
-
-────────────────────────────────────────────────────────────────────────────────
-
-================================================================================
-================================================================================
-
-               PLANIT BACKEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
-                          EXCLUSIVE RIGHTS RESERVED
-
-================================================================================
-================================================================================
-
-                      PlanIt Backend Services License Agreement
-                              Version 2.0 — January 2026
-
-              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
-
-                          planit.userhelp@gmail.com
-                        https://planitapp.onrender.com
-
-================================================================================
-                            PREAMBLE AND LEGAL NOTICE
-================================================================================
-
-IMPORTANT — READ THIS ENTIRE AGREEMENT BEFORE ACCESSING, READING, CLONING,
-EXECUTING, DEPLOYING, OR INTERACTING WITH THE PLANIT BACKEND APPLICATION OR
-ANY PART OF ITS INFRASTRUCTURE.
-
-The PlanIt Backend Application is the server-side engine powering all data
-persistence, business logic, authentication, authorization, real-time
-communication, external integrations, and API services for the PlanIt platform.
-
-================================================================================
-SECTION 1 — DEFINITIONS
-================================================================================
-
-1.1   "Backend Application" or "Software" means the PlanIt server-side
-      application in its entirety, including the main Express.js server, all
-      route handlers (/routes/), all Mongoose data models (/models/), all
-      middleware (/middleware/), all service modules (/services/), the
-      Cryptographic License Key System, the white-label resolution and heartbeat
-      enforcement system, the Socket.IO real-time layer, all configuration
-      files, and all documentation and comments.
-
-1.2   "Author" means Aakshat Hariharan, the sole architect, developer, and
-      intellectual property owner of the Backend Application.
-
-1.3   "You" means any individual or entity interacting with the Backend
-      Application in any way.
-
-1.4   "Cryptographic License System" means the HMAC-SHA256-based license key
-      generation and verification system, including the key format, algorithm,
-      domain hash function, expiry encoding, and HMAC construction.
-
-1.5   "Data Models" means all Mongoose schema definitions and associated
-      business logic, constituting trade secrets of the Author.
-
-1.6   "Derivative Work" means any work derived from, reimplementing, or
-      substantially similar to the Backend Application.
-
-1.7   "Deploy" means to execute, run, or host the Backend Application on any
-      computing infrastructure.
-
-1.8   "Commercial Use" means any use in connection with commercial activity.
-
-================================================================================
-SECTION 2 — GRANT OF LIMITED LICENSE
-================================================================================
-
-2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
-      non-sublicensable, revocable license to: (a) view the source code for
-      personal educational reference; and (b) access the API Surface through
-      the official frontend only, or as explicitly authorized in writing.
-
-2.2   No right to Deploy, modify, distribute, or commercially exploit the
-      Backend Application is granted.
-
-2.3   All rights not expressly granted are reserved.
-
-================================================================================
-SECTION 3 — RESTRICTIONS ON USE
-================================================================================
-
-3.1   Without prior explicit written permission, You must NOT:
-
-      (a)  Deploy, execute, or host the Backend Application;
-      (b)  Copy, clone, or reproduce the Backend Application;
-      (c)  Distribute the Backend Application to any third party;
-      (d)  Modify or create any Derivative Work, including reimplementing
-           the Data Models or Cryptographic License System;
-      (e)  Reverse engineer the Cryptographic License System;
-      (f)  Access the API Surface through any means other than the official
-           frontend, except as explicitly authorized;
-      (g)  Conduct Penetration Testing or vulnerability assessment;
-      (h)  Access, extract, or aggregate any user data;
-      (i)  Use source code in ML training datasets;
-      (j)  Circumvent any security mechanism;
-      (k)  Use Data Models as basis for competing platform;
-      (l)  Use for Commercial Use without written license.
-
-3.2   Unauthorized direct API access constitutes a breach of this Agreement.
-
-3.3   Security vulnerability reports must be submitted to
-      planit.userhelp@gmail.com without public disclosure.
-
-================================================================================
-SECTION 4 — CRYPTOGRAPHIC LICENSE SYSTEM
-================================================================================
-
-4.1   The Cryptographic License System is the Author's proprietary invention
-      and most sensitive trade secret.
-
-4.2   Any attempt to reverse engineer, bypass, spoof, or circumvent it
-      constitutes trade secret misappropriation and potential criminal liability.
-
-4.3   The WL_LICENSE_SECRET and all related secrets are inaccessible to You
-      under any circumstance.
-
-================================================================================
-SECTION 5 — DATA AND PRIVACY
-================================================================================
-
-5.1   Unauthorized access to the Backend Application or its databases constitutes
-      a serious privacy violation and may trigger breach notification obligations
-      under applicable data protection law.
-
-================================================================================
-SECTION 6 — INTELLECTUAL PROPERTY
-================================================================================
-
-6.1   The Backend Application and all components are the sole property of the
-      Author. All copyrights and trade secrets belong exclusively to the Author.
-
-================================================================================
-SECTIONS 7–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
-TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
-================================================================================
+1.2  "Author" means Aakshat Hariharan, the sole creator and owner of the
+     Software and all intellectual property rights therein.
 
-The Backend Application is provided "AS IS" without warranty. The Author's
-liability is limited to USD $100.00. You agree to indemnify the Author for
-any breach. The Author may terminate this Agreement immediately upon breach.
-Injunctive relief is available to the Author without bond. Governing law is
-the jurisdiction of the Author's residence.
+1.3  "You" or "Licensee" means any individual, organization, company,
+     partnership, or other legal entity that accesses, views, downloads,
+     copies, or otherwise interacts with the Software or any portion thereof.
 
-11.8  Export Compliance: You agree to comply with all applicable export
-      control laws.
+1.4  "Hosted Service" means the publicly accessible deployment of the
+     Software operated by the Author at planitapp.onrender.com and any
+     associated domains or subdomains.
 
-11.9  Security Obligations: You agree not to use knowledge from this source
-      code to harm the Author, the platform, its users, or any third party.
+1.5  "Derivative Work" means any work, software, product, service, or
+     creation that is based on, derived from, substantially similar to,
+     inspired by, or incorporates any portion of the Software, including
+     works that replicate the design, architecture, functionality, or
+     user experience of the Software in any form.
 
-================================================================================
-
-                  Copyright (c) 2026 Aakshat Hariharan.
-                         All Rights Reserved.
-
-================================================================================
-
-────────────────────────────────────────────────────────────────────────────────
+1.6  "Commercial Use" means any use of the Software or any portion thereof
+     in connection with any activity intended to generate revenue, profit,
+     or other financial or commercial benefit, whether directly or indirectly.
 
-                [END OF PLANIT BACKEND APPLICATION LICENSE — PART FOUR]
-
-================================================================================
-================================================================================
+1.7  "Distribute" means to make available, publish, transmit, share,
+     sublicense, sell, rent, lease, lend, or otherwise transfer the Software
+     or any portion thereof to any third party by any means.
 
-                PART FIVE: PLANIT ROUTER SERVICE LICENSE (FULL TEXT)
+1.8  "Deploy" means to install, run, host, execute, or operate the Software
+     or any portion thereof on any server, device, infrastructure, cloud
+     platform, virtual machine, container, or computing environment.
 
 ================================================================================
+SECTION 2 -- GRANT OF LIMITED LICENSE
 ================================================================================
-
-The following is the complete, unabridged text of the PlanIt Router Service
-License Agreement, which governs all access to and use of the PlanIt intelligent
-HTTP traffic orchestration layer. This component license is also available as
-LICENSE-ROUTER in the router repository directory.
-
-This license covers every source file in the /router/ directory, the entire
-Routing Intelligence, the Mesh Protocol implementation, and all configuration
-and operational tooling associated with the Router Service.
 
-────────────────────────────────────────────────────────────────────────────────
+2.1  Subject to the terms and conditions of this Agreement, the Author
+     hereby grants You a limited, non-exclusive, non-transferable,
+     non-sublicensable, revocable license to:
 
-================================================================================
-================================================================================
+     (a) View the source code of the Software solely for personal,
+         non-commercial educational and reference purposes; and
 
-                PLANIT ROUTER SERVICE — PROPRIETARY SOFTWARE LICENSE
-                          EXCLUSIVE RIGHTS RESERVED
-
-================================================================================
-================================================================================
+     (b) Access and use the Hosted Service for its intended purpose of
+         event planning, subject to the Terms of Service of the Hosted
+         Service.
 
-                     PlanIt Router Infrastructure License Agreement
-                              Version 2.0 — January 2026
+2.2  This license does not grant You any rights to the Software except
+     as expressly set forth in Section 2.1. All rights not expressly
+     granted herein are reserved by the Author.
 
-              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+2.3  The Author reserves the right to revoke this limited license at any
+     time, for any reason or no reason, upon notice or without notice.
 
-                          planit.userhelp@gmail.com
-                        https://planitapp.onrender.com
+2.4  Making the repository publicly accessible does not, under any
+     circumstances, constitute a grant of any rights beyond those expressly
+     set forth in Section 2.1, nor does it constitute a dedication of the
+     Software to the public domain.
 
 ================================================================================
-                            PREAMBLE AND LEGAL NOTICE
+SECTION 3 -- RESTRICTIONS
 ================================================================================
 
-The Router Service embodies proprietary algorithms for adaptive backend
-selection, health-aware load distribution, maintenance-safe traffic management,
-mesh-authenticated inter-service communication, and white-label-aware routing
-that represent significant engineering investment and constitute trade secrets.
+3.1  You expressly agree that You will NOT, without prior explicit written
+     permission from the Author:
 
-================================================================================
-SECTION 1 — DEFINITIONS
-================================================================================
+     (a) Copy, clone, fork, mirror, scrape, or otherwise reproduce the
+         Software or any portion thereof, in whole or in part, in any
+         medium or format, whether digital or physical;
 
-1.1   "Router Service" or "Software" means the PlanIt HTTP routing and
-      orchestration layer in its entirety, including all backend selection
-      algorithms, health-check polling logic, maintenance intercept middleware,
-      CORS management system, mesh authentication protocol, response caching
-      layer, rate limiting configuration, health check aggregation, deploy hook
-      configuration, backend fleet registry, WebSocket proxying configuration,
-      and all documentation and comments.
+     (b) Deploy, host, run, or execute the Software or any portion thereof
+         on any server, device, or infrastructure other than the Author's
+         official Hosted Service;
 
-1.2   "Author" means Aakshat Hariharan, the sole architect and owner.
+     (c) Distribute, sublicense, sell, rent, lease, transfer, publish,
+         or otherwise make the Software or any portion thereof available
+         to any third party in any form;
 
-1.3   "You" means any individual or entity interacting with the Router Service.
+     (d) Modify, adapt, translate, reverse engineer, decompile, disassemble,
+         or attempt to derive the source code of any compiled portion of
+         the Software;
 
-1.4   "Routing Intelligence" means the proprietary scoring algorithm, health
-      heuristics, boost mode logic, and all decision-making code — constituting
-      trade secrets of the Author.
+     (e) Create any Derivative Work based on or substantially similar to
+         the Software, including recreating its functionality, architecture,
+         design, or user experience in any other codebase or product;
 
-1.5   "Mesh Protocol" means the HMAC-based inter-service authentication system.
+     (f) Use the Software or any portion of its source code, design,
+         architecture, or functionality as the basis for any competing
+         product or service, whether commercial or non-commercial;
 
-1.6   "Derivative Work" means any work derived from or reimplementing any
-      portion of the Router Service.
+     (g) Use the Software for any Commercial Use without a separately
+         negotiated commercial license agreement executed in writing by
+         the Author;
 
-1.7   "Deploy" means to execute or host the Router Service on any infrastructure.
+     (h) Remove, alter, obscure, or replace any copyright notices, license
+         notices, proprietary markings, or attribution notices contained
+         in or accompanying the Software;
 
-1.8   "Commercial Use" means any use in connection with commercial activity.
+     (i) Use the name "PlanIt", the PlanIt logo, or the name "Aakshat
+         Hariharan" in connection with any product, service, or
+         organization in a manner that suggests endorsement, affiliation,
+         or sponsorship without prior written permission from the Author;
 
-================================================================================
-SECTION 2 — GRANT OF LIMITED LICENSE
-================================================================================
+     (j) Use the Software in any manner that violates any applicable local,
+         state, national, or international law or regulation;
 
-2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
-      non-sublicensable, revocable license to view the source code for personal
-      educational reference only.
+     (k) Circumvent, disable, or interfere with any technical measures
+         implemented in the Software to enforce the terms of this license,
+         including but not limited to the cryptographic license integrity
+         verification system embedded in the Software's backend;
 
-2.2   No deployment, modification, distribution, or commercial exploitation right
-      is granted.
+     (l) Access the Software's backend services, APIs, or database
+         infrastructure through any means other than the official Hosted
+         Service's user interface, except as explicitly authorized by
+         the Author in writing;
 
-2.3   All rights not expressly granted are reserved.
+     (m) Use any automated tools, bots, scrapers, or scripts to access,
+         download, or index the Software's source code or the Hosted
+         Service's content at scale.
 
-================================================================================
-SECTION 3 — RESTRICTIONS ON USE
-================================================================================
+3.2  The restrictions set forth in Section 3.1 apply regardless of whether
+     Your intended use is personal, educational, academic, commercial,
+     non-profit, or for any other purpose.
 
-3.1   Without prior written permission, You must NOT:
-
-      (a)  Deploy or host the Router Service;
-      (b)  Copy or reproduce the Router Service;
-      (c)  Distribute the Router Service;
-      (d)  Modify or create any Derivative Work, including reimplementing
-           the Routing Intelligence;
-      (e)  Benchmark or reverse engineer the Routing Intelligence for building
-           a competing system;
-      (f)  Disclose Confidential Information to any third party;
-      (g)  Probe or stress-test the Hosted Infrastructure;
-      (h)  Forge or bypass Mesh Protocol authentication;
-      (i)  Use source code in ML training datasets;
-      (j)  Remove copyright notices;
-      (k)  Use for Commercial Use without a written license.
-
-3.2   The Routing Intelligence is classified as Confidential Information and
-      a trade secret. Any attempt to extract or commercialize it constitutes
-      trade secret misappropriation.
+3.3  The restrictions set forth in this Agreement apply to the Software
+     as a whole and to any portion, excerpt, component, module, or file
+     thereof, no matter how small.
 
 ================================================================================
-SECTION 4 — ROUTING INTELLIGENCE AS TRADE SECRET
+SECTION 4 -- INTELLECTUAL PROPERTY OWNERSHIP
 ================================================================================
 
-4.1   The Routing Intelligence constitutes a proprietary system developed
-      through substantial engineering investment. The specific combination of
-      health-check scoring weights, backend alive-state hysteresis logic,
-      boost mode thresholds, and maintenance exemption categorization are not
-      publicly known and provide the Author with a competitive advantage.
+4.1  The Software and all copies, modifications, and Derivative Works
+     thereof, and all intellectual property rights therein, including
+     without limitation all copyrights, patents, trade secrets, trademarks,
+     and other proprietary rights, are and shall remain the exclusive
+     property of the Author.
 
-4.2   Your obligation to maintain the confidentiality of the Routing Intelligence
-      survives termination of this Agreement indefinitely.
+4.2  Nothing in this Agreement shall be construed to transfer, assign, or
+     convey to You any ownership interest in the Software or any intellectual
+     property rights therein.
 
-================================================================================
-SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
-TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
-================================================================================
+4.3  The design, architecture, visual appearance, user experience, and
+     functionality of the Software are trade secrets and confidential
+     information of the Author, and You agree to treat them as such.
 
-The Router Service is provided "AS IS" without warranty. The Author's liability
-is limited to USD $100.00. You agree to indemnify the Author for any breach.
-The Author may terminate this Agreement immediately upon breach. Injunctive
-relief is available to the Author without bond. Governing law is the
-jurisdiction of the Author's residence.
+4.4  Any feedback, suggestions, bug reports, or contributions You provide
+     to the Author regarding the Software shall be the sole and exclusive
+     property of the Author, and You hereby assign to the Author all
+     rights in such feedback without any obligation of compensation or
+     attribution to You.
 
-11.8  Infrastructure Integrity: You agree not to take any action that could
-      degrade, disrupt, or damage the Hosted Infrastructure or Backend Fleet.
+4.5  You acknowledge that the Software embodies substantial creative effort
+     and investment by the Author, and that unauthorized use or copying
+     would cause irreparable harm to the Author for which monetary damages
+     would be inadequate.
 
 ================================================================================
-
-                  Copyright (c) 2026 Aakshat Hariharan.
-                         All Rights Reserved.
-
+SECTION 5 -- TECHNICAL ENFORCEMENT
 ================================================================================
 
-────────────────────────────────────────────────────────────────────────────────
+5.1  The Software includes a cryptographic license integrity verification
+     system that runs at server startup and periodically during operation.
+     This system uses HMAC proof chains derived from a deployment-specific
+     license key to verify that each running instance of the Software is
+     an authorized deployment.
 
-                 [END OF PLANIT ROUTER SERVICE LICENSE — PART FIVE]
+5.2  Any attempt to tamper with, circumvent, disable, or bypass this
+     verification system constitutes a material breach of this Agreement
+     and may also constitute a violation of applicable computer fraud and
+     abuse laws.
 
-================================================================================
-================================================================================
+5.3  Unauthorized deployments will fail to start or will terminate
+     automatically. The Author reserves the right to implement additional
+     technical measures to prevent unauthorized use at any time.
 
-               PART SIX: PLANIT WATCHDOG SERVICE LICENSE (FULL TEXT)
-
 ================================================================================
+SECTION 6 -- CONFIDENTIALITY
 ================================================================================
-
-The following is the complete, unabridged text of the PlanIt Watchdog Service
-License Agreement, which governs all access to and use of the PlanIt autonomous
-infrastructure monitoring daemon. This component license is also available as
-LICENSE-WATCHDOG in the watchdog repository directory.
 
-This license covers every source file in the /watchdog/ directory (or pulse/
-directory if applicable), the Monitoring Intelligence, alert routing logic,
-uptime aggregation system, and all configuration and operational data generated
-by the Watchdog Service.
+6.1  You acknowledge that the Software contains confidential and proprietary
+     information belonging to the Author, including but not limited to
+     source code, algorithms, data structures, database schemas, security
+     implementations, and architectural design.
 
-────────────────────────────────────────────────────────────────────────────────
+6.2  You agree to maintain the confidentiality of the Software and not to
+     disclose, publish, or share any non-public portions of the Software
+     with any third party without the Author's prior written consent.
 
-================================================================================
-================================================================================
-
-               PLANIT WATCHDOG SERVICE — PROPRIETARY SOFTWARE LICENSE
-                          EXCLUSIVE RIGHTS RESERVED
+6.3  You agree to take reasonable precautions to prevent unauthorized
+     access to or disclosure of the Software, using at least the same
+     degree of care You use to protect Your own confidential information,
+     but in no event less than reasonable care.
 
 ================================================================================
+SECTION 7 -- DISCLAIMER OF WARRANTIES
 ================================================================================
 
-                    PlanIt Watchdog Monitoring License Agreement
-                              Version 2.0 — January 2026
+7.1  THE SOFTWARE AND THE HOSTED SERVICE ARE PROVIDED "AS IS" AND "AS
+     AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
 
-              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
-
-                          planit.userhelp@gmail.com
-                        https://planitapp.onrender.com
-
-================================================================================
-                            PREAMBLE AND LEGAL NOTICE
-================================================================================
+7.2  THE AUTHOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT
+     LIMITED TO: (A) ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+     FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT; (B) ANY
+     WARRANTIES THAT THE SOFTWARE WILL BE UNINTERRUPTED, ERROR-FREE, OR
+     FREE OF HARMFUL COMPONENTS; (C) ANY WARRANTIES REGARDING THE ACCURACY,
+     RELIABILITY, OR COMPLETENESS OF THE SOFTWARE OR ANY CONTENT THEREIN;
+     AND (D) ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF
+     PERFORMANCE, OR USAGE OF TRADE.
 
-The Watchdog Service contains proprietary incident detection heuristics, alert
-suppression logic, uptime aggregation algorithms, and integration-specific
-configurations that constitute trade secrets and copyrighted works of the Author.
+7.3  YOU ASSUME ALL RISK ARISING FROM YOUR ACCESS TO AND USE OF THE
+     SOFTWARE AND THE HOSTED SERVICE.
 
 ================================================================================
-SECTION 1 — DEFINITIONS
+SECTION 8 -- LIMITATION OF LIABILITY
 ================================================================================
 
-1.1   "Watchdog Service" or "Software" means the PlanIt autonomous monitoring
-      daemon in its entirety, including all health-check polling logic, incident
-      lifecycle management, alert routing and deduplication system, uptime
-      history aggregation, status page data API, mesh-authenticated endpoints,
-      auto-promotion of scheduled maintenance, and all configuration, operational
-      documentation, and comments.
+8.1  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+     THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+     CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS
+     OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, BUSINESS INTERRUPTION,
+     OR ANY OTHER COMMERCIAL DAMAGES OR LOSSES, ARISING OUT OF OR RELATED
+     TO THIS AGREEMENT OR YOUR USE OF OR INABILITY TO USE THE SOFTWARE,
+     EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-1.2   "Author" means Aakshat Hariharan, the sole designer and owner.
+8.2  THE AUTHOR'S TOTAL CUMULATIVE LIABILITY TO YOU FOR ANY AND ALL CLAIMS
+     ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE
+     GREATER OF (A) THE AMOUNT YOU PAID TO THE AUTHOR IN THE TWELVE MONTHS
+     PRECEDING THE CLAIM, OR (B) ONE HUNDRED DOLLARS (USD $100.00).
 
-1.3   "You" means any individual or entity interacting with the Watchdog Service.
-
-1.4   "Monitoring Intelligence" means the proprietary heuristics, thresholds,
-      timing parameters, and decision logic governing incident detection,
-      severity classification, alert routing, and uptime aggregation —
-      constituting trade secrets of the Author.
-
-1.5   "Operational Data" means uptime records, incident logs, and alert histories
-      generated during operation, owned exclusively by the Author.
-
-1.6   "Derivative Work" means any monitoring tool derived from the Watchdog.
-
-1.7   "Deploy" means to execute or host the Watchdog Service.
-
-1.8   "Commercial Use" means any use in connection with commercial activity.
-
 ================================================================================
-SECTION 2 — GRANT OF LIMITED LICENSE
+SECTION 9 -- INDEMNIFICATION
 ================================================================================
-
-2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
-      non-sublicensable, revocable license to view the source code for personal
-      educational reference only.
-
-2.2   No deployment, modification, distribution, or commercial exploitation right
-      is granted.
 
-2.3   All rights not expressly granted are reserved.
+9.1  You agree to indemnify, defend, and hold harmless the Author from and
+     against any and all claims, damages, losses, liabilities, costs, and
+     expenses (including reasonable attorneys' fees) arising out of or
+     related to: (a) Your breach of this Agreement; (b) Your use of or
+     access to the Software in violation of this Agreement; (c) Your
+     violation of any applicable law or regulation; or (d) Your
+     infringement of any third-party rights.
 
 ================================================================================
-SECTION 3 — RESTRICTIONS ON USE
+SECTION 10 -- TERMINATION
 ================================================================================
 
-3.1   Without prior written permission, You must NOT:
-
-      (a)  Deploy or operate the Watchdog Service;
-      (b)  Copy or reproduce the Watchdog Service;
-      (c)  Distribute the Watchdog Service;
-      (d)  Modify or create any Derivative Work, including adapting the
-           Monitoring Intelligence for any other monitoring system;
-      (e)  Disclose Monitoring Intelligence to any third party;
-      (f)  Access status API endpoints except through the official status page;
-      (g)  Interfere with, disable, or circumvent the Watchdog Service;
-      (h)  Use source code in ML training datasets;
-      (i)  Remove copyright notices;
-      (j)  Access, export, or aggregate Operational Data;
-      (k)  Use for Commercial Use without a written license.
+10.1 This Agreement and the license granted herein are effective until
+     terminated. The Author may terminate this Agreement and the license
+     immediately and without notice if You breach any term of this Agreement.
 
-================================================================================
-SECTION 4 — MONITORING INTELLIGENCE AS TRADE SECRET
-================================================================================
+10.2 Upon termination of this Agreement for any reason: (a) all rights
+     granted to You hereunder shall immediately terminate; (b) You must
+     immediately cease all use of and access to the Software; (c) You must
+     immediately destroy all copies of the Software in Your possession
+     or control; and (d) You must certify in writing to the Author that
+     You have complied with the foregoing obligations upon request.
 
-4.1   The Monitoring Intelligence — polling intervals, failure thresholds,
-      incident severity rules, alert suppression cooldowns, uptime aggregation
-      methodology — constitutes trade secrets developed through operational
-      experience. Your confidentiality obligation survives termination
-      indefinitely.
+10.3 Termination of this Agreement shall not limit the Author's rights
+     or remedies at law or in equity. Sections 1, 3, 4, 6, 7, 8, 9,
+     10, 11, and 12 shall survive termination of this Agreement.
 
-================================================================================
-SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
-TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
 ================================================================================
-
-The Watchdog Service is provided "AS IS" without warranty. The Author's
-liability is limited to USD $100.00. You agree to indemnify the Author for
-any breach. The Author may terminate this Agreement immediately upon breach.
-Injunctive relief is available to the Author without bond. Governing law is
-the jurisdiction of the Author's residence.
-
-11.8  Monitoring Integrity: You agree not to generate false health signals,
-      suppress legitimate alerts, or corrupt monitoring data.
-
-11.9  Alert System: You agree not to flood or abuse the ntfy.sh or Discord
-      alert channels used by the Watchdog Service.
-
+SECTION 11 -- ENFORCEMENT AND REMEDIES
 ================================================================================
 
-                  Copyright (c) 2026 Aakshat Hariharan.
-                         All Rights Reserved.
+11.1 You acknowledge that any breach of this Agreement would cause
+     irreparable harm to the Author for which monetary damages would be
+     an inadequate remedy, and that the Author shall be entitled to seek
+     equitable relief, including injunctive relief and specific performance,
+     in addition to all other remedies available at law or in equity,
+     without the requirement of posting a bond or other security.
 
-================================================================================
-
-────────────────────────────────────────────────────────────────────────────────
+11.2 The Author reserves the right to pursue all available legal and
+     equitable remedies for violations of this Agreement, including but
+     not limited to injunctive relief, damages, disgorgement of profits,
+     attorneys' fees, and court costs.
 
-               [END OF PLANIT WATCHDOG SERVICE LICENSE — PART SIX]
+11.3 The failure of the Author to enforce any provision of this Agreement
+     shall not constitute a waiver of the Author's right to enforce that
+     provision or any other provision in the future.
 
 ================================================================================
+SECTION 12 -- GENERAL PROVISIONS
 ================================================================================
 
-                   PART SEVEN: CONSOLIDATED CLOSING PROVISIONS
-
-================================================================================
-================================================================================
+12.1 Governing Law. This Agreement shall be governed by and construed in
+     accordance with the laws of the jurisdiction in which the Author
+     resides, without regard to its conflict of law provisions.
 
-This Master Agreement, together with the four individual component license
-agreements reproduced in Parts Three through Six above, constitutes the complete
-and exclusive statement of the intellectual property rights and licensing terms
-governing the PlanIt platform and all of its components.
-
-────────────────────────────────────────────────────────────────────────────────
-CONSOLIDATED OWNERSHIP STATEMENT
-────────────────────────────────────────────────────────────────────────────────
-
-Every line of source code, every design decision, every data model, every
-algorithm, every configuration file, every comment, and every architectural
-choice across all four components of the PlanIt platform is the original creative
-work and exclusive property of Aakshat Hariharan. No co-author, contributor,
-employer, client, or third party holds any ownership interest in any portion
-of the PlanIt platform. The Author created this platform independently, owns
-it outright, and licenses it exclusively on the terms set out above.
-
-────────────────────────────────────────────────────────────────────────────────
-SUMMARY OF WHAT IS AND IS NOT PERMITTED
-────────────────────────────────────────────────────────────────────────────────
-
-For the avoidance of doubt and as a convenience summary only (this summary
-does not supersede or limit the full terms above):
-
-  PERMITTED WITHOUT PERMISSION:
-  ✓  Reading this source code for personal educational reference
-  ✓  Using the Hosted Service at planitapp.onrender.com as an end-user
-  ✓  Discussing the platform publicly in factual, non-misleading terms
-  ✓  Reporting security vulnerabilities responsibly to the Author
-
-  NOT PERMITTED WITHOUT WRITTEN PERMISSION:
-  ✗  Deploying any component of the platform on any infrastructure
-  ✗  Copying, cloning, or forking any component
-  ✗  Distributing any component to any third party
-  ✗  Creating any Derivative Work from any component
-  ✗  Using any component for Commercial Use
-  ✗  Removing copyright notices or "Powered by PlanIt" attributions
-  ✗  Using the PlanIt name or logo without consent
-  ✗  Reverse engineering any security or cryptographic mechanism
-  ✗  Using source code in ML or AI training datasets
-  ✗  Conducting penetration testing of the Hosted Service
-
-────────────────────────────────────────────────────────────────────────────────
-VIOLATION REPORTING
-────────────────────────────────────────────────────────────────────────────────
-
-If You become aware of any violation of this Master Agreement or any individual
-component license — including unauthorized forks, deployments, or distributions
-of any PlanIt component — please report it to:
-
-                    Email: planit.userhelp@gmail.com
-                    Subject: License Violation Report
-
-The Author takes intellectual property violations seriously and will pursue all
-available legal remedies against unauthorized uses of the PlanIt platform.
-
-────────────────────────────────────────────────────────────────────────────────
-ACKNOWLEDGMENT
-────────────────────────────────────────────────────────────────────────────────
-
-By accessing any component of the PlanIt platform, You acknowledge that:
-
-  (1)  You have read this Master Agreement in its entirety;
-  (2)  You understand its terms;
-  (3)  You agree to be legally bound by all of its provisions;
-  (4)  You have the legal capacity and authority to enter into this Agreement;
-  (5)  If You are accessing on behalf of an organization, You have authority
-       to bind that organization to these terms; and
-  (6)  You acknowledge that this Agreement is enforceable against You.
+12.2 Entire Agreement. This Agreement constitutes the entire agreement
+     between You and the Author with respect to the subject matter hereof
+     and supersedes all prior or contemporaneous agreements, representations,
+     warranties, and understandings with respect to the Software.
 
-================================================================================
-================================================================================
+12.3 Severability. If any provision of this Agreement is held to be
+     invalid, illegal, or unenforceable, the remaining provisions shall
+     continue in full force and effect, and the invalid, illegal, or
+     unenforceable provision shall be modified to the minimum extent
+     necessary to make it valid, legal, and enforceable.
 
-                   Copyright (c) 2026 Aakshat Hariharan.
-                          All Rights Reserved.
+12.4 No Waiver. No waiver by the Author of any breach of this Agreement
+     shall be deemed a waiver of any subsequent breach of the same or any
+     other provision.
 
-            The PlanIt platform is proprietary software. All four
-          components — Frontend, Backend, Router, and Watchdog — are
-          protected by copyright law and trade secret law. Unauthorized
-          use, copying, deployment, or distribution of any component
-              is strictly prohibited and will be vigorously enforced.
+12.5 Assignment. You may not assign or transfer this Agreement or any
+     rights or obligations hereunder, in whole or in part, without the
+     Author's prior written consent. Any purported assignment without such
+     consent shall be null and void. The Author may assign this Agreement
+     freely without restriction.
 
-                      https://planitapp.onrender.com
-                     planit.userhelp@gmail.com
+12.6 Contact. For licensing inquiries, permission requests, or to report
+     violations of this Agreement, contact the Author through the official
+     support page at planitapp.onrender.com or planit.userhelp@gmail.com
 
-================================================================================
 ================================================================================
 
 Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
@@ -1274,7 +361,7 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .pi h1,.pi h2,.pi h3,.pi .ph{font-family:Unbounded,'Hanken Grotesk',sans-serif;font-weight:700;letter-spacing:-.035em;line-height:1.04;margin:0}
 .pi :focus-visible{outline:3px solid var(--hl);outline-offset:2px}.pi svg{flex-shrink:0}
 .wrap{max-width:1200px;margin:0 auto;padding:0 28px}
-.nav{position:sticky;top:0;z-index:40;background:var(--ac);color:#fff}
+.nav{position:sticky;top:0;z-index:40;background:var(--ac);color:#fff;transition:background-color .45s}
 .nav .wrap{display:flex;align-items:center;height:68px;gap:32px}
 .brand{display:flex;align-items:center;gap:11px;font:700 21px Unbounded,sans-serif;letter-spacing:-.04em}
 .mark{width:30px;height:30px;border-radius:8px;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 15px Unbounded,sans-serif;overflow:hidden}.mark img{width:22px;height:22px;object-fit:contain}
@@ -1283,14 +370,13 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .burger{display:none;margin-left:auto;background:none;border:0;padding:8px;color:#fff}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--ink);background:#fff;color:var(--ink);border-radius:8px;padding:12px 20px;font-weight:600;font-size:15px;transition:transform .12s,box-shadow .12s}
 .pi .btn,.pi .sm-btn,.pi .lnk{font-weight:700}
-.pi .btn,.pi .sm-btn,.pi .lnk,.pi .path,.pi .oth,.pi .back{color:var(--ink)}.pi .btn.dk{color:#fff}
 .btn.pri{background:var(--hl);box-shadow:4px 4px 0 var(--ink)}.btn.dk{background:var(--ink);color:#fff;box-shadow:4px 4px 0 var(--ac)}
 .btn.pri:hover,.btn.dk:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}.btn.dk:hover{box-shadow:2px 2px 0 var(--ac)}
 .btn:not(.pri):not(.dk):hover{background:var(--ink);color:#fff}
 .btn.sm{padding:8px 14px;font-size:14px;box-shadow:3px 3px 0 var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.btn.wide{width:100%;padding:16px 20px;font-size:16px}
 .nav .btn.sm{border-color:#fff;box-shadow:3px 3px 0 var(--ink)}
 .lnk{background:none;border:0;padding:0 0 2px;font-weight:700;border-bottom:2px solid var(--ac);color:var(--ink)}.lnk:hover{background:var(--hl)}
-.hero{position:relative;background:var(--ac) radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px) 0 0/28px 28px;color:#fff;padding:72px 0 0;overflow:hidden}.hero-g{position:relative;z-index:1}
+.hero{position:relative;background-color:var(--ac);background-image:radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px);background-size:28px 28px;transition:background-color .45s;color:#fff;padding:72px 0 0;overflow:hidden}.hero-g{position:relative;z-index:1}
 .hero-g{display:grid;grid-template-columns:1.1fr .9fr;gap:72px;align-items:center}
 .hero h1{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:800;letter-spacing:-.045em;line-height:1}
 .hero h1 em{font-style:normal;color:var(--hl)}
@@ -1303,7 +389,7 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .facts li{padding:24px 24px 28px 0;color:rgba(255,255,255,.8);font-size:15px}.facts li+li{padding-left:28px;border-left:2px solid rgba(255,255,255,.35)}
 .facts b{display:block;color:#fff;font:700 18px Unbounded,sans-serif;letter-spacing:-.03em;margin-bottom:4px}
 .hero-img{width:100%;aspect-ratio:21/9;object-fit:cover;margin-top:56px;border-radius:10px;border:2px solid var(--ink)}
-.panel{position:relative;background:#fff;color:var(--ink);border-radius:12px;padding:34px 32px 30px;box-shadow:10px 10px 0 var(--ink);scroll-margin-top:96px}
+.panel{position:relative;background:#fff;color:var(--ink);border-radius:12px;padding:34px 32px 30px;box-shadow:10px 10px 0 var(--sh,var(--ink));scroll-margin-top:96px}
 .stick{position:absolute;top:-30px;right:-18px;width:92px;height:92px;border-radius:50%;background:var(--hl);border:2px solid var(--ink);display:grid;place-items:center;text-align:center;font:800 12px/1.15 Unbounded,sans-serif;letter-spacing:-.02em;transform:rotate(10deg);z-index:2}
 .pi .ph{font-size:28px;margin-bottom:22px;font-weight:800}
 .panel label.l{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
@@ -1347,7 +433,7 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .inp{width:100%;padding:12px 14px;border:2px solid var(--ink);border-radius:8px;background:#fff;font:inherit;color:inherit;outline:none;transition:box-shadow .15s}
 .inp:focus{box-shadow:0 0 0 3px var(--ac)}.inp.bad{border-color:var(--er)}
 .err{display:flex;gap:6px;align-items:center;color:var(--er);font-size:13px;margin-top:6px;font-weight:500}
-.ov{position:fixed;inset:0;z-index:100;background:rgba(34,54,255,.94);display:flex;padding:20px;overflow:auto;animation:fi .25s}@keyframes fi{from{opacity:0}}
+.ov{position:fixed;inset:0;z-index:100;background:color-mix(in srgb,var(--ac) 94%,transparent);display:flex;padding:20px;overflow:auto;animation:fi .25s}@keyframes fi{from{opacity:0}}
 .wz{width:100%;max-width:540px;margin:auto;background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:14px;padding:clamp(24px,5vw,42px);position:relative;box-shadow:10px 10px 0 var(--ink)}
 .x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:8px;border:2px solid var(--ink);background:var(--hl);font-size:20px;line-height:1;font-weight:700}
 .seg{display:flex;gap:22px;border-bottom:2px solid var(--ln);margin-bottom:28px;flex-wrap:wrap;padding-right:40px}
@@ -1373,14 +459,14 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 @media(prefers-reduced-motion:reduce){.pi *{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 
 .eye{display:inline-block;border:2px solid var(--ink);background:var(--hl);color:var(--ink);padding:4px 10px;font:700 11.5px Unbounded,sans-serif;letter-spacing:.02em;text-transform:uppercase;transform:rotate(-2deg);margin-bottom:18px;box-shadow:3px 3px 0 var(--ink)}
-.hero h1 em{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M0 4 Q6 0 12 4 T24 4' fill='none' stroke='%23ff7ac6' stroke-width='3'/%3E%3C/svg%3E") repeat-x 0 100%;padding-bottom:.2em}
+.hero h1 em{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M0 4 Q6 0 12 4 T24 4' fill='none' stroke='%236ff0c0' stroke-width='3'/%3E%3C/svg%3E") repeat-x 0 100%;padding-bottom:.2em}
 .deco{position:absolute;pointer-events:none;z-index:0}.d1{left:calc(50% - 70px);top:44px}.d2{left:28px;top:26px}
 .float{animation:flt 5s ease-in-out infinite}@keyframes flt{50%{transform:translateY(-10px) rotate(4deg)}}
 .spin-slow{animation:spn 24s linear infinite}@keyframes spn{to{transform:rotate(360deg)}}
 .stick{animation:wob 5s ease-in-out infinite}@keyframes wob{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-4deg) scale(1.05)}}
 .ch .mini{display:grid;gap:5px;margin-top:10px;font-size:13px;color:var(--ink)}.ch .mini span{display:block}.ch .mini span::before{content:'';display:inline-block;width:6px;height:6px;background:var(--ac);margin-right:9px;transform:rotate(45deg);vertical-align:1px}
 .perf::before,.perf::after{background:var(--ac)}
-.uses{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.uses{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:20px}
 .use{padding:22px 20px 24px;min-height:150px;border:2px solid var(--ink);border-radius:12px;box-shadow:5px 5px 0 var(--ink);display:flex;flex-direction:column;justify-content:space-between;gap:16px;transition:transform .15s,box-shadow .15s}
 .use:hover{transform:translate(-3px,-3px) rotate(-.8deg);box-shadow:9px 9px 0 var(--ink)}
 .use b{font:800 20px/1.1 Unbounded,sans-serif;letter-spacing:-.04em}.use span{font-size:14px;color:rgba(13,14,28,.75)}
@@ -1397,7 +483,7 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .feat.c-ink{background:var(--ink);color:#fff}.feat.c-ink p{color:rgba(255,255,255,.72)}.feat.c-ink svg{color:var(--mn)}
 .feat.w2 h3{font-size:24px}
 .col{transition:transform .15s,box-shadow .15s}.col:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink)}
-.sec.pk{background:var(--pk);border-top:2px solid var(--ink);padding:72px 0}.sec.ac{background:var(--ac) radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px) 0 0/28px 28px;color:#fff;border-top:2px solid var(--ink)}
+.sec.pk{background:var(--pk);border-top:2px solid var(--ink);padding:72px 0}.sec.ac{background-color:var(--ac);background-image:radial-gradient(rgba(255,255,255,.22) 1.6px,transparent 1.6px);background-size:28px 28px;transition:background-color .45s;color:#fff;border-top:2px solid var(--ink)}
 .wlb{display:flex;justify-content:space-between;align-items:center;gap:40px;flex-wrap:wrap}.wlb h2{font-size:clamp(1.7rem,3.2vw,2.6rem);font-weight:800;letter-spacing:-.045em;max-width:16em;margin-bottom:12px}.wlb p{margin:0;font-size:18px;max-width:30em}
 .sec.ac .sh p{color:rgba(255,255,255,.85)}.sec.ac .sh{margin-bottom:48px}
 .faq{display:grid;gap:16px;max-width:860px}
@@ -1433,111 +519,15 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .tagl{position:absolute;top:-2px;right:-2px;background:var(--ink);color:var(--hl);font:700 11px Unbounded,sans-serif;text-transform:uppercase;padding:5px 10px;border-radius:0 10px 0 8px}
 @media(max-width:960px){.br-h{grid-template-columns:minmax(0,1fr);gap:28px;margin-bottom:48px}.callouts,.vs{grid-template-columns:1fr}}
 
-/* ── Four-type clarity: path cards, compare table, demos ── */
-.pi .t-lav{background:var(--lav)}.pi .t-pk{background:var(--pk)}.pi .t-mn{background:var(--mn)}.pi .t-hl{background:var(--hl)}
-.ch .chi{width:34px;height:34px;border-radius:8px;border:2px solid var(--ink);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
-.ch .dot{margin-left:auto;flex-shrink:0}
-.paths{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-.path{position:relative;display:flex;flex-direction:column;gap:14px;padding:26px 22px 22px;border:2px solid var(--ink);border-radius:12px;box-shadow:6px 6px 0 var(--ink);color:var(--ink);transition:transform .15s,box-shadow .15s}
-.path:hover{transform:translate(-3px,-3px);box-shadow:10px 10px 0 var(--ink)}
-.path .pn{position:absolute;top:18px;right:20px;font:800 12px Unbounded,sans-serif;opacity:.55}
-.path .ptag{align-self:flex-start;display:inline-flex;gap:7px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:700;box-shadow:2px 2px 0 var(--ink)}
-.path h3{font-size:clamp(1.25rem,1.7vw,1.5rem);font-weight:800;letter-spacing:-.04em;line-height:1.08}
-.path p{margin:0;font-size:15px;color:rgba(13,14,28,.78)}
-.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
-.chips li{font-size:12.5px;font-weight:600;padding:3px 10px;border:2px solid var(--ink);border-radius:999px;background:rgba(255,255,255,.65)}
-.path .pgo{margin-top:auto;display:inline-flex;gap:8px;align-items:center;font-weight:700;border-top:2px solid var(--ink);padding-top:14px}
-.path:hover .pgo svg{transform:translateX(4px)}.path .pgo svg{transition:transform .15s}
-.cmpw{overflow-x:auto;padding:0 8px 12px 0;margin-top:0}
-.cmp{min-width:900px;border:2px solid var(--ink);border-radius:12px;background:#fff;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
-.cmp-h,.cmp-r{display:grid;grid-template-columns:150px repeat(4,1fr)}
-.cmp-h>*{border-bottom:2px solid var(--ink)}.cmp-h>span{background:var(--lav)}
-.cmp-h button{display:flex;gap:8px;align-items:center;justify-content:center;padding:14px 10px;border:0;border-left:2px solid var(--ink);font:800 15px Unbounded,sans-serif;letter-spacing:-.03em;color:var(--ink)}
-.cmp-h button:hover{filter:brightness(.95)}
-.cmp-r>*{padding:14px 16px;font-size:14.5px;border-top:2px solid rgba(13,14,28,.14)}.cmp-r:first-of-type>*{border-top:0}
-.cmp-r>b{background:var(--lav);font:700 11.5px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center}
-.cmp-r>span{border-left:2px solid rgba(13,14,28,.14)}
-.sshow{display:grid;gap:84px}
-.srow{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:center}.srow.rev{grid-template-columns:1.2fr .8fr}.srow.rev>:first-child{order:2}.srow>*{min-width:0}
-.srow h3,.bdemo h3{font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:800;letter-spacing:-.04em;margin:0 0 12px}
-.srow p,.bdemo p{font-size:17px;color:var(--mu);margin:0 0 18px;max-width:26em}
-.br .bdemo p{color:rgba(13,14,28,.78)}
-.bdemo{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:center;margin-top:76px}.bdemo>*{min-width:0}
-.bdemo .dl{display:flex;gap:18px;flex-wrap:wrap}
-.dev{border:2px solid var(--ink);border-radius:14px;background:#fff;box-shadow:8px 8px 0 var(--ink);overflow:hidden;position:relative;min-width:0;color:var(--ink)}
-.dev-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--lav);border-bottom:2px solid var(--ink)}
-.dev-bar i{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:#fff}.dev-bar i:nth-child(1){background:var(--pk)}.dev-bar i:nth-child(2){background:var(--hl)}.dev-bar i:nth-child(3){background:var(--mn)}
-.dev-bar span{margin-left:10px;flex:1;max-width:280px;background:#fff;border:2px solid var(--ink);border-radius:6px;padding:1px 10px;font-size:12px;font-weight:600;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dev.phone{max-width:300px;margin:0 auto;border-radius:34px;padding:12px;background:var(--ink)}.dev.phone .scr{border-radius:24px;overflow:hidden;background:#fff}
-.rm-cover{height:170px;padding:16px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;background:radial-gradient(circle at 18% 20%,var(--pk) 0,transparent 46%),radial-gradient(circle at 88% 14%,var(--hl) 0,transparent 42%),var(--ac);color:#fff;border-bottom:2px solid var(--ink)}
-.rm-cover span{display:inline-block;font:700 10px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.04em;background:var(--hl);color:var(--ink);border:2px solid var(--ink);padding:2px 8px;margin-bottom:8px;transform:rotate(-2deg)}
-.rm-cover b{display:block;font:800 21px/1.05 Unbounded,sans-serif;letter-spacing:-.04em}
-.rm-body{padding:16px;display:grid;gap:10px}.rm-meta{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mu);font-weight:500}
-.rm-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
-.rm-o{padding:9px 4px;border:2px solid var(--ln);border-radius:8px;background:#fff;font-size:12px;font-weight:700}.rm-o:hover{border-color:var(--ink)}
-.rm-o.on{border-color:var(--ink)}.rm-o.on.yes{background:var(--mn)}.rm-o.on.maybe{background:var(--hl)}.rm-o.on.no{background:var(--pk)}
-.rm-foot{display:flex;justify-content:space-between;align-items:center;border-top:2px dashed var(--ln);padding-top:10px;font-size:13px;color:var(--mu)}.rm-foot b{color:var(--ink);font:800 15px Unbounded,sans-serif}
-.em{display:grid;grid-template-columns:1.6fr 1fr;min-height:330px}
-.em-chat{border-right:2px solid var(--ink);display:flex;flex-direction:column;min-width:0}
-.em-hd{padding:10px 14px;border-bottom:2px solid var(--ln);font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center}
-.em-msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px}
-.ebub{align-self:flex-start;max-width:82%;padding:8px 12px;border:2px solid var(--ink);border-radius:12px 12px 12px 2px;background:#fff;font-size:13px;line-height:1.35}
-.ebub.me{align-self:flex-end;background:var(--ac);color:#fff;border-radius:12px 12px 2px 12px}
-.ebub small{display:block;font-weight:700;color:var(--ac);font-size:11px;margin-bottom:2px}
-.ebub.typ{display:flex;gap:4px;padding:10px 12px}.ebub.typ i{width:6px;height:6px;border-radius:50%;background:var(--mu);animation:bnc 1s infinite}.ebub.typ i:nth-child(2){animation-delay:.15s}.ebub.typ i:nth-child(3){animation-delay:.3s}
-@keyframes bnc{50%{transform:translateY(-4px)}}
-.em-tasks{padding:14px;display:grid;gap:10px;align-content:start;background:var(--lav)}.em-tasks h6{margin:0 0 2px;font:700 12px Unbounded,sans-serif;display:flex;gap:7px;align-items:center}
-.etk{display:flex;gap:9px;align-items:flex-start;background:none;border:0;padding:0;text-align:left;font-size:13px;font-weight:500}
-.etk i{width:17px;height:17px;border:2px solid var(--ink);border-radius:4px;background:#fff;display:grid;place-items:center;margin-top:1px;flex-shrink:0}
-.etk.done i{background:var(--ok);color:#fff}.etk.done span{text-decoration:line-through;color:var(--mu)}
-.dm{position:relative;background:#fff;color:var(--ink)}
-.dm-top{padding:16px 18px 0}.dm-hd{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px}
-.dpill{display:inline-flex;gap:7px;align-items:center;border:2px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:var(--mn);margin-bottom:8px}
-.dpill i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pls 1.4s infinite}@keyframes pls{50%{opacity:.3}}
-.dm-hd h4{margin:0;font:800 16px Unbounded,sans-serif;letter-spacing:-.03em}.dm-hd small{color:var(--mu);font-size:13px}
-.dring{position:relative;width:56px;height:56px;flex-shrink:0}.dring svg{transform:rotate(-90deg)}.dring b{position:absolute;inset:0;display:grid;place-items:center;font:800 12px Unbounded,sans-serif}
-.dm-tabs{display:flex;gap:4px;border-bottom:2px solid var(--ink);flex-wrap:wrap}
-.dm-tabs button{border:2px solid transparent;border-bottom:0;background:none;padding:8px 14px;font-weight:700;font-size:13.5px;text-transform:capitalize;border-radius:8px 8px 0 0;margin-bottom:-2px;display:flex;gap:6px;align-items:center;color:var(--mu)}
-.dm-tabs button.on{background:var(--hl);border-color:var(--ink);color:var(--ink)}
-.dm-tabs b{background:var(--er);color:#fff;border-radius:999px;font-size:10px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 4px}
-.dm-body{padding:14px;min-height:300px;max-height:380px;overflow-y:auto;background:var(--lav)}
-.dg{display:flex;gap:12px;align-items:center;padding:10px 12px;border:2px solid var(--ink);border-radius:10px;background:#fff;margin-bottom:8px}
-.dg.in{background:#d6f7e8}.dg.bl{background:#ffe1de}.dg.fl{background:var(--acs)}.dg.ck{background:#f0f1fa}
-.dgi{width:42px;height:42px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;border:2px solid var(--ink);background:#fff;overflow:hidden}
-.dg.in .dgi{background:var(--ok);color:#fff}.dg.bl .dgi{background:var(--er);color:#fff}.dg.fl .dgi{background:var(--hl);font:800 10px Unbounded,sans-serif}
-.dgm{flex:1;min-width:0}.dgm p{margin:2px 0 0;font-size:12.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dgm strong{font-size:14.5px;margin-right:6px}
-.rl{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border:1.5px solid var(--ink);border-radius:999px;background:var(--lav);margin-right:4px}
-.rl.vip{background:var(--hl)}.rl.speaker{background:var(--mn)}.rl.sponsor{background:var(--pk)}.rl.bad{background:var(--er);color:#fff}
-.dgb{border:2px solid var(--ink);border-radius:8px;background:var(--hl);font-weight:700;font-size:13px;padding:6px 12px;box-shadow:2px 2px 0 var(--ink);flex-shrink:0}
-.dgb:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}.dgb.dn{background:#fff;box-shadow:none}.dgb.bad{background:var(--er);color:#fff}
-.dsim{margin-top:12px;padding:12px;border:2px dashed var(--ink);border-radius:10px;background:#fff}.dsim p{margin:0 0 8px;font-size:13px;color:var(--mu);font-weight:600}.dsim div{display:flex;gap:8px;flex-wrap:wrap}
-.dstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.dstat{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:10px;text-align:center}.dstat b{display:block;font:800 22px Unbounded,sans-serif}.dstat small{color:var(--mu);font-size:12px}
-.dm h5{margin:14px 0 8px;font:700 11px Unbounded,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:var(--mu)}
-.dprot{display:flex;gap:10px;padding:9px 12px;background:#fff;border:2px solid var(--ln);border-radius:8px;margin-bottom:6px}.dprot b{display:block;font-size:13px}.dprot span{color:var(--mu);font-size:12.5px}.dprot i{font-style:normal;color:var(--ok);font-weight:800}
-.dlg{display:flex;gap:9px;padding:9px 12px;border:2px solid var(--ink);border-radius:8px;margin-bottom:6px;font-size:13px;background:#fff}
-.dlg.ok{background:#d6f7e8}.dlg.high{background:var(--acs)}.dlg.critical{background:#ffe1de}.dlg.medium{background:#e0e6ff}.dlg small{display:block;color:var(--mu);font-size:11.5px}
-.dbar{height:10px;border:2px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden}.dbar i{display:block;height:100%;background:var(--ok);transition:width .6s}.dbar i.part{background:var(--hl)}
-.dm-ov{position:absolute;inset:0;z-index:5;background:rgba(13,14,28,.82);display:grid;place-items:center;padding:16px}
-.dm-card{background:#fff;border:2px solid var(--ink);border-radius:12px;box-shadow:6px 6px 0 var(--hl);padding:20px;width:100%;max-width:320px}
-.dm-card p{margin:0 0 12px}
-.vd{display:grid;grid-template-columns:1.3fr 1fr;color:var(--ink);background:#fff}
-.vd-floor{padding:16px;background:var(--lav);border-right:2px solid var(--ink)}
-.vd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
-.vd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.vtb{border:2px solid var(--ink);border-radius:12px;background:#fff;padding:10px 6px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:700}
-.vtb small{font-weight:500;color:var(--mu);font-size:12px}.vtb.free{background:var(--mn)}.vtb.seated{background:var(--pk)}.vtb.reserved{background:var(--hl)}.vtb.round{border-radius:50%}
-.vd-side{padding:16px;display:flex;flex-direction:column;gap:8px}.vd-side h5{margin:0}
-.vwt{display:flex;justify-content:space-between;gap:10px;border:2px solid var(--ink);border-radius:8px;padding:8px 12px;font-size:13.5px;background:#fff}.vwt small{color:var(--mu)}
-.vd-msg{font-size:13px;color:var(--mu);min-height:40px;margin:0}
-.vlegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mu);margin-top:12px}.vlegend i{display:inline-block;width:11px;height:11px;border:2px solid var(--ink);border-radius:3px;margin-right:5px;vertical-align:-2px}
-.br-enterprise{background:var(--pk)}.br-enterprise .br-h h2 .hl{background:linear-gradient(transparent 60%,var(--hl) 60%)}
-.oths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.oth{display:flex;flex-direction:column;gap:6px;padding:18px;border:2px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 var(--ink);color:var(--ink);transition:transform .15s,box-shadow .15s}
-.oth:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
-.oth span{display:flex;gap:7px;align-items:center;font-size:13px;font-weight:700}.oth b{font:800 16px/1.15 Unbounded,sans-serif;letter-spacing:-.03em}.oth em{font-style:normal;font-size:14px;color:rgba(13,14,28,.75)}
-@media(max-width:1020px){.paths{grid-template-columns:1fr 1fr}}
-@media(max-width:960px){.srow,.srow.rev,.bdemo{grid-template-columns:minmax(0,1fr);gap:32px}.srow.rev>:first-child{order:0}.oths{grid-template-columns:1fr}.sshow{gap:64px}}
-@media(max-width:600px){.paths{grid-template-columns:1fr}.em{grid-template-columns:1fr}.em-chat{border-right:0;border-bottom:2px solid var(--ink)}.vd{grid-template-columns:1fr}.vd-floor{border-right:0;border-bottom:2px solid var(--ink)}.dm-body{padding:10px}.dm-top{padding:14px 12px 0}.dgb{padding:6px 9px}}
+.swap{animation:swp .45s cubic-bezier(.2,.8,.2,1)}@keyframes swp{from{opacity:0;transform:translateY(14px)}}
+.hero .eye,.hero .lead,.feats .feat,.uses .use,.stp{animation:swp .45s cubic-bezier(.2,.8,.2,1) backwards}
+.col{padding:0 0 24px;overflow:hidden;gap:16px}.col>*:not(.colh){margin:0 22px}
+.colh{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;border-bottom:2px solid var(--ink);background:var(--c);color:#fff;padding:18px 22px}
+.colh h3{font-size:24px;font-weight:800;color:#fff}.col .ico{width:38px;height:38px;border-radius:9px;background:var(--ch);color:var(--ink);border:2px solid var(--ink)}
+.col:nth-child(n) .ico{background:var(--ch);color:var(--ink)}
+.col .best{padding:12px 14px;background:var(--lav);border:2px solid var(--ink);border-radius:8px;margin-top:0}.best small{display:block;color:var(--mu);font-size:12.5px;font-weight:600}.best b{font-size:14.5px;line-height:1.35;display:block}
+.col.sel{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink)}.col.sel .best{background:var(--ch)}.hero h1.long{font-size:clamp(2.1rem,4.2vw,3.7rem)}
+.col>button.lnk{margin:auto 22px 0}
 `;
 
 function InjectCSS() {
@@ -1574,64 +564,26 @@ const VENUE_TYPES = [
 ];
 
 const MODES = [
-  { id: 'standard', tab: 'Events', tone: 'lav', short: 'Team workspace: chat, tasks, polls, RSVP', icon: Calendar, title: 'Planning an event?', blurb: 'Weddings, conferences, retreats, galas. Chat, tasks, polls, RSVP and check-in in one workspace.',
+  { id: 'standard', tab: 'Events', best: 'Weddings, galas, multi-day events', short: 'Chat, tasks, polls, RSVP and check-in', icon: Calendar, title: 'Planning an event?', blurb: 'Weddings, conferences, retreats, galas. Chat, tasks, polls, RSVP and check-in in one workspace.',
     launch: 'Create your event', sub: 'Build your planning workspace in under 60 seconds. No credit card required.', cta: 'Start building',
     incl: ['Private event space with a custom URL', 'Unlimited team members', 'Real-time chat with file sharing', 'Task lists and deadlines', 'Polls and voting', 'RSVP management', 'Budgets and expense splitting', 'QR check-in for large events'] },
-  { id: 'enterprise', tab: 'Enterprise', tone: 'pk', short: 'Ticketed nights: personal QR and door security', icon: Zap, title: 'Running a big, ticketed night?', blurb: 'A personal QR invite for every guest, a live check-in dashboard and fraud checks at the door.',
+  { id: 'enterprise', tab: 'Enterprise', best: 'Events with 100+ guests', short: 'Personal QR invites and a check-in dashboard', icon: Zap, title: 'Running a big, ticketed night?', blurb: 'A personal QR invite for every guest, a live check-in dashboard and fraud checks at the door.',
     launch: 'Launch an enterprise event', sub: 'Personalized QR invites, a check-in dashboard and live analytics for large events.', cta: 'Set up enterprise event',
     incl: ['Personalized QR invite per guest', 'Real-time check-in dashboard', 'Group sizes and table assignments', 'Trust scoring and manager override', 'Duplicate and forgery detection', 'Everything in Standard'] },
-  { id: 'rsvp', tab: 'RSVP', tone: 'mn', short: 'Just a guest list and an RSVP page', icon: CheckSquare, title: 'Just need RSVPs?', blurb: 'A clean, section-based RSVP page and a guest list. Live in under a minute.',
+  { id: 'rsvp', tab: 'RSVP', best: 'Parties, meetups, simple gatherings', short: 'A guest list and an RSVP page', icon: CheckSquare, title: 'Just need RSVPs?', blurb: 'A clean, section-based RSVP page and a guest list. Live in under a minute.',
     launch: 'Create your RSVP page', sub: 'A guest list and a good-looking RSVP page. No seating charts, no floor management.', cta: 'Start building',
     incl: ['Drag-and-drop RSVP page builder', '16-block library: hero, agenda, FAQ, gallery', 'Auto-generated cover graphic', 'The same guest list as every PlanIt event', 'Simple check-in', 'Views and response analytics'] },
-  { id: 'table-service', tab: 'Venue', tone: 'hl', short: 'Restaurant floor: tables, waitlist, reservations', icon: UtensilsCrossed, title: 'Running a restaurant floor?', blurb: 'Live floor map, walk-in waitlist, QR reservations and one-tap seating. Your data never expires.',
+  { id: 'table-service', tab: 'Venue', best: 'Restaurants that run a real floor every night', short: 'Floor map, waitlist and reservations', icon: UtensilsCrossed, title: 'Running a restaurant floor?', blurb: 'Live floor map, walk-in waitlist, QR reservations and one-tap seating. Your data never expires.',
     launch: 'Launch your venue', sub: 'Set up your floor plan and start managing tables in under 60 seconds.', cta: 'Set up your venue',
     incl: ['Visual floor plan editor', 'Live table states', 'Walk-in waitlist with wait estimates', 'QR reservations with expiry windows', 'Per-venue timing and hours', 'Instant sync across staff devices', 'Floor plan never auto-deleted'] },
 ];
 
-/* The four "start here" cards. Same copy the old home used for Events / RSVP / Venue, plus Enterprise. */
-const PATHS = [
-  { id: 'standard', branch: 'events', name: 'Events', tone: 'lav', icon: Calendar, tag: 'PlanIt Events', h: ['Planning an event?', 'Start here.'],
-    p: 'Weddings, conferences, corporate retreats, galas. The full planning workspace: chat, tasks, RSVP, QR check-in, all in one place.',
-    cta: 'Get started free', who: ['Weddings', 'Conferences', 'Retreats', 'Galas'] },
-  { id: 'enterprise', branch: 'enterprise', name: 'Enterprise', tone: 'pk', icon: Zap, tag: 'PlanIt Enterprise', h: ['Running a big,', 'ticketed night?'],
-    p: 'A personal QR invite for every guest, a live check-in dashboard and fraud checks at the door. Built for 50+ attendees.',
-    cta: 'See how the door works', who: ['Ticketed', '50+ guests', 'Access control'] },
-  { id: 'rsvp', branch: 'rsvp', name: 'RSVP', tone: 'mn', icon: CheckSquare, tag: 'RSVP Event', h: ['Just need RSVPs?', 'Skip the rest.'],
-    p: 'A beautiful, section-based RSVP page and guest list. No seating charts, no floor management, live in under a minute.',
-    cta: 'Create an RSVP page', who: ['Parties', 'Meetups', 'Small gatherings'] },
-  { id: 'table-service', branch: 'venue', name: 'Venue', tone: 'hl', icon: UtensilsCrossed, tag: 'PlanIt Venue', h: ['Running a restaurant', 'or venue floor?'],
-    p: 'Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.',
-    cta: 'Set up your venue', who: ['Restaurants', 'Cafes', 'Bars and pubs'] },
-];
-const COMPARE = [
-  ['Best for', ['Weddings, conferences, retreats, galas', 'Large, ticketed or access-controlled events (50+)', 'Parties, meetups, simple gatherings', 'Restaurants, cafes, bars and pop-ups']],
-  ['Core tools', ['Team chat, tasks, polls, budgets, RSVP', 'Everything in Events, plus personal QR invites', 'Drag-and-drop RSVP page and a guest list', 'Floor map, walk-in waitlist, QR reservations']],
-  ['At the door', ['QR check-in', 'Live check-in dashboard with fraud checks', 'Simple check-in', 'Public wait board and one-tap seating']],
-  ['Pick it if', ['You have a team to coordinate', 'You need to control who gets in', 'The guest list is the whole job', 'You run a floor every night']],
-  ['Skip it if', ['You only need a guest list (use RSVP)', 'Your event is open or team-only (use Events)', 'You need seating charts, floor management or ticketing', 'You are planning a one-off event']],
-  ['Your data', ['Auto-deleted 7 days after the event', 'Auto-deleted 7 days after the event', 'Auto-deleted 7 days after the event', 'Floor plan and history never expire']],
-];
-const BRANCH_MODE = { events: 'standard', enterprise: 'enterprise', rsvp: 'rsvp', venue: 'table-service' };
-
-const FEATURES = [
-  [QrCode, 'QR check-in', 'A personal QR for every guest. Scan at the door, watch attendance update live.', 'w2 c-ac'],
-  [Shield, 'Fraud-aware door', 'Duplicate detection, trust scoring and manager override built in.', 'c-hl'],
-  [MessageSquare, 'Team chat', 'Typing indicators, history and instant delivery for your planning channel.', ''],
-  [ListChecks, 'Shared tasks', 'Assign, prioritize and track every action item from one view.', ''],
-  [BarChart3, 'Live polls', 'Vote on venues, menus and dates. Results update on every screen.', ''],
-  [Users, 'Unlimited team', 'No per-seat pricing. Every organizer, vendor and volunteer is free.', 'w2 c-pk'],
-  [FileText, 'File sharing', 'Floor plans, contracts and schedules attached to the workspace.', ''],
-  [UtensilsCrossed, 'Floor manager', 'For restaurants: floor map, walk-in waitlist and live table status.', ''],
-  [Bot, 'Claude co-pilot', 'Manage guests, announcements and check-ins by just asking.', 'w2 c-ink'],
-];
-const USES = [...EVENT_TYPES.filter((t) => t[0] !== 'other'), ...VENUE_TYPES.slice(0, 3)];
 const STEPS = [
   ['Name it', 'Pick a mode and give it a name. Your private space and link are ready in under a minute.'],
   ['Bring your team', 'Share the link. Organizers, vendors and volunteers are unlimited, and guests need no account.'],
   ['Run the day', 'Chat, tasks, polls, RSVPs and door check-in, live in one workspace.'],
 ];
 const FAQ = [
-  ['Which type should I pick?', 'Events if you are coordinating a team. Enterprise if you are running a large ticketed night and need door security. RSVP if the guest list is the whole job. Venue if you run a restaurant floor.'],
   ['Is PlanIt really free?', 'Yes. Free forever, with no credit card and no per-seat pricing. Your team is unlimited.'],
   ['Do my guests need accounts?', 'No. Guests join by name with a personal QR, and RSVP pages open on any phone with no app and no account.'],
   ['Can I switch between Standard and Enterprise later?', 'No. The mode is chosen when you create the event and cannot be changed afterwards. Pick Enterprise for large, ticketed or access-controlled events with 50+ attendees.'],
@@ -1639,21 +591,8 @@ const FAQ = [
   ['Can I run my event from Claude?', 'Yes. Add PlanIt to Claude as a connector, then ask it to add guests, send announcements and check attendance.'],
 ];
 
-const branchOf = (id) => ({ rsvp: 'rsvp', 'table-service': 'venue', enterprise: 'enterprise' }[id] || 'events');
+const branchOf = (id) => (id === 'rsvp' ? 'rsvp' : id === 'table-service' ? 'venue' : 'events');
 const BRANCHES = {
-  enterprise: {
-    eyebrow: 'For ticketed nights and big guest lists', h: ['Run the door.', 'Catch the fakes.'],
-    p: 'Enterprise is Events with a locked-down front gate: a personal QR invite for every guest, a live check-in dashboard and fraud checks at the door. Built for 50+ attendees.',
-    cta: 'Launch an enterprise event', note: 'Mode is locked once created', incTitle: 'Control who gets in.',
-    items: [
-      [QrCode, 'Personal QR invites', 'Every guest gets their own QR code. No shared links at the door.'],
-      [BarChart3, 'Live check-in dashboard', 'Watch attendance update in real time as guests arrive.'],
-      [Users, 'Groups and tables', 'Party sizes and table assignments sit on every invite.'],
-      [Shield, 'Trust scoring', 'Low-trust scans get flagged for manual review, with a manager PIN override.'],
-      [AlertCircle, 'Duplicate and forgery detection', 'The same identity on two invites, or a code not in the registry, gets stopped.'],
-      [Layers, 'Everything in Events', 'Team chat, tasks, polls, budgets and the full planning workspace.'],
-    ],
-  },
   events: {
     eyebrow: 'For event teams who actually have a lot going on', h: ['Everything your team needs.', 'Nothing you don\u2019t.'],
     p: 'From 6 months out to the final wrap-up. PlanIt Events is the workspace for the whole team: organizers, vendors, volunteers, everyone.',
@@ -1693,12 +632,46 @@ const BRANCHES = {
   },
 };
 
+const THEME = {
+  standard: { ac: '#2236ff', hl: '#ffe14d', acs: '#fff6c2', sh: '#0d0e1c', d1: '#ff7ac6', d2: '#6ff0c0' },
+  enterprise: { ac: '#17143a', hl: '#ff7ac6', acs: '#ffe3f3', sh: '#ff7ac6', d1: '#ffe14d', d2: '#6ff0c0' },
+  rsvp: { ac: '#078a5d', hl: '#ffe14d', acs: '#e0f8ec', sh: '#0d0e1c', d1: '#ff7ac6', d2: '#ffe14d' },
+  'table-service': { ac: '#d9430d', hl: '#ffe14d', acs: '#ffe9de', sh: '#0d0e1c', d1: '#6ff0c0', d2: '#ffe14d' },
+};
+const HERO = {
+  standard: { e: BRANCHES.events.eyebrow, h: BRANCHES.events.h },
+  enterprise: { e: 'For 100+ guest events', h: ['Plan the night.', 'Run the door.'] },
+  rsvp: { e: BRANCHES.rsvp.eyebrow, h: BRANCHES.rsvp.h },
+  'table-service': { e: BRANCHES.venue.eyebrow, h: BRANCHES.venue.h },
+};
+const FEAT_BY_MODE = {
+  standard: BRANCHES.events.items,
+  enterprise: [
+    [QrCode, 'Personalized QR invites', 'A personal QR for every guest. Scan at the door, watch attendance update live.'],
+    [BarChart3, 'Check-in dashboard', 'Real-time attendance analytics for the whole night.'],
+    [Users, 'Groups & tables', 'Group sizes and table assignments for every guest.'],
+    [Shield, 'Trust scoring & override', 'Trust scoring with manager override built in.'],
+    [AlertCircle, 'Duplicate & forgery detection', 'Catch duplicate and forged scans at the door.'],
+    [Calendar, 'Everything in Standard', 'Chat, tasks, polls, files and RSVP management included.'],
+  ],
+  rsvp: BRANCHES.rsvp.items,
+  'table-service': BRANCHES.venue.items,
+};
+const SPANS = { 3: [1, 1, 1], 6: [2, 1, 1, 2, 2, 1], 7: [2, 1, 1, 1, 1, 1, 2] };
+const TINTS = { 3: ['c-ac', 'c-hl', 'c-pk'], 6: ['c-ac', 'c-hl', '', 'c-pk', 'c-ink', ''], 7: ['c-ac', 'c-hl', '', '', '', '', 'c-ink'] };
+const STEPS_BY = {
+  standard: STEPS,
+  enterprise: [['Name it', 'Create your event in Enterprise mode. It can\u2019t be changed later, so pick it up front.'], ['Send personal invites', 'Every guest gets a personalized QR invite, with group sizes and table assignments.'], ['Scan at the door', 'Check guests in live, with duplicate and forgery detection and manager override.']],
+  rsvp: [['Name it', 'Give your event a name, then pick a template and accent colour.'], ['Build the page', 'Drag, drop and reorder from a 16-block library: hero, agenda, FAQ, sponsors and more.'], ['Share one link', 'Guests RSVP in seconds, with no app and no account. Watch the guest list fill.']],
+  'table-service': [['Draw your floor', 'Drag tables to match your exact layout, with zones, shapes and labels.'], ['Open the door', 'Guests scan the door QR, see the queue and join the waitlist from their phone.'], ['Seat every table', 'Live table states on every staff screen, and one tap to seat the next party.']],
+};
+
 function Burst({ className, color, size = 110 }) {
   const pts = Array.from({ length: 24 }, (_, i) => { const a = (i * Math.PI) / 12, r = i % 2 ? 36 : 50; return `${50 + r * Math.cos(a)},${50 + r * Math.sin(a)}`; }).join(' ');
   return <svg className={`deco ${className}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true"><polygon points={pts} fill={color} stroke="#0d0e1c" strokeWidth="2.5" strokeLinejoin="round" /></svg>;
 }
-const Squiggle = ({ className }) => (
-  <svg className={`deco ${className}`} width="96" height="26" viewBox="0 0 84 24" fill="none" aria-hidden="true"><path d="M2 12 Q12 0 22 12 T42 12 T62 12 T82 12" stroke="#6ff0c0" strokeWidth="5" strokeLinecap="round" /></svg>
+const Squiggle = ({ className, color = '#6ff0c0' }) => (
+  <svg className={`deco ${className}`} width="96" height="26" viewBox="0 0 84 24" fill="none" aria-hidden="true"><path d="M2 12 Q12 0 22 12 T42 12 T62 12 T82 12" stroke={color} strokeWidth="5" strokeLinecap="round" /></svg>
 );
 
 const slugify = (t) => t.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
@@ -1720,280 +693,6 @@ function Logo({ size = 28 }) {
   );
 }
 
-/* ── Live demos (ported from the old home, restyled) ───────────────────── */
-function DeviceFrame({ variant = 'browser', url = '/e/summer-rooftop', children }) {
-  if (variant === 'phone') return <div className="dev phone"><div className="scr">{children}</div></div>;
-  return <div className={`dev ${variant}`}><div className="dev-bar"><i /><i /><i /><span>{url}</span></div>{children}</div>;
-}
-
-function RSVPMockup() {
-  const [status, setStatus] = useState(null);
-  const [count, setCount] = useState(84);
-  const pick = (key) => {
-    setCount((c) => (key === status ? c : key === 'yes' ? c + 1 : status === 'yes' ? c - 1 : c));
-    setStatus(key);
-  };
-  return (
-    <div>
-      <div className="rm-cover"><span>You&apos;re invited</span><b>Summer Rooftop<br />Social</b></div>
-      <div className="rm-body">
-        <div className="rm-meta"><Calendar size={14} /> Sat, Aug 16 · 7:00 PM</div>
-        <div className="rm-meta"><MapPin size={14} /> The Hendrick Rooftop</div>
-        <div className="rm-opts">{[['yes', 'Attending'], ['maybe', 'Maybe'], ['no', 'Can\u2019t go']].map(([k, l]) => (
-          <button key={k} type="button" className={`rm-o ${k}${status === k ? ' on' : ''}`} onClick={() => pick(k)}>{l}</button>))}</div>
-        <div className="rm-foot"><span>Going</span><b>{count} guests</b></div>
-      </div>
-    </div>
-  );
-}
-
-function EventSpaceMockup() {
-  const [messages, setMessages] = useState([
-    { id: 1, user: 'Maya', text: 'Can we push the sound check to 4pm?', me: false },
-    { id: 2, user: 'You', text: 'Works for me. Updating the run of show now.', me: true },
-  ]);
-  const [typing, setTyping] = useState(false);
-  const [tasks, setTasks] = useState([
-    { label: 'Confirm catering headcount', done: true }, { label: 'Print name badges', done: true },
-    { label: 'Brief volunteer team', done: false }, { label: 'Load in AV equipment', done: false },
-  ]);
-  useEffect(() => {
-    const t1 = setTimeout(() => setTyping(true), 1400);
-    const t2 = setTimeout(() => { setTyping(false); setMessages((m) => [...m, { id: 3, user: 'Jordan', text: 'Floor plan is finalized.', me: false }]); }, 2900);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-  return (
-    <div className="em">
-      <div className="em-chat">
-        <div className="em-hd"><MessageSquare size={15} /># general</div>
-        <div className="em-msgs">
-          {messages.map((m) => <div key={m.id} className={`ebub${m.me ? ' me' : ''}`}>{!m.me && <small>{m.user}</small>}{m.text}</div>)}
-          {typing && <div className="ebub typ"><i /><i /><i /></div>}
-        </div>
-      </div>
-      <div className="em-tasks">
-        <h6><ListChecks size={15} /> Tasks</h6>
-        {tasks.map((t, i) => (
-          <button key={t.label} type="button" className={`etk${t.done ? ' done' : ''}`} onClick={() => setTasks((a) => a.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))}>
-            <i>{t.done && <Check size={11} strokeWidth={3} />}</i><span>{t.label}</span></button>))}
-      </div>
-    </div>
-  );
-}
-
-const DEMO_GUESTS = [
-  { id: 1, name: 'Sarah Johnson', group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP', status: 'normal' },
-  { id: 2, name: 'Marcus Rivera', group: 2, table: 5, code: 'MR2B-K3', role: 'Speaker', status: 'normal' },
-  { id: 3, name: 'Priya Sharma', group: 1, table: 8, code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
-  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3, code: 'TC2D-R1', role: 'Sponsor', status: 'normal' },
-  { id: 5, name: 'Dev Patel', group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked', blockReason: 'Duplicate identity: another invite with the same email already checked in' },
-  { id: 6, name: 'Amara Okafor', group: 1, table: 7, code: 'AO1F-Q2', role: 'Attendee', status: 'flagged', flagReason: 'Low trust score: 42/100, scanned from 3 different devices' },
-];
-
-function QRPattern({ code, size = 36 }) {
-  const cells = 8, hash = code.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
-  return (
-    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 2, background: '#fff' }}>
-      {Array.from({ length: cells * cells }, (_, i) => <div key={i} style={{ background: ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0 ? '#0d0e1c' : '#fff' }} />)}
-    </div>
-  );
-}
-
-function EnterpriseDemo() {
-  const fresh = () => DEMO_GUESTS.map((g) => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 }));
-  const [tab, setTab] = useState('guests');
-  const [guests, setGuests] = useState(fresh);
-  const [scanning, setScanning] = useState(null);
-  const [lastChecked, setLastChecked] = useState(null);
-  const [securityLog, setSecurityLog] = useState([]);
-  const [overrideTarget, setOverrideTarget] = useState(null);
-  const [overridePin, setOverridePin] = useState('');
-  const [overrideError, setOverrideError] = useState('');
-  const [overrideSuccess, setOverrideSuccess] = useState(false);
-  const [simulating, setSimulating] = useState(false);
-
-  const checkedInCount = guests.filter((g) => g.checkedIn).length;
-  const totalGuests = guests.reduce((s, g) => s + g.group, 0);
-  const checkedInPeople = guests.filter((g) => g.checkedIn).reduce((s, g) => s + g.group, 0);
-  const pct = Math.round((checkedInPeople / totalGuests) * 100);
-  const addLog = (entry) => setSecurityLog((prev) => [{ ...entry, id: Date.now() + Math.random(), ts: new Date() }, ...prev].slice(0, 20));
-
-  const handleCheckIn = (guest) => {
-    if (scanning) return;
-    if (guest.checkedIn) { addLog({ type: 'duplicate', severity: 'high', msg: `Duplicate scan: ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` }); return; }
-    if (guest.status === 'blocked') { addLog({ type: 'blocked', severity: 'critical', msg: `BLOCKED: ${guest.name}, ${guest.blockReason}` }); setOverrideTarget(guest); return; }
-    if (guest.status === 'flagged') { addLog({ type: 'flagged', severity: 'high', msg: `WARNING: ${guest.name}, ${guest.flagReason}` }); setOverrideTarget(guest); return; }
-    setScanning(guest.id);
-    setGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g)));
-    setTimeout(() => {
-      const now = new Date();
-      setGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g)));
-      setLastChecked(guest.id); setScanning(null);
-      addLog({ type: 'success', severity: 'ok', msg: `Checked in: ${guest.name}, party of ${guest.group}, table ${guest.table}` });
-      setTimeout(() => setLastChecked(null), 2500);
-    }, 900);
-  };
-  const handleOverride = () => {
-    if (overridePin !== '1234') { setOverrideError('Wrong PIN. Try 1234 for this demo.'); return; }
-    setOverrideError(''); setOverrideSuccess(true);
-    const target = overrideTarget;
-    setTimeout(() => {
-      const now = new Date();
-      setGuests((prev) => prev.map((g) => (g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g)));
-      addLog({ type: 'override', severity: 'medium', msg: `Manager override approved: ${target.name} manually checked in` });
-      setOverrideTarget(null); setOverridePin(''); setOverrideSuccess(false);
-    }, 1000);
-  };
-  const simulateUnauthorized = () => {
-    if (simulating) return;
-    setSimulating(true);
-    const code = ['XX99-ZZ', 'FAKE-001', 'HACK-123'][Math.floor(Math.random() * 3)];
-    addLog({ type: 'unauthorized', severity: 'critical', msg: `UNAUTHORIZED: Code "${code}" not found, possible forged ticket` });
-    setTimeout(() => { addLog({ type: 'ratelimit', severity: 'medium', msg: 'Rate limit triggered: IP blocked for 60s after 3 failed attempts' }); setSimulating(false); }, 1200);
-    if (tab !== 'security') setTab('security');
-  };
-  const handleReset = () => {
-    setGuests(fresh()); setSecurityLog([]); setLastChecked(null); setScanning(null); setOverrideTarget(null); setOverridePin(''); setOverrideError('');
-  };
-  const alerts = securityLog.filter((l) => l.severity === 'critical' || l.severity === 'high').length;
-  const circ = 2 * Math.PI * 22;
-
-  return (
-    <div className="dm">
-      {overrideTarget && (
-        <div className="dm-ov">
-          {!overrideSuccess ? (
-            <div className="dm-card">
-              <span className={`rl ${overrideTarget.status === 'blocked' ? 'bad' : 'vip'}`}>{overrideTarget.status === 'blocked' ? 'Guest blocked' : 'Guest flagged'}</span>
-              <p style={{ fontWeight: 700, margin: '10px 0 2px' }}>{overrideTarget.name}</p>
-              <p style={{ fontSize: 13, color: 'var(--mu)' }}>{overrideTarget.blockReason || overrideTarget.flagReason}</p>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }} htmlFor="ov-pin">Manager PIN required to override</label>
-              <input id="ov-pin" className="inp" type="password" maxLength={4} autoFocus value={overridePin} placeholder="Enter PIN (hint: 1234)"
-                style={{ textAlign: 'center', letterSpacing: '.3em' }} onChange={(e) => { setOverridePin(e.target.value); setOverrideError(''); }} onKeyDown={(e) => e.key === 'Enter' && handleOverride()} />
-              {overrideError && <div className="err"><AlertCircle size={13} />{overrideError}</div>}
-              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                <button className="btn sm" style={{ flex: 1 }} onClick={() => { setOverrideTarget(null); setOverridePin(''); setOverrideError(''); }}>Cancel</button>
-                <button className="btn pri sm" style={{ flex: 1 }} onClick={handleOverride}>Override</button>
-              </div>
-            </div>
-          ) : (
-            <div className="dm-card" style={{ textAlign: 'center' }}><CheckCircle2 size={36} style={{ color: 'var(--ok)' }} /><p style={{ fontWeight: 700, margin: '8px 0 0' }}>Override approved</p></div>
-          )}
-        </div>
-      )}
-      <div className="dm-top">
-        <div className="dm-hd">
-          <div><span className="dpill"><i />Live check-in demo</span><h4>Tech Summit</h4><small>{DEMO_GUESTS.length} invites · {totalGuests} guests</small></div>
-          <div className="dring">
-            <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="22" fill="none" stroke="#d9dbe8" strokeWidth="6" />
-              <circle cx="28" cy="28" r="22" fill="none" stroke="#0c8a5b" strokeWidth="6" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * (1 - pct / 100)} style={{ transition: 'stroke-dashoffset .6s' }} /></svg>
-            <b>{pct}%</b>
-          </div>
-        </div>
-        <div className="dm-tabs" role="tablist">
-          {['guests', 'security', 'analytics'].map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}{t === 'security' && alerts > 0 && <b>{alerts}</b>}</button>))}
-        </div>
-      </div>
-
-      {tab === 'guests' && (
-        <div className="dm-body">
-          {guests.map((g) => {
-            const bl = g.status === 'blocked' && !g.checkedIn, fl = g.status === 'flagged' && !g.checkedIn;
-            return (
-              <div key={g.id} className={`dg${g.checkedIn ? ' in' : g.checking ? ' ck' : bl ? ' bl' : fl ? ' fl' : ''}`}>
-                <div className="dgi">{g.checking ? <div className="spin" /> : g.checkedIn ? <Check size={22} strokeWidth={3} /> : bl ? <Shield size={20} /> : fl ? 'FLAG' : <QRPattern code={g.code} />}</div>
-                <div className="dgm">
-                  <div><strong>{g.name}</strong><span className={`rl ${g.role.toLowerCase()}`}>{g.role}</span>{bl && <span className="rl bad">BLOCKED</span>}{fl && <span className="rl vip">FLAGGED</span>}</div>
-                  <p>{g.checkedIn ? `Checked in · Party of ${g.group} · Table ${g.table}` : bl ? g.blockReason : fl ? g.flagReason : `Party of ${g.group} · Table ${g.table}`}</p>
-                </div>
-                {lastChecked === g.id && <b style={{ color: 'var(--ok)', fontSize: 13 }}>In!</b>}
-                <button className={`dgb${g.checkedIn ? ' dn' : bl ? ' bad' : ''}`} disabled={!!scanning || g.checkedIn} onClick={() => handleCheckIn(g)}>
-                  {g.checkedIn ? 'Done' : scanning === g.id ? '…' : bl ? 'Blocked' : fl ? 'Review' : 'Scan'}</button>
-              </div>
-            );
-          })}
-          <div className="dsim"><p>Simulate a security scenario:</p>
-            <div><button className="btn sm" onClick={simulateUnauthorized} disabled={simulating}>{simulating ? 'Scanning…' : 'Try a forged ticket'}</button>
-              {(checkedInCount > 0 || securityLog.length > 0) && <button className="btn sm" onClick={handleReset}>Reset</button>}</div></div>
-        </div>
-      )}
-
-      {tab === 'security' && (
-        <div className="dm-body">
-          <div className="dstats">{[['Blocked', guests.filter((g) => g.status === 'blocked' && !g.checkedIn).length], ['Flagged', guests.filter((g) => g.status === 'flagged' && !g.checkedIn).length], ['Alerts', securityLog.filter((l) => l.severity !== 'ok').length]].map(([l, n]) => (
-            <div className="dstat" key={l}><b>{n}</b><small>{l}</small></div>))}</div>
-          <h5>Active protections</h5>
-          {[['Duplicate detection', 'Flags the same identity across multiple invites'], ['Rate limiting', '3 failed scans, then a 60s IP lockout'], ['Trust scoring', 'Flags low-trust guests for manual review'], ['Manager override', 'PIN-protected override for blocked guests'], ['QR forgery detection', 'Rejects codes that are not in the guest registry']].map(([t, d]) => (
-            <div className="dprot" key={t}><i>✓</i><div><b>{t}</b><span>{d}</span></div></div>))}
-          <h5>Security log</h5>
-          {securityLog.length === 0 ? <p style={{ fontSize: 13, color: 'var(--mu)', margin: 0 }}>No events yet. Go to Guests and scan a blocked or flagged guest, or try a forged ticket.</p>
-            : securityLog.map((l) => <div key={l.id} className={`dlg ${l.severity}`}><div><b style={{ fontSize: 13 }}>{l.msg}</b><small>{l.ts.toLocaleTimeString()}</small></div></div>)}
-        </div>
-      )}
-
-      {tab === 'analytics' && (
-        <div className="dm-body">
-          <div className="dstats">{[['Arrived', checkedInPeople], ['Pending', totalGuests - checkedInPeople], ['Invites in', checkedInCount]].map(([l, n]) => <div className="dstat" key={l}><b>{n}</b><small>{l}</small></div>)}</div>
-          <h5>Guest breakdown</h5>
-          {guests.map((g) => (
-            <div key={g.id} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}><span>{g.name}</span><span style={{ color: 'var(--mu)' }}>{g.checkedIn ? g.group : 0}/{g.group}</span></div>
-              <div className="dbar"><i className={g.checking ? 'part' : ''} style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }} /></div>
-            </div>))}
-          {checkedInCount === 0 && <p style={{ fontSize: 13, color: 'var(--mu)' }}>Switch to Guests and start checking people in.</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VenueDemo() {
-  const init = () => ({
-    tables: [{ id: 'T1', seats: 2, s: 'seated' }, { id: 'T2', seats: 2, s: 'free' }, { id: 'T3', seats: 4, s: 'reserved' }, { id: 'T4', seats: 4, s: 'free' }, { id: 'T5', seats: 6, s: 'seated' }, { id: 'T6', seats: 8, s: 'free' }],
-    wait: [{ name: 'Okafor', n: 2 }, { name: 'Lindqvist', n: 4 }, { name: 'Rivera', n: 6 }],
-  });
-  const [d, setD] = useState(init);
-  const [msg, setMsg] = useState('Hit Seat next to place the first party on the waitlist.');
-  const seatNext = () => {
-    if (!d.wait.length) { setMsg('Waitlist is empty. Tap Reset to run the service again.'); return; }
-    const [first, ...rest] = d.wait;
-    const fit = d.tables.filter((t) => t.s === 'free' && t.seats >= first.n).sort((a, b) => a.seats - b.seats)[0];
-    if (!fit) { setMsg(`No free table fits ${first.name} (${first.n}). Tap a seated table to clear it.`); return; }
-    setD({ tables: d.tables.map((t) => (t.id === fit.id ? { ...t, s: 'seated' } : t)), wait: rest });
-    setMsg(`Seated ${first.name} (${first.n}) at ${fit.id}, the tightest fit.`);
-  };
-  const clear = (id) => setD((p) => ({ ...p, tables: p.tables.map((t) => (t.id === id && t.s === 'seated' ? { ...t, s: 'free' } : t)) }));
-  return (
-    <div className="vd">
-      <div className="vd-floor">
-        <div className="vd-top"><span className="dpill" style={{ margin: 0 }}><i />Live floor</span><button className="btn sm" onClick={() => { setD(init()); setMsg('Reset. Hit Seat next to start.'); }}>Reset</button></div>
-        <div className="vd-grid">{d.tables.map((t) => (
-          <button key={t.id} type="button" className={`vtb ${t.s}${t.seats <= 2 ? ' round' : ''}`} onClick={() => clear(t.id)} aria-label={`Table ${t.id}, ${t.seats} seats, ${t.s}`}>
-            {t.id}<small>{t.seats} seats · {t.s}</small></button>))}</div>
-        <div className="vlegend"><span><i style={{ background: 'var(--mn)' }} />Free</span><span><i style={{ background: 'var(--pk)' }} />Seated (tap to clear)</span><span><i style={{ background: 'var(--hl)' }} />Reserved</span></div>
-      </div>
-      <div className="vd-side">
-        <h5 style={{ margin: 0, font: '700 11px Unbounded,sans-serif', textTransform: 'uppercase', color: 'var(--mu)' }}>Walk-in waitlist</h5>
-        {d.wait.length === 0 ? <div className="vwt"><small>Nobody waiting</small></div> : d.wait.map((w, i) => <div className="vwt" key={w.name}><span><b>{w.name}</b> · party of {w.n}</span><small>~{(i + 1) * 8} min</small></div>)}
-        <button className="btn pri" onClick={seatNext}>Seat next <ArrowRight size={16} /></button>
-        <p className="vd-msg" aria-live="polite">{msg}</p>
-      </div>
-    </div>
-  );
-}
-
-const SHOWCASE = [
-  { key: 'rsvp', eyebrow: 'Step 01', title: 'Guests RSVP in seconds', desc: 'No app, no account: a beautiful invite page guests can respond to from any phone. Tap a response.', device: 'phone', node: <RSVPMockup />, cta: 'See RSVP pages', mode: 'rsvp' },
-  { key: 'space', eyebrow: 'Step 02', title: 'Your team plans together', desc: 'Chat, shared tasks, and polls in one live workspace instead of five different apps. Tick a task off.', device: 'browser', node: <EventSpaceMockup />, cta: 'See Events', mode: 'standard' },
-  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door', desc: 'A real, working check-in demo. Duplicate detection and manager overrides included. Try it.', device: 'tablet', url: '/e/tech-summit/check-in', node: <EnterpriseDemo />, cta: 'See Enterprise', mode: 'enterprise' },
-];
-const BRANCH_DEMOS = {
-  events: { k: 'Live demo', h: 'Your team workspace, in motion.', p: 'Chat, shared tasks and polls in one live workspace instead of five different apps. Tick a task off to try it.', device: 'browser', url: '/e/summer-rooftop', node: <EventSpaceMockup />, links: [['Try the invite demo', '/demo/invite'], ['Try the RSVP demo', '/demo/rsvp']] },
-  enterprise: { k: 'Live demo', h: 'Work the door yourself.', p: 'Scan guests in, hit a blocked or flagged one and override it with the manager PIN (1234). Then fire a forged ticket and watch the security log.', device: 'tablet', url: '/e/tech-summit/check-in', node: <EnterpriseDemo />, links: [] },
-  rsvp: { k: 'Live demo', h: 'What your guests see.', p: 'The page opens on any phone with no app and no account. Tap a response and watch the count move.', device: 'phone', node: <RSVPMockup />, links: [['Try the RSVP demo', '/demo/rsvp']] },
-  venue: { k: 'Live demo', h: 'Seat a walk-in in one tap.', p: 'Hit Seat next and the tightest-fit free table goes to the next party on the waitlist. Tap a seated table to clear it.', device: 'browser', url: '/e/taverna-roma/floor', node: <VenueDemo />, links: [] },
-};
 /* ── Find an event by link ─────────────────────────────────────────────── */
 function SlugFinder() {
   const navigate = useNavigate();
@@ -2207,6 +906,7 @@ export default function Home() {
   const [menu, setMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mode, setMode] = useState('standard');
+  const [picked, setPicked] = useState(false); // user has chosen a type, so copy + theme follow it
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'rsvp' | 'venue'
   const [formData, setFormData] = useState({
     subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
@@ -2250,7 +950,7 @@ export default function Home() {
   }, [wizardOpen]);
 
   const pickMode = (id, target) => {
-    setSelectedBranch((b) => (b ? branchOf(id) : b));
+    setPicked(true); setSelectedBranch((b) => (b ? branchOf(id) : b));
     setMode(id); setFormData((p) => ({ ...p, isEnterpriseMode: id === 'enterprise' })); setWizardKey((k) => k + 1);
     if (target) setTimeout(() => { document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); document.getElementById(target === 'start' ? 'hero-title' : 'create-title')?.focus({ preventScroll: true }); }, 30);
   };
@@ -2259,15 +959,9 @@ export default function Home() {
   const goHash = (e, href) => {
     if (!href.startsWith('#')) return;
     e.preventDefault(); setMenu(false);
-    const key = href.startsWith('#planit-') ? href.slice(8) : '';
-    if (BRANCH_MODE[key]) { selectBranch(BRANCH_MODE[key]); return; }
     const go = () => document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (selectedBranch && !['#start', '#create', '#branch'].includes(href)) { setSelectedBranch(null); setTimeout(go, 60); } else go();
   };
-  useEffect(() => { // old links like /#planit-events, /#planit-rsvp and /#planit-venue still open that type's page
-    const k = window.location.hash.startsWith('#planit-') ? window.location.hash.slice(8) : '';
-    if (!isWL && BRANCH_MODE[k]) selectBranch(BRANCH_MODE[k]);
-  }, []); // eslint-disable-line
   const heroTitle = (e) => { const title = e.target.value; setFormData((p) => ({ ...p, title, subdomain: p._subdomainTouched ? p.subdomain : makeSubdomain(title) })); };
   const openWizard = () => { setFormData((p) => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey((k) => k + 1); timing.current.formStartedAt = Date.now(); setWizardOpen(true); };
 
@@ -2359,13 +1053,18 @@ export default function Home() {
       <button className="btn pri wide" onClick={enterEvent}>{doneLabel}</button>
     </div>
   );
+  const th = THEME[mode] || THEME.standard;
+  const hero = picked ? HERO[mode] : null;
+  const feats = FEAT_BY_MODE[mode];
+  const steps = STEPS_BY[mode];
+  const uses = (mode === 'table-service' ? VENUE_TYPES : EVENT_TYPES).filter((t) => t[0] !== 'other');
   const nameLabel = mode === 'table-service' ? 'Venue name' : mode === 'rsvp' ? 'What are you hosting?' : 'Event name';
   const namePh = mode === 'table-service' ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2026';
-  const nav = isWL ? [['Discover', '/discover'], ['Help', '/help'], ['About', '/about']] : [['Features', '#features'], ['Event types', '#modes'], ['Demos', '#showcase'], ['Claude', '#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Help', '/help']];
+  const nav = isWL ? [['Discover', '/discover'], ['Help', '/help'], ['About', '/about']] : [['Features', '#features'], ['Modes', '#modes'], ['Claude', '#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Help', '/help']];
   const startFree = (e) => { e.preventDefault(); setMenu(false); pickMode(mode, 'start'); };
 
   return (
-    <div className="pi" style={wlPrimary ? { '--ac': wlPrimary, '--acs': `color-mix(in srgb, ${wlPrimary} 12%, white)` } : undefined}>
+    <div className="pi" style={isWL ? (wlPrimary ? { '--ac': wlPrimary, '--acs': `color-mix(in srgb, ${wlPrimary} 12%, white)` } : undefined) : { '--ac': th.ac, '--hl': th.hl, '--acs': th.acs, '--sh': th.sh }}>
       <InjectCSS />
       {recoveryCode && <RecoveryCodeModal code={recoveryCode} onDismiss={() => setRecoveryCode(null)} eventSlug={created?.subdomain} />}
 
@@ -2386,12 +1085,14 @@ export default function Home() {
 
       <main id="top">
         <section className="hero">
-          <Burst className="d1 spin-slow" color="#ff7ac6" size={96} /><Squiggle className="d2 float" />
+          <Burst className="d1 spin-slow" color={th.d1} size={96} /><Squiggle className="d2 float" color={th.d2} />
           <div className="wrap hero-g">
             <div>
-              <span className="eye">{isWL ? 'Event platform' : 'For event teams & venues'}</span>
-              {wlHome.headline ? <h1>{wlHome.headline}</h1> : <h1>Plan the night.<br /><em>Run the door.</em></h1>}
-              <p className="lead">{isWL ? (wlHome.subheadline || wlName || 'Your event platform') : 'One workspace for events and hospitality: team chat, tasks, RSVPs, check-in, and a live floor manager for restaurants.'}</p>
+              <span className="eye" key={`e${picked ? mode : 'x'}`}>{isWL ? 'Event platform' : hero ? hero.e : 'For event teams & venues'}</span>
+              {wlHome.headline ? <h1>{wlHome.headline}</h1> : hero
+                ? <h1 key={mode} className={`swap${hero.h.join('').length > 40 ? ' long' : ''}`}>{hero.h.map((l, i) => i === hero.h.length - 1 ? <em key={l}>{l}</em> : <span key={l}>{l}<br /></span>)}</h1>
+                : <h1>Plan the night.<br /><em>Run the door.</em></h1>}
+              <p className="lead" key={`l${picked ? mode : 'x'}`}>{isWL ? (wlHome.subheadline || wlName || 'Your event platform') : hero ? m.blurb : 'One workspace for events and hospitality: team chat, tasks, RSVPs, check-in, and a live floor manager for restaurants.'}</p>
               <SlugFinder />
             </div>
             <div className="panel" id="start">
@@ -2405,15 +1106,14 @@ export default function Home() {
                   <div className="choose" role="radiogroup" aria-label="Event mode">
                     {MODES.map((x) => (
                       <button key={x.id} type="button" role="radio" aria-checked={mode === x.id} data-mode={x.id} className={`ch${mode === x.id ? ' on' : ''}`} onClick={() => pickMode(x.id)}>
-                        <span className={`chi t-${x.tone}`}><x.icon size={16} strokeWidth={2.2} /></span>
+                        <span className="dot" />
                         <span style={{ flex: 1 }}><b>{x.tab}</b><small>{x.short}</small>
                           {mode === x.id && <span className="mini">{x.incl.slice(0, 4).map((i) => <span key={i}>{i}</span>)}</span>}</span>
-                        <span className="dot" />
                       </button>))}
                   </div>
                   <button className="btn pri wide" onClick={openWizard}>{m.cta}</button>
                   <p className="sub2">{m.sub}</p>
-                  {!isWL && <p className="sub2" style={{ marginTop: 8 }}><button className="lnk" onClick={() => selectBranch(mode)}>See everything in {m.tab}</button> &nbsp;·&nbsp; <a className="lnk" href="#modes" onClick={(e) => goHash(e, '#modes')}>Compare all four</a></p>}
+                  {!isWL && <p className="sub2" style={{ marginTop: 8 }}><button className="lnk" onClick={() => selectBranch(mode)}>See everything in {m.tab}</button></p>}
                   {mode === 'enterprise' && <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} />Mode cannot be changed after creation.</div>}
                 </>
               )}
@@ -2425,58 +1125,13 @@ export default function Home() {
           </div>
         </section>
 
-        {!isWL && !selectedBranch && <div className="belt" aria-hidden="true"><div>{[0, 1].map((k) => FEATURES.map(([, t]) => <span key={`${k}-${t}`}>{t}</span>))}</div></div>}
-
-        {!isWL && !selectedBranch && (
-          <section className="sec" id="modes">
-            <div className="wrap">
-              <div className="sh"><div><span className="eye">Pick your path</span><h2>Four ways to start. Pick the one that sounds like you.</h2></div><p>Each one has its own page that shows exactly what you get, with a live demo. Tap a card to see how it works.</p></div>
-              <div className="paths">
-                {PATHS.map((pt, i) => (
-                  <a key={pt.id} href={`#planit-${pt.branch}`} className={`path t-${pt.tone}`} onClick={(e) => { e.preventDefault(); selectBranch(pt.id); }}>
-                    <span className="pn">0{i + 1}</span>
-                    <span className="ptag"><pt.icon size={15} strokeWidth={2.2} />{pt.tag}</span>
-                    <h3>{pt.h[0]}<br />{pt.h[1]}</h3>
-                    <p>{pt.p}</p>
-                    <ul className="chips">{pt.who.map((c) => <li key={c}>{c}</li>)}</ul>
-                    <span className="pgo">{pt.cta} <ArrowRight size={16} /></span>
-                  </a>))}
-              </div>
-              <div className="sh2" style={{ marginTop: 84 }}><span className="eye">Side by side</span><h3>Not sure which one? Compare.</h3></div>
-              <div className="cmpw">
-                <div className="cmp" role="table" aria-label="Compare the four types">
-                  <div className="cmp-h" role="row"><span />{PATHS.map((pt) => <button key={pt.id} className={`t-${pt.tone}`} onClick={() => selectBranch(pt.id)} aria-label={`See ${pt.name}`}><pt.icon size={16} />{pt.name}</button>)}</div>
-                  {COMPARE.map(([label, cells]) => <div className="cmp-r" role="row" key={label}><b role="rowheader">{label}</b>{cells.map((c, i) => <span role="cell" key={i}>{c}</span>)}</div>)}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {!isWL && !selectedBranch && (
-          <section className="sec lav" id="showcase">
-            <div className="wrap">
-              <div className="sh"><div><span className="eye">See it in action</span><h2>Not just a free trial. This is the real thing.</h2></div><p>Tap around. The RSVP page, the team workspace and the door check-in below are live demos, no sign-up needed.</p></div>
-              <div className="sshow">
-                {SHOWCASE.map((s, i) => (
-                  <div key={s.key} className={`srow${i % 2 ? ' rev' : ''}`}>
-                    <div><span className="eye">{s.eyebrow}</span><h3>{s.title}</h3><p>{s.desc}</p>
-                      <button className="lnk" onClick={() => selectBranch(s.mode)}>{s.cta} <ArrowRight size={14} style={{ verticalAlign: -2 }} /></button></div>
-                    <DeviceFrame variant={s.device} url={s.url}>{s.node}</DeviceFrame>
-                  </div>))}
-              </div>
-            </div>
-          </section>
-        )}
+        {!isWL && !selectedBranch && <div className="belt" aria-hidden="true"><div>{[0, 1].map((k) => feats.map(([, t]) => <span key={`${k}-${t}`}>{t}</span>))}</div></div>}
 
         {!isWL && selectedBranch && (() => {
           const b = BRANCHES[selectedBranch];
-          const demo = BRANCH_DEMOS[selectedBranch];
-          const jump = () => pickMode(BRANCH_MODE[selectedBranch], 'create');
-          const others = PATHS.filter((pt) => pt.branch !== selectedBranch);
+          const jump = () => pickMode(selectedBranch === 'rsvp' ? 'rsvp' : selectedBranch === 'venue' ? 'table-service' : (mode === 'enterprise' ? 'enterprise' : 'standard'), 'create');
           return (
             <section className={`sec br br-${selectedBranch}`} id="branch">
-              <span id={`planit-${selectedBranch}`} />
               <div className="wrap">
                 <button className="back" onClick={backToAll}><ArrowRight size={15} style={{ transform: 'rotate(180deg)' }} />All options</button>
                 <div className="br-h">
@@ -2485,32 +1140,11 @@ export default function Home() {
                 </div>
                 <div className="sh2"><span className="eye">What&apos;s included</span><h3>{b.incTitle}</h3></div>
                 <div className="feats br-f">{b.items.map(([I, t, d]) => <div className="feat" key={t}><I size={26} strokeWidth={1.7} /><h3>{t}</h3><p>{d}</p></div>)}</div>
-
-                <div className="bdemo">
-                  <div><span className="eye">{demo.k}</span><h3>{demo.h}</h3><p>{demo.p}</p>
-                    {demo.links.length > 0 && <div className="dl">{demo.links.map(([l, h]) => <a key={h} className="lnk" href={h}>{l}</a>)}</div>}</div>
-                  <DeviceFrame variant={demo.device} url={demo.url}>{demo.node}</DeviceFrame>
-                </div>
-
                 {selectedBranch === 'events' && (
                   <div className="callouts">
-                    <div className="callout"><b>See it in action</b><p>Invites and RSVP pages guests actually want to share. Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest. Try the real thing, no account needed.</p>
-                      <div className="cta"><a className="btn pri sm" href="/demo/invite">Open the invite demo <ArrowUpRight size={14} /></a><a className="btn sm" href="/demo/rsvp"><Share2 size={14} /> Try the RSVP demo</a></div></div>
-                    <div className="callout alt"><b>Need door security?</b><p>Enterprise adds personalized QR invites, a check-in dashboard and real-time attendance analytics. For events with 50+ guests.</p><button className="btn dk sm" onClick={() => selectBranch('enterprise')}>See Enterprise <ArrowRight size={14} /></button></div>
+                    <div className="callout"><b>See it in action</b><p>Invites and RSVP pages guests actually want to share. Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest. Try the real thing, no account needed.</p><a className="btn pri sm" href="/demo/invite">Open the invite demo <ArrowUpRight size={14} /></a></div>
+                    <div className="callout alt"><b>Enterprise Mode</b><p>Personalized QR invites, check-in dashboard, real-time attendance analytics. For 100+ guest events.</p><button className="btn dk sm" onClick={() => pickMode('enterprise', 'create')}>Choose Enterprise <ArrowRight size={14} /></button></div>
                   </div>)}
-
-                {selectedBranch === 'enterprise' && (
-                  <div style={{ marginTop: 64 }}>
-                    <div className="sh2"><span className="eye">Compare</span><h3>Events or Enterprise?</h3></div>
-                    <div className="vs">
-                      <div className="vcard"><b><Calendar size={17} /> Events (Standard)</b><small>The full planning workspace</small>
-                        <dl><div><dt>Guests</dt><dd>Open RSVP link</dd></div><div><dt>Team</dt><dd>Chat, tasks, polls, budget, unlimited members</dd></div><div><dt>Best for</dt><dd>Weddings, retreats, team-run events</dd></div></dl></div>
-                      <div className="vcard on"><span className="tagl">Locked down</span><b><Zap size={17} /> Enterprise</b><small>Everything in Events, plus the door</small>
-                        <dl><div><dt>Guests</dt><dd>Personalized QR invites, groups and tables</dd></div><div><dt>Door</dt><dd>Check-in dashboard, trust scoring, duplicate and forgery detection</dd></div><div><dt>Best for</dt><dd>Large, ticketed or access-controlled events, 50+ attendees</dd></div></dl></div>
-                    </div>
-                    <div className="note"><AlertCircle size={15} style={{ marginTop: 2 }} /><span><b>This cannot be changed later.</b> Switching between Standard and Enterprise isn&apos;t possible after your event is created.</span></div>
-                  </div>)}
-
                 {selectedBranch === 'rsvp' && (
                   <div style={{ marginTop: 64 }}>
                     <div className="sh2"><span className="eye">Compare</span><h3>Which one do you actually need?</h3></div>
@@ -2521,13 +1155,6 @@ export default function Home() {
                         <dl><div><dt>Setup time</dt><dd>~1 min</dd></div><div><dt>Included</dt><dd>Guest list, RSVP builder, basic check-in, analytics</dd></div><div><dt>Intentionally left out</dt><dd>Seating charts, floor management, ticketing, advanced fraud detection</dd></div><div><dt>Best for</dt><dd>Parties, meetups, simple gatherings</dd></div></dl></div>
                     </div>
                   </div>)}
-
-                <div style={{ marginTop: 64 }}>
-                  <div className="sh2"><span className="eye">Not quite it?</span><h3>The other three types</h3></div>
-                  <div className="oths">{others.map((pt) => (
-                    <a key={pt.id} href={`#planit-${pt.branch}`} className={`oth t-${pt.tone}`} onClick={(e) => { e.preventDefault(); selectBranch(pt.id); }}>
-                      <span><pt.icon size={15} />{pt.tag}</span><b>{pt.h[0]} {pt.h[1]}</b><em>{pt.cta} →</em></a>))}</div>
-                </div>
               </div>
             </section>
           );
@@ -2536,8 +1163,8 @@ export default function Home() {
         {!isWL && !selectedBranch && (
           <section className="sec" id="uses">
             <div className="wrap">
-              <div className="sh"><div><span className="eye">Built for</span><h2>Every kind of room you run.</h2></div><p>From a wedding for 80 to a conference floor to a Friday-night dining room, the same workspace fits.</p></div>
-              <div className="uses">{USES.map(([id, l, h], i) => <div key={id} className={`use u${i % 4}`}><b>{l}</b><span>{h}</span></div>)}</div>
+              <div className="sh"><div><span className="eye">Built for</span><h2>{mode === 'table-service' ? 'Every kind of venue you run.' : 'Every kind of room you run.'}</h2></div><p>From a wedding for 80 to a conference floor to a Friday-night dining room, the same workspace fits.</p></div>
+              <div className="uses">{uses.map(([id, l, h], i) => <div key={`${mode}-${id}`} className={`use u${i % 4}`}><b>{l}</b><span>{h}</span></div>)}</div>
             </div>
           </section>
         )}
@@ -2546,17 +1173,34 @@ export default function Home() {
           <section className="sec ink" id="how">
             <div className="wrap">
               <div className="sh"><div><span className="eye">How it works</span><h2>Live in about a minute.</h2></div><p>No setup call, no seat licences, no guest sign-ups. Three steps and your team is in.</p></div>
-              <div className="steps">{STEPS.map(([t, d], i) => <div key={t} className="stp"><i>{`0${i + 1}`}</i><h3>{t}</h3><p>{d}</p></div>)}</div>
+              <div className="steps">{steps.map(([t, d], i) => <div key={`${mode}-${t}`} className="stp"><i>{`0${i + 1}`}</i><h3>{t}</h3><p>{d}</p></div>)}</div>
             </div>
           </section>
         )}
 
+        {!isWL && !selectedBranch && (
+          <section className="sec" id="modes">
+            <div className="wrap">
+              <div className="sh"><div><span className="eye">Compare</span><h2>Four ways to start. One workspace.</h2></div><p>Pick a column to see the whole page change to that type, or open one for the full story.</p></div>
+              <div className="cols">
+                {MODES.map((x) => (
+                  <div className={`col${mode === x.id ? ' sel' : ''}`} key={x.id} style={{ '--c': THEME[x.id].ac, '--ch': THEME[x.id].hl }}>
+                    <button className="colh" onClick={() => pickMode(x.id)} aria-pressed={mode === x.id}><span className="ico"><x.icon size={20} strokeWidth={1.9} /></span><h3>{x.tab}</h3></button>
+                    <p>{x.blurb}</p>
+                    <div className="best"><small>Best for</small><b>{x.best}</b></div>
+                    <ul className="incl">{x.incl.map((i) => <li key={i}><Check size={14} />{i}</li>)}</ul>
+                    <button className="lnk" onClick={() => selectBranch(x.id)}>Start with {x.tab} <ArrowRight size={14} style={{ verticalAlign: -2 }} /></button>
+                  </div>))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {!isWL && !selectedBranch && (
           <section className="sec lav" id="features">
             <div className="wrap">
-              <div className="sh"><div><span className="eye">Features</span><h2>Everything in one place. Nothing across five apps.</h2></div><p>Most teams plan across group chats, email threads and spreadsheets. PlanIt puts the whole team in one workspace from day one.</p></div>
-              <div className="feats">{FEATURES.map(([I, t, d, c]) => <div className={`feat ${c}`} key={t}><I size={26} strokeWidth={1.7} /><h3>{t}</h3><p>{d}</p></div>)}</div>
+              <div className="sh"><div><span className="eye">Features</span><h2 key={mode} className="swap">{`What you get with ${m.tab}.`}</h2></div><p>{m.blurb}</p></div>
+              <div className="feats" key={mode}>{feats.map(([I, t, d], i) => <div className={`feat ${(TINTS[feats.length] || [])[i] || ''}${(SPANS[feats.length] || [])[i] === 2 ? ' w2' : ''}`} key={t}><I size={26} strokeWidth={1.7} /><h3>{t}</h3><p>{d}</p></div>)}</div>
             </div>
           </section>
         )}
@@ -2652,7 +1296,7 @@ export default function Home() {
           <div>
             <div><h4 style={{ fontSize: 22, fontFamily: 'Unbounded,sans-serif', color: '#fff' }}>{brand}</h4>{isWL && wlLogo && <img src={wlLogo} alt={brand} style={{ height: 32, objectFit: 'contain', marginBottom: 12 }} />}
               <p style={{ color: 'var(--mu)', fontSize: 14.5, maxWidth: 280, margin: 0 }}>{isWL ? '' : 'The planning hub for event teams, plus standalone RSVP pages when that\u2019s all you need.'}</p></div>
-            {[['Product', [['Features', '#features'], ['Event types', '#modes'], ['RSVP pages', '#planit-rsvp'], ['Venue', '#planit-venue'], ['Claude integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get started', '#start']]],
+            {[['Product', [['Features', '#features'], ['Claude integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get started', '#start']]],
               ['Company', [['About', '/about'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']]],
               ['Connect', [['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']]]].map(([t, ls]) => (
               <div key={t}><h4>{t}</h4><ul>{ls.map(([l, h]) => <li key={l}><a href={h} onClick={(e) => goHash(e, h)}>{l}</a></li>)}</ul></div>))}

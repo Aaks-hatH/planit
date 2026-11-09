@@ -41,37 +41,37 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+        background: '#ffffff', 
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1rem',
       }}
     >
       <div
         style={{
-          background: '#0f0f14',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '1rem',
+          background: '#ffffff',
+          border: '2px solid #0d0e1c',
+          borderRadius: '8px',
           padding: '2rem',
           maxWidth: '480px',
           width: '100%',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+          boxShadow: '4px 4px 0 #0d0e1c',
         }}
       >
         {/* Amber warning header */}
         <div style={{
-          background: 'rgba(245,158,11,0.12)',
-          border: '1px solid rgba(245,158,11,0.35)',
+          background: '#fff6c2',
+          border: '2px solid #6e5400',
           borderRadius: '0.625rem',
           padding: '0.875rem 1rem',
           marginBottom: '1.25rem',
         }}>
           <p style={{
             fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.08em',
-            textTransform: 'uppercase', color: '#f59e0b', marginBottom: '0.375rem',
+            textTransform: 'uppercase', color: '#6e5400', marginBottom: '0.375rem',
           }}>
             Shown exactly once — save this now
           </p>
-          <p style={{ fontSize: '0.8125rem', color: '#fcd34d', lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontSize: '0.8125rem', color: '#6e5400', lineHeight: 1.55, margin: 0 }}>
             This recovery code is displayed <strong>one time only</strong> and cannot
             be retrieved again. If you lose it and forget your account password, you will
             not be able to self-serve reset it.
@@ -79,7 +79,7 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
         </div>
 
         <h2 style={{
-          fontSize: '1rem', fontWeight: 700, color: '#fff',
+          fontSize: '1rem', fontWeight: 700, color: '#0d0e1c',
           marginBottom: '0.5rem', marginTop: 0,
         }}>
           Your account recovery code
@@ -87,8 +87,8 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
 
         {/* The code itself */}
         <div style={{
-          background: '#1a1a24',
-          border: '1px solid rgba(255,255,255,0.12)',
+          background: '#ffffff',
+          border: '2px solid #0d0e1c',
           borderRadius: '0.625rem',
           padding: '1.25rem 1rem',
           marginBottom: '1rem',
@@ -99,7 +99,7 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
         }}>
           <span style={{
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            fontSize: '1.1rem', fontWeight: 700, color: '#fff',
+            fontSize: '1.1rem', fontWeight: 700, color: '#0d0e1c',
             letterSpacing: '0.08em', wordBreak: 'break-all',
           }}>
             {code}
@@ -134,7 +134,7 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
             'It is one-time use: once used to reset your password it is immediately invalidated.',
           ].map((item, i) => (
             <li key={i} style={{
-              fontSize: '0.8125rem', color: 'rgba(255,255,255,0.6)',
+              fontSize: '0.8125rem', color: '#5a5d70',
               lineHeight: 1.55, marginBottom: i < 2 ? '0.5rem' : 0,
             }}>
               {item}
@@ -153,7 +153,7 @@ export default function RecoveryCodeModal({ code, onDismiss, eventSlug }) {
             onChange={e => setConfirmed(e.target.checked)}
             style={{ marginTop: '0.15rem', accentColor: '#f59e0b', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+          <span style={{ fontSize: '0.8125rem', color: '#0d0e1c', lineHeight: 1.5 }}>
             I have saved my recovery code and understand I cannot retrieve it again.
           </span>
         </label>

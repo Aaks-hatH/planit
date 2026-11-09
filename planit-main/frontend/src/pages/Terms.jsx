@@ -37,7 +37,7 @@ function DefItem({ term, children }) {
 
 function LegalCallout({ children }) {
   return (
-    <div className="my-5 p-4 bg-neutral-900 rounded-xl text-sm text-neutral-300 leading-relaxed">
+    <div className="my-5 p-4 bg-white rounded-xl text-sm text-neutral-600 leading-relaxed">
       {children}
     </div>
   );
@@ -55,8 +55,8 @@ export default function Terms() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="bg-neutral-900 p-2 rounded-xl">
-                <FileText className="w-5 h-5 text-white" />
+              <div className="bg-white p-2 rounded-xl">
+                <FileText className="w-5 h-5 text-ink" />
               </div>
               <h1 className="text-lg font-semibold text-neutral-900">Terms of Service</h1>
             </div>
@@ -65,14 +65,14 @@ export default function Terms() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-ink p-8 md:p-14">
 
           <div className="mb-12">
             <h1 className="text-4xl font-black text-neutral-900 mb-2 tracking-tight">Terms of Service</h1>
             <p className="text-sm text-neutral-500 mb-1">Last updated: {LAST_UPDATED}</p>
             <p className="text-sm text-neutral-500 mb-6">Effective date: {EFFECTIVE_DATE}</p>
             <LegalCallout>
-              <strong className="text-white">PLEASE READ THESE TERMS OF SERVICE CAREFULLY AND IN THEIR ENTIRETY BEFORE ACCESSING OR USING THE SERVICE.</strong> These Terms of Service constitute a legally binding agreement between you and PlanIt. Your access to or use of the Service in any manner whatsoever — including browsing, creating an Event, joining an Event workspace, submitting Content, or otherwise interacting with the Service — constitutes your unconditional acceptance of and agreement to be bound by these Terms of Service and all policies incorporated herein by reference. IF YOU DO NOT AGREE TO THESE TERMS IN THEIR ENTIRETY, YOU MUST IMMEDIATELY CEASE ALL USE OF AND ACCESS TO THE SERVICE.
+              <strong className="text-ink">PLEASE READ THESE TERMS OF SERVICE CAREFULLY AND IN THEIR ENTIRETY BEFORE ACCESSING OR USING THE SERVICE.</strong> These Terms of Service constitute a legally binding agreement between you and PlanIt. Your access to or use of the Service in any manner whatsoever — including browsing, creating an Event, joining an Event workspace, submitting Content, or otherwise interacting with the Service — constitutes your unconditional acceptance of and agreement to be bound by these Terms of Service and all policies incorporated herein by reference. IF YOU DO NOT AGREE TO THESE TERMS IN THEIR ENTIRETY, YOU MUST IMMEDIATELY CEASE ALL USE OF AND ACCESS TO THE SERVICE.
             </LegalCallout>
           </div>
 
@@ -80,7 +80,7 @@ export default function Terms() {
             <p>
               For the purposes of these Terms of Service, the following defined terms shall have the meanings set forth herein. Capitalised terms not otherwise defined shall bear the meanings commonly attributed to them in the context of software-as-a-service agreements governed by commercial law. The singular shall include the plural and vice versa. Headings are for convenience only. References to any statute or statutory provision include all amendments, re-enactments, and consolidations thereof.
             </p>
-            <div className="mt-4 border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="mt-4 border-2 border-ink rounded-xl overflow-hidden shadow">
               <DefItem term="Agreement">These Terms of Service together with the Privacy Policy, any Supplemental Terms, and all other policies, notices, or guidelines published by PlanIt from time to time, each of which is incorporated herein by reference and forms an integral part of this Agreement.</DefItem>
               <DefItem term="Analytics Data">Session identifiers, visitor identifiers, page view data, interaction event records, device and browser signals, UTM parameters, anonymised IP signals, and all associated metadata collected by the Platform Analytics System as described in Section 12 of these Terms and Section 2.3 of the Privacy Policy.</DefItem>
               <DefItem term="Authorised Use">Use of the Service strictly within the scope of the permissions expressly granted in Section 6 hereof and consistent with the features and functionalities made available through PlanIt's standard user interface, as modified from time to time.</DefItem>
@@ -479,7 +479,7 @@ export default function Terms() {
               <p>
                 PlanIt's designated agent for receiving notifications of claimed copyright infringement is:
               </p>
-              <div className="mt-3 p-4 bg-neutral-50 border border-neutral-200 rounded-xl space-y-1 text-sm">
+              <div className="mt-3 p-4 bg-neutral-50 border-2 border-ink rounded-xl space-y-1 text-sm shadow">
                 <p><strong className="text-neutral-900">Designated Agent:</strong> Aakshat Hariharan</p>
                 <p><strong className="text-neutral-900">Email:</strong> <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 underline underline-offset-2">planit.userhelp@gmail.com</a></p>
                 <p><strong className="text-neutral-900">Subject line:</strong> DMCA Copyright Notice</p>
@@ -579,7 +579,7 @@ export default function Terms() {
 
           <Section number="24" title="Contact Information and Notices">
             <p>All inquiries, reports, legal notices, and correspondence should be directed to:</p>
-            <div className="mt-4 p-5 bg-neutral-50 border border-neutral-200 rounded-xl space-y-2 text-sm">
+            <div className="mt-4 p-5 bg-neutral-50 border-2 border-ink rounded-xl space-y-2 text-sm shadow-md">
               <p><strong className="text-neutral-900">Operator:</strong> Aakshat Hariharan</p>
               <p><strong className="text-neutral-900">Operating name:</strong> PlanIt</p>
               <p><strong className="text-neutral-900">Email:</strong>{' '}
@@ -593,9 +593,9 @@ export default function Terms() {
             </div>
           </Section>
 
-          <div className="mt-10 p-6 bg-neutral-900 rounded-xl">
-            <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Plain-Language Summary (non-binding)</p>
-            <p className="text-sm text-neutral-300 leading-relaxed">
+          <div className="mt-10 p-6 bg-white rounded-xl">
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3">Plain-Language Summary (non-binding)</p>
+            <p className="text-sm text-neutral-600 leading-relaxed">
               By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. When you first visit, we show a notice that platform analytics (page views, clicks, session data) is running. Dismissing it just acknowledges you've seen it — it's not an accept/decline choice, and analytics runs for everyone regardless. We use analytics to understand how the platform is used, fix bugs, and catch abuse — never for ads or profiling. All analytics records are automatically deleted after 90 days. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
             </p>
           </div>

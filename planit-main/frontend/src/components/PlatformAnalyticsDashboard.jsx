@@ -93,7 +93,7 @@ function DailyChart({ data }) {
               {lbl}: {fmtNum(d.views)} views
             </div>
             <div className="w-full rounded-t transition-all duration-300"
-              style={{ height: `${h}%`, background: '#6366f1', opacity: 0.7 + 0.3 * (h / 100) }} />
+              style={{ height: `${h}%`, background: '#2236ff', opacity: 0.7 + 0.3 * (h / 100) }} />
           </div>
         );
       })}
@@ -124,7 +124,7 @@ function StatCard({ label, value, sub, trend, icon: Icon, accent = '#6366f1', sp
   const TrendIcon  = trend > 0 ? ArrowUpRight : trend < 0 ? ArrowDownRight : Minus;
   const trendColor = trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-500' : 'text-neutral-400';
   return (
-    <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+    <div className="bg-white border-2 border-ink rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: accent + '18' }}>
@@ -141,7 +141,7 @@ function StatCard({ label, value, sub, trend, icon: Icon, accent = '#6366f1', sp
       <div className="flex items-end justify-between">
         <div>
           <div className="text-2xl font-bold text-neutral-900 tabular-nums">{value}</div>
-          {sub && <div className="text-xs text-neutral-400 mt-0.5">{sub}</div>}
+          {sub && <div className="text-xs text-neutral-500 mt-0.5">{sub}</div>}
         </div>
         {sparkData && <Sparkline data={sparkData} color={accent} />}
       </div>
@@ -151,10 +151,10 @@ function StatCard({ label, value, sub, trend, icon: Icon, accent = '#6366f1', sp
 
 function Section({ title, icon: Icon, children, action }) {
   return (
-    <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+    <div className="bg-white border-2 border-ink rounded-2xl overflow-hidden shadow">
       <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
         <div className="flex items-center gap-2">
-          {Icon && <Icon className="w-4 h-4 text-neutral-400" />}
+          {Icon && <Icon className="w-4 h-4 text-neutral-500" />}
           <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
         </div>
         {action}
@@ -242,7 +242,7 @@ function EventsTab({ data }) {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-50">
+            <tbody className="divide-y divide-neutral-200">
               {rows.map((r, i) => (
                 <tr key={i} className="hover:bg-neutral-50 transition-colors">
                   <td className="py-2.5 pr-4">
@@ -261,12 +261,12 @@ function EventsTab({ data }) {
                   <td className="py-2.5 pr-4 font-semibold tabular-nums">{fmtNum(r.sessionCount)}</td>
                   <td className="py-2.5 pr-4 tabular-nums text-neutral-600">{fmtNum(r.uniqueVisitorCount)}</td>
                   <td className="py-2.5 pr-4 tabular-nums">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.checkedInCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'text-neutral-400'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.checkedInCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'text-neutral-500'}`}>
                       {fmtNum(r.checkedInCount)}
                     </span>
                   </td>
                   <td className="py-2.5 pr-4 tabular-nums">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.rsvpYesCount > 0 ? 'bg-blue-50 text-blue-700' : 'text-neutral-400'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.rsvpYesCount > 0 ? 'bg-blue-50 text-blue-700' : 'text-neutral-500'}`}>
                       {fmtNum(r.rsvpYesCount)}
                     </span>
                   </td>
@@ -292,7 +292,7 @@ function EventsTab({ data }) {
           ].map(({ label, desc }) => (
             <div key={label} className="bg-neutral-50 rounded-lg p-2.5">
               <p className="text-[10px] font-bold text-neutral-700 mb-0.5 uppercase tracking-wide">{label}</p>
-              <p className="text-[10px] text-neutral-400 leading-relaxed">{desc}</p>
+              <p className="text-[10px] text-neutral-500 leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
@@ -315,7 +315,7 @@ function EventsTab({ data }) {
                     </div>
                     <div className="h-2.5 bg-neutral-100 rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct(row.count, max)}%`, background: '#f97316' }} />
+                        style={{ width: `${pct(row.count, max)}%`, background: '#ffe14d' }} />
                     </div>
                   </div>
                 );
@@ -373,7 +373,7 @@ function SpamTab({ data, onRefresh }) {
           ['Medium-Risk IPs', ipHeatmap.filter(r => r.count >= 8 && r.count < 20).length, '#eab308'],
           ['Total Flagged IPs', ipHeatmap.length, '#6366f1'],
         ].map(([l, v, c]) => (
-          <div key={l} className="bg-white border border-neutral-200 rounded-2xl p-4 text-center">
+          <div key={l} className="bg-white border-2 border-ink rounded-2xl p-4 text-center shadow">
             <div className="text-2xl font-bold tabular-nums" style={{ color: c }}>{v}</div>
             <div className="text-xs text-neutral-500 mt-1">{l}</div>
           </div>
@@ -402,27 +402,27 @@ function SpamTab({ data, onRefresh }) {
                 const isExpanded = expandedVisitor === v.visitorId;
                 const piiData = v.pii || {};
                 return (
-                  <div key={i} className="border border-red-100 bg-red-50 rounded-xl overflow-hidden">
+                  <div key={i} className="border-2 border-red-600 bg-red-50 rounded-xl overflow-hidden">
                     <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => setExpandedVisitor(isExpanded ? null : v.visitorId)}>
                       <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <div>
-                          <p className="font-mono text-neutral-400 truncate">{v.visitorId?.slice(-12) || '—'}</p>
+                          <p className="font-mono text-neutral-500 truncate">{v.visitorId?.slice(-12) || '—'}</p>
                           <p className="font-medium text-neutral-800 truncate">{piiData.name || piiData.email || 'Unknown visitor'}</p>
                           {piiData.email && piiData.name && <p className="text-neutral-500 truncate">{piiData.email}</p>}
                         </div>
                         <div>
-                          <span className="px-2 py-0.5 rounded-full text-white text-xs font-bold" style={{ background: spamColor(spam) }}>
+                          <span className="px-2 py-0.5 rounded-full text-ink text-xs font-bold" style={{ background: spamColor(spam) }}>
                             {spam} — {spamLabel(spam)}
                           </span>
                           {v.adminFlagReason && <p className="text-neutral-500 text-[11px] mt-1 truncate">{v.adminFlagReason}</p>}
                         </div>
                         <div>
                           <p className="text-neutral-500">{v.ipCountry || '—'}{v.ipCity ? ` · ${v.ipCity}` : ''}</p>
-                          <p className="text-neutral-400 font-mono text-[10px] truncate">{v.ipHash?.slice(0, 16) || '—'}</p>
+                          <p className="text-neutral-500 font-mono text-[10px] truncate">{v.ipHash?.slice(0, 16) || '—'}</p>
                         </div>
                         <div>
                           <p className="text-neutral-500">{v.ts ? new Date(v.ts).toLocaleDateString() : '—'}</p>
-                          {v.linkedEventId && <p className="text-neutral-400 text-[10px] font-mono">Event: …{v.linkedEventId.slice(-6)}</p>}
+                          {v.linkedEventId && <p className="text-neutral-500 text-[10px] font-mono">Event: …{v.linkedEventId.slice(-6)}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -434,10 +434,10 @@ function SpamTab({ data, onRefresh }) {
                         <button
                           disabled={flagging === v.visitorId}
                           onClick={e => { e.stopPropagation(); handleFlag(v.visitorId, true); }}
-                          className="btn btn-secondary text-xs px-2 py-1 text-green-700">
+                          className="btn btn-secondary text-xs px-2 py-1 !text-green-700">
                           {flagging === v.visitorId ? '…' : 'Unflag'}
                         </button>
-                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />}
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-neutral-500" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />}
                       </div>
                     </div>
                     {isExpanded && (
@@ -479,7 +479,7 @@ function SpamTab({ data, onRefresh }) {
             ))}
           </div>
           {guestProfile.pii && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-4 grid grid-cols-3 gap-2 text-xs">
+            <div className="bg-amber-50 border-2 border-amber-600 rounded-xl p-3 mb-4 grid grid-cols-3 gap-2 text-xs">
               <span><b>Email:</b> {guestProfile.pii.email || '—'}</span>
               <span><b>Name:</b> {guestProfile.pii.name || '—'}</span>
               <span><b>Phone:</b> {guestProfile.pii.phone || '—'}</span>
@@ -487,7 +487,7 @@ function SpamTab({ data, onRefresh }) {
           )}
           <div className="space-y-2">
             {(guestProfile.allEvents ?? []).map((ev, i) => (
-              <div key={i} className="border border-neutral-100 rounded-xl p-3 text-xs">
+              <div key={i} className="border-2 border-ink rounded-xl p-3 text-xs shadow">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium text-neutral-800">{ev.eventDetails?.title || `Event …${ev.eventId?.slice(-6)}`}</span>
                   <span className="text-neutral-400">{ev.firstSeen ? new Date(ev.firstSeen).toLocaleDateString() : '—'}</span>
@@ -528,7 +528,7 @@ function SpamTab({ data, onRefresh }) {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-50">
+                <tbody className="divide-y divide-neutral-200">
                   {ipHeatmap.map((row, i) => {
                     const risk = row.count >= 50 ? 'high' : row.count >= 20 ? 'medium' : 'low';
                     const riskStyle = risk === 'high' ? 'bg-red-100 text-red-700' : risk === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-600';
@@ -617,13 +617,13 @@ export default function PlatformAnalyticsDashboard() {
           <div className="flex bg-neutral-100 rounded-xl p-0.5 gap-0.5">
             {WINDOWS.map(w => (
               <button key={w.v} onClick={() => setWin(w.v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${win === w.v ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${win === w.v ? 'bg-white shadow-sm text-neutral-900 border-2 border-ink rounded-lg font-bold' : 'text-neutral-500 hover:text-neutral-700'}`}>
                 {w.l}
               </button>
             ))}
           </div>
           <button onClick={load} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-600 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-600 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
@@ -637,14 +637,14 @@ export default function PlatformAnalyticsDashboard() {
         </div>
         {(data?.suspectedFakes?.length ?? 0) > 0 && (
           <button onClick={() => setTab('spam')}
-            className="flex items-center gap-1.5 text-xs text-red-600 font-semibold bg-red-50 px-3 py-1 rounded-full border border-red-100 hover:bg-red-100 transition-colors">
+            className="flex items-center gap-1.5 text-xs text-red-600 font-semibold bg-red-50 px-3 py-1 rounded-lg border-2 border-red-600 hover:bg-red-100 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Flag className="w-3 h-3" />
             {data.suspectedFakes.length} suspected visitor{data.suspectedFakes.length !== 1 ? 's' : ''} — view in Spam & Security
           </button>
         )}
         {(data?.ipHeatmap?.length ?? 0) > 0 && (
           <button onClick={() => setTab('spam')}
-            className="flex items-center gap-1.5 text-xs text-amber-700 font-semibold bg-amber-50 px-3 py-1 rounded-full border border-amber-100 hover:bg-amber-100 transition-colors">
+            className="flex items-center gap-1.5 text-xs text-amber-700 font-semibold bg-amber-50 px-3 py-1 rounded-lg border-2 border-amber-600 hover:bg-amber-100 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
             <Shield className="w-3 h-3" />
             {data.ipHeatmap.length} high-volume IP{data.ipHeatmap.length !== 1 ? 's' : ''} detected
           </button>
@@ -735,7 +735,7 @@ export default function PlatformAnalyticsDashboard() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-50">
+                <tbody className="divide-y divide-neutral-200">
                   {(data?.topPages ?? []).map((p, i) => {
                     const timeRow  = data?.avgTimeOnPage?.find(t => t.page === p.page);
                     const clickRow = data?.topClickPages?.find(c => c.page === p.page);
@@ -782,7 +782,7 @@ export default function PlatformAnalyticsDashboard() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-50">
+                <tbody className="divide-y divide-neutral-200">
                   {(data?.referrers ?? []).map((r, i) => {
                     const total = (data?.referrers ?? []).reduce((s, x) => s + x.count, 0) || 1;
                     return (
@@ -814,10 +814,10 @@ export default function PlatformAnalyticsDashboard() {
             {(data?.utmSources ?? []).length === 0
               ? <p className="text-xs text-neutral-400 text-center py-8">No UTM parameters detected yet</p>
               : (data.utmSources).map((u, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100 mb-2">
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-neutral-50 border-2 border-ink mb-2 shadow">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold text-neutral-800">{u.source}</div>
-                    <div className="text-[11px] text-neutral-400">{[u.medium, u.campaign].filter(Boolean).join(' · ') || 'No medium/campaign'}</div>
+                    <div className="text-[11px] text-neutral-500">{[u.medium, u.campaign].filter(Boolean).join(' · ') || 'No medium/campaign'}</div>
                   </div>
                   <span className="text-sm font-bold text-indigo-600 tabular-nums">{fmtNum(u.count)}</span>
                 </div>
@@ -862,10 +862,10 @@ export default function PlatformAnalyticsDashboard() {
                 const total = (data?.devices ?? []).reduce((s, x) => s + x.count, 0) || 1;
                 return (
                   <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50">
-                    <DevIcon className="w-4 h-4 text-neutral-400" />
+                    <DevIcon className="w-4 h-4 text-neutral-500" />
                     <div>
                       <div className="text-xs font-semibold capitalize text-neutral-700">{d.device}</div>
-                      <div className="text-[11px] text-neutral-400">{fmtNum(d.count)} · {pct(d.count, total)}%</div>
+                      <div className="text-[11px] text-neutral-500">{fmtNum(d.count)} · {pct(d.count, total)}%</div>
                     </div>
                   </div>
                 );
@@ -918,7 +918,7 @@ export default function PlatformAnalyticsDashboard() {
             ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-emerald-600">
                 <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-emerald-500" />
+                  <Zap className="w-5 h-5 text-emerald-700" />
                 </div>
                 <p className="text-sm font-semibold">No errors recorded</p>
                 <p className="text-xs text-neutral-400">The platform is running clean</p>
@@ -927,14 +927,14 @@ export default function PlatformAnalyticsDashboard() {
             : (data.recentErrors).map((err, i) => {
               const pl = err.payload || {};
               return (
-                <div key={i} className="p-3 rounded-xl border border-red-100 bg-red-50 mb-2">
+                <div key={i} className="p-3 rounded-xl border-2 border-red-600 bg-red-50 mb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-red-800 truncate">{pl.message || 'Unknown error'}</p>
-                      {pl.source && <p className="text-[11px] text-red-500 font-mono mt-0.5 truncate">{pl.source}{pl.line ? `:${pl.line}` : ''}{pl.col ? `:${pl.col}` : ''}</p>}
-                      <p className="text-[11px] text-neutral-400 mt-1">Page: {labelPage(err.page)} · {new Date(err.ts).toLocaleString()}</p>
+                      {pl.source && <p className="text-[11px] text-red-700 font-mono mt-0.5 truncate">{pl.source}{pl.line ? `:${pl.line}` : ''}{pl.col ? `:${pl.col}` : ''}</p>}
+                      <p className="text-[11px] text-neutral-500 mt-1">Page: {labelPage(err.page)} · {new Date(err.ts).toLocaleString()}</p>
                     </div>
-                    <span className="text-[10px] text-red-400 bg-red-100 px-2 py-0.5 rounded-full shrink-0">error</span>
+                    <span className="text-[10px] text-red-700 bg-red-100 px-2 py-0.5 rounded-full shrink-0">error</span>
                   </div>
                 </div>
               );

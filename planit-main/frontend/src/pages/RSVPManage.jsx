@@ -9,10 +9,10 @@ import { rsvpAPI } from '../services/api';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 
 const STATUS_COLORS = {
-  confirmed:  { bg: '#10b98122', border: '#10b98144', text: '#10b981', label: 'Confirmed' },
-  pending:    { bg: '#6366f122', border: '#6366f144', text: '#a5b4fc', label: 'Pending Approval' },
-  waitlisted: { bg: '#f59e0b22', border: '#f59e0b44', text: '#f59e0b', label: 'Waitlisted' },
-  declined:   { bg: '#ef444422', border: '#ef444444', text: '#ef4444', label: 'Declined' },
+  confirmed:  { bg: '#d6f7e8', border: '#10b98144', text: '#10b981', label: 'Confirmed' },
+  pending:    { bg: '#eceeff', border: '#6366f144', text: '#a5b4fc', label: 'Pending Approval' },
+  waitlisted: { bg: '#fff6c2', border: '#f59e0b44', text: '#f59e0b', label: 'Waitlisted' },
+  declined:   { bg: '#ffe1de', border: '#ef444444', text: '#ef4444', label: 'Declined' },
 };
 
 const RESPONSE_LABELS = { yes: 'Attending', maybe: 'Maybe', no: 'Not Attending' };
@@ -62,15 +62,15 @@ export default function RSVPManage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a12' }}>
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#ffffff' }}>
+        <div className="w-8 h-8 border-2 border-ink border-t-white/80 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#0a0a12', color: '#fff' }}>
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#ffffff', color: '#0d0e1c' }}>
         <div className="text-center space-y-3 max-w-sm">
           <AlertTriangle className="w-10 h-10 mx-auto opacity-40" />
           <p className="text-sm opacity-50">{error}</p>
@@ -92,10 +92,10 @@ export default function RSVPManage() {
     if (new Date() > cutoff) canEdit = false;
   }
 
-  const inputCls = "w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all bg-white/[0.06] border-white/10 focus:border-white/30 text-white placeholder-white/30";
+  const inputCls = "w-full px-4 py-3 rounded-xl text-sm border-2 outline-none transition-all bg-white/[0.06] border-ink focus:border-ink text-ink placeholder-white/30";
 
   return (
-    <div className="min-h-screen px-4 py-10" style={{ background: '#0a0a12', color: '#fff' }}>
+    <div className="min-h-screen px-4 py-10" style={{ background: '#ffffff', color: '#0d0e1c' }}>
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}
@@ -113,7 +113,7 @@ export default function RSVPManage() {
 
         {/* Event card */}
         {event && (
-          <div className="rounded-2xl p-4 space-y-2.5 bg-white/[0.04] border border-white/10">
+          <div className="rounded-2xl p-4 space-y-2.5 bg-white/[0.04] border-2 border-ink shadow">
             <h2 className="text-base font-bold">{event.title}</h2>
             {event.date && (
               <div className="flex items-center gap-2.5">
@@ -133,7 +133,7 @@ export default function RSVPManage() {
         )}
 
         {/* Submission detail */}
-        <div className="rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden">
+        <div className="rounded-2xl bg-white/[0.04] border-2 border-ink overflow-hidden shadow">
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
             <p className="text-xs font-bold uppercase tracking-widest opacity-40">RSVP Details</p>
             {canEdit && !editing && (
@@ -229,11 +229,11 @@ export default function RSVPManage() {
                 <div className="flex gap-2 pt-2">
                   <button onClick={save} disabled={saving}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
-                    style={{ background: accent, color: '#fff', opacity: saving ? 0.7 : 1 }}>
+                    style={{ background: accent, color: '#0d0e1c', opacity: saving ? 0.7 : 1 }}>
                     {saving ? 'Saving…' : 'Save Changes'}
                   </button>
                   <button onClick={() => setEditing(false)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80 border border-white/10">
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition">
                     Cancel
                   </button>
                 </div>
@@ -271,7 +271,7 @@ function Row({ label, value }) {
 function RespBtn({ active, onClick, icon, label, accent }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold transition-all"
+      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 text-xs font-semibold transition-all border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
       style={{
         borderColor: active ? accent : 'rgba(255,255,255,0.12)',
         background:  active ? `${accent}18` : 'transparent',

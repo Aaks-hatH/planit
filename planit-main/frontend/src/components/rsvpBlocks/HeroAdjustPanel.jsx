@@ -149,7 +149,7 @@ export default function HeroAdjustPanel({
         <ControlLabel hint="Desktop and mobile can each have their own image, zoom, and crop — handy since a banner that looks great on a phone (tall) can leave dead space or crop badly on a wide desktop screen, and vice versa. Upload a second image above ('Use a different image for desktop') if one photo doesn't work for both; otherwise adjustments here apply to whichever one is shared.">
           Editing for
         </ControlLabel>
-        <div className="flex rounded-full bg-white/5 p-0.5">
+        <div className="flex rounded-full bg-lav p-0.5">
           {Object.entries(DEVICE).map(([key, d]) => {
             const Icon = d.icon;
             const custom = resolve(key).hasCustomImage;
@@ -158,7 +158,7 @@ export default function HeroAdjustPanel({
                 key={key}
                 type="button"
                 onClick={() => setPrimary(key)}
-                className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full transition-colors ${primary === key ? 'bg-white/15 text-white' : 'opacity-50 hover:opacity-80'}`}
+                className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors ${primary === key ? 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}
               >
                 <Icon size={11} /> {d.label}
                 {custom && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Has its own image" />}
@@ -172,7 +172,7 @@ export default function HeroAdjustPanel({
       <div className="relative">
         <div
           ref={frameRef}
-          className={`relative w-full ${Primary.aspect} rounded-lg overflow-hidden border border-white/10 bg-black/40 cursor-crosshair select-none`}
+          className={`relative w-full ${Primary.aspect} rounded-lg overflow-hidden border-2 border-ink bg-lav cursor-crosshair select-none shadow`}
           onPointerDown={startDrag('image')}
         >
           {active.fit === 'contain' && (
@@ -181,7 +181,7 @@ export default function HeroAdjustPanel({
               alt=""
               aria-hidden="true"
               draggable={false}
-              className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50 pointer-events-none"
+              className="absolute inset-0 w-full h-full object-cover scale-125 opacity-50 pointer-events-none"
             />
           )}
           <img
@@ -195,7 +195,7 @@ export default function HeroAdjustPanel({
           <div
             role="button"
             aria-label="Drag to move the title"
-            className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-white bg-black/60 flex items-center justify-center text-[9px] font-semibold text-white cursor-move shadow"
+            className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full border-2 border-ink bg-lav flex items-center justify-center text-[9px] font-semibold text-ink cursor-move shadow"
             style={{ left: `${textX}%`, top: `${textY}%` }}
             onPointerDown={(e) => { e.stopPropagation(); startDrag('text')(e); }}
             title="Drag to move the title"
@@ -206,14 +206,14 @@ export default function HeroAdjustPanel({
 
         {/* floating live preview of the OTHER breakpoint — its own image/crop */}
         <div className="absolute -bottom-2.5 -right-2.5 w-[30%] min-w-[64px] max-w-[92px] z-10">
-          <div className={`relative w-full ${Secondary.aspect} rounded-md overflow-hidden border-2 border-[#0a0a12] shadow-lg ring-1 ring-white/15 bg-black/60`}>
+          <div className={`relative w-full ${Secondary.aspect} rounded-md overflow-hidden border-2 border-ink shadow-lg ring-1 ring-ink bg-lav`}>
             {secondary.fit === 'contain' && (
               <img
                 src={secondary.url}
                 alt=""
                 aria-hidden="true"
                 draggable={false}
-                className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50 pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-50 pointer-events-none"
               />
             )}
             <img
@@ -238,18 +238,18 @@ export default function HeroAdjustPanel({
         <ControlLabel hint="Cover fills the whole banner and crops whatever doesn't fit — good for wide photos. Full photo shows the entire image with no cropping (letterboxed) — use this for a poster, invite, or anything where the whole image matters, like a portrait-shaped graphic.">
           <span className="w-auto">Fit ({Primary.label})</span>
         </ControlLabel>
-        <div className="flex rounded-full bg-white/5 p-0.5">
+        <div className="flex rounded-full bg-lav p-0.5">
           <button
             type="button"
             onClick={() => setFit('cover')}
-            className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full transition-colors ${active.fit === 'cover' ? 'bg-white/15 text-white' : 'opacity-50 hover:opacity-80'}`}
+            className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors ${active.fit === 'cover' ? 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}
           >
             <Crop size={11} /> Cover
           </button>
           <button
             type="button"
             onClick={() => setFit('contain')}
-            className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full transition-colors ${active.fit === 'contain' ? 'bg-white/15 text-white' : 'opacity-50 hover:opacity-80'}`}
+            className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg transition-colors ${active.fit === 'contain' ? 'bg-lav text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}
           >
             <Maximize size={11} /> Full photo
           </button>
@@ -260,11 +260,11 @@ export default function HeroAdjustPanel({
         <ControlLabel hint="Scales the photo. Above 100% pushes a distracting edge (like a stray head or a wall outlet) out of frame; below 100% pulls back if it's already cropped too tight. Doesn't affect image quality on upload, only how much of it is visible.">
           <span className="w-auto">Zoom ({Primary.label})</span>
         </ControlLabel>
-        <button type="button" onClick={() => setZoom(active.zoom - 10)} className="p-1 rounded bg-white/5 hover:bg-white/10 shrink-0">
+        <button type="button" onClick={() => setZoom(active.zoom - 10)} className="p-1 rounded bg-lav hover:bg-lav shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <ZoomOut size={13} />
         </button>
         <input type="range" min={50} max={250} step={5} value={active.zoom} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1" />
-        <button type="button" onClick={() => setZoom(active.zoom + 10)} className="p-1 rounded bg-white/5 hover:bg-white/10 shrink-0">
+        <button type="button" onClick={() => setZoom(active.zoom + 10)} className="p-1 rounded bg-lav hover:bg-lav shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
           <ZoomIn size={13} />
         </button>
         <span className="text-[11px] opacity-50 w-9 text-right shrink-0">{active.zoom}%</span>
@@ -273,22 +273,22 @@ export default function HeroAdjustPanel({
       <div className="flex items-center gap-4">
         <div className="flex flex-col items-center gap-0.5">
           <ControlLabel hint="Moves which part of this device's photo is visible, without changing where the title sits on top of it.">Photo</ControlLabel>
-          <button type="button" onClick={() => nudgeImage(0, -5)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronUp size={13} /></button>
+          <button type="button" onClick={() => nudgeImage(0, -5)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronUp size={13} /></button>
           <div className="flex gap-0.5">
-            <button type="button" onClick={() => nudgeImage(-5, 0)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronLeft size={13} /></button>
-            <button type="button" onClick={() => nudgeImage(5, 0)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronRight size={13} /></button>
+            <button type="button" onClick={() => nudgeImage(-5, 0)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronLeft size={13} /></button>
+            <button type="button" onClick={() => nudgeImage(5, 0)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronRight size={13} /></button>
           </div>
-          <button type="button" onClick={() => nudgeImage(0, 5)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronDown size={13} /></button>
+          <button type="button" onClick={() => nudgeImage(0, 5)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronDown size={13} /></button>
         </div>
 
         <div className="flex flex-col items-center gap-0.5">
           <ControlLabel hint="Moves the title, date and location text — the photo underneath stays put, and this is shared by both screen sizes. Try a corner that isn't covering a face or focal point.">Title</ControlLabel>
-          <button type="button" onClick={() => nudgeText(0, -5)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronUp size={13} /></button>
+          <button type="button" onClick={() => nudgeText(0, -5)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronUp size={13} /></button>
           <div className="flex gap-0.5">
-            <button type="button" onClick={() => nudgeText(-5, 0)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronLeft size={13} /></button>
-            <button type="button" onClick={() => nudgeText(5, 0)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronRight size={13} /></button>
+            <button type="button" onClick={() => nudgeText(-5, 0)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronLeft size={13} /></button>
+            <button type="button" onClick={() => nudgeText(5, 0)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronRight size={13} /></button>
           </div>
-          <button type="button" onClick={() => nudgeText(0, 5)} className="p-1 rounded bg-white/5 hover:bg-white/10"><ChevronDown size={13} /></button>
+          <button type="button" onClick={() => nudgeText(0, 5)} className="p-1 rounded bg-lav hover:bg-lav border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"><ChevronDown size={13} /></button>
         </div>
 
         <button
@@ -298,7 +298,7 @@ export default function HeroAdjustPanel({
             imageZoomDesktop: undefined, imagePositionDesktop: undefined, imageFitDesktop: undefined,
             textPosition: undefined,
           })}
-          className="ml-auto self-start flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-white/5 hover:bg-white/10 opacity-70 hover:opacity-100"
+          className="ml-auto self-start flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-lav hover:bg-lav opacity-70 hover:opacity-100 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold"
         >
           <RotateCcw size={11} /> Reset both
         </button>

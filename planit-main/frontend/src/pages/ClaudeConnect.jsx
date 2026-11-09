@@ -77,14 +77,14 @@ export default function ClaudeConnect() {
       <div style={s.root}>
         <style>{keyframes}</style>
         <div style={{ ...s.successWrap, ...(mounted ? s.fadeIn : {}) }}>
-          <div style={{ ...s.successRing, background: 'rgba(239,68,68,0.1)' }}>
+          <div style={{ ...s.successRing, background: '#ffe1de' }}>
             <AlertCircle size={32} color="#ef4444" strokeWidth={2} />
           </div>
           <h1 style={s.successTitle}>Invalid link</h1>
           <p style={s.successBody}>
             This connection link is invalid or has already been used. Return to Claude and ask for a new link.
           </p>
-          <div style={{ ...s.successPill, background: 'rgba(239,68,68,0.07)', color: '#ef4444' }}>
+          <div style={{ ...s.successPill, background: '#ffe1de', color: '#ef4444' }}>
             <MessageSquare size={13} />
             <span>Type "Connect my PlanIt event" in Claude</span>
           </div>
@@ -353,7 +353,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'flex-start',
     padding: 'clamp(1.5rem, 4vw, 3rem) 1.25rem',
-    fontFamily: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+    fontFamily: "'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif",
     WebkitFontSmoothing: 'antialiased',
   },
 
@@ -377,8 +377,8 @@ const s = {
 
   // ── Hero panel
   hero: {
-    background: '#0f1117',
-    borderRadius: '1.25rem',
+    background: '#ffffff',
+    borderRadius: '12px',
     padding: 'clamp(1.75rem, 4vw, 2.5rem)',
     display: 'flex',
     flexDirection: 'column',
@@ -396,24 +396,24 @@ const s = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 7,
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: '#ffffff',
+    border: '2px solid #0d0e1c',
     borderRadius: 999,
     padding: '5px 12px',
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.55)',
+    color: '#5a5d70',
     width: 'fit-content',
   },
   badgeDot: {
     width: 6,
     height: 6,
     borderRadius: '50%',
-    background: '#10b981',
+    background: '#0c8a5b',
     display: 'inline-block',
-    boxShadow: '0 0 6px #10b981',
+    boxShadow: 'none',
   },
   heroTitle: {
     margin: 0,
@@ -421,16 +421,16 @@ const s = {
     fontWeight: 800,
     lineHeight: 1.1,
     letterSpacing: '-0.04em',
-    color: '#ffffff',
+    color: '#0d0e1c',
   },
   heroAccent: {
-    color: '#a78bfa',
+    color: '#2236ff',
   },
   heroCopy: {
     margin: 0,
     fontSize: '0.9375rem',
     lineHeight: 1.65,
-    color: 'rgba(255,255,255,0.5)',
+    color: '#5a5d70',
     maxWidth: '34ch',
   },
   featureList: {
@@ -447,12 +447,12 @@ const s = {
   featureIcon: {
     display: 'flex',
     alignItems: 'center',
-    color: 'rgba(255,255,255,0.35)',
+    color: '#5a5d70',
     flexShrink: 0,
   },
   featureLabel: {
     fontSize: '0.825rem',
-    color: 'rgba(255,255,255,0.45)',
+    color: '#5a5d70',
     fontWeight: 450,
   },
   heroFooterLink: {
@@ -460,7 +460,7 @@ const s = {
     alignItems: 'center',
     fontSize: '0.8125rem',
     fontWeight: 600,
-    color: 'rgba(255,255,255,0.35)',
+    color: '#5a5d70',
     textDecoration: 'none',
     marginTop: '2rem',
     transition: 'color 0.15s',
@@ -469,10 +469,10 @@ const s = {
   // ── Form card
   card: {
     background: '#ffffff',
-    border: '1px solid rgba(0,0,0,0.07)',
-    borderRadius: '1.25rem',
+    border: '2px solid #0d0e1c',
+    borderRadius: '12px',
     padding: 'clamp(1.75rem, 4vw, 2.25rem)',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+    boxShadow: '4px 4px 0 #0d0e1c',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -486,8 +486,8 @@ const s = {
     width: 40,
     height: 40,
     borderRadius: '0.625rem',
-    background: '#faf5ff',
-    border: '1px solid rgba(167,139,250,0.25)',
+    background: '#eceeff',
+    border: '2px solid #2236ff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -499,7 +499,7 @@ const s = {
     fontWeight: 700,
     letterSpacing: '0.09em',
     textTransform: 'uppercase',
-    color: '#a78bfa',
+    color: '#2236ff',
   },
   cardTitle: {
     margin: 0,
@@ -540,14 +540,14 @@ const s = {
   },
   inputWrap: {
     position: 'relative',
-    border: '1.5px solid #e5e7eb',
+    border: '2px solid #0d0e1c',
     borderRadius: '0.625rem',
     background: '#fafafa',
     transition: 'border-color 0.15s, box-shadow 0.15s',
   },
   inputFocused: {
     borderColor: '#a78bfa',
-    boxShadow: '0 0 0 3px rgba(167,139,250,0.12)',
+    boxShadow: '4px 4px 0 #0d0e1c',
     background: '#ffffff',
   },
   input: {
@@ -571,7 +571,7 @@ const s = {
     border: 'none',
     cursor: 'pointer',
     padding: 4,
-    color: '#9ca3af',
+    color: '#5a5d70',
     display: 'flex',
     alignItems: 'center',
     borderRadius: 4,
@@ -583,8 +583,8 @@ const s = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 8,
-    background: 'rgba(239,68,68,0.06)',
-    border: '1px solid rgba(239,68,68,0.2)',
+    background: '#ffe1de',
+    border: '2px solid #a82020',
     borderRadius: '0.5rem',
     padding: '0.625rem 0.875rem',
     fontSize: '0.8125rem',
@@ -598,9 +598,9 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    background: '#0f1117',
-    color: '#ffffff',
-    border: 'none',
+    background: '#ffffff',
+    color: '#0d0e1c',
+    border: '2px solid #0d0e1c',
     borderRadius: '0.625rem',
     padding: '0.75rem 1.25rem',
     fontSize: '0.9375rem',
@@ -609,17 +609,17 @@ const s = {
     cursor: 'pointer',
     marginTop: '0.25rem',
     transition: 'background 0.15s, transform 0.1s',
-    fontFamily: 'inherit',
+    fontFamily: 'inherit', boxShadow: '3px 3px 0 #0d0e1c',
   },
   submitDisabled: {
     background: '#d1d5db',
-    color: '#9ca3af',
+    color: '#5a5d70',
     cursor: 'not-allowed',
   },
   cardFooter: {
     margin: '1.25rem 0 0',
     fontSize: '0.75rem',
-    color: '#9ca3af',
+    color: '#5a5d70',
     textAlign: 'center',
     letterSpacing: '0.01em',
   },
@@ -627,12 +627,12 @@ const s = {
   // ── Success / error screens
   successWrap: {
     background: '#ffffff',
-    border: '1px solid rgba(0,0,0,0.07)',
-    borderRadius: '1.25rem',
+    border: '2px solid #0d0e1c',
+    borderRadius: '12px',
     padding: 'clamp(2rem, 5vw, 3rem)',
     maxWidth: 440,
     width: '100%',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+    boxShadow: '4px 4px 0 #0d0e1c',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -643,7 +643,7 @@ const s = {
     width: 64,
     height: 64,
     borderRadius: '50%',
-    background: 'rgba(16,185,129,0.1)',
+    background: '#d6f7e8',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -659,7 +659,7 @@ const s = {
     margin: 0,
     fontSize: '1rem',
     fontWeight: 600,
-    color: '#a78bfa',
+    color: '#2236ff',
   },
   successBody: {
     margin: 0,
@@ -672,7 +672,7 @@ const s = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    background: 'rgba(0,0,0,0.04)',
+    background: '#ffffff',
     borderRadius: 999,
     padding: '7px 14px',
     fontSize: '0.8125rem',
@@ -687,10 +687,10 @@ const s = {
     maxWidth: 960,
     marginTop: '1.25rem',
     background: '#ffffff',
-    border: '1px solid rgba(0,0,0,0.07)',
-    borderRadius: '1.25rem',
+    border: '2px solid #0d0e1c',
+    borderRadius: '12px',
     padding: 'clamp(1.5rem, 4vw, 2.25rem)',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+    boxShadow: '4px 4px 0 #0d0e1c',
   },
   setupTitle: {
     margin: '0 0 1.5rem',
@@ -698,7 +698,7 @@ const s = {
     fontWeight: 700,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    color: '#9ca3af',
+    color: '#5a5d70',
   },
   setupGrid: {
     display: 'grid',
@@ -744,7 +744,7 @@ const s = {
   },
   codeBlock: {
     background: '#f3f4f6',
-    border: '1px solid #e5e7eb',
+    border: '2px solid #0d0e1c',
     borderRadius: '0.375rem',
     padding: '6px 10px',
     fontSize: '0.8rem',
@@ -773,7 +773,7 @@ const s = {
   },
   prompt: {
     background: '#f8f7f5',
-    border: '1px solid #e5e7eb',
+    border: '2px solid #0d0e1c',
     borderRadius: '0.375rem',
     padding: '5px 10px',
     fontSize: '0.75rem',
@@ -782,7 +782,7 @@ const s = {
   },
   inlineCode: {
     background: '#f3f4f6',
-    border: '1px solid #e5e7eb',
+    border: '2px solid #0d0e1c',
     borderRadius: '0.25rem',
     padding: '1px 5px',
     fontSize: '0.8em',
@@ -790,16 +790,16 @@ const s = {
     color: '#111827',
   },
   link: {
-    color: '#a78bfa',
+    color: '#2236ff',
     textDecoration: 'none',
     fontWeight: 600,
   },
   setupNote: {
     margin: '1.5rem 0 0',
     paddingTop: '1rem',
-    borderTop: '1px solid #f3f4f6',
+    borderTop: '1px solid #d9dbe8',
     fontSize: '0.75rem',
-    color: '#9ca3af',
+    color: '#5a5d70',
     lineHeight: 1.6,
   },
 };
