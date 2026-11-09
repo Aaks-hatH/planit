@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import '../styles/piColor.css';
 import {
  Settings, X, Users, MessageSquare, BarChart3, FileText,
  Calendar, Save, Lock, Globe, Clock, CheckCircle, AlertTriangle,
@@ -288,16 +289,16 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  onClick={onClose}
  >
  <div
- className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] max-h-[740px] flex flex-col overflow-hidden"
+ className="pi-tint bg-white rounded-2xl border-2 border-ink shadow-2xl w-full max-w-4xl h-[85vh] max-h-[740px] flex flex-col overflow-hidden"
  onClick={e => e.stopPropagation()}
  >
  {/* Header */}
- <div className="flex items-center justify-between px-7 py-5 border-b border-neutral-100 flex-shrink-0">
- <div className="flex items-center gap-2.5">
- <Settings className="w-5 h-5 text-neutral-700" />
- <h2 className="text-lg font-semibold text-neutral-900">Event Settings</h2>
- </div>
- <button onClick={onClose} className="btn btn-ghost p-2">
+ <div className="flex items-center justify-between px-7 py-5 border-b-2 border-ink bg-ac flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Settings className="w-5 h-5 text-hl" />
+            <h2 className="text-lg font-semibold text-white">Event Settings</h2>
+          </div>
+          <button onClick={onClose} className="btn btn-ghost p-2 !text-white hover:!bg-white/20 hover:!text-white">
  <X className="w-4 h-4" />
  </button>
  </div>
@@ -306,7 +307,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className="flex flex-1 min-h-0">
 
  {/* Sidebar nav */}
- <div className="w-52 flex-shrink-0 border-r border-neutral-100 bg-neutral-50/70 overflow-y-auto py-4 px-3 space-y-1">
+ <div className="w-52 flex-shrink-0 border-r-2 border-ink bg-lav overflow-y-auto py-4 px-3 space-y-1">
  {[
  { id: 'general', label: 'General', icon: Calendar },
  { id: 'features', label: 'Features', icon: Sliders },
@@ -326,8 +327,8 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
  active
  ? 'bg-hl text-ink shadow-sm border-2 border-ink rounded-lg font-bold'
- : 'text-neutral-600 hover:bg-neutral-100'
- }`}
+ : 'text-neutral-700 hover:bg-white'
+                }`}
  >
  <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-ink' : 'text-neutral-500'}`} />
  <span className="flex-1 text-left truncate">{tab.label}</span>
