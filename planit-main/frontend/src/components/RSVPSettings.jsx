@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import '../styles/piColor.css';
 import {
   Settings, Eye, Shield, Mail, Users, Palette, Type,
   Calendar, Lock, Plus, Trash2, GripVertical, ChevronDown,
@@ -36,10 +37,10 @@ function Section({ title, icon: Icon, children, defaultOpen = false, accent }) {
   return (
     <div className="rounded-xl border-2 border-ink overflow-hidden shadow">
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors text-left border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
+        className="w-full flex items-center justify-between px-4 py-3.5 bg-lav hover:bg-hl transition-colors text-left border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold">
         <div className="flex items-center gap-2.5">
-          {Icon && <Icon className="w-4 h-4 text-neutral-500" />}
-          <span className="text-sm font-semibold text-neutral-700">{title}</span>
+          {Icon && <Icon className="w-4 h-4 text-ac" />}
+          <span className="text-sm font-bold text-ink">{title}</span>
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
       </button>
@@ -336,7 +337,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="pi-tint space-y-4">
 
       {/* RSVP link & enable */}
       <div className="p-4 rounded-xl border-2 border-ink bg-neutral-50 space-y-3 shadow">
@@ -382,7 +383,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
         {TABS.map(tab => (
           <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-indigo-50 text-indigo-700 border-2 border-blue-600 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'}`}>
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeTab === tab.id ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100'}`}>
             <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
           </button>
