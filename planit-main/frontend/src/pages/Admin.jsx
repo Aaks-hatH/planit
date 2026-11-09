@@ -47,6 +47,7 @@ import toast from 'react-hot-toast';
 import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
 import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';
+import '../styles/adminDark.css';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (date) => {
@@ -11183,7 +11184,7 @@ export default function Admin() {
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
     <DemoContext.Provider value={isDemo}>
-    <div className={`min-h-screen bg-neutral-100 flex ${adminTheme === 'dark' ? 'admin-dark' : ''}`}>
+    <div className={`admin-root min-h-screen bg-neutral-100 flex ${adminTheme === 'dark' ? 'admin-dark' : 'admin-light'}`}>
 
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
