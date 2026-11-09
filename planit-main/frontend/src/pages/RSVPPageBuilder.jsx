@@ -13,6 +13,7 @@
  * public page uses.
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import '../styles/piColor.css';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -53,7 +54,7 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
     <div
       ref={sortable.setNodeRef}
       style={style}
-      className={`rounded-xl border-2 border-ink ${isFixed ? 'border-ink bg-white/[0.04]' : 'border-ink bg-white/[0.02]'} ${sortable.isDragging ? 'opacity-50' : ''}`}
+      className={`rounded-xl border-2 border-ink ${isFixed ? 'border-ink bg-acs' : 'border-ink bg-white'} ${sortable.isDragging ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center gap-2 px-3 py-2.5">
         {!isFixed && (
@@ -71,7 +72,7 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
                 key={v}
                 type="button"
                 onClick={() => onChangeLayout(v)}
-                className={`px-2 py-0.5 rounded-lg ${section.layout === v ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}
+                className={`px-2 py-0.5 rounded-lg ${section.layout === v ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}
               >
                 {v}
               </button>
@@ -155,9 +156,9 @@ function SectionCard({ section, isFixed, expanded, onToggleExpand, onChangeLayou
 
 function SaveIndicator({ state }) {
   if (state === 'saving') return <span className="flex items-center gap-1.5 text-xs opacity-60"><Loader2 size={12} className="animate-spin" /> Saving…</span>;
-  if (state === 'saved') return <span className="flex items-center gap-1.5 text-xs text-emerald-700"><Check size={12} /> Saved</span>;
-  if (state === 'error') return <span className="flex items-center gap-1.5 text-xs text-red-700"><AlertCircle size={12} /> Couldn't save</span>;
-  return <span className="text-xs opacity-30">—</span>;
+  if (state === 'saved') return <span className="flex items-center gap-1.5 text-xs font-bold text-mn"><Check size={12} /> Saved</span>;
+  if (state === 'error') return <span className="flex items-center gap-1.5 text-xs font-bold text-hl"><AlertCircle size={12} /> Couldn't save</span>;
+  return <span className="text-xs text-white/50">—</span>;
 }
 
 export default function RSVPPageBuilder() {
@@ -363,22 +364,22 @@ export default function RSVPPageBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-ink flex flex-col">
+    <div className="pi-color min-h-screen text-ink flex flex-col">
       {/* header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-ink">
+      <div className="flex items-center gap-3 px-4 py-3 border-b-2 border-ink bg-ac text-white">
         <button onClick={() => navigate(-1)} className="opacity-70 hover:opacity-100"><ArrowLeft size={18} /></button>
         <div className="flex-1">
           <p className="text-sm font-semibold">{event?.title || 'RSVP Page Builder'}</p>
         </div>
         <SaveIndicator state={saveState} />
-        <div className="flex rounded-full bg-lav p-0.5">
-          <button onClick={() => setActiveTab('design')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'design' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}>Design</button>
-          <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'settings' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50 hover:opacity-80'}`}>Settings</button>
+        <div className="flex rounded-full bg-white/20 p-0.5">
+          <button onClick={() => setActiveTab('design')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'design' ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-white/80 hover:text-white'}`}>Design</button>
+          <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${activeTab === 'settings' ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'text-white/80 hover:text-white'}`}>Settings</button>
         </div>
         {activeTab === 'design' && (
-          <div className="flex rounded-full bg-lav p-0.5">
-            <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-lg ${viewMode === 'desktop' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Monitor size={14} /></button>
-            <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-lg ${viewMode === 'mobile' ? 'bg-lav border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Smartphone size={14} /></button>
+          <div className="flex rounded-full bg-white/20 p-0.5">
+            <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-lg ${viewMode === 'desktop' ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Monitor size={14} /></button>
+            <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-lg ${viewMode === 'mobile' ? 'bg-hl text-ink border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'opacity-50'}`}><Smartphone size={14} /></button>
           </div>
         )}
         <a href={`/rsvp/${event?.subdomain || eventId}`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
@@ -389,15 +390,15 @@ export default function RSVPPageBuilder() {
       {activeTab === 'design' && (
       <div className="flex flex-1 overflow-hidden">
         {/* left rail */}
-        <div className="w-[380px] shrink-0 border-r border-ink overflow-y-auto p-4 flex flex-col gap-3">
+        <div className="w-[380px] shrink-0 border-r-2 border-ink bg-lav overflow-y-auto p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs opacity-60">Accent</span>
+            <span className="text-xs font-bold text-ink">Accent</span>
             {PRESET_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => updateConfig((prev) => ({ ...prev, accentColor: c }))}
                 className="w-5 h-5 rounded-full border-2"
-                style={{ background: c, borderColor: config.accentColor === c ? '#fff' : 'transparent' }}
+                style={{ background: c, borderColor: config.accentColor === c ? '#0d0e1c' : 'rgba(13,14,28,.25)' }}
               />
             ))}
           </div>
