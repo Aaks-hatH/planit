@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import '../styles/piColor.css';
 import {
   Users, Check, X, Clock, Search, Filter, Download,
   ChevronDown, Star, Trash2, UserCheck,
@@ -25,15 +26,20 @@ const RESPONSE_META = {
 // badges below (STATUS_META), so "Attending" up top is visibly the same
 // color language as the "Confirmed" pill on each row — one system, not two
 // disconnected components stacked on top of each other.
+// Each stat gets its own brand fill (keyed off the status dot) so the row reads as colour-coded tiles.
+const CHIP_FILL = {
+  'bg-emerald-500': 'bg-mn', 'bg-amber-500': 'bg-hl', 'bg-indigo-500': 'bg-lav', 'bg-amber-400': 'bg-acs',
+  'bg-red-400': 'bg-pk', 'bg-neutral-700': 'bg-white', 'bg-amber-300': 'bg-hl',
+};
 function StatChip({ label, value, sub, dot, text }) {
   return (
-    <div className="flex-1 min-w-[110px] bg-white border-2 border-ink rounded-xl px-3.5 py-3 shadow">
+    <div className={`flex-1 min-w-[110px] ${CHIP_FILL[dot] || 'bg-white'} border-2 border-ink rounded-xl px-3.5 py-3 shadow`}>
       <div className="flex items-center gap-1.5 mb-1">
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
-        <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide truncate">{label}</p>
+        <p className="text-[11px] font-bold text-ink/70 uppercase tracking-wide truncate">{label}</p>
       </div>
-      <p className={`text-2xl font-black leading-none ${text || 'text-neutral-900'}`}>{value ?? '—'}</p>
-      {sub && <p className="text-[11px] text-neutral-500 mt-1">{sub}</p>}
+      <p className="text-2xl font-black leading-none text-ink">{value ?? '—'}</p>
+      {sub && <p className="text-[11px] text-ink/70 mt-1">{sub}</p>}
     </div>
   );
 }
