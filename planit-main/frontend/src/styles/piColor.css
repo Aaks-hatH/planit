@@ -1,0 +1,45 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * piColor.css — brings the Home page palette to the app screens
+ *
+ * The restyle left the event space, table service, RSVP screens and settings on
+ * white cards over a white page, so nothing had colour. This layer is opt-in:
+ *   .pi-color  page / screen root  → lavender dot-grid page + tinted chips
+ *   .pi-tint   modals and panels   → tinted chips only (keeps the white body)
+ * It only recolours Tailwind's pale "-50 / -100" tint classes and neutral wells,
+ * so text colours and hover states in the components are untouched.
+ * Palette: --ac #2236ff, --hl #ffe14d, --lav #eceeff, --pk #ff7ac6, --mn #6ff0c0.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.pi-color {
+  background-color: #eceeff;
+  background-image: radial-gradient(rgba(34, 54, 255, .13) 1.4px, transparent 1.4px);
+  background-size: 24px 24px;
+  color: #0d0e1c;
+}
+
+/* neutral wells inside cards: lavender instead of near-white */
+:is(.pi-color, .pi-tint) .bg-neutral-50  { background-color: #e4e7ff; }
+:is(.pi-color, .pi-tint) .bg-neutral-100 { background-color: #dfe3ff; }
+:is(.pi-color, .pi-tint) .bg-lav         { background-color: #dfe3ff; }
+
+/* status chips: saturated pastels, so green / yellow / blue / pink / red read at a glance */
+:is(.pi-color, .pi-tint) :is(.bg-emerald-50, .bg-green-50, .bg-teal-50)                         { background-color: #bff0da; }
+:is(.pi-color, .pi-tint) :is(.bg-emerald-100, .bg-green-100, .bg-teal-100)                      { background-color: #93e3c0; }
+:is(.pi-color, .pi-tint) :is(.bg-amber-50, .bg-yellow-50, .bg-orange-50)                        { background-color: #fff0a0; }
+:is(.pi-color, .pi-tint) :is(.bg-amber-100, .bg-yellow-100, .bg-orange-100)                     { background-color: #ffe14d; }
+:is(.pi-color, .pi-tint) :is(.bg-indigo-50, .bg-violet-50, .bg-blue-50, .bg-purple-50, .bg-sky-50, .bg-cyan-50) { background-color: #cdd3ff; }
+:is(.pi-color, .pi-tint) :is(.bg-indigo-100, .bg-violet-100, .bg-blue-100, .bg-purple-100, .bg-sky-100, .bg-cyan-100) { background-color: #b3bbff; }
+:is(.pi-color, .pi-tint) :is(.bg-pink-50, .bg-rose-50, .bg-fuchsia-50)                          { background-color: #ffc9e8; }
+:is(.pi-color, .pi-tint) :is(.bg-pink-100, .bg-rose-100)                                         { background-color: #ffa8d8; }
+:is(.pi-color, .pi-tint) .bg-red-50                                                              { background-color: #ffd0cc; }
+:is(.pi-color, .pi-tint) .bg-red-100                                                             { background-color: #ffb3ad; }
+
+/* dark text on the saturated fills so pale tinted text colours never wash out */
+:is(.pi-color, .pi-tint) .text-emerald-600, :is(.pi-color, .pi-tint) .text-green-600 { color: #0a7149; }
+:is(.pi-color, .pi-tint) .text-amber-500,   :is(.pi-color, .pi-tint) .text-amber-600 { color: #6e5400; }
+:is(.pi-color, .pi-tint) .text-red-400,     :is(.pi-color, .pi-tint) .text-red-500   { color: #b42323; }
+:is(.pi-color, .pi-tint) .text-indigo-600,  :is(.pi-color, .pi-tint) .text-violet-600 { color: #1a2ad1; }
+
+/* scrollbar track matches the page */
+.pi-color ::-webkit-scrollbar-track { background: #dfe3ff; }
+.pi-color ::-webkit-scrollbar-thumb { border-color: #dfe3ff; }
