@@ -7,6 +7,7 @@ const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
 const { meshAuth, meshGet } = require('./mesh');
+const { startUptimeRollup, getDayRows } = require('./uptimeRollup'); // 1 doc per service per day instead of 1,440 raw checks
 
 function ts() { return new Date().toISOString(); }
 
@@ -222,16 +223,14 @@ function getLatencyPercentiles(name) {
 async function computeSLO() {
   const since  = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  // One aggregation pipeline — much faster than loading every doc
-  const rows = await UptimeCheck.aggregate([
-    { $match: { createdAt: { $gte: since } } },
-    { $group: {
-        _id:    '$service',
-        total:  { $sum: 1 },
-        upCount:{ $sum: { $cond: [{ $eq: ['$status','up'] }, 1, 0] } },
-      }
-    },
-  ]);
+  // Per-day rows = raw checks (recent days) + rolled-up UptimeDaily docs (older days); sum them per service
+  const dayRows = await getDayRows(UptimeCheck, since);
+  const sums = {};
+  dayRows.forEach(d => {
+    const a = sums[d.service] || (sums[d.service] = { _id: d.service, total: 0, upCount: 0 });
+    a.total += d.total; a.upCount += d.up;
+  });
+  const rows = Object.values(sums);
 
   const result = {};
   rows.forEach(r => {
@@ -266,19 +265,9 @@ async function computeSLO() {
 async function computeUptimeHistory() {
   const since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
 
-  const rows = await UptimeCheck.aggregate([
-    { $match: { createdAt: { $gte: since } } },
-    { $group: {
-        _id: {
-          service: '$service',
-          // yyyy-mm-dd key using date parts (avoids string parsing)
-          day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-        },
-        total:   { $sum: 1 },
-        upCount: { $sum: { $cond: [{ $eq: ['$status','up'] }, 1, 0] } },
-      }
-    },
-  ]);
+  // raw checks (recent days) + rolled-up UptimeDaily docs (older days), one row per service per UTC day
+  const rows = (await getDayRows(UptimeCheck, since))
+    .map(d => ({ _id: { service: d.service, day: d.day }, total: d.total, upCount: d.up }));
 
   // Build day list (last 15 days oldest-first)
   const days = [];
@@ -968,6 +957,9 @@ app.post('/watchdog/test-ntfy', async (req, res) => {
 
 async function boot() {
   await ensureDbConnected();
+
+  // Compact old raw uptime checks into one UptimeDaily doc per service per day (keeps MongoDB small)
+  startUptimeRollup(UptimeCheck);
 
   app.listen(PORT, () => {
     console.log(`[${ts()}] Watchdog HTTP -> http://0.0.0.0:${PORT}`);
