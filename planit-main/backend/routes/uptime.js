@@ -10,6 +10,7 @@ const Incident       = require('../models/Incident');
 const UptimeReport   = require('../models/UptimeReport');
 const UptimeCheck    = require('../models/UptimeCheck');
 const UptimeOverride = require('../models/UptimeOverride');
+const { getDayRows, distinctServices, fixDailyDown, avgOf } = require('../utils/uptimeDaily'); // old days live in UptimeDaily (1 doc/day)
 const { verifyAdmin, requirePermission } = require('../middleware/auth');
 const canIncidents = requirePermission('canManageIncidents');
 
@@ -166,13 +167,9 @@ router.delete('/admin/incidents/:id',  verifyAdmin, canIncidents, async (req, re
 
 async function buildServerHistory(serverName, days) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const rows  = await UptimeCheck.aggregate([
-    { $match: { service: serverName, createdAt: { $gte: since } } },
-    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, total: {$sum:1}, upCount: {$sum:{$cond:[{$eq:['$status','up']},1,0]}}, avgLatency: {$avg:'$latencyMs'} } },
-    { $sort: { _id: 1 } },
-  ]);
+  const rows  = await getDayRows(since, { service: serverName }); // raw recent days + rolled-up older days
   const byDay = {};
-  rows.forEach(r => { byDay[r._id] = r; });
+  rows.forEach(r => { byDay[r.day] = { total: r.total, upCount: r.up, avgLatency: avgOf(r) }; });
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
@@ -227,7 +224,7 @@ router.get('/admin/server-health-history', verifyAdmin, canIncidents, async (req
     const checkSince = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // Server names from UptimeCheck (real watchdog pings)
-    const serverNames = await UptimeCheck.distinct('service', { createdAt: { $gte: checkSince } });
+    const serverNames = await distinctServices(checkSince);
 
     // All 40+ logical service keys (always show all, even if no incidents)
     const incidentKeys = await Incident.distinct('affectedServices', { createdAt: { $gte: checkSince } });
@@ -287,8 +284,10 @@ router.post('/admin/uptime-override', verifyAdmin, canIncidents, async (req, res
     }
 
     const result = await UptimeCheck.updateMany(filter, { $set: { status: 'up', error: null } });
-    console.log(`[uptime] Fixed ${result.modifiedCount} down checks permanently: service="${service}"`);
-    res.json({ success: true, service, fixed: result.modifiedCount });
+    // also fix days that were already rolled up into UptimeDaily
+    const dailyFixed = await fixDailyDown({ service, fromDay: startDate ? new Date(startDate).toISOString().slice(0, 10) : undefined, toDay: endDate ? new Date(endDate).toISOString().slice(0, 10) : undefined });
+    console.log(`[uptime] Fixed ${result.modifiedCount} down checks + ${dailyFixed} rolled-up days permanently: service="${service}"`);
+    res.json({ success: true, service, fixed: result.modifiedCount, dailyFixed });
   } catch (err) { res.status(500).json({ error: 'Failed to fix uptime records' }); }
 });
 
@@ -330,6 +329,7 @@ router.post('/admin/override-all-uptime', verifyAdmin, canIncidents, async (req,
         { $set: { status: 'up', error: null } }
       );
       totalFixed = result.modifiedCount;
+      totalFixed += await fixDailyDown({ service: affectedSvcs }); // rolled-up days (counted per day-record)
     }
 
     console.log(`[uptime] Fix-all: ${activeIncidents.length} incidents resolved, ${totalFixed} down checks fixed across ${affectedSvcs.length} services`);
@@ -360,8 +360,10 @@ router.patch('/admin/server-health-history/:service/:date', verifyAdmin, canInci
       { $set: { status: 'up', error: null } }
     );
 
-    console.log(`[uptime] Fixed ${result.modifiedCount} down checks permanently: ${service} / ${normalizedDate}`);
-    res.json({ success: true, service, date: normalizedDate, fixed: result.modifiedCount });
+    const dailyFixed = await fixDailyDown({ service, fromDay: normalizedDate, toDay: normalizedDate });
+
+    console.log(`[uptime] Fixed ${result.modifiedCount} down checks + ${dailyFixed} rolled-up day(s) permanently: ${service} / ${normalizedDate}`);
+    res.json({ success: true, service, date: normalizedDate, fixed: result.modifiedCount, dailyFixed });
   } catch (err) { res.status(500).json({ error: 'Failed to fix uptime records' }); }
 });
 
@@ -411,20 +413,26 @@ router.get('/admin/live-history', verifyAdmin, canIncidents, async (req, res) =>
       buckets.push({ key, ts: t, label: labelFn(key) });
     }
 
-    // Aggregate UptimeCheck by bucket per service
-    const rows = await UptimeCheck.aggregate([
-      { $match: { createdAt: { $gte: since } } },
-      { $group: {
-          _id: {
-            service: '$service',
-            bucket:  { $dateToString: { format: groupFmt, date: '$createdAt', timezone: 'UTC' } },
-          },
-          total:      { $sum: 1 },
-          upCount:    { $sum: { $cond: [{ $eq: ['$status', 'up'] }, 1, 0] } },
-          avgLatency: { $avg: '$latencyMs' },
-        }
-      },
-    ]);
+    // Aggregate UptimeCheck by bucket per service. The 1h / 24h windows only need recent raw checks;
+    // the day-based 7d / 15d windows also read the rolled-up UptimeDaily docs (older days have no raw checks left).
+    let rows;
+    if (win === '1h' || win === '24h') {
+      rows = await UptimeCheck.aggregate([
+        { $match: { createdAt: { $gte: since } } },
+        { $group: {
+            _id: {
+              service: '$service',
+              bucket:  { $dateToString: { format: groupFmt, date: '$createdAt', timezone: 'UTC' } },
+            },
+            total:      { $sum: 1 },
+            upCount:    { $sum: { $cond: [{ $eq: ['$status', 'up'] }, 1, 0] } },
+            avgLatency: { $avg: '$latencyMs' },
+          }
+        },
+      ]);
+    } else {
+      rows = (await getDayRows(since)).map(r => ({ _id: { service: r.service, bucket: r.day }, total: r.total, upCount: r.up, avgLatency: avgOf(r) }));
+    }
 
     // Re-index by service → bucket
     const bySvc = {};
@@ -474,7 +482,7 @@ router.get('/server-history', async (req, res) => {
     const days  = 15;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const serverNames    = await UptimeCheck.distinct('service', { createdAt: { $gte: since } });
+    const serverNames    = await distinctServices(since);
     const overrideMap    = await loadOverrides(serverNames);
 
     const services = {};
