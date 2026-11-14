@@ -676,13 +676,36 @@ process.on('SIGINT',  () => { server.close(() => { mongoose.connection.close(fal
 // immediately restarts a clean instance. The 200ms delay is enough for the
 // log line to reach Render's log collector on the current write but short
 // enough that Render restarts before the health-check timeout fires.
+// Unhandled rejections are logged but no longer kill the process on their own.
+// One stray failed promise (a timed-out DB call, a router hiccup) used to take
+// the whole instance down and Render needed minutes to bring it back (the
+// 502/503 window the watchdog sees). If they pile up, that points to real
+// trouble, so exit then.
+const _rejTimes = [];
 process.on('unhandledRejection', err => {
-  console.error('[PlanIt] FATAL — Unhandled Rejection (process will exit):', err?.stack || err);
-  setTimeout(() => process.exit(1), 200);
+  console.error('[PlanIt] Unhandled Rejection (kept alive):', err?.stack || err);
+  const now = Date.now();
+  _rejTimes.push(now);
+  while (_rejTimes.length && now - _rejTimes[0] > 60_000) _rejTimes.shift();
+  if (_rejTimes.length >= 10) {
+    console.error('[PlanIt] FATAL — 10+ unhandled rejections in 60s (process will exit)');
+    setTimeout(() => process.exit(1), 200);
+  }
 });
 process.on('uncaughtException', err => {
   console.error('[PlanIt] FATAL — Uncaught Exception (process will exit):', err?.stack || err);
   setTimeout(() => process.exit(1), 200);
 });
+
+// Memory trend in the logs: if Render is OOM-killing this instance, the last
+// [mem] lines before each restart will show rss climbing toward the limit.
+let _memTick = 0;
+setInterval(() => {
+  const m   = process.memoryUsage();
+  const rss = Math.round(m.rss / 1048576);
+  if (rss > 350 || ++_memTick % 5 === 0) {
+    console.log(`[mem] rss=${rss}MB heapUsed=${Math.round(m.heapUsed / 1048576)}MB heapTotal=${Math.round(m.heapTotal / 1048576)}MB`);
+  }
+}, 60_000).unref();
 
 module.exports = { app, server, io };
