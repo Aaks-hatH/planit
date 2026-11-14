@@ -2,7 +2,7 @@
 
 require('dotenv').config();
 
-const VERSION = '1.1.0'; // bump on every deploy — appears in all ntfy alerts
+const VERSION = '1.2.0'; // bump on every deploy — appears in all ntfy alerts
 const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
@@ -633,6 +633,13 @@ async function pingTarget(target) {
     });
     const ms = Date.now() - t0;
     if (pingResp.status === 429) {
+      if (s.isDown || s.consecutiveFailures > 0) {
+        // Mid-outage, a 429 is usually the host's edge answering for a
+        // restarting instance. It is not proof the app is healthy, so don't
+        // reset the failure count or close the incident.
+        console.warn(`[${ts()}] ${target.name} rate-limited (429) during failures — inconclusive, not counting as recovery`);
+        return;
+      }
       console.warn(`[${ts()}] ${target.name} rate-limited (429) — treating as UP`);
     }
 
