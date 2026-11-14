@@ -296,7 +296,7 @@ function startCleanupScheduler() {
       await cleanupUptimeData();
       await cleanupDeletedBlogPosts();
       await cleanupStaleWLLeads();
-    });
+    }).catch(e => console.error('[cleanup] daily job failed:', e.message));
   });
 
   // Email reminder job: runs hourly and checks which events start in ~REMINDER_HOURS
