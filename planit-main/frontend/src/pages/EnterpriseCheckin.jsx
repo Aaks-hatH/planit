@@ -230,17 +230,17 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
   }, [countdown, paused, onDone]);
 
   return (
-    <div className="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center justify-center p-8">
-      <div className="max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center overflow-y-auto p-3 sm:p-8">
+      <div className="max-w-3xl w-full my-auto bg-white rounded-lg overflow-hidden shadow-2xl">
         {/* Green status bar */}
         <div className="h-3 bg-emerald-600" />
         
         {/* Main content */}
-        <div className="p-12 text-center">
+        <div className="p-6 sm:p-12 text-center">
           {/* Checkmark circle */}
           <div className="mb-8">
-            <div className="w-32 h-32 mx-auto rounded-full border-8 border-emerald-600 flex items-center justify-center">
-              <CheckCircle className="w-20 h-20 text-emerald-600" strokeWidth={3} />
+            <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full border-[6px] sm:border-8 border-emerald-600 flex items-center justify-center">
+              <CheckCircle className="w-14 h-14 sm:w-20 sm:h-20 text-emerald-600" strokeWidth={3} />
             </div>
           </div>
           
@@ -249,10 +249,10 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
             <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mb-3">
                Pass Accepted
             </p>
-            <h1 className="text-6xl font-bold text-neutral-900 mb-4">
+            <h1 className="text-4xl sm:text-6xl font-bold text-neutral-900 mb-4">
               ADMITTED
             </h1>
-            <p className="text-3xl font-semibold text-neutral-700">
+            <p className="text-2xl sm:text-3xl font-semibold text-neutral-700 break-words">
               {guest.guestName}
             </p>
             {guest.guestRole && guest.guestRole !== 'GUEST' && (
@@ -263,7 +263,7 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
 
             {/* ── Table assignment callout ── */}
             {tableInfo && (
-              <div className="mt-6 inline-flex items-center gap-3 px-5 py-3 bg-emerald-50 border-2 border-emerald-300 rounded-xl">
+              <div className="mt-6 inline-flex flex-wrap justify-center max-w-full items-center gap-3 px-4 sm:px-5 py-3 bg-emerald-50 border-2 border-emerald-300 rounded-xl">
                 <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                 <div className="text-left">
                   <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Table Assignment</p>
@@ -283,7 +283,7 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
           
           {/* Passenger details */}
           <div className="border-t border-neutral-200 pt-8">
-            <div className="flex justify-center gap-16 text-lg">
+            <div className="flex justify-center gap-10 sm:gap-16 text-lg">
               <div>
                 <p className="text-neutral-500 font-medium mb-1">Adults</p>
                 <p className="text-4xl font-bold text-neutral-900">{guest.adults}</p>
@@ -299,24 +299,24 @@ function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
         </div>
         
         {/* Footer */}
-        <div className="bg-neutral-50 px-12 py-6 border-t border-neutral-200 flex items-center justify-between">
+        <div className="bg-neutral-50 px-5 sm:px-12 py-4 sm:py-6 border-t border-neutral-200 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <p className="text-sm text-neutral-500">
             {paused ? 'Screen paused — tap Done when ready' : `Auto-closing in ${countdown}s...`}
           </p>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-neutral-400 font-medium tracking-wide">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline text-xs text-neutral-400 font-medium tracking-wide">
               Powered by <span className="font-black text-neutral-600">Planit</span>
             </span>
-            <div className="w-px h-4 bg-neutral-200" />
+            <div className="hidden sm:block w-px h-4 bg-neutral-200" />
             <button
               onClick={() => setPaused(v => !v)}
-              className="px-4 py-2 text-sm font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-all"
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-sm font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-all"
             >
               {paused ? 'Resume' : 'Keep Open'}
             </button>
             <button
               onClick={onDone}
-              className="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"
             >
               Done
             </button>
@@ -348,21 +348,21 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
   }, [details?.severity]);
 
   return (
-    <div className={`fixed inset-0 ${config.bg} z-50 flex flex-col items-center justify-center p-8`}>
-      <div className="max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-2xl">
+    <div className={`fixed inset-0 ${config.bg} z-50 flex flex-col items-center overflow-y-auto p-3 sm:p-8`}>
+      <div className="max-w-3xl w-full my-auto bg-white rounded-lg overflow-hidden shadow-2xl">
         {/* Status bar */}
         <div className={`h-3 ${config.bg}`} />
         
         {/* Main content */}
-        <div className="p-12">
+        <div className="p-6 sm:p-12">
           {/* Large X icon */}
           <div className="mb-8 text-center">
-            <div className={`w-32 h-32 mx-auto rounded-full border-8 ${
+            <div className={`w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full border-[6px] sm:border-8 ${
               details?.severity === 'critical' ? 'border-red-600' :
               details?.severity === 'high' ? 'border-orange-600' :
               'border-yellow-500'
             } flex items-center justify-center`}>
-              <IconComponent className={`w-20 h-20 ${
+              <IconComponent className={`w-14 h-14 sm:w-20 sm:h-20 ${
                 details?.severity === 'critical' ? 'text-red-600' :
                 details?.severity === 'high' ? 'text-orange-600' :
                 'text-yellow-500'
@@ -381,16 +381,16 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
                details?.severity === 'high' ? 'Entry Blocked' :
                'Verification Required'}
             </p>
-            <h1 className="text-5xl font-bold text-neutral-900 mb-6">
+            <h1 className="text-3xl sm:text-5xl font-bold text-neutral-900 mb-6 break-words">
               {config.text}
             </h1>
-            <p className="text-2xl font-semibold text-neutral-700 mb-8">
+            <p className="text-xl sm:text-2xl font-semibold text-neutral-700 mb-6 sm:mb-8 break-words">
               {message || details?.displayMessage || 'Access denied'}
             </p>
           </div>
           
           {/* BLOCK REASONS - CLEAR AND PROMINENT */}
-          <div className="bg-neutral-50 border-2 border-neutral-200 rounded-lg p-6 mb-8">
+          <div className="bg-neutral-50 border-2 border-neutral-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
             <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">
               Denial Information
             </p>
@@ -400,9 +400,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.blockedReason && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Reason</p>
-                    <p className="text-lg text-neutral-700">
+                    <p className="text-base sm:text-lg text-neutral-700 break-words">
                       {details.blockedReason.replace(/_/g, ' ').toUpperCase()}
                     </p>
                   </div>
@@ -413,9 +413,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.checkedInAt && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Previous Check-In</p>
-                    <p className="text-lg text-neutral-700">
+                    <p className="text-base sm:text-lg text-neutral-700 break-words">
                       {new Date(details.checkedInAt).toLocaleString()}
                     </p>
                     {details.checkedInBy && (
@@ -431,7 +431,7 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.message && details.message !== message && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Details</p>
                     <p className="text-neutral-700">{details.message}</p>
                   </div>
@@ -442,9 +442,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.currentCapacity !== undefined && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Capacity Status</p>
-                    <p className="text-lg text-neutral-700">
+                    <p className="text-base sm:text-lg text-neutral-700 break-words">
                       {details.currentCapacity} / {details.maxCapacity} attendees
                     </p>
                   </div>
@@ -455,9 +455,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.trustScore !== undefined && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Trust Score</p>
-                    <p className="text-lg text-neutral-700">
+                    <p className="text-base sm:text-lg text-neutral-700 break-words">
                       {details.trustScore} / {details.minimumRequired || 100}
                       {details.trustScore < (details.minimumRequired || 50) && 
                         <span className="text-red-600 ml-2">(Below Minimum)</span>
@@ -471,9 +471,9 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
               {details?.lockdownReason && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-neutral-900 mb-1">Lockdown Active</p>
-                    <p className="text-lg text-neutral-700">{details.lockdownReason}</p>
+                    <p className="text-base sm:text-lg text-neutral-700 break-words">{details.lockdownReason}</p>
                   </div>
                 </div>
               )}
@@ -481,17 +481,17 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
           </div>
           
           {/* Action buttons */}
-          <div className="flex gap-4">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
             <button 
               onClick={onDone} 
-              className="flex-1 px-8 py-4 bg-neutral-200 text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-300 transition-all"
+              className="flex-1 px-4 sm:px-8 py-4 bg-neutral-200 text-neutral-900 text-lg sm:text-xl font-bold rounded-lg hover:bg-neutral-300 transition-all"
             >
               Close
             </button>
             {canOverride && (
               <button 
                 onClick={onOverride} 
-                className="flex-1 px-8 py-4 bg-white text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-100 transition-all border-2 border-white/80"
+                className="flex-1 px-4 sm:px-8 py-4 bg-white text-neutral-900 text-lg sm:text-xl font-bold rounded-lg hover:bg-neutral-100 transition-all border-2 border-neutral-900"
               >
                 Manager Override
               </button>
@@ -543,23 +543,23 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-6 overflow-y-auto">
-      <div className="bg-white w-full max-w-xl my-auto border-2 border-neutral-900 overflow-hidden">
+    <div className="fixed inset-0 bg-black/85 z-50 flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className="bg-white w-full max-w-xl my-auto border-2 border-neutral-900 overflow-clip">
 
         {/* ── ROLE BAND — first thing eyes land on ──────────────────── */}
-        <div className="flex items-center justify-between px-8 py-3" style={{ backgroundColor: accent.bg }}>
-          <span className="text-xs font-black uppercase tracking-[0.25em]" style={{ color: accent.textColor, opacity: 0.75 }}>
+        <div className="flex items-center justify-between gap-3 px-5 sm:px-8 py-3" style={{ backgroundColor: accent.bg }}>
+          <span className="text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.25em]" style={{ color: accent.textColor, opacity: 0.75 }}>
             Access Pass
           </span>
-          <span className="text-sm font-black uppercase tracking-[0.25em]" style={{ color: accent.textColor }}>
+          <span className="text-sm font-black uppercase tracking-[0.15em] sm:tracking-[0.25em]" style={{ color: accent.textColor }}>
             {accent.label}
           </span>
         </div>
 
         {/* ── NAME BLOCK — dominant, readable at arm's length ───────── */}
-        <div className="px-8 pt-7 pb-6 border-b-2 border-neutral-900">
+        <div className="px-5 sm:px-8 pt-7 pb-6 border-b-2 border-neutral-900">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-400 mb-2">Attendee Name</p>
-          <h2 className="text-5xl font-black text-neutral-900 leading-none tracking-tight break-words">
+          <h2 className="text-4xl sm:text-5xl font-black text-neutral-900 leading-none tracking-tight break-words">
             {guest.guestName}
           </h2>
           {(guest.guestEmail || guest.guestPhone) && (
@@ -572,28 +572,28 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         </div>
 
         {/* ── 2×2 DATA GRID — large labels, large values ────────────── */}
-        <div className="grid grid-cols-2 border-b-2 border-neutral-900">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] border-b-2 border-neutral-900">
           {/* Adults */}
-          <div className="px-8 py-5 border-r-2 border-b-2 border-neutral-900">
+          <div className="px-5 sm:px-8 py-5 border-r-2 border-b-2 border-neutral-900">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Adults</p>
-            <p className="text-4xl font-black text-neutral-900 leading-none">{guest.adults ?? 1}</p>
+            <p className="text-3xl sm:text-4xl font-black break-words text-neutral-900 leading-none">{guest.adults ?? 1}</p>
           </div>
           {/* Children */}
-          <div className="px-8 py-5 border-b-2 border-neutral-900">
+          <div className="px-5 sm:px-8 py-5 border-b-2 border-neutral-900">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Children</p>
-            <p className="text-4xl font-black text-neutral-900 leading-none">{guest.children ?? 0}</p>
+            <p className="text-3xl sm:text-4xl font-black break-words text-neutral-900 leading-none">{guest.children ?? 0}</p>
           </div>
           {/* Table */}
-          <div className="px-8 py-5 border-r-2 border-neutral-900">
+          <div className="px-5 sm:px-8 py-5 border-r-2 border-neutral-900">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Table</p>
-            <p className={`text-4xl font-black leading-none ${guest.tableLabel ? 'text-neutral-900' : 'text-neutral-300'}`}>
+            <p className={`text-3xl sm:text-4xl font-black break-words leading-none ${guest.tableLabel ? 'text-neutral-900' : 'text-neutral-300'}`}>
               {guest.tableLabel || '—'}
             </p>
           </div>
           {/* Seat */}
-          <div className="px-8 py-5">
+          <div className="px-5 sm:px-8 py-5">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Seat</p>
-            <p className={`text-4xl font-black leading-none ${seatValue ? 'text-neutral-900' : 'text-neutral-300'}`}>
+            <p className={`text-3xl sm:text-4xl font-black break-words leading-none ${seatValue ? 'text-neutral-900' : 'text-neutral-300'}`}>
               {seatValue || '—'}
             </p>
           </div>
@@ -601,11 +601,11 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 
         {/* ── CONFIRMATION CODE + TRUST ──────────────────────────────── */}
         <div className="flex items-stretch border-b-2 border-neutral-900">
-          <div className="flex-1 px-8 py-5 border-r-2 border-neutral-900">
+          <div className="flex-1 min-w-0 px-5 sm:px-8 py-5 border-r-2 border-neutral-900">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Confirmation Code</p>
-            <p className="text-2xl font-black font-mono tracking-[0.15em] text-neutral-900">{guest.inviteCode}</p>
+            <p className="text-lg sm:text-2xl font-black font-mono tracking-[0.1em] sm:tracking-[0.15em] text-neutral-900 break-all">{guest.inviteCode}</p>
           </div>
-          <div className="px-8 py-5">
+          <div className="flex-shrink-0 px-5 sm:px-8 py-5">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400 mb-1.5">Trust Score</p>
             <p className="text-2xl font-black leading-none" style={{ color: trustColor }}>{trustScore}<span className="text-sm font-bold text-neutral-300 ml-0.5">/100</span></p>
           </div>
@@ -613,7 +613,7 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 
         {/* ── NOTES ─────────────────────────────────────────────────── */}
         {guest.notes && (
-          <div className="px-8 py-5 border-b-2 border-neutral-900 bg-neutral-50">
+          <div className="px-5 sm:px-8 py-5 border-b-2 border-neutral-900 bg-neutral-50">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 mb-2">Notes</p>
             <p className="text-base text-neutral-800 leading-relaxed">{guest.notes}</p>
           </div>
@@ -622,13 +622,13 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         {/* ── SECURITY WARNINGS ─────────────────────────────────────── */}
         {hasWarnings && (
           <div className="border-b-2 border-neutral-900">
-            <div className="bg-amber-400 px-8 py-3 flex items-center justify-between">
+            <div className="bg-amber-400 px-5 sm:px-8 py-3 flex items-center justify-between">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-neutral-900">Security Alert</p>
               <AlertTriangle className="w-4 h-4 text-neutral-900" />
             </div>
             <div className="divide-y divide-neutral-200">
               {security?.warnings?.map((w, i) => (
-                <div key={i} className="px-8 py-4 border-l-4 border-amber-400 bg-amber-50">
+                <div key={i} className="px-5 sm:px-8 py-4 border-l-4 border-amber-400 bg-amber-50">
                   <p className="text-sm font-black uppercase tracking-wide text-neutral-900 mb-1">
                     {w.type?.replace(/_/g, ' ')}
                   </p>
@@ -636,7 +636,7 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
                 </div>
               ))}
               {security?.flags?.map((f, i) => (
-                <div key={i} className="px-8 py-4 border-l-4 border-amber-400 bg-amber-50">
+                <div key={i} className="px-5 sm:px-8 py-4 border-l-4 border-amber-400 bg-amber-50">
                   <p className="text-sm font-black uppercase tracking-wide text-neutral-900 mb-1">
                     {f.flag?.replace(/_/g, ' ')}
                   </p>
@@ -653,11 +653,11 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         {/* ── PIN VERIFICATION ──────────────────────────────────────── */}
         {requiresPin && guest.hasPin && (
           <div className="border-b-2 border-neutral-900">
-            <div className="bg-neutral-900 px-8 py-3 flex items-center justify-between">
+            <div className="bg-neutral-900 px-5 sm:px-8 py-3 flex items-center justify-between">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-white">PIN Required</p>
               <Lock className="w-4 h-4 text-neutral-400" />
             </div>
-            <div className="px-8 py-6">
+            <div className="px-5 sm:px-8 py-6">
               <p className="text-sm text-neutral-600 mb-4 font-medium">
                 Ask the attendee for their security PIN before proceeding.
               </p>
@@ -667,7 +667,7 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
                   value={pin}
                   onChange={e => { setPin(e.target.value.toUpperCase()); setPinError(''); }}
                   placeholder="ENTER PIN"
-                  className="flex-1 border-2 border-neutral-900 px-4 py-3 text-xl font-black font-mono uppercase tracking-[0.2em] focus:outline-none bg-white placeholder-neutral-300"
+                  className="flex-1 min-w-0 border-2 border-neutral-900 px-3 sm:px-4 py-3 text-xl font-black font-mono uppercase tracking-[0.2em] focus:outline-none bg-white placeholder-neutral-300"
                   maxLength={6}
                 />
                 <button
@@ -693,18 +693,18 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
         {/* ── STAFF INSTRUCTIONS ────────────────────────────────────── */}
         {staffNote && (
           <div className="border-b-2 border-neutral-900 bg-neutral-900">
-            <div className="px-8 py-3 flex items-center justify-between border-b border-neutral-700">
+            <div className="px-5 sm:px-8 py-3 flex items-center justify-between border-b border-neutral-700">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-300">Staff Instructions</p>
               <Info className="w-3.5 h-3.5 text-neutral-400" />
             </div>
-            <div className="px-8 py-4">
+            <div className="px-5 sm:px-8 py-4">
               <p className="text-base text-white leading-relaxed font-medium">{staffNote}</p>
             </div>
           </div>
         )}
 
         {/* ── ACTION BUTTONS ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2">
+        <div className="grid grid-cols-2 sticky bottom-0 bg-white pb-[env(safe-area-inset-bottom)]">
           <button
             onClick={onDeny}
             className="py-6 bg-white text-neutral-900 text-base font-black uppercase tracking-widest border-r-2 border-neutral-900 hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
@@ -986,7 +986,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   if (showSuccess && createdInvite) {
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-lg max-h-[92dvh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
           <div className="text-center mb-6">
             <CheckCircle className="w-16 h-16 text-emerald-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Invite Created!</h2>
@@ -1055,7 +1055,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-lg max-h-[92dvh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">{invite ? 'Edit' : 'Create'} Invite</h2>
           <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -1231,7 +1231,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">Import Guests from CSV</h2>
@@ -1376,7 +1376,7 @@ function ActivityLogDialog({ eventId, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92dvh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-6 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold">Activity Log</h2>
@@ -2414,16 +2414,16 @@ export default function EnterpriseCheckin() {
         />
       )}
       
-      <header className="bg-white border-b border-neutral-100 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-neutral-100 sm:sticky sm:top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-2.5 sm:py-0 sm:h-16 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
             {authState.role === 'organizer' && (
-              <button onClick={() => navigate(`/event/${eventId}`)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+              <button onClick={() => navigate(`/event/${eventId}`)} className="p-2.5 sm:p-1.5 -ml-1 sm:ml-0 flex-shrink-0 hover:bg-neutral-100 rounded-lg transition-colors" aria-label="Back to event">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
-            <div>
-              <h1 className="text-base font-bold text-neutral-900 truncate max-w-[240px]">{event?.title || 'Event'}</h1>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-neutral-900 truncate max-w-full sm:max-w-[240px]">{event?.title || 'Event'}</h1>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs text-neutral-400">Check-in</p>
                 {authState.username && (
@@ -2434,10 +2434,10 @@ export default function EnterpriseCheckin() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowSettingsPanel(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
               title="Security Settings"
             >
               <Settings className="w-3.5 h-3.5" />
@@ -2452,7 +2452,7 @@ export default function EnterpriseCheckin() {
             {seatingEnabled ? (
               <button
                 onClick={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
+                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Seating</span>
@@ -2466,7 +2466,7 @@ export default function EnterpriseCheckin() {
                   setShowSeatingMap(true);
                 }}
                 title="Create a seating chart for this event"
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-dashed border-neutral-300 rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all"
+                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-500 border border-dashed border-neutral-300 rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Set Up Seating</span>
@@ -2477,7 +2477,7 @@ export default function EnterpriseCheckin() {
               <>
                 <button
                   onClick={() => setShowActivityLog(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
                   title="Activity Log"
                 >
                   <BarChart2 className="w-3.5 h-3.5" />
@@ -2485,14 +2485,14 @@ export default function EnterpriseCheckin() {
                 </button>
                 <button
                   onClick={() => setShowCsvImport(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Import CSV</span>
                 </button>
                 <button
                   onClick={() => setShowInviteDialog(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
+                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Add Guest</span>
@@ -2501,7 +2501,7 @@ export default function EnterpriseCheckin() {
             )}
             <button
               onClick={() => setShowManual(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
             >
               <Keyboard className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Manual</span>
@@ -2511,7 +2511,7 @@ export default function EnterpriseCheckin() {
                 resetScan();
                 setScanMode(true);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-sm"
+              className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-sm"
             >
               <Camera className="w-4 h-4" />
               Scan QR
@@ -2521,7 +2521,7 @@ export default function EnterpriseCheckin() {
               <button
                 onClick={handleStaffLogout}
                 title="Log out of check-in"
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Log Out</span>
@@ -2530,7 +2530,7 @@ export default function EnterpriseCheckin() {
           </div>
         </div>
         {showManual && (
-          <div className="border-t border-neutral-100 bg-neutral-50 px-6 py-3">
+          <div className="border-t border-neutral-100 bg-neutral-50 px-3 sm:px-6 py-3">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -2542,15 +2542,15 @@ export default function EnterpriseCheckin() {
                 type="text"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                placeholder="Enter invite code e.g. AB12CD34"
-                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
+                placeholder="Invite code, e.g. AB12CD34"
+                className="flex-1 min-w-0 border border-neutral-200 rounded-xl px-3 sm:px-4 py-2.5 text-base sm:text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
                 autoFocus
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
                 inputMode="text"
               />
-              <button type="submit" disabled={!manualCode.trim()} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
+              <button type="submit" disabled={!manualCode.trim()} className="flex-shrink-0 px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
                 Verify
               </button>
             </form>
@@ -2558,16 +2558,16 @@ export default function EnterpriseCheckin() {
         )}
       </header>
       
-      <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-8">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-4 mb-4 sm:mb-8">
           {[
             { label: 'Total Groups', value: stats?.total ?? (invites.length || null), color: 'text-neutral-900' },
             { label: 'Checked In', value: stats ? (stats.checkedIn ?? 0) : (invites.length ? invites.filter(i => i.checkedIn).length : null), color: 'text-emerald-600' },
             { label: 'Total Admitted', value: stats?.totalActualAttendees ?? (invites.length ? invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0) : null), color: 'text-emerald-700' },
             { label: 'Adults Expected', value: stats ? (stats.totalExpectedAdults ?? 0) : null, color: 'text-neutral-600' },
             { label: 'Children', value: stats ? (stats.totalExpectedChildren ?? 0) : null, color: 'text-indigo-600' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-2xl border border-neutral-150 p-5 shadow-sm">
+          ].map(({ label, value, color }, idx) => (
+            <div key={label} className={`bg-white rounded-2xl border border-neutral-150 p-3.5 sm:p-5 shadow-sm ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}>
               {value === null
                 ? ((statsLoading || invitesLoading)
                     ? <div className="h-9 w-14 rounded-lg bg-neutral-100 animate-pulse" aria-label={`${label} loading`} />
@@ -2583,7 +2583,7 @@ export default function EnterpriseCheckin() {
           {invites.length > 0 && (() => {
             const pct = Math.round(((stats?.checkedIn ?? invites.filter(i => i.checkedIn).length) / invites.length) * 100);
             return (
-              <div className="px-8 pt-5 pb-3">
+              <div className="px-4 sm:px-8 pt-5 pb-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold text-neutral-500">Check-in progress</span>
                   <span className="text-xs font-bold text-emerald-600">{pct}%</span>
@@ -2597,24 +2597,24 @@ export default function EnterpriseCheckin() {
               </div>
             );
           })()}
-          <div className="px-8 py-5 border-b border-neutral-100 flex items-center gap-4 flex-wrap">
+          <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-neutral-100 flex items-center gap-3 sm:gap-4 flex-wrap">
             <h2 className="text-lg font-bold text-neutral-900 flex-1">Guest List</h2>
             <input
               type="text"
               placeholder="Search guests…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400 w-56"
+              className="border border-neutral-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-neutral-400 w-full sm:w-56"
             />
           </div>
           
           {invitesStale && invitesLoading && (
-            <div className="px-8 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
+            <div className="px-4 sm:px-8 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
               Showing saved guest list · updating…
             </div>
           )}
           {invitesError && (
-            <div className="px-8 py-3 text-sm bg-amber-50 border-b border-amber-100 text-amber-800 flex items-center justify-between gap-3">
+            <div className="px-4 sm:px-8 py-3 text-sm bg-amber-50 border-b border-amber-100 text-amber-800 flex items-center justify-between gap-3">
               <span>{invitesError}{invites.length ? ' — showing the last saved list.' : ''}</span>
               <button onClick={loadInvites} className="font-bold underline">Retry</button>
             </div>
@@ -2648,12 +2648,13 @@ export default function EnterpriseCheckin() {
                 return (
                   <div
                     key={invite._id}
-                    className={`flex items-center gap-5 px-8 py-5 hover:bg-neutral-50 transition-colors ${
+                    className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 px-4 sm:px-8 py-4 sm:py-5 hover:bg-neutral-50 transition-colors ${
                       invite.checkedIn ? 'bg-emerald-50/40 hover:bg-emerald-50' : ''
                     }`}
                   >
+                    <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
                     <div
-                      className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                      className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold ${
                         invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
                       }`}
                     >
@@ -2662,7 +2663,7 @@ export default function EnterpriseCheckin() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-base font-semibold text-neutral-900">{invite.guestName}</p>
+                        <p className="text-base font-semibold text-neutral-900 break-words min-w-0">{invite.guestName}</p>
                         <RoleBadge role={invite.guestRole || 'GUEST'} />
                         {/* Table assignment badge */}
                         {invite.tableLabel && (
@@ -2693,15 +2694,16 @@ export default function EnterpriseCheckin() {
                         </span>
                       </div>
                     </div>
+                    </div>
                     
-                    <div className="flex-shrink-0 flex items-center gap-2">
+                    <div className="sm:flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
                       {invite.checkedIn ? (
-                        <div className="text-right">
-                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold mb-0.5">
+                        <div className="sm:text-right w-full sm:w-auto flex sm:block items-center justify-between gap-3">
+                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold sm:mb-0.5">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Admitted
                           </div>
-                          <p className="text-xs text-neutral-400 flex items-center gap-1 justify-end">
+                          <p className="text-xs text-neutral-400 flex items-center gap-1 sm:justify-end">
                             <Clock className="w-3 h-3" />
                             {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -2722,21 +2724,21 @@ export default function EnterpriseCheckin() {
                               setEditingInvite(invite);
                               setShowInviteDialog(true);
                             }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
+                            className="p-3 sm:p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
                             title="Edit"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteInvite(invite._id)}
-                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-3 sm:p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleScan(invite.inviteCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all"
+                            className="order-first sm:order-none flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-1.5 px-4 sm:px-3 py-3 sm:py-1.5 bg-neutral-900 text-white text-sm sm:text-xs font-semibold rounded-xl hover:bg-black active:bg-black transition-all"
                           >
                             <UserCheck className="w-3.5 h-3.5" />
                             Check In
@@ -2749,7 +2751,7 @@ export default function EnterpriseCheckin() {
               })
             )}
             {sorted.length > visibleCount && (
-              <div className="px-8 py-4 text-center">
+              <div className="px-4 sm:px-8 py-4 text-center">
                 <button
                   onClick={() => setVisibleCount(c => c + GUEST_PAGE_SIZE)}
                   className="px-5 py-2.5 text-sm font-bold text-neutral-700 border border-neutral-200 rounded-xl hover:bg-neutral-50"
@@ -2762,7 +2764,7 @@ export default function EnterpriseCheckin() {
         </div>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
+      <footer className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 pt-6 pb-28 sm:pb-6 flex flex-wrap items-center justify-between gap-2">
         {/* Offline indicator */}
         {isOffline && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
@@ -2807,6 +2809,18 @@ export default function EnterpriseCheckin() {
 
       {/* ── Walkie-talkie PTT button — visible to all staff/organizers ── */}
       {authState.ready && <WalkieTalkieButton walkie={walkie} />}
+
+      {/* ── Mobile: scan is always one tap away, wherever you are in the list ── */}
+      {!scanMode && !currentGuest && !showAdmitSuccess && !showDenyScreen && (
+        <button
+          onClick={() => { resetScan(); setScanMode(true); }}
+          aria-label="Scan QR code"
+          className="sm:hidden fixed bottom-6 left-4 z-40 flex items-center gap-2 pl-4 pr-5 py-3.5 bg-neutral-900 text-white text-sm font-bold rounded-2xl shadow-2xl active:scale-95 transition-transform"
+        >
+          <Camera className="w-5 h-5" />
+          Scan QR
+        </button>
+      )}
     </div>
   );
 }
