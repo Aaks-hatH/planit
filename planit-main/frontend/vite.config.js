@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'PlanIt',
         short_name: 'PlanIt',
         description: 'Plan events together with secure chat, polls, and file sharing',
-        theme_color: '#2236ff',
-        background_color: '#ffffff',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -168,27 +168,21 @@ export default defineConfig({
               id.includes('node_modules/date-fns')) {
             return 'utils';
           }
+          // Shared public UI (nav, footer, modal...) is imported from several lazy
+          // chunks. Giving it its own chunk keeps it out of the venue/whitelabel/admin
+          // chunks, which would otherwise import each other in a cycle.
+          if (id.includes('/src/components/ui/')) {
+            return 'ui-shared';
+          }
           // Admin panel is large and only ever used by organizers — keep it isolated
           if (id.includes('/src/pages/Admin') ||
               id.includes('/src/pages/SecurityDashboard') ||
               id.includes('/src/components/PlatformAnalyticsDashboard')) {
             return 'admin';
           }
-          // Venue/restaurant views — only tablet/kiosk users hit these
-          if (id.includes('/src/pages/TableService') ||
-              id.includes('/src/pages/ServerView') ||
-              id.includes('/src/pages/KitchenView') ||
-              id.includes('/src/pages/GuestTablet') ||
-              id.includes('/src/pages/LiveWaitBoard')) {
-            return 'venue';
-          }
-          // White-label portal chunks
-          if (id.includes('/src/pages/WhiteLabel') ||
-              id.includes('/src/pages/ClientPortal') ||
-              id.includes('/src/pages/WLHome') ||
-              id.includes('/src/pages/SetupFee')) {
-            return 'whitelabel';
-          }
+          // Venue and white-label pages are already lazy routes, so Rollup splits them on the dynamic imports.
+          // (Manual 'venue' and 'whitelabel' chunks imported each other, which crashed the app with a
+          // circular-chunk error: "Cannot access 'Qr' before initialization".)
         },
       },
     },

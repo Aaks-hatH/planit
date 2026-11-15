@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --quiet"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

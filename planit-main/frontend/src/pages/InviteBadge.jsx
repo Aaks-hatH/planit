@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const ROLE_STYLES = {
-  VIP:     { bg: '#fff6c2', text: '#92400e', border: '#fcd34d', label: 'VIP' },
-  SPEAKER: { bg: '#eceeff', text: '#5b21b6', border: '#a78bfa', label: 'SPEAKER' },
+  VIP:     { bg: '#fef3c7', text: '#92400e', border: '#fcd34d', label: 'VIP' },
+  SPEAKER: { bg: '#ede9fe', text: '#5b21b6', border: '#a78bfa', label: 'SPEAKER' },
   GUEST:   { bg: '#f3f4f6', text: '#374151', border: '#d1d5db', label: 'GUEST' },
 };
 
@@ -34,13 +34,13 @@ export default function InviteBadge() {
   const style = ROLE_STYLES[role] || ROLE_STYLES.GUEST;
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <p style={{ color: '#6b7280' }}>Loading…</p>
     </div>
   );
 
   if (error) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
       <p style={{ color: '#ef4444' }}>Error: {error}</p>
     </div>
   );
@@ -50,10 +50,10 @@ export default function InviteBadge() {
       {/* ── Global styles including print ── */}
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #ffffff; font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+        body { background: #f9fafb; font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
 
         .screen-wrapper {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -72,8 +72,8 @@ export default function InviteBadge() {
           align-items: center;
           gap: 8px;
           padding: 10px 20px;
-          background: #ffe14d; border: 2px solid #0d0e1c; box-shadow: 3px 3px 0 #0d0e1c;
-          color: #0d0e1c;
+          background: #111827;
+          color: #fff;
           border: none;
           border-radius: 10px;
           font-size: 14px;
@@ -81,30 +81,30 @@ export default function InviteBadge() {
           cursor: pointer;
           margin-top: 8px;
         }
-        .print-btn:hover { background: #0d0e1c; color: #fff; }
+        .print-btn:hover { background: #000; }
 
         /* ── Badge card ── */
         .badge {
           width: 148mm;    /* A6 width */
           min-height: 105mm;
           background: #fff;
-          border: 2px solid #0d0e1c;
+          border: 1.5px solid #e5e7eb;
           border-radius: 12px;
           overflow: hidden;
-          box-shadow: 6px 6px 0 #0d0e1c;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
           display: flex;
           flex-direction: column;
         }
 
         .badge-header {
-          background: #ffe14d; border: 2px solid #0d0e1c; box-shadow: 3px 3px 0 #0d0e1c;
+          background: #111827;
           padding: 10px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
         .badge-brand {
-          color: #0d0e1c;
+          color: #fff;
           font-size: 11px;
           font-weight: 800;
           letter-spacing: 4px;
@@ -191,7 +191,7 @@ export default function InviteBadge() {
         }
 
         .badge-footer {
-          background: #ffffff;
+          background: #f9fafb;
           border-top: 1px solid #e5e7eb;
           padding: 7px 16px;
           font-size: 9px;
