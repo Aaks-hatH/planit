@@ -89,7 +89,7 @@ export default function TurnstileWidget({ onToken, theme = 'dark', resetKey = 0 
   // resetKey is intentional — parent uses it to force a fresh widget.
   // theme is intentional — widget must re-render if theme changes.
   // onToken is intentionally excluded — handled via ref above.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [resetKey, theme, mount, cleanup]);
 
   if (!TURNSTILE_SITE_KEY) return null;
@@ -100,8 +100,8 @@ export default function TurnstileWidget({ onToken, theme = 'dark', resetKey = 0 
       <div style={{
         padding: '12px 16px',
         borderRadius: 8,
-        border: '2px solid #0d0e1c',
-        background: '#ffffff',
+        border: '1px solid rgba(255,255,255,0.15)',
+        background: 'rgba(255,255,255,0.05)',
         color: theme === 'light' ? '#555' : 'rgba(255,255,255,0.5)',
         fontSize: 13,
         textAlign: 'center',

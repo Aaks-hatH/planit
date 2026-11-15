@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { bugReportAPI } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import PublicNav from '../components/ui/PublicNav';
+import PublicFooter from '../components/ui/PublicFooter';
 import {
   ArrowLeft, Search, ChevronRight, ChevronDown, X,
   Calendar, Users, MessageSquare, BarChart3, FileText,
@@ -4375,7 +4376,7 @@ function StepBlock({ items }) {
     <ol className="space-y-4 mt-4">
       {items.map((item, i) => (
         <li key={i} className="flex gap-4">
-          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-white text-ink text-xs font-black flex items-center justify-center mt-0.5">
+          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-neutral-900 text-white text-xs font-black flex items-center justify-center mt-0.5">
             {i + 1}
           </div>
           <div className="flex-1 min-w-0">
@@ -4401,7 +4402,7 @@ function LinksBlock({ items }) {
           key={i}
           href={l.href}
           {...(l.external !== false ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 border-ink bg-white text-xs font-bold text-neutral-700 hover:border-ink hover:text-neutral-900 transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-colors"
         >
           {l.label}
           {l.external !== false && <ExternalLink className="w-3 h-3 opacity-60" />}
@@ -4424,7 +4425,7 @@ function CalloutBlock({ variant, text }) {
   };
   const Icon = icons[variant] || Info;
   return (
-    <div className={`flex gap-3 p-4 rounded-xl border-2 my-4 text-sm leading-relaxed border-ink shadow ${styles[variant] || styles.info}`}>
+    <div className={`flex gap-3 p-4 rounded-xl border my-4 text-sm leading-relaxed ${styles[variant] || styles.info}`}>
       <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
       <span>{text}</span>
     </div>
@@ -4435,7 +4436,7 @@ function CompareBlock({ items }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
       {items.map((item, i) => (
-        <div key={i} className="border-2 border-ink rounded-2xl p-5 shadow-md">
+        <div key={i} className="border border-neutral-200 rounded-2xl p-5">
           <p className="text-sm font-black text-neutral-900 mb-1">{item.label}</p>
           <p className="text-xs text-neutral-500 mb-3 leading-relaxed">{item.desc}</p>
           <ul className="space-y-1.5">
@@ -4461,7 +4462,7 @@ function FAQBlock({ items }) {
     <div className="mt-4 space-y-2">
       <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Frequently Asked Questions</p>
       {items.map((item, i) => (
-        <div key={i} className="border-2 border-ink rounded-xl overflow-hidden shadow">
+        <div key={i} className="border border-neutral-200 rounded-xl overflow-hidden">
           <button
             onClick={() => setOpen(open === i ? null : i)}
             className="w-full flex items-center justify-between p-4 text-left hover:bg-neutral-50 transition-colors"
@@ -4506,21 +4507,21 @@ function ArticleCard({ article, onClick, isNew }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border-2 border-ink hover:border-ink hover:bg-white hover:shadow-sm transition-all group bg-white font-bold"
+      className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-neutral-200 hover:border-neutral-900 hover:bg-white hover:shadow-sm transition-all group bg-white"
     >
-      <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
-        <Icon className="w-4 h-4 text-neutral-600 group-hover:text-ink transition-colors" />
+      <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 group-hover:bg-neutral-900 transition-colors">
+        <Icon className="w-4 h-4 text-neutral-600 group-hover:text-white transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold text-neutral-900 leading-snug">{article.title}</p>
           {isNew && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border-2 border-emerald-600 flex-shrink-0">NEW</span>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex-shrink-0">NEW</span>
           )}
         </div>
-        <p className="text-xs text-neutral-500 mt-0.5">{article.category}</p>
+        <p className="text-xs text-neutral-400 mt-0.5">{article.category}</p>
       </div>
-      <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-neutral-700 flex-shrink-0 mt-1 transition-colors" />
+      <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-700 flex-shrink-0 mt-1 transition-colors" />
     </button>
   );
 }
@@ -4592,17 +4593,17 @@ function BugReportModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: '#ffffff' }}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-neutral-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-ink" />
+            <div className="w-9 h-9 rounded-xl bg-neutral-900 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-white" />
             </div>
             <div>
               <h2 className="text-base font-black text-neutral-900">Report an Issue</h2>
-              <p className="text-xs text-neutral-500">We'll email you when it's fixed</p>
+              <p className="text-xs text-neutral-400">We'll email you when it's fixed</p>
             </div>
           </div>
           <button onClick={handleClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-100 transition-colors">
@@ -4619,13 +4620,13 @@ function BugReportModal({ open, onClose }) {
             <h3 className="text-lg font-black text-neutral-900 mb-2">Report received!</h3>
             <p className="text-sm text-neutral-500 mb-1">We'll look into this and email you at</p>
             <p className="text-sm font-bold text-neutral-900 mb-6">{form.email}</p>
-            <p className="text-xs text-neutral-500 mb-6">
+            <p className="text-xs text-neutral-400 mb-6">
               For urgent event-day issues also check{' '}
               <a href="/status" className="underline font-medium">planitapp.onrender.com/status</a>
             </p>
             <button
               onClick={handleClose}
-              className="px-6 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 transition-colors"
             >
               Done
             </button>
@@ -4633,7 +4634,7 @@ function BugReportModal({ open, onClose }) {
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {errors._global && (
-              <div className="p-3 bg-red-50 border-2 border-red-600 rounded-xl text-xs text-red-700">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
                 {errors._global}
               </div>
             )}
@@ -4645,17 +4646,17 @@ function BugReportModal({ open, onClose }) {
                 <input
                   value={form.name} onChange={set('name')}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac bg-white"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Email <span className="text-red-700">*</span></label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Email <span className="text-red-500">*</span></label>
                 <input
                   type="email" value={form.email} onChange={set('email')}
                   placeholder="you@example.com"
-                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:border-ink transition-colors border-ink focus:ring-[3px] focus:ring-ac bg-white ${errors.email ? 'border-red-400 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
+                  className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors ${errors.email ? 'border-red-400' : 'border-neutral-200'}`}
                 />
-                {errors.email && <p className="text-xs text-red-700 mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
               </div>
             </div>
 
@@ -4665,7 +4666,7 @@ function BugReportModal({ open, onClose }) {
                 <label className="block text-xs font-bold text-neutral-700 mb-1">Category</label>
                 <select
                   value={form.category} onChange={set('category')}
-                  className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:border-ink bg-white transition-colors focus:ring-[3px] focus:ring-ac"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 bg-white transition-colors"
                 >
                   {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -4674,7 +4675,7 @@ function BugReportModal({ open, onClose }) {
                 <label className="block text-xs font-bold text-neutral-700 mb-1">Severity</label>
                 <select
                   value={form.severity} onChange={set('severity')}
-                  className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:border-ink bg-white transition-colors focus:ring-[3px] focus:ring-ac"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 bg-white transition-colors"
                 >
                   {SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -4683,63 +4684,63 @@ function BugReportModal({ open, onClose }) {
 
             {/* Summary */}
             <div>
-              <label className="block text-xs font-bold text-neutral-700 mb-1">Summary <span className="text-red-700">*</span></label>
+              <label className="block text-xs font-bold text-neutral-700 mb-1">Summary <span className="text-red-500">*</span></label>
               <input
                 value={form.summary} onChange={set('summary')}
                 placeholder="One line description of the problem"
                 maxLength={150}
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:border-ink transition-colors border-ink focus:ring-[3px] focus:ring-ac bg-white ${errors.summary ? 'border-red-400 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
+                className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors ${errors.summary ? 'border-red-400' : 'border-neutral-200'}`}
               />
-              {errors.summary && <p className="text-xs text-red-700 mt-1">{errors.summary}</p>}
+              {errors.summary && <p className="text-xs text-red-500 mt-1">{errors.summary}</p>}
             </div>
 
             {/* Description */}
             <div>
               <label className="block text-xs font-bold text-neutral-700 mb-1">
-                What happened? <span className="text-red-700">*</span>
-                <span className="font-normal text-neutral-500 ml-1">(steps to reproduce, what you expected vs what occurred)</span>
+                What happened? <span className="text-red-500">*</span>
+                <span className="font-normal text-neutral-400 ml-1">(steps to reproduce, what you expected vs what occurred)</span>
               </label>
               <textarea
                 value={form.description} onChange={set('description')}
                 rows={4}
                 maxLength={2000}
                 placeholder="1. I clicked... 2. I expected... 3. Instead I saw..."
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:border-ink transition-colors resize-none border-ink focus:ring-[3px] focus:ring-ac bg-white ${errors.description ? 'border-red-400 border-2 focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg' : 'border-2 border-ink focus:ring-[3px] focus:ring-ac focus:outline-none bg-white rounded-lg'}`}
+                className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors resize-none ${errors.description ? 'border-red-400' : 'border-neutral-200'}`}
               />
               <div className="flex justify-between">
-                {errors.description && <p className="text-xs text-red-700">{errors.description}</p>}
-                <p className="text-xs text-neutral-600 ml-auto">{form.description.length}/2000</p>
+                {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+                <p className="text-xs text-neutral-300 ml-auto">{form.description.length}/2000</p>
               </div>
             </div>
 
             {/* Optional fields */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Event link <span className="text-neutral-500 font-normal">(optional)</span></label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Event link <span className="text-neutral-400 font-normal">(optional)</span></label>
                 <input
                   value={form.eventLink} onChange={set('eventLink')}
                   placeholder="planitapp.onrender.com/e/..."
-                  className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac bg-white"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1">Browser / device <span className="text-neutral-500 font-normal">(optional)</span></label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Browser / device <span className="text-neutral-400 font-normal">(optional)</span></label>
                 <input
                   value={form.browser} onChange={set('browser')}
                   placeholder="e.g. Chrome on iPhone"
-                  className="w-full px-3 py-2 border-2 border-ink rounded-xl text-sm focus:outline-none focus:border-ink transition-colors focus:ring-[3px] focus:ring-ac bg-white"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
                 />
               </div>
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-3">
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-400">
                 We'll email you at <strong>{form.email || 'your address'}</strong> when resolved.
               </p>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl disabled:opacity-50 transition-colors flex-shrink-0 border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-colors flex-shrink-0"
               >
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {loading ? 'Sending…' : 'Submit Report'}
@@ -4756,7 +4757,6 @@ function BugReportModal({ open, onClose }) {
 /* ─── MAIN PAGE ─────────────────────────────────────────────────────────────── */
 
 export default function Help() {
-  const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -4816,38 +4816,16 @@ export default function Help() {
   return (
     <>
     <BugReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
-    <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
-      <style>{`html { scroll-behavior: smooth; } body { background: #ffffff; }`}</style>
+    <div className="min-h-screen" style={{ background: 'var(--pi-bg)', overflowX: 'clip' }}>
+      <style>{`html { scroll-behavior: smooth; }`}</style>
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { if (currentArticle) { setActiveArticle(null); } else { navigate('/'); } }}
-              className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {currentArticle ? 'Help Center' : 'Back'}
-            </button>
-            <span className="text-neutral-600">|</span>
-            <div className="flex items-center gap-2">
-              <LifeBuoy className="w-4 h-4 text-neutral-600" />
-              <span className="text-sm font-bold text-neutral-900">PlanIt Help Center</span>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <a href="/status" className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800 transition-colors">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Status
-            </a>
-            <span className="text-ink">·</span>
-            <button onClick={() => setReportOpen(true)} className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Report an Issue</button>
-          </div>
-        </div>
-      </header>
+      <PublicNav
+        actions={
+          <button onClick={() => setReportOpen(true)} className="pi-nav-link hidden md:inline-flex">Report an issue</button>
+        }
+      />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-6xl mx-auto px-[var(--gutter)] pt-[calc(var(--safe-top,0px)+6.5rem)] pb-16">
 
         {/* ── Article view ── */}
         {currentArticle ? (
@@ -4862,19 +4840,19 @@ export default function Help() {
                   <ArrowLeft className="w-4 h-4" />
                   All articles
                 </button>
-                <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">In this category</p>
+                <p className="t-label mb-2">In this category</p>
                 <nav className="space-y-0.5">
                   {ARTICLES.filter(a => a.category === currentArticle.category).map(a => (
                     <button
                       key={a.id}
                       onClick={() => openArticle(a.id)}
-                      className={`w-full text-left text-sm py-1.5 px-2 rounded-lg transition-colors ${a.id === activeArticle ? 'bg-hl text-ink font-semibold border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition' : 'text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+                      className={`w-full text-left text-sm py-1.5 px-2 rounded-lg transition-colors ${a.id === activeArticle ? 'bg-neutral-900 text-white font-semibold' : 'text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
                     >
                       {a.title}
                     </button>
                   ))}
                 </nav>
-                <div className="mt-6 p-4 bg-white border-2 border-ink rounded-2xl shadow">
+                <div className="mt-6 p-4 bg-white border border-neutral-200 rounded-2xl">
                   <p className="text-xs font-bold text-neutral-900 mb-1">Still stuck?</p>
                   <p className="text-xs text-neutral-500 mb-3">Our support team is here to help.</p>
                   <button
@@ -4891,7 +4869,7 @@ export default function Help() {
             {/* Article body */}
             <main className="flex-1 min-w-0" ref={articleRef}>
               {/* Breadcrumb */}
-              <nav className="flex items-center gap-2 text-xs text-neutral-500 mb-6">
+              <nav className="flex items-center gap-2 text-xs text-neutral-400 mb-6">
                 <button onClick={() => setActiveArticle(null)} className="hover:text-neutral-700 transition-colors">Help Center</button>
                 <ChevronRight className="w-3 h-3" />
                 <button onClick={() => { setActiveArticle(null); setActiveCategory(currentArticle.category); }} className="hover:text-neutral-700 transition-colors">{currentArticle.category}</button>
@@ -4899,13 +4877,13 @@ export default function Help() {
                 <span className="text-neutral-600 font-medium truncate">{currentArticle.title}</span>
               </nav>
 
-              <div className="bg-white rounded-2xl border-2 border-ink p-8 shadow-md" id={currentArticle.id === 'claude-integration' ? 'claude' : undefined}>
+              <div className="bg-white rounded-2xl border border-neutral-200 p-8" id={currentArticle.id === 'claude-integration' ? 'claude' : undefined}>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-11 h-11 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0">
                     <ArticleIcon className="w-5 h-5 text-neutral-700" />
                   </div>
                   <div>
-                    <p className="text-xs text-neutral-500 font-medium">{currentArticle.category}</p>
+                    <p className="text-xs text-neutral-400 font-medium">{currentArticle.category}</p>
                     <h1 className="text-xl font-black text-neutral-900 leading-tight">{currentArticle.title}</h1>
                   </div>
                 </div>
@@ -4916,14 +4894,14 @@ export default function Help() {
                 <div className="mt-10 pt-6 border-t border-neutral-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold text-neutral-500">Was this article helpful?</p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
+                    <p className="text-xs text-neutral-400 mt-0.5">
                       If not, email us at{' '}
                       <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-700 underline underline-offset-2 font-medium">planit.userhelp@gmail.com</a>
                     </p>
                   </div>
                   <button
                     onClick={() => setReportOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-hl text-ink text-xs font-bold rounded-xl hover:bg-hl transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-xs font-bold rounded-xl hover:bg-neutral-700 transition-colors"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Report an Issue
@@ -4933,7 +4911,7 @@ export default function Help() {
 
               {/* Related articles */}
               <div className="mt-6">
-                <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-3">Related articles</p>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Related articles</p>
                 <div className="space-y-2">
                   {ARTICLES
                     .filter(a => a.id !== currentArticle.id && (a.category === currentArticle.category || a.tags.some(t => currentArticle.tags.includes(t))))
@@ -4949,27 +4927,24 @@ export default function Help() {
           <>
             {/* Hero + search */}
             <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-semibold text-neutral-600 mb-5">
-                <LifeBuoy className="w-3.5 h-3.5" />
-                Help Center
-              </div>
-              <h1 className="font-display text-4xl font-black text-neutral-900 mb-3">How can we help?</h1>
+              <p className="eyebrow mb-5">Help Center</p>
+              <h1 className="t-h1 mb-4 text-neutral-900">How can we help?</h1>
               <p className="text-base text-neutral-500 mb-8 max-w-lg mx-auto">
                 Search for a feature, an error message, or anything you need help with.
               </p>
 
               {/* Search bar */}
               <div className="relative max-w-xl mx-auto mb-4">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 <input
                   ref={searchRef}
                   value={query}
                   onChange={e => { setQuery(e.target.value); setActiveCategory('all'); }}
                   placeholder="Search — e.g. 'reset password', 'QR code', 'seating map'..."
-                  className="w-full pl-11 pr-10 py-3.5 bg-white border-2 border-neutral-200 focus:border-ink rounded-2xl text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-colors shadow-sm focus:ring-[3px] focus:ring-ac"
+                  className="input pl-11 pr-10 py-3.5 text-sm shadow-sm"
                 />
                 {query && (
-                  <button onClick={() => setQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700">
+                  <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-md text-neutral-400 hover:text-neutral-700">
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -4982,7 +4957,7 @@ export default function Help() {
                     <button
                       key={t}
                       onClick={() => setQuery(t)}
-                      className="px-3 py-1.5 bg-white border-2 border-ink rounded-lg text-xs font-bold text-neutral-600 hover:border-ink hover:text-neutral-900 transition-all shadow-sm"
+                      className="px-3 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs font-medium text-neutral-600 hover:border-[var(--pi-accent)] hover:text-[var(--pi-accent-ink)] transition-colors"
                     >
                       {t}
                     </button>
@@ -5023,7 +4998,7 @@ export default function Help() {
                   {/* Category sidebar */}
                   <aside className="hidden lg:block w-52 flex-shrink-0">
                     <div className="sticky top-24">
-                      <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Browse by topic</p>
+                      <p className="text-xs font-bold text-neutral-300 uppercase tracking-widest mb-3">Browse by topic</p>
                       <nav className="space-y-0.5">
                         {CATEGORIES.map(cat => {
                           const CatIcon = cat.icon;
@@ -5032,13 +5007,13 @@ export default function Help() {
                             <button
                               key={cat.id}
                               onClick={() => setActiveCategory(cat.id)}
-                              className={`w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg transition-colors ${activeCategory === cat.id ? 'bg-hl text-ink font-semibold border-2 border-ink rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition' : 'text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+                              className={`w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg transition-colors ${activeCategory === cat.id ? 'bg-neutral-900 text-white font-semibold' : 'text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
                             >
                               <span className="flex items-center gap-2 min-w-0">
                                 <CatIcon className="w-3.5 h-3.5 flex-shrink-0" />
                                 <span className="truncate text-xs">{cat.label}</span>
                               </span>
-                              <span className={`text-xs flex-shrink-0 ${activeCategory === cat.id ? 'text-neutral-600' : 'text-neutral-600'}`}>{count}</span>
+                              <span className={`text-xs flex-shrink-0 ${activeCategory === cat.id ? 'text-neutral-300' : 'text-neutral-300'}`}>{count}</span>
                             </button>
                           );
                         })}
@@ -5054,7 +5029,7 @@ export default function Help() {
                         <button
                           key={cat.id}
                           onClick={() => setActiveCategory(cat.id)}
-                          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition ${activeCategory === cat.id ? 'bg-hl text-ink border-ink border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold' : 'bg-white text-neutral-600 border-neutral-200 border-2 rounded-lg shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition font-bold'}`}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${activeCategory === cat.id ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white text-neutral-600 border-neutral-200'}`}
                         >
                           {cat.label}
                         </button>
@@ -5069,11 +5044,11 @@ export default function Help() {
                       return (
                         <div key={cat.id} className="mb-10">
                           <div className="flex items-center gap-2.5 mb-4">
-                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
-                              <CatIcon className="w-4 h-4 text-ink" />
+                            <div className="w-8 h-8 rounded-xl bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                              <CatIcon className="w-4 h-4 text-white" />
                             </div>
                             <h2 className="text-base font-black text-neutral-900">{cat.label}</h2>
-                            <span className="text-xs text-neutral-500 font-medium">{catArticles.length} articles</span>
+                            <span className="text-xs text-neutral-400 font-medium">{catArticles.length} articles</span>
                           </div>
                           <div className="space-y-2">
                             {catArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating','btc-how-to-pay','btc-what-is-bitcoin'].includes(a.id)} />)}
@@ -5085,24 +5060,24 @@ export default function Help() {
                 </div>
 
                 {/* Contact banner */}
-                <div className="mt-12 rounded-3xl bg-white p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="mt-12 rounded-3xl bg-neutral-900 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
                   <div>
-                    <h3 className="text-lg font-black text-ink mb-1">Didn't find what you need?</h3>
-                    <p className="text-sm text-neutral-500">
+                    <h3 className="text-lg font-black text-white mb-1">Didn't find what you need?</h3>
+                    <p className="text-sm text-neutral-400">
                       Describe your issue and we'll get back to you within 48 business hours.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
                     <button
                       onClick={() => setReportOpen(true)}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors border-2 border-ink shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors"
                     >
                       <AlertTriangle className="w-4 h-4" />
                       Report an Issue
                     </button>
                     <a
                       href="mailto:planit.userhelp@gmail.com"
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-hl text-ink text-sm font-bold rounded-xl hover:bg-hl border-2 border-ink transition-colors shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_#0d0e1c] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition"
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-800 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 border border-neutral-700 transition-colors"
                     >
                       <Mail className="w-4 h-4" />
                       planit.userhelp@gmail.com
@@ -5114,6 +5089,7 @@ export default function Help() {
           </>
         )}
       </div>
+      <PublicFooter />
     </div>
     </>
   );

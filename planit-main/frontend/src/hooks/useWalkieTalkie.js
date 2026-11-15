@@ -444,7 +444,7 @@ export function useWalkieTalkie(socket, eventId, token, username) {
         : `Could not open mic: ${e.message}`;
       setError(msg);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // ── PTT stop ──────────────────────────────────────────────────────────
   const stopPTT = useCallback(async () => {
@@ -464,7 +464,7 @@ export function useWalkieTalkie(socket, eventId, token, username) {
     isSpeakingRef.current = false;
     setIsSpeaking(false);
     socketRef.current?.emit('walkie:ptt_stop', { eventId: eventIdRef.current });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // ── Cleanup ───────────────────────────────────────────────────────────
   function closePeer(peerId) {
