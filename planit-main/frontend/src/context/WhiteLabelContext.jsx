@@ -30,7 +30,11 @@ const NATIVE_HOSTS = [
   ...(import.meta.env.VITE_MAIN_DOMAIN ? [import.meta.env.VITE_MAIN_DOMAIN] : []),
 ];
 
+// Render pull-request previews (planitapp-pr-<n>.onrender.com) are the platform itself, not white-label clients.
+const PREVIEW_HOST = /^planitapp-pr-\d+\.onrender\.com$/;
+
 function isCustomDomain(hostname) {
+  if (PREVIEW_HOST.test(hostname)) return false;
   return !NATIVE_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
 }
 
