@@ -373,9 +373,9 @@ function Step4({ event, invites, checkinSettings, onDone }) {
           Go to dashboard <ArrowRight className="w-4 h-4" />
         </button>
         <a
-          href="https://docs.planitapp.com/checkin-guide"
+          href="/help#ent-checkin"
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noopener"
           className="w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm text-neutral-500 hover:text-neutral-900 border border-neutral-200 rounded-xl transition-all"
         >
           <BookOpen className="w-4 h-4" /> View check-in guide
