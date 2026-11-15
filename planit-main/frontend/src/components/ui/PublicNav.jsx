@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpRight, ChevronDown, CornerDownRight, LogIn, Menu, X } from 'lucide-react';
 import { useWhiteLabel } from '../../context/WhiteLabelContext';
-import { PRODUCT, SOLUTIONS, RESOURCES } from './navData';
+import { PRODUCT, RESOURCES, TOP_LINKS } from './navData';
 import { extractSlug } from './slug';
 import PlanItMark from './PlanItMark';
 
@@ -11,9 +11,9 @@ import PlanItMark from './PlanItMark';
  * PublicNav: the one navigation bar for every public PlanIt page.
  *
  * - Floating bar that picks up a firmer surface and shadow once you scroll.
- * - Product / Solutions / Resources open rich menus (hover on desktop, tap or
+ * - Product / Resources open rich menus (hover on desktop, tap or
  *   keyboard everywhere). Escape and outside-click close them.
- * - "Sign in" opens a small panel: PlanIt has no global account, organizers
+ * - "Open event" opens a small panel: PlanIt has no global account, organizers
  *   enter through their event link, so that is what the panel asks for.
  * - Below `lg` it collapses to a full-height sheet with 44px targets and
  *   safe-area padding.
@@ -191,10 +191,10 @@ export default function PublicNav({ dark = false, actions = null, showCta = true
         {!isWL ? (
           <div className="ml-2 hidden items-center gap-0.5 lg:flex">
             <NavMenu id="product" label="Product" items={PRODUCT} open={open} setOpen={setOpen} active={anyActive(PRODUCT)} />
-            <Link to="/#features" className="pi-nav-link">Features</Link>
-            <NavMenu id="solutions" label="Solutions" items={SOLUTIONS} open={open} setOpen={setOpen} active={anyActive(SOLUTIONS)} />
-            <Link to="/about" className="pi-nav-link" aria-current={isActivePath(pathname, '/about') ? 'page' : undefined}>About</Link>
-            <NavMenu id="resources" label="Resources" items={RESOURCES} open={open} setOpen={setOpen} active={anyActive(RESOURCES)} align="right" />
+            {TOP_LINKS.map(({ to, title }) => (
+              <Link key={to} to={to} className="pi-nav-link" aria-current={isActivePath(pathname, to) ? 'page' : undefined}>{title}</Link>
+            ))}
+            <NavMenu id="resources" label="Resources" items={RESOURCES} open={open} setOpen={setOpen} active={anyActive(RESOURCES)} />
           </div>
         ) : (
           <div className="ml-2 hidden items-center gap-0.5 lg:flex">
@@ -208,7 +208,7 @@ export default function PublicNav({ dark = false, actions = null, showCta = true
           {!isWL && (
             <div className="relative hidden sm:block">
               <button type="button" className="pi-nav-link" aria-haspopup="dialog" aria-expanded={open === 'signin'} onClick={() => setOpen(open === 'signin' ? null : 'signin')}>
-                Sign in
+                Open event
               </button>
               <AnimatePresence>{open === 'signin' && <SignInPanel onDone={closeAll} />}</AnimatePresence>
             </div>
@@ -255,11 +255,14 @@ export default function PublicNav({ dark = false, actions = null, showCta = true
                     <MobileSignIn onDone={closeAll} />
                   </div>
                   <div className="grid grid-cols-2 gap-1">
-                    <Link to="/#features" className="menu-item" style={{ minHeight: 44 }}>Features</Link>
-                    <Link to="/about" className="menu-item" style={{ minHeight: 44 }}>About</Link>
+                    {TOP_LINKS.map(({ to, icon: Icon, title }) => (
+                      <Link key={to} to={to} className="menu-item" style={{ minHeight: 44 }}>
+                        <Icon className="h-4 w-4 text-[var(--pi-text-muted)]" strokeWidth={1.75} />{title}
+                      </Link>
+                    ))}
                   </div>
                   <div className="menu-sep" />
-                  {[['Product', PRODUCT], ['Solutions', SOLUTIONS], ['Resources', RESOURCES]].map(([h, items]) => (
+                  {[['Product', PRODUCT], ['Resources', RESOURCES]].map(([h, items]) => (
                     <div key={h} className="mb-1">
                       <p className="t-label px-2.5 pb-1 pt-2">{h}</p>
                       {items.map(({ to, icon: Icon, title }) => (
@@ -284,7 +287,7 @@ function MobileSignIn({ onDone }) {
   const navigate = useNavigate();
   const [show, setShow] = useState(false);
   const [value, setValue] = useState('');
-  if (!show) return <button type="button" className="btn btn-secondary btn-lg" onClick={() => setShow(true)}>Sign in</button>;
+  if (!show) return <button type="button" className="btn btn-secondary btn-lg" onClick={() => setShow(true)}>Open event</button>;
   return (
     <form
       className="col-span-2 flex gap-2"
