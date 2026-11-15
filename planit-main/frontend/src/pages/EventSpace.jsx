@@ -33,6 +33,7 @@ import OrganizerSettings from '../components/OrganizerSettings';
 import FeatureTour from '../components/tour/FeatureTour';
 import CrossPlatformAd from '../components/CrossPlatformAd';
 import SeatingMap from '../components/SeatingMap';
+import { SkeletonPage } from '../components/ui/Feedback';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ eventId, onClose }) {
@@ -1525,18 +1526,10 @@ export default function EventSpace() {
   }, [settings.allowChat, settings.allowPolls, settings.allowFileSharing]);
 
   /* ── Gate / Loading ── */
-  if (resolving || (loading && !event)) return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
-    </div>
-  );
+  if (resolving || (loading && !event)) return <SkeletonPage />;
   if (needsJoin) return <JoinGate key={joinKey} eventId={eventId} onJoined={handleJoined} />;
   if (!event)   return null;
-  if (loading)  return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
-    </div>
-  );
+  if (loading)  return <SkeletonPage />;
 
   return (
     <>

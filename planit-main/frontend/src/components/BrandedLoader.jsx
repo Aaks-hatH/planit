@@ -12,6 +12,7 @@
  */
 import { useEffect, useState } from 'react';
 import { currentBrandFromLocation, parseEventPath, fetchBrand } from '../utils/eventBrand';
+import PlanItMark from './ui/PlanItMark';
 
 export default function BrandedLoader({ dark = true, label = 'Loading…' }) {
   const [brand, setBrand] = useState(() => currentBrandFromLocation());
@@ -38,7 +39,9 @@ export default function BrandedLoader({ dark = true, label = 'Loading…' }) {
       {brand?.logoUrl
         ? <img src={brand.logoUrl} alt="" style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'cover' }} />
         : !name && (
-          <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 10, background: dark ? '#fff' : '#0f0f14', color: dark ? '#07070b' : '#fff', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, letterSpacing: '-0.05em', animation: 'bl-breathe 1.6s ease-in-out infinite' }}>P</span>
+          <span aria-hidden="true" style={{ display: 'inline-flex', animation: 'bl-breathe 1.6s ease-in-out infinite' }}>
+            <PlanItMark size={48} style={{ boxShadow: dark ? '0 0 0 1px rgba(255,255,255,0.18)' : '0 0 0 1px rgba(15,15,20,0.08)' }} />
+          </span>
         )}
       {name && (
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: fg, maxWidth: 420, lineHeight: 1.25, wordBreak: 'break-word' }}>{name}</div>

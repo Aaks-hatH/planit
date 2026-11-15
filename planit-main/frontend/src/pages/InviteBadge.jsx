@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { SkeletonSection } from '../components/ui/Feedback';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -35,7 +36,7 @@ export default function InviteBadge() {
 
   if (loading) return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
-      <p style={{ color: '#6b7280' }}>Loading…</p>
+      <div style={{ width: 'min(380px, 90vw)' }}><SkeletonSection cards={1} /></div>
     </div>
   );
 

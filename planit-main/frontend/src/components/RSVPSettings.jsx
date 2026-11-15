@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rsvpAPI, fileAPI } from '../services/api';
+import { SkeletonSection } from './ui/Feedback';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
@@ -318,11 +319,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
   };
 
   if (loading || !settings) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-6 h-6 border-2 border-neutral-200 border-t-indigo-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <SkeletonSection cards={2} className="py-4" />;
   }
 
   const TABS = [

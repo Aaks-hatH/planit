@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Eye, CheckCircle2 } from 'lucide-react';
 import { rsvpAPI } from '../services/api';
+import { SkeletonStats, SkeletonTable } from './ui/Feedback';
 
 /**
  * frontend/src/components/RSVPAnalytics.jsx
@@ -34,8 +35,9 @@ export default function RSVPAnalytics({ eventId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-6 h-6 border-2 border-neutral-200 border-t-neutral-500 rounded-full animate-spin" />
+      <div className="space-y-5 py-2">
+        <SkeletonStats />
+        <SkeletonTable rows={4} cols={4} />
       </div>
     );
   }

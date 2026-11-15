@@ -13,6 +13,7 @@ import api from '../services/api';
 import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
+import PlanItMark from '../components/ui/PlanItMark';
 import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
 import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
 import { HomePreloader } from '../components/HomeMotion';
@@ -486,9 +487,7 @@ function Nav({ onApply, openRoles, go }) {
       style={{ top: 'calc(1rem + 3px)' }}
     >
       <a href="/" aria-label="PlanIt home" className="group flex items-center gap-3 text-white">
-        <span className="lq-glass flex items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
-          <span className="lq-display text-[26px] leading-none">P</span>
-        </span>
+        <PlanItMark size={44} />
         <span className="lq-display hidden text-2xl leading-none sm:block">PlanIt</span>
         <span className="lq-glass hidden rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/80 sm:block">Careers</span>
       </a>

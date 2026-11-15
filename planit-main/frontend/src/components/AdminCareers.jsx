@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import OrgChart from './OrgChart';
 import AddPersonWizard from './AddPersonWizard';
+import { SkeletonSection } from './ui/Feedback';
 
 /**
  * Admin -> Careers
@@ -421,7 +422,7 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
     : [['org', 'Org chart', Network, 0]]), [overview, canHiring]);
   useEffect(() => { if (!canHiring) setTab('org'); }, [canHiring]);
 
-  if (loading) return <div className="flex items-center justify-center py-24 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading careers…</div>;
+  if (loading) return <SkeletonSection cards={3} className="py-6" />;
 
   return (
     <div className="space-y-5">

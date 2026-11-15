@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { Skeleton } from './ui/Feedback';
 
 /**
  * Admin → Payments
@@ -243,7 +244,11 @@ export default function AdminPayments({ isDemo = false }) {
               </tr>
             </thead>
             <tbody>
-              {loading && !data && <tr><td colSpan={7} className="py-12 text-center text-neutral-400"><Loader2 className="w-5 h-5 animate-spin inline" /></td></tr>}
+              {loading && !data && Array.from({ length: 6 }).map((_, r) => (
+                <tr key={`sk${r}`} aria-hidden="true">
+                  {Array.from({ length: 7 }).map((_, c) => <td key={c} className="px-3 py-3"><Skeleton style={{ width: `${45 + (((r + 1) * (c + 3)) * 11) % 45}%`, margin: 0 }} /></td>)}
+                </tr>
+              ))}
               {data?.items?.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-neutral-400">No payments match.</td></tr>}
               {data?.items?.map((i) => (
                 <tr key={i.id} onClick={() => setSelected(i)} className="border-b border-neutral-50 hover:bg-neutral-50 cursor-pointer">

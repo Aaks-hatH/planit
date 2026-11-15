@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { useWhiteLabel } from '../../context/WhiteLabelContext';
 import { FOOTER_COLUMNS, LEGAL_LINKS } from './navData';
+import PlanItMark from './PlanItMark';
 
 /**
  * PublicFooter: shared footer for every public page. Sits on an ink surface
@@ -60,7 +61,7 @@ export default function PublicFooter({ compact = false }) {
 
         <div className="flex flex-col gap-4 border-t border-[var(--pi-border)] py-6 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="pi-mark" aria-hidden="true" style={{ width: '1.5rem', height: '1.5rem', fontSize: '0.875rem' }}>P</span>
+            <PlanItMark size={24} />
             <span>© {year} PlanIt. All rights reserved. Built by Aakshat Hariharan.</span>
           </div>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-1">

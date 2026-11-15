@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
 import RSVPPageRenderer from '../components/RSVPPageRenderer';
 import { FONTS, getBgStyle } from '../components/rsvpBlocks/theme';
+import { SkeletonHeroPage } from '../components/ui/Feedback';
 
 // Code-split: only guests who actually submit ever need this screen, and it's
 // the only thing in this file that pulled in luxon + the canvas share-card
@@ -137,7 +138,7 @@ export default function RSVPPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a12' }}><div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" /></div>;
+    return <SkeletonHeroPage dark />;
   }
   if (error || !pageData) {
     return (
@@ -178,7 +179,7 @@ export default function RSVPPage() {
 
   if (submitResult) {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={bg}><div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" /></div>}>
+      <Suspense fallback={<SkeletonHeroPage dark bg={bg?.background} />}>
         <RSVPConfirmationScreen data={submitResult} rsvpPage={rsvpPage} event={pageData} accent={accent} bgStyle={bgStyleKey} fontStyle={fontStyle} />
       </Suspense>
     );

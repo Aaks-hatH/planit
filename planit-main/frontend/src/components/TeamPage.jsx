@@ -8,6 +8,7 @@ import { adminAPI } from '../services/api';
 import AddPersonWizard from './AddPersonWizard';
 import { GithubTab, TasksTab } from './TeamWork';
 import { FIELD, SECTION_LABEL, TONE, TONE_BAR, ago, initials, roleLabel, roleOf, sectionsFrom, when } from './teamShared';
+import { SkeletonList } from './ui/Feedback';
 
 /**
  * Admin -> Team
@@ -359,7 +360,7 @@ function Directory({ catalog, currentUser, isDemo, demoEmployees, isSuper, reloa
         <select className={`${FIELD} sm:w-36`} value={fStatus} onChange={(e) => setFStatus(e.target.value)}><option value="all">All statuses</option>{['active', 'inactive', 'suspended'].map((s) => <option key={s}>{s}</option>)}</select>
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div> : (
+      {loading ? <SkeletonList rows={6} columns={2} /> : (
         <div className="grid gap-3 lg:grid-cols-2">
           {root && !q && fRole === 'all' && fStatus === 'all' && (
             <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4">

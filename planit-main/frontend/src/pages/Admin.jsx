@@ -48,6 +48,7 @@ import toast from 'react-hot-toast';
 import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
 import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';
+import { SkeletonList, SkeletonStats, SkeletonTable, SkeletonSection } from '../components/ui/Feedback';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (date) => {
@@ -492,7 +493,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div>
+          <div className="p-5 space-y-5"><SkeletonStats /><SkeletonTable rows={5} cols={4} /></div>
         ) : (
           <div className="p-5">
             {/* Overview */}
@@ -809,7 +810,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             {/* ── ANALYTICS TAB (lazy load) ─────────────────────────────────── */}
             {tab === 'analytics' && (
               <div>
-                {analyticsLoading && <div className="flex justify-center py-16"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-indigo-500" /></div>}
+                {analyticsLoading && <div className="space-y-5"><SkeletonStats /><SkeletonTable rows={5} cols={4} /></div>}
                 {!analyticsLoaded && !analyticsLoading && (
                   <div className="text-center py-16">
                     <p className="text-sm text-neutral-400 mb-3">Visitor analytics for this event</p>
@@ -1970,7 +1971,7 @@ function UptimePanel() {
             </div>
             <button onClick={loadAll} className="btn btn-secondary text-xs py-1.5 gap-1"><RefreshCw className="w-3 h-3"/> Refresh</button>
           </div>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600"/></div>
+          {loading ? <SkeletonList rows={4} />
           : reports.length === 0 ? <div className="text-center py-12 text-neutral-400"><Radio className="w-8 h-8 mx-auto mb-2 opacity-30"/><p className="text-sm">No reports</p></div>
           : reports.map(r => {
             const svcMeta = ALL_SERVICES_FLAT.find(s => s.key === r.affectedService);
@@ -2017,7 +2018,7 @@ function UptimePanel() {
               <button onClick={() => { setCreateForm({title:'',description:'',severity:'minor',initialMessage:'',reportIds:[]}); setSelServices([]); setShowCreate(true); }} className="btn btn-primary text-xs py-1.5 gap-1"><Plus className="w-3 h-3"/> New</button>
             </div>
           </div>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600"/></div>
+          {loading ? <SkeletonList rows={4} />
           : incidents.length === 0 ? <div className="text-center py-12 text-neutral-400"><CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30"/><p className="text-sm">No incidents</p></div>
           : incidents.map(inc => {
             const sm = STATUS_META[inc.status] || STATUS_META.investigating;
@@ -2281,7 +2282,7 @@ function SystemPanel() {
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
-  if (loading && !sys) return <div className="flex justify-center py-24"><div className="spinner w-8 h-8 border-2 border-neutral-300 border-t-neutral-600" /></div>;
+  if (loading && !sys) return <div className="space-y-6"><SkeletonStats /><SkeletonSection cards={3} /></div>;
 
   return (
     <div className="space-y-6">
@@ -2830,7 +2831,7 @@ function OrganizersPanel() {
         </div>
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : (
+      {loading ? <SkeletonTable rows={7} cols={6} /> : (
         <div className="card overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -2892,7 +2893,7 @@ function StaffPanel() {
         <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search staff..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : (
+      {loading ? <SkeletonTable rows={7} cols={6} /> : (
         <div className="card overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -2960,7 +2961,7 @@ function AllUsersPanel() {
         <div className="relative"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><input type="text" placeholder="Search by username..." className="input pl-10 text-sm" value={search} onChange={e => setSearch(e.target.value)} /></div>
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : (
+      {loading ? <SkeletonTable rows={7} cols={6} /> : (
         <div className="card overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -3032,7 +3033,7 @@ function AnalyticsPanel({ stats }) {
         </div>
       )}
 
-      {loading ? <div className="flex justify-center py-8"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : exportStats && (
+      {loading ? <SkeletonSection cards={4} /> : exportStats && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Events by Status */}
@@ -3284,7 +3285,7 @@ function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin
         {/* Report list */}
         <div className="flex-1 min-w-0 space-y-2">
           {loading ? (
-            <div className="text-center py-16 text-neutral-400 text-sm">Loading reports…</div>
+            <SkeletonList rows={5} />
           ) : reports.length === 0 ? (
             <div className="text-center py-16 text-neutral-400 text-sm">No reports match your filters</div>
           ) : (

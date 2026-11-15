@@ -298,6 +298,9 @@
   .skeleton-title  { height: 1.5rem; width: 60%; margin-bottom: 0.75rem; }
   .skeleton-circle { border-radius: 50%; aspect-ratio: 1; }
   .skeleton-card   { height: 7rem; border-radius: var(--r-xl); }
+  /* Same shimmer on always-dark pages (RSVP, reservation ticket, ...) where the light tokens would glare. */
+  .skeleton-dark   { background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.14) 37%, rgba(255,255,255,0.06) 63%); background-size: 400% 100%; }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
   /* ─── Empty state ───────────────────────────────────────────────────────── */
   .empty-state {

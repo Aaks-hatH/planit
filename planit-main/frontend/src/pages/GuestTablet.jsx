@@ -23,6 +23,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { eventAPI } from '../services/api';
+import { SkeletonSection } from '../components/ui/Feedback';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -920,7 +921,7 @@ export default function GuestTablet() {
   if (!tableState || !tableObj) {
     return (
       <div style={{ height: '100dvh', background: '#fafaf9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 24, height: 24, border: '2px solid #e7e5e4', borderTopColor: '#a8a29e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 'min(560px, 90vw)' }}><SkeletonSection cards={2} /></div>
       </div>
     );
   }

@@ -17,6 +17,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Loader2, QrCode,
   ChevronLeft, Info, Utensils,
 } from 'lucide-react';
+import { SkeletonHeroPage } from '../components/ui/Feedback';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -82,9 +83,7 @@ export default function ReservationTicket() {
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-    </div>
+    <SkeletonHeroPage dark bg="#0a0a0a" />
   );
 
   if (error === 'not_found') return (

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import { SkeletonSection } from './ui/Feedback';
 
 /**
  * Security Settings Configuration Panel
@@ -228,9 +229,8 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-neutral-600 text-center">Loading settings...</p>
+        <div className="bg-white rounded-2xl p-6 shadow-2xl" style={{ width: 'min(480px, 92vw)' }}>
+          <SkeletonSection cards={2} />
         </div>
       </div>
     );

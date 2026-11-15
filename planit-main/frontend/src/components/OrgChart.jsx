@@ -12,6 +12,7 @@ import {
   CARD_W, CARD_H, HEAD_W, HEAD_H, MAX_LEVEL, computeLayout, linkPath, childrenMap, descendantsOf,
   ancestorsOf, planMove, validTargets, initials,
 } from './orgChartLogic';
+import { SkeletonSection } from './ui/Feedback';
 
 /**
  * Admin -> Careers -> Org chart
@@ -662,7 +663,7 @@ export default function OrgChart({ isDemo = false }) {
   const selected = draft || (selectedId ? nodes.find((n) => n._id === selectedId) : null);
   const rootIds = useMemo(() => new Set(viewNodes.filter((n) => !n.parentId || !byId.has(n.parentId)).filter((n) => n.level === 0).map((n) => n._id)), [viewNodes, byId]);
 
-  if (loading) return <div className="flex items-center justify-center py-24 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading org chart…</div>;
+  if (loading) return <SkeletonSection cards={3} className="py-6" />;
   if (err) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err} <button onClick={() => { setLoading(true); load(); }} className="ml-2 font-bold underline">Retry</button></div>;
 
   const tbtn = 'rounded-lg border border-neutral-200 bg-white p-2 text-neutral-600 hover:bg-neutral-50';

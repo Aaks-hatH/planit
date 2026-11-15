@@ -7,6 +7,7 @@ import {
 import { eventAPI } from '../services/api';
 import { formatRelativeTime } from '../utils/formatters';
 import toast from 'react-hot-toast';
+import { SkeletonPage } from '../components/ui/Feedback';
 
 export default function Waitlist() {
   const { eventId } = useParams();
@@ -123,9 +124,7 @@ export default function Waitlist() {
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
-      </div>
+      <SkeletonPage cards={2} />
     );
   }
 

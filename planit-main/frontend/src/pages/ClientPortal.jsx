@@ -19,6 +19,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 import { validatePassword } from '../utils/validators';
+import { Skeleton } from '../components/ui/Feedback';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 const TOKEN_KEY = 'wl_portal_token';
@@ -386,7 +387,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
                 </option>
               ))}
             </select>
-            {eventsLoading && <p className="text-xs text-neutral-400 mt-1">Loading tenant events…</p>}
+            {eventsLoading && <span role="status" aria-label="Loading tenant events" className="mt-1 block"><Skeleton style={{ width: 160, height: 12 }} /></span>}
             {!eventsLoading && tenantEvents.length === 0 && <p className="text-xs text-amber-700 mt-1">No tenant events yet. Create one from the branded homepage or admin dashboard first.</p>}
           </Field>
           {form.home.tableServiceEventId && (

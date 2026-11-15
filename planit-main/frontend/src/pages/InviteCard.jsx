@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { SkeletonSection } from '../components/ui/Feedback';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -59,7 +60,7 @@ export default function InviteCard() {
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
       fontFamily: 'system-ui', color: '#9ca3af' }}>
-      Loading…
+      <div style={{ width: 'min(380px, 90vw)' }}><SkeletonSection dark cards={1} /></div>
     </div>
   );
 

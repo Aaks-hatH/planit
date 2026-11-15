@@ -10,6 +10,7 @@ import { eventAPI, fileAPI } from '../services/api';
 import RSVPSettings from './RSVPSettings';
 import RSVPDashboard from './RSVPDashboard';
 import CloneEventButton from './CloneEventButton';
+import { SkeletonList } from './ui/Feedback';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -480,7 +481,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
       </button>
      </div>
      {queueLoading ? (
-      <div className="flex items-center justify-center py-8 text-neutral-400 text-sm">Loading…</div>
+      <SkeletonList rows={3} />
      ) : approvalQueue.length === 0 ? (
       <div className="text-center py-10 text-neutral-400 text-sm">
        <p className="text-neutral-300 mb-1">No pending requests</p>
@@ -875,7 +876,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* ── Existing webhooks ── */}
  {webhooksLoading ? (
- <div className="flex justify-center py-4"><span className="spinner w-4 h-4 border-2 border-neutral-200 border-t-neutral-500" /></div>
+ <SkeletonList rows={2} />
  ) : webhooks.length > 0 ? (
  <div className="space-y-2">
  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Active Webhooks</p>

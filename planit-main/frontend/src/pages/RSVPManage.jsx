@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
+import { SkeletonHeroPage } from '../components/ui/Feedback';
 
 const STATUS_COLORS = {
   confirmed:  { bg: '#10b98122', border: '#10b98144', text: '#10b981', label: 'Confirmed' },
@@ -62,9 +63,7 @@ export default function RSVPManage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a12' }}>
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
-      </div>
+      <SkeletonHeroPage dark />
     );
   }
 

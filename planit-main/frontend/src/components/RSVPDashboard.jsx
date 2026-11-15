@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
+import { SkeletonTable } from './ui/Feedback';
 
 const STATUS_META = {
   confirmed:  { label: 'Confirmed',  bg: 'bg-emerald-50',  text: 'text-emerald-700',  border: 'border-emerald-200', dot: 'bg-emerald-500' },
@@ -456,9 +457,7 @@ export default function RSVPDashboard({ event, eventId }) {
       {/* Table */}
       <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <RefreshCw className="w-5 h-5 text-neutral-400 animate-spin" />
-          </div>
+          <SkeletonTable rows={6} cols={5} className="!border-0 !rounded-none" />
         ) : submissions.length === 0 ? (
           <div className="text-center py-16 space-y-2">
             <Users className="w-8 h-8 mx-auto text-neutral-200" />

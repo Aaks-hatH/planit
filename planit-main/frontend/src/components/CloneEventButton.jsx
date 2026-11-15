@@ -20,6 +20,7 @@ import { Copy, Plus, X, ExternalLink, ChevronRight, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import { getUserTimezone, localDateTimeToUTC } from '../utils/timezoneUtils';
+import { SkeletonSection } from './ui/Feedback';
 
 const SLUG_RE = /^[a-z0-9-]{3,50}$/;
 const cleanSlug = (v) => v.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50);
@@ -166,9 +167,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
 
         <div className="px-6 py-5 overflow-y-auto space-y-4">
           {loadingInfo && (
-            <div className="flex justify-center py-6">
-              <span className="spinner w-4 h-4 border-2 border-neutral-200 border-t-neutral-500" />
-            </div>
+            <SkeletonSection cards={1} />
           )}
 
           {/* ── Result ── */}

@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Eye, KeyRound, Loade
 import toast from 'react-hot-toast';
 import api, { adminAPI } from '../services/api';
 import { FIELD, SECTION_LABEL, TONE, TONE_BAR, sectionsFrom, roleLabel } from './teamShared';
+import { SkeletonList } from './ui/Feedback';
 
 /**
  * AddPersonWizard - the one way to add a person to the team.
@@ -171,7 +172,7 @@ export default function AddPersonWizard({ prefill = {}, onClose, onCreated }) {
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading…</div>
+            <SkeletonList rows={4} />
           ) : result ? (
             /* ───────── done ───────── */
             <div className="space-y-4">

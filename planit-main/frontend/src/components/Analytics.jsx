@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart3, Users, MessageSquare, FileText, Vote, Eye, TrendingUp, CheckCircle2, DollarSign, UserCheck, Clock, AlertCircle } from 'lucide-react';
 import { analyticsAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import { SkeletonStats, SkeletonSection } from './ui/Feedback';
 
 export default function Analytics({ eventId }) {
   const [analytics, setAnalytics] = useState(null);
@@ -25,8 +26,9 @@ export default function Analytics({ eventId }) {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8 border-4 border-neutral-200 border-t-neutral-900" />
+      <div className="h-full space-y-6 p-4">
+        <SkeletonStats />
+        <SkeletonSection cards={3} />
       </div>
     );
   }

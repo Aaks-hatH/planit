@@ -7,6 +7,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
 import { platformAnalyticsAPI } from '../services/api';
+import { SkeletonStats, SkeletonTable } from './ui/Feedback';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmtMs = (ms) => {
@@ -588,9 +589,9 @@ export default function PlatformAnalyticsDashboard() {
   const WINDOWS = [{ v: 1, l: '24h' }, { v: 7, l: '7 days' }, { v: 30, l: '30 days' }, { v: 90, l: '90 days' }];
 
   if (loading && !data) return (
-    <div className="flex items-center justify-center h-64 text-neutral-400 gap-3">
-      <RefreshCw className="w-5 h-5 animate-spin" />
-      <span className="text-sm">Loading analytics…</span>
+    <div className="space-y-5">
+      <SkeletonStats />
+      <SkeletonTable rows={6} cols={5} />
     </div>
   );
   if (error) return (

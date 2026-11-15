@@ -5,6 +5,7 @@ import { ArrowUpRight, ChevronDown, CornerDownRight, LogIn, Menu, X } from 'luci
 import { useWhiteLabel } from '../../context/WhiteLabelContext';
 import { PRODUCT, SOLUTIONS, RESOURCES } from './navData';
 import { extractSlug } from './slug';
+import PlanItMark from './PlanItMark';
 
 /**
  * PublicNav: the one navigation bar for every public PlanIt page.
@@ -34,7 +35,9 @@ function Brand({ isWL, name, logo }) {
     <Link to="/" className="flex items-center gap-2.5 pr-2 shrink-0" aria-label={isWL ? (name || 'Home') : 'PlanIt home'}>
       {isWL && logo
         ? <img src={logo} alt={name || ''} className="h-7 w-auto max-w-[8rem] object-contain" />
-        : <span className="pi-mark" aria-hidden="true">{(isWL ? (name || 'P') : 'P').charAt(0)}</span>}
+        : isWL
+          ? <span className="pi-mark" aria-hidden="true">{(name || 'P').charAt(0)}</span>
+          : <PlanItMark size={28} />}
       <span className="pi-wordmark">{isWL ? (name || '') : 'PlanIt'}</span>
     </Link>
   );

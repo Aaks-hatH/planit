@@ -18,6 +18,7 @@ import WalkieTalkieButton from '../components/WalkieTalkieButton';
 import SeatingMap from '../components/SeatingMap';
 import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
 import SetupWizard from '../components/SetupWizard';
+import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
 
 // Simple JWT decode (not for security — only for reading role/username from stored token)
 function decodeJWT(token) {
@@ -1365,11 +1366,7 @@ function ActivityLogDialog({ eventId, onClose }) {
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {loading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-            </div>
-          )}
+          {loading && <SkeletonRows rows={7} />}
           {error && (
             <div className="text-center py-16 text-red-500 text-sm">{error}</div>
           )}
@@ -2166,15 +2163,7 @@ export default function EnterpriseCheckin() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-neutral-400 mx-auto mb-4" />
-          <p className="text-neutral-600">Loading check-in system...</p>
-          <p className="text-xs text-neutral-400 mt-2">Check console (F12) if stuck</p>
-        </div>
-      </div>
-    );
+    return <SkeletonPage cards={4} />;
   }
 
   if (loadError) {

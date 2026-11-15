@@ -6,6 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import { adminAPI } from '../services/api';
 import { FIELD, ago, initials } from './teamShared';
+import { SkeletonList, SkeletonSection } from './ui/Feedback';
 
 /**
  * Admin -> Team -> Tasks and Team -> GitHub
@@ -190,7 +191,7 @@ export function TasksTab({ currentUser, isDemo, canAssign }) {
 
   const shown = useMemo(() => (tasks || []).filter((t) => !who || t.assigneeId === who), [tasks, who]);
   if (isDemo) return <DemoNote what="Tasks" />;
-  if (!tasks) return <div className="flex justify-center py-16 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (!tasks) return <SkeletonList rows={5} />;
 
   const open = (tasks || []).filter((t) => t.status !== 'done').length;
   const hasPeople = scope === 'all' && canAssign;
@@ -375,7 +376,7 @@ export function GithubTab({ isDemo, isSuper }) {
   }, [feed]);
 
   if (isDemo) return <DemoNote what="GitHub" />;
-  if (!status) return err ? <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div> : <div className="flex justify-center py-16 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (!status) return err ? <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err}</div> : <SkeletonSection cards={2} />;
   if (!status.connected || replacing) {
     return <ConnectCard isSuper={isSuper} replacing={replacing} onCancel={() => setReplacing(false)} onDone={async () => { setReplacing(false); await loadStatus(); loadFeed(); }} />;
   }
@@ -433,7 +434,7 @@ export function GithubTab({ isDemo, isSuper }) {
           )}
         </div>
 
-        {!feed ? <div className="flex justify-center py-10 text-neutral-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        {!feed ? <SkeletonList rows={3} />
           : prs.length === 0 ? (
             <div className="rounded-xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-400">
               {seesAll ? 'No pull requests match.' : 'No pull requests are linked to your account yet. If you have opened some, ask a super admin to link your GitHub username.'}
