@@ -2575,7 +2575,14 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
 router.get('/:eventId/invites', verifyCheckinAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
-    const invites = await Invite.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
+    // The guest list only needs display fields. Skip the per-guest audit arrays
+    // (scanAttempts / securityFlags / checkInHistory grow with every scan and can
+    // be many KB per guest) and use lean() so Mongoose doesn't hydrate thousands
+    // of full documents just to serialise them straight back to JSON.
+    const invites = await Invite.find({ eventId: req.params.eventId })
+      .select('-scanAttempts -securityFlags -checkInHistory -lastScanMetadata -checkInLock -duplicateCheckFingerprint')
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ invites });
   } catch (error) { next(error); }
 });
