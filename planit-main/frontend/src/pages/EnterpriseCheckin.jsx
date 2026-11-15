@@ -1479,6 +1479,7 @@ export default function EnterpriseCheckin() {
   // holds the whole screen hostage behind a skeleton.
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [invitesError, setInvitesError] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [invitesStale, setInvitesStale] = useState(false);   // showing the on-device copy until fresh data lands
   const freshInvitesRef = useRef(false);
   const invitesRef = useRef([]);          // latest list for socket handlers (their closures are stale)
@@ -1793,9 +1794,23 @@ export default function EnterpriseCheckin() {
   const loadEvent = async () => {
     try {
       const response = await eventAPI.getById(eventId);
-      console.log('Event loaded:', response.data);
-      setEvent(response.data.event || response.data);
+      const ev = response.data.event || response.data;
+      setEvent(ev);
+      try { localStorage.setItem(`checkin_event_cache_${eventId}`, JSON.stringify(ev)); } catch { /* quota: fine */ }
     } catch (error) {
+      // No response at all means a network failure (offline / server unreachable).
+      // Door staff still need the scanner, so fall back to the copy saved from
+      // the last successful load instead of showing "Failed to Load".
+      if (!error.response) {
+        try {
+          const raw = localStorage.getItem(`checkin_event_cache_${eventId}`);
+          if (raw) {
+            setEvent(JSON.parse(raw));
+            toast('Offline — using saved event data', { icon: '📴' });
+            return;
+          }
+        } catch { /* fall through to the error */ }
+      }
       console.error('Failed to load event:', error);
       throw error;
     }
@@ -1837,21 +1852,27 @@ export default function EnterpriseCheckin() {
   const loadStats = async () => {
     try {
       const response = await eventAPI.getCheckInStats(eventId);
-      console.log('Stats loaded:', response.data);
       setStats(response.data.stats || response.data);
     } catch (error) {
       console.error('Failed to load stats:', error);
+    } finally {
+      setStatsLoading(false);
     }
   };
   
   const loadSettings = async () => {
     try {
       const response = await eventAPI.getCheckInSettings(eventId);
-      console.log('Settings loaded:', response.data);
-      setSettings(response.data.settings || response.data || {});
+      const next = response.data.settings || response.data || {};
+      setSettings(next);
+      try { localStorage.setItem(`checkin_settings_cache_${eventId}`, JSON.stringify(next)); } catch { /* ignore */ }
     } catch (error) {
       console.error('Failed to load settings:', error);
-      setSettings({});
+      let saved = {};
+      if (!error.response) {
+        try { saved = JSON.parse(localStorage.getItem(`checkin_settings_cache_${eventId}`) || '{}'); } catch { /* ignore */ }
+      }
+      setSettings(saved);
     }
   };
 
@@ -2540,15 +2561,17 @@ export default function EnterpriseCheckin() {
       <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           {[
-            { label: 'Total Groups', value: stats?.total ?? (invitesLoading && !invites.length ? null : invites.length), color: 'text-neutral-900' },
-            { label: 'Checked In', value: stats ? (stats.checkedIn ?? 0) : null, color: 'text-emerald-600' },
-            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? (invitesLoading && !invites.length ? null : invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0)), color: 'text-emerald-700' },
+            { label: 'Total Groups', value: stats?.total ?? (invites.length || null), color: 'text-neutral-900' },
+            { label: 'Checked In', value: stats ? (stats.checkedIn ?? 0) : (invites.length ? invites.filter(i => i.checkedIn).length : null), color: 'text-emerald-600' },
+            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? (invites.length ? invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0) : null), color: 'text-emerald-700' },
             { label: 'Adults Expected', value: stats ? (stats.totalExpectedAdults ?? 0) : null, color: 'text-neutral-600' },
             { label: 'Children', value: stats ? (stats.totalExpectedChildren ?? 0) : null, color: 'text-indigo-600' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white rounded-2xl border border-neutral-150 p-5 shadow-sm">
               {value === null
-                ? <div className="h-9 w-14 rounded-lg bg-neutral-100 animate-pulse" aria-label={`${label} loading`} />
+                ? ((statsLoading || invitesLoading)
+                    ? <div className="h-9 w-14 rounded-lg bg-neutral-100 animate-pulse" aria-label={`${label} loading`} />
+                    : <div className="text-3xl font-black tabular-nums text-neutral-300" title="Unavailable offline">—</div>)
                 : <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>}
               <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
             </div>
