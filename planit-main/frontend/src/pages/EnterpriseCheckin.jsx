@@ -20,6 +20,40 @@ import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
 import SetupWizard from '../components/SetupWizard';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
 
+// Guest rows rendered at a time. Thousands of rows at once is what makes the
+// list janky; searching still covers the whole list, only rendering is windowed.
+const GUEST_PAGE_SIZE = 50;
+
+// Same shape the backend's /checkin-cache builds, so the offline cache can be
+// refreshed from the /invites response we already have.
+const inviteToSnapshot = (inv) => ({
+  code:       inv.inviteCode,
+  name:       inv.guestName,
+  email:      inv.guestEmail || '',
+  groupSize:  inv.groupSize  || 1,
+  adults:     inv.adults     || 1,
+  children:   inv.children   || 0,
+  checkedIn:  !!inv.checkedIn,
+  hasPin:     !!inv.securityPin,
+  isBlocked:  !!inv.isBlocked,
+  status:     inv.status     || 'active',
+  notes:      inv.notes      || '',
+  tableId:    inv.tableId    || null,
+  tableLabel: inv.tableLabel || null,
+});
+
+// Read-only stand-in for an invite, built from the on-device snapshot.
+const snapshotToInvite = (g) => ({
+  _id: `cached-${g.code}`,
+  inviteCode: g.code,
+  guestName: g.name || '',
+  guestEmail: g.email || '',
+  groupSize: g.groupSize, adults: g.adults, children: g.children,
+  checkedIn: g.checkedIn, isBlocked: g.isBlocked, status: g.status,
+  notes: g.notes, tableId: g.tableId, tableLabel: g.tableLabel,
+  guestRole: 'GUEST',
+});
+
 // Simple JWT decode (not for security — only for reading role/username from stored token)
 function decodeJWT(token) {
   try {
@@ -1441,6 +1475,14 @@ export default function EnterpriseCheckin() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // The guest list loads separately from the page shell so a big list never
+  // holds the whole screen hostage behind a skeleton.
+  const [invitesLoading, setInvitesLoading] = useState(true);
+  const [invitesError, setInvitesError] = useState(null);
+  const [invitesStale, setInvitesStale] = useState(false);   // showing the on-device copy until fresh data lands
+  const freshInvitesRef = useRef(false);
+  const invitesRef = useRef([]);          // latest list for socket handlers (their closures are stale)
+  const [visibleCount, setVisibleCount] = useState(GUEST_PAGE_SIZE);
   
   const [scanMode, setScanMode] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -1499,18 +1541,21 @@ export default function EnterpriseCheckin() {
     }
   }, [eventId, authState.ready]);
 
+  useEffect(() => { setVisibleCount(GUEST_PAGE_SIZE); }, [searchQuery]);
+  invitesRef.current = invites;
+
   // ── Setup wizard: show on first run for organizers, or when they've just
   // added their first guest and the wizard step key indicates they should
   // continue to the QR / settings steps.
   useEffect(() => {
-    if (loading || authState.role !== 'organizer') return;
+    if (loading || invitesLoading || invitesError || authState.role !== 'organizer') return;
     if (localStorage.getItem(`checkin_setup_done_${eventId}`) === 'true') return;
     const pendingStep = localStorage.getItem(`checkin_wizard_step_${eventId}`);
     // Show if no guests yet, OR if they added guests and should continue
     if (invites.length === 0 || pendingStep !== null) {
       setShowSetupWizard(true);
     }
-  }, [loading, authState.role, invites.length, eventId]);
+  }, [loading, invitesLoading, invitesError, authState.role, invites.length, eventId]);
 
   // Real-time socket updates + offline cache bootstrap
   useEffect(() => {
@@ -1524,8 +1569,23 @@ export default function EnterpriseCheckin() {
 
     if (socket) {
       socket.emit('join_event', eventId);
-      socket.on('guest_checked_in', () => {
-        loadInvites();
+      socket.on('guest_checked_in', (evt) => {
+        // Patch the one guest that changed instead of re-downloading the whole
+        // list on every scan by every staff member. Fall back to a full reload
+        // only if we don't know this guest yet (e.g. just added elsewhere).
+        const code = evt?.inviteCode;
+        const known = !!code && invitesRef.current.some(inv => inv.inviteCode === code);
+        if (known) {
+          setInvites(prev => prev.map(inv => inv.inviteCode !== code ? inv : {
+            ...inv,
+            checkedIn: true,
+            actualAttendees: evt.actualAttendees ?? inv.actualAttendees,
+            checkedInAt: evt.checkedInAt ?? inv.checkedInAt,
+            checkedInBy: evt.checkedInBy ?? inv.checkedInBy,
+          }));
+        } else {
+          loadInvites();
+        }
         loadStats();
       });
       // Security alerts from server antifraud middleware
@@ -1548,15 +1608,18 @@ export default function EnterpriseCheckin() {
     // ── Offline cache: load from DB immediately, then refresh from server ──
     const refreshCacheInfo = () => offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
     offlineCheckin.loadCacheFromDB(eventId).then(cached => {
-      if (cached) setCacheReady(true);
+      if (cached) {
+        setCacheReady(true);
+        // Instant paint: show last session's guest list while the fresh one loads.
+        if (!freshInvitesRef.current && cached.snapshot?.length) {
+          setInvites(cached.snapshot.map(snapshotToInvite));
+          setInvitesStale(true);
+        }
+      }
       refreshCacheInfo();
     });
-    if (offlineCheckin.isOnline()) {
-      offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId)).then(ok => {
-        if (ok) setCacheReady(true);
-        refreshCacheInfo();
-      });
-    }
+    // The network refresh of this cache now happens in loadInvites(), from the
+    // same /invites response, so we no longer fetch /checkin-cache on mount.
 
     // ── Count pending offline check-ins ───────────────────────────────────
     offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
@@ -1696,29 +1759,23 @@ export default function EnterpriseCheckin() {
   };
 
   const loadAllData = async () => {
-    console.log('[checkin] Starting to load check-in data...');
     try {
       setLoading(true);
       setLoadError(null);
-      
-      console.log('[checkin] Loading event...');
-      await loadEvent();
-      
-      console.log('[checkin] Loading invites...');
-      await loadInvites();
-      
-      console.log('[checkin] Loading stats...');
-      await loadStats();
-      
-      console.log('[checkin] Loading settings...');
-      await loadSettings();
 
-      // Non-blocking — seating may not be enabled yet
+      // Only the event itself gates the page. It is small, and its 401/403
+      // tells us whether this person should be here at all.
+      await loadEvent();
+      setLoading(false);
+
+      // Everything else streams in on its own. The guest list can be thousands of
+      // rows, so it must not block stats, settings or the header.
+      loadInvites();
+      loadStats();
+      loadSettings();
       loadSeating().catch(() => {});
-      
-      console.log('✅ All data loaded successfully');
     } catch (error) {
-      console.error('❌ Failed to load data:', error);
+      console.error('Failed to load check-in data:', error);
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
         localStorage.removeItem('eventToken');
@@ -1729,7 +1786,6 @@ export default function EnterpriseCheckin() {
       const errorMsg = error.response?.data?.error || error.message || 'Failed to load check-in data';
       setLoadError(errorMsg);
       toast.error(errorMsg);
-    } finally {
       setLoading(false);
     }
   };
@@ -1746,13 +1802,35 @@ export default function EnterpriseCheckin() {
   };
   
   const loadInvites = async () => {
+    setInvitesLoading(true);
+    setInvitesError(null);
     try {
       const response = await eventAPI.getInvites(eventId);
-      console.log('Invites loaded:', response.data);
-      setInvites(response.data.invites || response.data || []);
+      const list = response.data.invites || response.data || [];
+      freshInvitesRef.current = true;
+      setInvites(list);
+      setInvitesStale(false);
+
+      // Reuse this response to refresh the offline cache instead of downloading
+      // the same guest list a second time from /checkin-cache.
+      offlineCheckin.refreshCache(eventId, async () => ({
+        data: {
+          snapshot: list.map(inviteToSnapshot),
+          total: list.length,
+          builtAt: new Date().toISOString(),
+        },
+      })).then(ok => {
+        if (ok) {
+          setCacheReady(true);
+          offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
+        }
+      });
     } catch (error) {
       console.error('Failed to load invites:', error);
-      setInvites([]);
+      // Keep whatever we are already showing (cached copy) rather than blanking the list.
+      setInvitesError(error.response?.data?.error || error.message || 'Could not load the guest list');
+    } finally {
+      setInvitesLoading(false);
     }
   };
   
@@ -2462,14 +2540,16 @@ export default function EnterpriseCheckin() {
       <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           {[
-            { label: 'Total Groups', value: stats?.total ?? invites.length, color: 'text-neutral-900' },
-            { label: 'Checked In', value: stats?.checkedIn ?? 0, color: 'text-emerald-600' },
-            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0), color: 'text-emerald-700' },
-            { label: 'Adults Expected', value: stats?.totalExpectedAdults ?? 0, color: 'text-neutral-600' },
-            { label: 'Children', value: stats?.totalExpectedChildren ?? 0, color: 'text-indigo-600' },
+            { label: 'Total Groups', value: stats?.total ?? (invitesLoading && !invites.length ? null : invites.length), color: 'text-neutral-900' },
+            { label: 'Checked In', value: stats ? (stats.checkedIn ?? 0) : null, color: 'text-emerald-600' },
+            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? (invitesLoading && !invites.length ? null : invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0)), color: 'text-emerald-700' },
+            { label: 'Adults Expected', value: stats ? (stats.totalExpectedAdults ?? 0) : null, color: 'text-neutral-600' },
+            { label: 'Children', value: stats ? (stats.totalExpectedChildren ?? 0) : null, color: 'text-indigo-600' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white rounded-2xl border border-neutral-150 p-5 shadow-sm">
-              <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>
+              {value === null
+                ? <div className="h-9 w-14 rounded-lg bg-neutral-100 animate-pulse" aria-label={`${label} loading`} />
+                : <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>}
               <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
             </div>
           ))}
@@ -2505,8 +2585,21 @@ export default function EnterpriseCheckin() {
             />
           </div>
           
-          <div className="divide-y divide-neutral-100">
-            {sorted.length === 0 ? (
+          {invitesStale && invitesLoading && (
+            <div className="px-8 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
+              Showing saved guest list · updating…
+            </div>
+          )}
+          {invitesError && (
+            <div className="px-8 py-3 text-sm bg-amber-50 border-b border-amber-100 text-amber-800 flex items-center justify-between gap-3">
+              <span>{invitesError}{invites.length ? ' — showing the last saved list.' : ''}</span>
+              <button onClick={loadInvites} className="font-bold underline">Retry</button>
+            </div>
+          )}
+          <div className={`divide-y divide-neutral-100 ${invitesStale ? 'opacity-70 pointer-events-none select-none' : ''}`}>
+            {invitesLoading && invites.length === 0 ? (
+              <SkeletonRows rows={8} />
+            ) : sorted.length === 0 ? (
               <div className="text-center py-12 text-neutral-400 text-sm">
                 {invites.length === 0 ? (
                   <div>
@@ -2524,7 +2617,7 @@ export default function EnterpriseCheckin() {
                 )}
               </div>
             ) : (
-              sorted.map((invite) => {
+              sorted.slice(0, visibleCount).map((invite) => {
                 const adults = invite.adults || 1;
                 const children = invite.children || 0;
                 const total = adults + children;
@@ -2631,6 +2724,16 @@ export default function EnterpriseCheckin() {
                   </div>
                 );
               })
+            )}
+            {sorted.length > visibleCount && (
+              <div className="px-8 py-4 text-center">
+                <button
+                  onClick={() => setVisibleCount(c => c + GUEST_PAGE_SIZE)}
+                  className="px-5 py-2.5 text-sm font-bold text-neutral-700 border border-neutral-200 rounded-xl hover:bg-neutral-50"
+                >
+                  Show {Math.min(GUEST_PAGE_SIZE, sorted.length - visibleCount)} more · {sorted.length - visibleCount} remaining
+                </button>
+              </div>
             )}
           </div>
         </div>
