@@ -185,6 +185,8 @@ router.patch(
     body('assignments.*.inviteId').isMongoId(),
     body('assignments.*.tableId').optional({ nullable: true }).isString(),
     body('assignments.*.tableLabel').optional({ nullable: true }).isString().isLength({ max: 50 }),
+    body('assignments.*.seatNumber').optional({ nullable: true }).isString().isLength({ max: 20 }),
+    body('assignments.*.guestRole').optional().isIn(['GUEST', 'VIP', 'SPEAKER']),
     validate,
   ],
   async (req, res, next) => {
@@ -192,12 +194,24 @@ router.patch(
       const { eventId }   = req.params;
       const { assignments } = req.body;
 
-      const ops = assignments.map(a => ({
-        updateOne: {
-          filter: { _id: a.inviteId, eventId },
-          update: { $set: { tableId: a.tableId || null, tableLabel: a.tableLabel || null } },
-        },
-      }));
+      // Resolve table labels from the saved map so passes always show the right name
+      const ev = await Event.findById(eventId).select('seatingMap.objects').lean();
+      const tablesById = new Map((ev?.seatingMap?.objects || []).map(o => [o.id, o]));
+      for (const a of assignments) {
+        if (a.tableId && !tablesById.has(a.tableId)) {
+          return res.status(400).json({ error: 'Table not found in seating map' });
+        }
+      }
+      const labelOf = (o) => (o.label && String(o.label).trim()) || (o.type ? o.type.charAt(0).toUpperCase() + o.type.slice(1) : 'Table');
+
+      const ops = assignments.map(a => {
+        const table = a.tableId ? tablesById.get(a.tableId) : null;
+        const $set = { tableId: table ? table.id : null, tableLabel: table ? labelOf(table) : null };
+        if (a.seatNumber !== undefined) $set.seatNumber = a.seatNumber || null;
+        else if (!table) $set.seatNumber = null;
+        if (a.guestRole) $set.guestRole = a.guestRole;
+        return { updateOne: { filter: { _id: a.inviteId, eventId }, update: { $set } } };
+      });
 
       const result = await Invite.bulkWrite(ops, { ordered: false });
 
