@@ -210,7 +210,7 @@ function SupportCard({ title, desc, href }) {
   );
 }
 
-const navStyle = { background: "#fff", borderBottom: "1px solid #e5e5e5", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 };
+const navStyle = { background: "#fff", borderBottom: "1px solid #e5e5e5", padding: "env(safe-area-inset-top, 0px) max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px))", height: "calc(56px + env(safe-area-inset-top, 0px))", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 };
 const logoStyle = { fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: "#0a0a0a", textDecoration: "none", letterSpacing: "-0.02em" };
 const navLinkStyle = { fontSize: 13, fontWeight: 600, color: "#444", textDecoration: "none", padding: "7px 14px", borderRadius: 10, border: "1px solid #e5e5e5", background: "transparent" };
 const pillStyle = { display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 100, padding: "6px 16px", marginBottom: 28 };
