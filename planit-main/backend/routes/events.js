@@ -2373,6 +2373,24 @@ router.delete('/:eventId', verifyOrganizer, async (req, res, next) => {
 });
 
 // Enterprise Mode: Create personalized invites
+// ── Seating helpers (used by invite create / update / CSV import) ──────────
+const INVITE_ROLES = ['GUEST', 'VIP', 'SPEAKER'];
+const tableDisplayLabel = (o) =>
+  (o.label && String(o.label).trim()) ||
+  (o.type ? o.type.charAt(0).toUpperCase() + o.type.slice(1) : 'Table');
+
+async function getTableIndex(eventId) {
+  const ev = await Event.findById(eventId).select('seatingMap.objects').lean();
+  const objs = (ev?.seatingMap?.objects || []).filter(o => o.type !== 'zone');
+  const byId = new Map(objs.map(o => [o.id, o]));
+  const byLabel = new Map();
+  for (const o of objs) {
+    const key = tableDisplayLabel(o).toLowerCase();
+    if (!byLabel.has(key)) byLabel.set(key, o);
+  }
+  return { byId, byLabel };
+}
+
 router.post('/:eventId/invites', verifyOrganizer, 
   [
     body('guests').isArray().withMessage('Guests must be an array'),
@@ -2381,15 +2399,23 @@ router.post('/:eventId/invites', verifyOrganizer,
     body('guests.*.groupSize').optional().isInt({ min: 1 }),
     body('guests.*.adults').optional().isInt({ min: 0 }),
     body('guests.*.children').optional().isInt({ min: 0 }),
+    body('guests.*.guestRole').optional().isIn(INVITE_ROLES),
+    body('guests.*.tableId').optional({ nullable: true }).isString().isLength({ max: 64 }),
+    body('guests.*.seatNumber').optional({ nullable: true }).isString().isLength({ max: 20 }),
     validate
   ],
   async (req, res, next) => {
     try {
       const Invite = require('../models/Invite');
       const { guests } = req.body;
+      const tableIndex = await getTableIndex(req.params.eventId);
       
       const invites = [];
       for (const guest of guests) {
+        const table = guest.tableId ? tableIndex.byId.get(guest.tableId) : null;
+        if (guest.tableId && !table) {
+          return res.status(400).json({ error: 'Table not found in seating map' });
+        }
         const inviteCode = generateInviteCode();
         
         // Calculate adults and children with proper defaults
@@ -2403,6 +2429,10 @@ router.post('/:eventId/invites', verifyOrganizer,
           guestName: guest.guestName,
           guestEmail: guest.guestEmail || '',
           guestPhone: guest.guestPhone || '',
+          guestRole: INVITE_ROLES.includes(String(guest.guestRole || '').toUpperCase()) ? String(guest.guestRole).toUpperCase() : 'GUEST',
+          tableId: table ? table.id : null,
+          tableLabel: table ? tableDisplayLabel(table) : null,
+          seatNumber: guest.seatNumber ? String(guest.seatNumber).trim().slice(0, 20) : null,
           adults: adults,
           children: children,
           groupSize: guest.groupSize || calculatedGroupSize,
@@ -2473,6 +2503,11 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
     const iChildren = col('children');
     const iPin      = col('securitypin');
     const iNotes    = col('notes');
+    const colAny    = (...names) => { for (const n of names) { const i = col(n); if (i !== -1) return i; } return -1; };
+    const iTable    = colAny('table', 'tablename', 'tablelabel');
+    const iSeat     = colAny('seat', 'seatnumber');
+    const tableIndex = iTable !== -1 ? await getTableIndex(req.params.eventId) : null;
+    const warnings  = [];
 
     if (iName === -1) {
       return res.status(400).json({ error: 'CSV is missing required column: guestName' });
@@ -2543,6 +2578,19 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
         continue;
       }
 
+      // ── Table / seat (optional columns) ───────────────────────────────────
+      let table = null;
+      if (iTable !== -1) {
+        const rawTable = (cells[iTable] || '').trim();
+        if (rawTable) {
+          table = tableIndex.byLabel.get(rawTable.toLowerCase()) || null;
+          if (!table) {
+            warnings.push({ row: rowNum, guestName, reason: `Table "${rawTable}" not found in the seating map — imported without a table` });
+          }
+        }
+      }
+      const seatNumber = iSeat !== -1 ? ((cells[iSeat] || '').trim().slice(0, 20) || null) : null;
+
       // ── Create invite ─────────────────────────────────────────────────────
       const inviteCode = generateInviteCode();
       await Invite.create({
@@ -2558,6 +2606,9 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
         plusOnes:    0,
         securityPin,
         notes,
+        tableId:    table ? table.id : null,
+        tableLabel: table ? tableDisplayLabel(table) : null,
+        seatNumber,
       });
 
       existingEmails.add(emailKey);
@@ -2565,7 +2616,7 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
       imported++;
     }
 
-    res.status(201).json({ imported, skipped, errors });
+    res.status(201).json({ imported, skipped, errors, warnings });
   } catch (error) {
     next(error);
   }
@@ -3055,6 +3106,7 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
     body('securityPin').optional().trim().isLength({ max: 6 }),
     body('notes').optional().trim(),
     body('seatNumber').optional({ nullable: true }).isString().isLength({ max: 20 }),
+    body('tableId').optional({ nullable: true }).isString().isLength({ max: 64 }),
     validate
   ],
   async (req, res, next) => {
@@ -3072,8 +3124,8 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
         return res.status(403).json({ error: 'Invite does not belong to this event' });
       }
       
-      // Don't allow updating checked-in invites
-      if (invite.checkedIn) {
+      // Checked-in invites are locked, except table / seat moves (guests get re-seated on the night)
+      if (invite.checkedIn && !Object.keys(req.body).every(k => ['tableId', 'seatNumber'].includes(k))) {
         return res.status(400).json({ error: 'Cannot update checked-in invite' });
       }
       
@@ -3087,6 +3139,20 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
         }
       }
       
+      // Table assignment — label is always resolved server-side from the seating map
+      if (req.body.tableId !== undefined) {
+        if (req.body.tableId) {
+          const table = (await getTableIndex(eventId)).byId.get(req.body.tableId);
+          if (!table) return res.status(400).json({ error: 'Table not found in seating map' });
+          updates.tableId = table.id;
+          updates.tableLabel = tableDisplayLabel(table);
+        } else {
+          updates.tableId = null;
+          updates.tableLabel = null;
+          if (req.body.seatNumber === undefined) updates.seatNumber = null;
+        }
+      }
+
       // Recalculate groupSize if adults or children changed
       if (updates.adults !== undefined || updates.children !== undefined) {
         const adults = updates.adults !== undefined ? parseInt(updates.adults) : invite.adults;
