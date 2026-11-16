@@ -865,9 +865,16 @@ function QRScanner({ onScan, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-white/10">
-        <button onClick={onClose} className="text-white flex items-center gap-2 hover:opacity-80">
-          <ArrowLeft className="w-4 h-4" />
+      <div
+        className="flex items-center justify-between px-4 pb-3 bg-black/80 backdrop-blur-sm border-b border-white/10"
+        style={{
+          paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <button onClick={onClose} className="text-white flex items-center gap-2 -ml-2 px-3 py-2.5 min-h-[44px] rounded-xl active:bg-white/10 hover:opacity-80">
+          <ArrowLeft className="w-5 h-5" />
           Back
         </button>
         <span className="text-white text-sm font-semibold">SCAN QR CODE</span>
