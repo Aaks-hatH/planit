@@ -5,7 +5,7 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin,
+  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin, LayoutGrid,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ import offlineCheckin from '../services/offlineCheckin';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 import WalkieTalkieButton from '../components/WalkieTalkieButton';
 import SeatingMap from '../components/SeatingMap';
+import TableAssignmentPanel from '../components/TableAssignmentPanel';
 import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
 import SetupWizard from '../components/SetupWizard';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
@@ -922,7 +923,7 @@ function QRScanner({ onScan, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // INVITE DIALOG WITH LINK COPYING
 // ═══════════════════════════════════════════════════════════════════════════
-function InviteDialog({ invite, eventId, event, onClose, onSave }) {
+function InviteDialog({ invite, eventId, event, tables = [], onClose, onSave }) {
   const [formData, setFormData] = useState({
     guestName: invite?.guestName || '',
     guestEmail: invite?.guestEmail || '',
@@ -932,6 +933,8 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
     children: invite?.children || 0,
     notes: invite?.notes || '',
     securityPin: invite?.securityPin || '',
+    tableId: invite?.tableId || '',
+    seatNumber: invite?.seatNumber || '',
   });
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -954,12 +957,17 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
     }
     setSaving(true);
     try {
+      const payload = {
+        ...formData,
+        tableId: formData.tableId || null,
+        seatNumber: formData.tableId ? (formData.seatNumber.trim() || null) : null,
+      };
       if (invite) {
-        await eventAPI.updateInvite(eventId, invite._id, formData);
+        await eventAPI.updateInvite(eventId, invite._id, payload);
         toast.success('Invite updated');
         onSave();
       } else {
-        const response = await eventAPI.createInvite(eventId, formData);
+        const response = await eventAPI.createInvite(eventId, payload);
         const newInvite = response.data.invites?.[0] || response.data.invite || response.data;
         setCreatedInvite(newInvite);
         setShowSuccess(true);
@@ -1104,8 +1112,39 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
                 );
               })}
             </div>
-            <p className="text-xs text-neutral-400 mt-1">Shown to staff at check-in. Defaults to Guest.</p>
+            <p className="text-xs text-neutral-400 mt-1">Shown to staff at check-in and printed on their pass. Defaults to Guest.</p>
           </div>
+
+          {/* Table + seat (only once a floor plan has tables) */}
+          {tables.length > 0 && (
+            <div>
+              <label className="block text-sm font-semibold mb-1">Table <span className="text-xs font-normal text-neutral-500">(optional)</span></label>
+              <div className="flex gap-2">
+                <select
+                  value={formData.tableId}
+                  onChange={(e) => setFormData({ ...formData, tableId: e.target.value, seatNumber: '' })}
+                  className="flex-1 min-w-0 border border-neutral-200 rounded-xl px-4 py-2.5 text-base sm:text-sm bg-white focus:outline-none focus:border-neutral-400"
+                >
+                  <option value="">No table yet</option>
+                  {[...tables]
+                    .map(t => ({ id: t.id, label: (t.label && t.label.trim()) || (t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Table'), capacity: t.capacity }))
+                    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+                    .map(t => (
+                      <option key={t.id} value={t.id}>{t.label}{t.capacity ? ` · seats ${t.capacity}` : ''}</option>
+                    ))}
+                </select>
+                <input
+                  type="text"
+                  value={formData.seatNumber}
+                  onChange={(e) => setFormData({ ...formData, seatNumber: e.target.value.slice(0, 20) })}
+                  disabled={!formData.tableId}
+                  placeholder="Seat"
+                  className="w-24 flex-shrink-0 border border-neutral-200 rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:border-neutral-400 disabled:bg-neutral-50 disabled:text-neutral-300"
+                />
+              </div>
+              <p className="text-xs text-neutral-400 mt-1">Shows on the guest&apos;s pass. Seat is optional. Use <span className="font-semibold">Assign</span> to seat many guests at once.</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1201,10 +1240,10 @@ function CsvImportDialog({ eventId, onClose, onImported }) {
   const [result, setResult] = useState(null);
   const fileRef = useRef(null);
 
-  const TEMPLATE = `guestName,guestEmail,guestRole,adults,children,securityPin,notes
-Jane Smith,jane@example.com,VIP,1,0,,VIP table reserved
-Bob Jones,bob@example.com,SPEAKER,1,0,,Keynote speaker
-Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
+  const TEMPLATE = `guestName,guestEmail,guestRole,adults,children,securityPin,notes,table,seat
+Jane Smith,jane@example.com,VIP,1,0,,VIP table reserved,Table 1,1
+Bob Jones,bob@example.com,SPEAKER,1,0,,Keynote speaker,Table 1,2
+Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy,Table 2,`;
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -1252,7 +1291,7 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
             <p className="font-bold text-blue-900">Required CSV format</p>
             <p className="text-blue-800 font-mono text-xs leading-relaxed break-all">
-              guestName, <span className="underline decoration-dotted">guestEmail</span>, guestRole, adults, children, securityPin, notes
+              guestName, <span className="underline decoration-dotted">guestEmail</span>, guestRole, adults, children, securityPin, notes, table, seat
             </p>
             <div className="space-y-1 text-xs text-blue-700">
               <p><span className="font-bold">guestName</span> — required</p>
@@ -1262,6 +1301,8 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
               <p><span className="font-bold">children</span> — optional, defaults to 0</p>
               <p><span className="font-bold">securityPin</span> — optional, up to 6 chars</p>
               <p><span className="font-bold">notes</span> — optional</p>
+              <p><span className="font-bold">table</span> — optional. Must match a table name on your seating map (e.g. <code className="bg-blue-100 px-1 rounded">Table 3</code>). Unmatched names import the guest without a table.</p>
+              <p><span className="font-bold">seat</span> — optional, e.g. <code className="bg-blue-100 px-1 rounded">4</code> or <code className="bg-blue-100 px-1 rounded">A2</code></p>
             </div>
           </div>
 
@@ -1315,6 +1356,14 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
                     <p key={i}>Row {e.row}{e.guestName ? ` (${e.guestName})` : ''}: {e.reason}</p>
                   ))}
                   {result.errors.length > 10 && <p>…and {result.errors.length - 10} more</p>}
+                </div>
+              )}
+              {result.warnings?.length > 0 && (
+                <div className="space-y-1 text-xs text-amber-700">
+                  {result.warnings.slice(0, 10).map((w, i) => (
+                    <p key={i}>Row {w.row}{w.guestName ? ` (${w.guestName})` : ''}: {w.reason}</p>
+                  ))}
+                  {result.warnings.length > 10 && <p>…and {result.warnings.length - 10} more</p>}
                 </div>
               )}
             </div>
@@ -1512,6 +1561,7 @@ export default function EnterpriseCheckin() {
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [editingInvite, setEditingInvite] = useState(null);
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
   
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -2358,6 +2408,7 @@ export default function EnterpriseCheckin() {
           invite={editingInvite}
           eventId={eventId}
           event={event}
+          tables={(seatingData?.seatingMap?.objects || []).filter(o => o.type !== 'zone' && o.type !== 'stage')}
           onClose={() => {
             setShowInviteDialog(false);
             setEditingInvite(null);
@@ -2378,6 +2429,21 @@ export default function EnterpriseCheckin() {
           onSettingsUpdated={() => {
             loadSettings();
             toast.success('Settings updated');
+          }}
+        />
+      )}
+      {showAssignPanel && (
+        <TableAssignmentPanel
+          eventId={eventId}
+          invites={invites}
+          seatingObjects={seatingData?.seatingMap?.objects || []}
+          onClose={() => setShowAssignPanel(false)}
+          onSaved={() => { loadInvites(); loadSeating(); }}
+          onOpenSeating={() => {
+            setShowAssignPanel(false);
+            if (!seatingData) setSeatingData({ seatingMap: { enabled: false, objects: [] }, guestsByTable: {} });
+            setSeatingFocusId(null);
+            setShowSeatingMap(true);
           }}
         />
       )}
@@ -2482,6 +2548,16 @@ export default function EnterpriseCheckin() {
 
             {authState.role === 'organizer' && (
               <>
+                {seatingEnabled && (
+                  <button
+                    onClick={() => setShowAssignPanel(true)}
+                    className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
+                    title="Assign tables & ticket types"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Assign</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowActivityLog(true)}
                   className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
@@ -2815,7 +2891,11 @@ export default function EnterpriseCheckin() {
       />
 
       {/* ── Walkie-talkie PTT button — visible to all staff/organizers ── */}
-      {authState.ready && <WalkieTalkieButton walkie={walkie} />}
+      {authState.ready && (
+        <div className={(currentGuest || showAdmitSuccess || showDenyScreen || showAssignPanel) ? 'hidden sm:block' : ''}>
+          <WalkieTalkieButton walkie={walkie} />
+        </div>
+      )}
 
       {/* ── Mobile: scan is always one tap away, wherever you are in the list ── */}
       {!scanMode && !currentGuest && !showAdmitSuccess && !showDenyScreen && (
