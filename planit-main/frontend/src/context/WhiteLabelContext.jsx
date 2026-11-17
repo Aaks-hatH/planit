@@ -38,6 +38,17 @@ function isCustomDomain(hostname) {
   return !NATIVE_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
 }
 
+const BRAND_KEY = 'wl_brand_v1';
+function getSavedBrand(domain) {
+  try {
+    const c = JSON.parse(localStorage.getItem(BRAND_KEY) || 'null');
+    return c && c.domain === domain ? c.branding : null;
+  } catch { return null; }
+}
+function saveBrand(domain, branding) {
+  try { localStorage.setItem(BRAND_KEY, JSON.stringify({ domain, branding })); } catch { /* ignore */ }
+}
+
 const HB_KEY = 'wl_hb_v2';
 const HB_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -142,7 +153,16 @@ export function WhiteLabelProvider({ children }) {
         }
         if (!r.ok) throw new Error('resolve failed');
         branding = await r.json();
+        saveBrand(hostname, branding);
       } catch {
+        // No connection but this device has loaded the site before: use the saved branding so the
+        // guest's ticket / the door scanner still opens. (Suspensions are still enforced on every
+        // online visit — blocks are never cached.)
+        const savedBrand = getSavedBrand(hostname);
+        if (savedBrand && (navigator.onLine === false || retries >= 3)) {
+          if (!cancelled) setState({ wl: savedBrand, isWL: true, resolved: true, blocked: false, blockReason: null });
+          return;
+        }
         // Network error on a custom domain — don't fail open to normal PlanIt.
         // Retry up to 3 times with backoff, then show a connecting error page.
         if (retries < 3) {
