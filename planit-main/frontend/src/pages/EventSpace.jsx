@@ -1593,6 +1593,7 @@ export default function EventSpace() {
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
           <span className="flex-1 min-w-[12rem]"><strong>Offline</strong> — showing the last saved copy of this event. Chat, polls and files update when you're back online.</span>
           <button onClick={() => navigate(`/event/${eventId}/checkin`)} className="min-h-[44px] px-4 rounded-xl bg-neutral-900 text-white text-xs font-semibold">Open check-in</button>
+          <button onClick={() => navigate('/')} className="min-h-[44px] px-3 rounded-xl border border-amber-300 text-xs font-semibold">Home</button>
           <button onClick={() => loadEvent(0)} className="min-h-[44px] px-3 rounded-xl border border-amber-300 text-xs font-semibold">Retry</button>
         </div>
       )}
