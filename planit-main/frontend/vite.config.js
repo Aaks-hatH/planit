@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': a new version waits until the person taps Reload (see src/utils/appUpdate.js).
+      // It must never swap itself in while check-ins are unsynced or a ticket is on screen.
+      registerType: 'prompt',
       includeAssets: ['planit-icon.svg', 'apple-touch-icon.png', 'favicon.ico'],
       manifest: {
         name: 'PlanIt',
@@ -16,9 +18,19 @@ export default defineConfig({
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
-        orientation: 'portrait',
+        id: '/',
         start_url: '/',
         scope: '/',
+        categories: ['productivity', 'events'],
+        shortcuts: [
+          {
+            name: 'Check-in',
+            short_name: 'Check-in',
+            description: 'Open PlanIt to the check-in screen',
+            url: '/',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
+          }
+        ],
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -111,7 +123,7 @@ export default defineConfig({
           }
         ],
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
+        skipWaiting: false,   // wait for the Reload tap (SKIP_WAITING message from registerSW)
         clientsClaim: true
       },
       devOptions: {
