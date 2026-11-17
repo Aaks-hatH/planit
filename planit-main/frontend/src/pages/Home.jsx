@@ -12,6 +12,8 @@ import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
 import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
+import SavedEvents from '../components/SavedEvents';
+import { findSavedEvent } from '../utils/offlineEvent';
 import TurnstileWidget from '../components/TurnstileWidget';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
@@ -1999,8 +2001,17 @@ function SlugFinder() {
   const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [shake, setShake] = useState(false);
+  const [offlineMsg, setOfflineMsg] = useState('');
   const go = () => {
     const raw = value.trim(); if (!raw) return;
+    setOfflineMsg('');
+    // No connection: only events this device already opened can be found. Say so instead of "not found".
+    if (navigator.onLine === false) {
+      const saved = findSavedEvent(raw);
+      if (saved) { navigate(saved.subdomain ? `/e/${saved.subdomain}` : `/event/${saved.id}`); return; }
+      setOfflineMsg("You're offline, and this event hasn't been opened on this device yet. Connect to the internet to open it.");
+      return;
+    }
     let slug = raw;
     try {
       const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
@@ -2012,11 +2023,14 @@ function SlugFinder() {
     navigate(`/e/${slug}`);
   };
   return (
+    <>
     <div className={`find${shake ? ' shake' : ''}`}>
       <input value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go()}
         placeholder="Already have an event link? Paste it here" aria-label="Event link or slug" />
       <button onClick={go}>Open <CornerDownRight size={14} /></button>
     </div>
+    {offlineMsg && <p role="alert" style={{ maxWidth: 440, margin: '8px 0 0', fontSize: 13, color: '#fff', fontWeight: 600 }}>{offlineMsg}</p>}
+    </>
   );
 }
 
@@ -2405,6 +2419,7 @@ export default function Home() {
               {wlHome.headline ? <h1>{wlHome.headline}</h1> : <h1>Plan the night.<br /><em>Run the door.</em></h1>}
               <p className="lead">{isWL ? (wlHome.subheadline || wlName || 'Your event platform') : 'One workspace for events and hospitality: team chat, tasks, RSVPs, check-in, and a live floor manager for restaurants.'}</p>
               <SlugFinder />
+              <SavedEvents />
             </div>
             <div className="panel" id="start">
               <span className="stick" aria-hidden="true">Free<br />forever</span>
