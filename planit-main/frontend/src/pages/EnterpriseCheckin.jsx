@@ -5,9 +5,10 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin, LayoutGrid,
+  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin, LayoutGrid, Home as HomeIcon,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
+import { saveEventMeta, readEventMeta } from '../utils/offlineEvent';
 import toast from 'react-hot-toast';
 import ManagerOverrideDialog from '../components/ManagerOverrideDialog';
 import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
@@ -1735,7 +1736,8 @@ function EnterpriseCheckinInner() {
     const key = `checkin_subdomain_${subdomain}`;
     let cancelled = false;
     let haveSaved = false;
-    try { const saved = localStorage.getItem(key); if (saved) { haveSaved = true; setEventId(saved); } } catch { /* ignore */ }
+    // Saved by an earlier check-in visit, or by the event page / home list (same event, opened another way).
+    try { const saved = localStorage.getItem(key) || readEventMeta(subdomain)?.id; if (saved) { haveSaved = true; setEventId(String(saved)); } } catch { /* ignore */ }
     eventAPI.getBySubdomain(subdomain).then(res => {
       if (cancelled) return;
       const id = res.data.event?.id || res.data.event?._id;
@@ -2075,6 +2077,8 @@ function EnterpriseCheckinInner() {
       const ev = response.data.event || response.data;
       setEvent(ev);
       try { localStorage.setItem(`checkin_event_cache_${eventId}`, JSON.stringify(ev)); } catch { /* quota: fine */ }
+      // So the home page can list this event (and its check-in) with no internet.
+      saveEventMeta(eventId, { id: eventId, title: ev.title || ev.name, subdomain: ev.subdomain, eventType: ev.eventType || 'standard' });
     } catch (error) {
       // No response at all means a network failure (offline / server unreachable).
       // Door staff still need the scanner, so fall back to the copy saved from
@@ -2810,9 +2814,14 @@ function EnterpriseCheckinInner() {
       <header className="bg-white border-b border-neutral-100 sm:sticky sm:top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-2.5 sm:py-0 sm:h-16 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
-            {authState.role === 'organizer' && (
+            {authState.role === 'organizer' ? (
               <button onClick={() => navigate(`/event/${eventId}`)} className="p-2.5 sm:p-1.5 -ml-1 sm:ml-0 flex-shrink-0 hover:bg-neutral-100 rounded-lg transition-colors" aria-label="Back to event">
                 <ArrowLeft className="w-4 h-4" />
+              </button>
+            ) : (
+              // Staff have no event page. An installed app has no address bar, so give them a way home.
+              <button onClick={() => navigate('/')} className="min-w-[44px] min-h-[44px] -ml-1 sm:ml-0 flex items-center justify-center flex-shrink-0 hover:bg-neutral-100 rounded-lg transition-colors" aria-label="Home">
+                <HomeIcon className="w-4 h-4" />
               </button>
             )}
             <div className="min-w-0">
