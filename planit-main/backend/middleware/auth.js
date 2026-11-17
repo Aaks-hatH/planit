@@ -466,6 +466,11 @@ const verifyAdmin = async (req, res, next) => {
 const verifyCheckinAccess = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.body.eventId;
+
+    if (!eventId || eventId === 'undefined' || eventId === 'null') {
+      return res.status(400).json({ error: 'No event ID was provided in this request.' });
+    }
+
     const event = await getCachedEvent(eventId);
 
     if (!event) {
@@ -493,6 +498,12 @@ const verifyCheckinAccess = async (req, res, next) => {
 
       if (role !== 'organizer' && role !== 'staff') {
         return res.status(403).json({ error: 'You need check-in staff or organizer access to do that.' });
+      }
+
+      // The token must have been issued for THIS event. Without this a staff PIN
+      // (or organizer token) from event A could scan and check in guests at event B.
+      if (String(decoded.eventId) !== String(eventId)) {
+        return res.status(403).json({ error: 'Your check-in session is for a different event. Please log in again for this event.' });
       }
 
       req.event = event;
