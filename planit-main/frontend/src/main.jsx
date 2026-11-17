@@ -4,9 +4,11 @@ import App from './App.jsx'
 import './styles/tokens.css'
 import './index.css'
 import { Toaster } from 'react-hot-toast'
-import { registerSW } from 'virtual:pwa-register'
+import { initAppUpdate } from './utils/appUpdate'
+import { captureInstallPrompt } from './hooks/useInstallPrompt'
 
-registerSW({ immediate: true })
+captureInstallPrompt()   // catch beforeinstallprompt before any component mounts
+initAppUpdate()          // service worker + "New version available" toast
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
