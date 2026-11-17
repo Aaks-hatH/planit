@@ -163,9 +163,11 @@ export const eventAPI = {
 
   // Check-in process
   getCheckinCache: (eventId)                   => api.get(`/events/${eventId}/checkin-cache`),
-  verifyScan:      (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
-  verifyPin:       (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
-  checkIn:         (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
+  // Door-critical calls use short timeouts (the default is 30s for Render cold starts). When the
+  // connection is dead the scanner must fall back to the saved guest list within seconds.
+  verifyScan:      (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`, { timeout: 8000 }),
+  verifyPin:       (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }, { timeout: 8000 }),
+  checkIn:         (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data, { timeout: 10000 }),
 
   // Check-in stats & settings
   getCheckInStats:       (eventId)           => api.get(`/events/${eventId}/checkin-stats`),
