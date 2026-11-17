@@ -19,6 +19,11 @@ import SeatingMap from '../components/SeatingMap';
 import TableAssignmentPanel from '../components/TableAssignmentPanel';
 import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
 import SetupWizard from '../components/SetupWizard';
+import InstallBanner from '../components/InstallBanner';
+import OfflineReadiness from '../components/OfflineReadiness';
+import OfflineQueuePanel from '../components/OfflineQueuePanel';
+import { requestPersistentStorage } from '../utils/persistentStorage';
+import { setUpdateBlocker } from '../utils/appUpdate';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
 
 // Guest rows rendered at a time. Thousands of rows at once is what makes the
@@ -184,6 +189,16 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin, onOrganizer, notice })
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Say so up front when there is no connection: logging in needs the server, and a staff member who
+  // has never logged in on this device must do that once while online.
+  const [offline, setOffline] = useState(typeof navigator !== 'undefined' && navigator.onLine === false);
+  useEffect(() => {
+    const down = () => setOffline(true);
+    const up = () => setOffline(false);
+    window.addEventListener('offline', down);
+    window.addEventListener('online', up);
+    return () => { window.removeEventListener('offline', down); window.removeEventListener('online', up); };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -227,6 +242,12 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin, onOrganizer, notice })
           <p className="text-neutral-400 text-sm">{eventTitle || 'Event Check-in'}</p>
         </div>
 
+        {offline && (
+          <div role="status" data-testid="login-offline-notice" className="mb-4 bg-amber-900/30 border border-amber-700/60 rounded-xl px-4 py-3">
+            <p className="text-sm text-amber-200 font-bold">You're offline</p>
+            <p className="text-sm text-amber-200/90 mt-0.5">Staff must log in once while online. After that, scanning works offline on this device. Connect to the internet to log in.</p>
+          </div>
+        )}
         {notice && (
           <div className="mb-4 bg-amber-900/30 border border-amber-700/60 rounded-xl px-4 py-3">
             <p className="text-sm text-amber-200 font-medium">{notice}</p>
@@ -1655,6 +1676,38 @@ function EnterpriseCheckinInner() {
   const [syncError, setSyncError]     = useState(null);
   isOfflineRef.current = isOffline;
 
+  // ── PWA: sync trigger shared with the readiness chip and queue panel ────────
+  const syncNowRef = useRef(null);
+  const syncNow = useCallback(() => (syncNowRef.current ? syncNowRef.current() : Promise.resolve()), []);
+
+  // Ask the browser to keep the saved guest list once it exists (Safari / low-storage phones may evict it).
+  const haveSavedList = !!cacheInfo?.total;
+  useEffect(() => { if (haveSavedList) requestPersistentStorage(); }, [haveSavedList]);
+
+  // A new app version must never reload the page while check-ins are unsynced or a scan is in progress.
+  const updateGuardRef = useRef({});
+  updateGuardRef.current = {
+    pending: pendingSync,
+    busy: scanMode || !!currentGuest || showAdmitSuccess || showDenyScreen || showOverrideDialog,
+  };
+  useEffect(() => {
+    setUpdateBlocker('checkin', () => {
+      const g = updateGuardRef.current;
+      if (g.pending > 0) return `${g.pending} check-in${g.pending !== 1 ? 's' : ''} still need to sync. Update after they sync.`;
+      if (g.busy) return 'Finish the current scan, then update.';
+      return false;
+    });
+    return () => setUpdateBlocker('checkin', null);
+  }, []);
+
+  // Warn before closing the tab / app while saved check-ins have not reached the server.
+  useEffect(() => {
+    if (pendingSync <= 0) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; return ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [pendingSync]);
+
   // ── Seating map state ────────────────────────────────────────────────────
   const [seatingData,    setSeatingData]    = useState(null); // { seatingMap, guestsByTable }
   const [showSeatingMap, setShowSeatingMap] = useState(false);
@@ -1856,6 +1909,8 @@ function EnterpriseCheckinInner() {
       }
     }
 
+    syncNowRef.current = syncOfflineWork;
+
     function handleOnline() {
       setIsOffline(false);       // optimistic; a failed request flips it back
       syncOfflineWork();
@@ -1887,6 +1942,7 @@ function EnterpriseCheckinInner() {
         socket.off('guest_table_updated');
       }
       clearInterval(syncTimer);
+      syncNowRef.current = null;
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -2772,6 +2828,7 @@ function EnterpriseCheckinInner() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <OfflineReadiness eventId={eventId} cacheVersion={cacheInfo?.builtAt || cacheInfo?.lastLocalUpdate || 0} onRefresh={syncNow} />
             {authState.role === 'organizer' && (
               <button
                 onClick={() => setShowSettingsPanel(true)}
@@ -2908,6 +2965,8 @@ function EnterpriseCheckinInner() {
       </header>
       
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-8">
+        <InstallBanner variant="light" className="mb-4" />
+        <OfflineQueuePanel eventId={eventId} pendingCount={pendingSync} onSync={syncNow} />
         {(isOffline || authState.expired) && (
           <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
             <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
