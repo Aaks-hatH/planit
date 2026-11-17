@@ -34,6 +34,7 @@ import { eventAPI } from '../services/api';
 import EventSpace from './EventSpace';
 import RSVPEventDashboard from './RSVPEventDashboard';
 import BrandedLoader from '../components/BrandedLoader';
+import { saveEventMeta, readEventMeta } from '../utils/offlineEvent';
 
 export default function EventTypeRouter() {
   const { subdomain, eventId } = useParams();
@@ -48,7 +49,11 @@ export default function EventTypeRouter() {
       req
         .then((res) => {
           if (cancelled) return;
-          setEventType(res.data.event?.eventType || 'standard');
+          const ev = res.data.event;
+          setEventType(ev?.eventType || 'standard');
+          // Remember which kind of event this is so it can open with no internet.
+          const id = ev?.id || ev?._id || eventId;
+          if (id) saveEventMeta(subdomain || eventId, { id, eventType: ev?.eventType || 'standard', title: ev?.title || ev?.name || '', subdomain: ev?.subdomain || subdomain || '' });
         })
         .catch((err) => {
           if (cancelled) return;
@@ -56,6 +61,12 @@ export default function EventTypeRouter() {
           // dashboard's own loader show the proper "not found" state
           // rather than guessing a type for a page that won't load anyway.
           if (err.response?.status === 404) { setEventType('standard'); return; }
+          // No connection: use the type saved the last time this event opened, right away.
+          if (!err.response) {
+            const saved = readEventMeta(subdomain || eventId);
+            if (saved) { setEventType(saved.eventType || 'standard'); return; }
+            if (navigator.onLine === false) { setEventType('standard'); return; }
+          }
           // Network hiccup / cold start — retry briefly instead of
           // guessing wrong and flashing the wrong dashboard.
           if (!err.response && attempts < 3) {
