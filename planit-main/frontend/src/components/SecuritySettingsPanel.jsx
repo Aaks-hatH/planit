@@ -16,6 +16,8 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   const [settings, setSettings] = useState(null);
   const [originalSettings, setOriginalSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(null);   // message when settings could not be loaded at all
+  const [offlineCopy, setOfflineCopy] = useState(false); // showing the copy saved on this device
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
 
@@ -49,15 +51,33 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSettings = async () => {
+    const cacheKey = `checkin_settings_cache_${eventId}`;
     try {
       setLoading(true);
+      setLoadFailed(null);
       const response = await eventAPI.getCheckInSettings(eventId);
-      const s = response.data.settings || response.data || {};
+      const s = response.data?.settings || response.data || {};
       setSettings(s);
+      setOfflineCopy(false);
       setOriginalSettings(JSON.parse(JSON.stringify(s)));
+      try { localStorage.setItem(cacheKey, JSON.stringify(s)); } catch { /* ignore */ }
     } catch (error) {
       console.error('Failed to load security settings:', error);
-      toast.error('Failed to load security settings');
+      // No connection: show the copy saved on this device (read-only). Before, settings stayed null
+      // and the form crashed the whole check-in page with "Cannot read properties of null".
+      let saved = null;
+      if (!error.response) {
+        try { saved = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch { saved = null; }
+      }
+      if (saved && typeof saved === 'object') {
+        setSettings(saved);
+        setOriginalSettings(JSON.parse(JSON.stringify(saved)));
+        setOfflineCopy(true);
+      } else {
+        setSettings(null);
+        setLoadFailed(error.response?.data?.error
+          || (!error.response ? 'You are offline and no settings are saved on this device yet. Open Settings once while online.' : 'Could not load security settings.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -88,6 +108,10 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   };
 
   const saveSettings = async () => {
+    if (offlineCopy) {
+      toast.error('You are offline. Settings can only be saved while online.');
+      return;
+    }
     try {
       setSaving(true);
       await eventAPI.updateCheckInSettings(eventId, settings);
@@ -236,6 +260,23 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
     );
   }
 
+  // Never render the form without settings (that was the crash).
+  if (!settings) {
+    return (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="bg-white rounded-2xl p-6 shadow-2xl text-center" style={{ width: 'min(440px, 92vw)' }} onClick={e => e.stopPropagation()}>
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-lg font-black text-neutral-900 mb-2">Settings unavailable</h2>
+          <p className="text-sm text-neutral-600 mb-5">{loadFailed || 'Could not load security settings.'}</p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={onClose} className="px-4 py-2 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">Close</button>
+            <button onClick={loadSettings} className="px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black">Retry</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'duplicate', label: 'Duplicates', icon: Users },
@@ -269,6 +310,11 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
             </button>
           </div>
           <p className="text-blue-100">Configure anti-fraud protection and manage check-in staff</p>
+          {offlineCopy && (
+            <p className="mt-2 text-xs font-bold bg-amber-400 text-amber-950 inline-block px-2 py-1 rounded">
+              Offline — showing the settings saved on this device. Changes can't be saved until you're back online.
+            </p>
+          )}
         </div>
 
         <div className="p-6">
