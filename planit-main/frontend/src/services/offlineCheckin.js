@@ -23,7 +23,7 @@
  *
  *   // On QR scan — lookup locally, optimistically admit, queue sync
  *   const result = offlineCheckin.lookupGuest(inviteCode);
- *   offlineCheckin.queueCheckin(eventId, inviteCode, actualAttendees);
+ *   offlineCheckin.queueCheckin(eventId, inviteCode, actualAttendees, { pinVerified });
  *
  *   // When online event fires — flush the queue
  *   const results = await offlineCheckin.flushQueue(token);
@@ -133,8 +133,27 @@ async function dbUpdateQueueItem(item) {
   return dbPut(STORE_QUEUE, item);
 }
 
+// ─── PIN hashing (must match the backend's /checkin-cache pinHash) ─────────
+// sha256( UPPERCASE_INVITE_CODE + ":" + pin ), hex. The PIN itself is never kept on the device.
+async function hashPin(inviteCode, pin) {
+  const data = new TextEncoder().encode(`${normalizeInviteCode(inviteCode)}:${String(pin ?? '').trim()}`);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// True when a request failed because there is no usable connection (offline, captive-portal wifi,
+// DNS failure, timeout, server unreachable) rather than because the server answered with an error.
+// navigator.onLine alone is NOT enough: it stays true on wifi that has no internet.
+function isNetworkError(err) {
+  if (!err) return false;
+  if (err.response) return false;                     // the server answered: not a network problem
+  if (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') return true;
+  return /network error|timeout|failed to fetch|load failed/i.test(String(err.message || ''));
+}
+
 // ─── In-memory map built from the snapshot for O(1) lookups ───────────────
 
+let _flushing = false;
 let _currentEventId = null;
 let _guestMap = new Map(); // inviteCode → guest record (also tracks offline check-ins)
 
@@ -148,6 +167,9 @@ function _buildMap(snapshot) {
 // ─── Public API ────────────────────────────────────────────────────────────
 
 const offlineCheckin = {
+
+  /** Last error from refreshCache (null after a success). Lets callers tell "no network" from "server said no". */
+  lastRefreshError: null,
 
   /**
    * isOnline() — true if navigator.onLine is true.
@@ -172,17 +194,34 @@ const offlineCheckin = {
         console.warn('[offlineCheckin] refreshCache: unexpected response shape', data);
         return false;
       }
+      // Guests admitted on this device but not yet synced are NOT in the server's copy. Keep them
+      // marked as admitted, otherwise a refresh would let the same ticket be admitted twice.
+      let snapshot = data.snapshot;
+      try {
+        const pending = (await dbGetAll(STORE_QUEUE)).filter(item => item.eventId === eventId);
+        if (pending.length) {
+          const byCode = new Map(pending.map(item => [normalizeInviteCode(item.inviteCode), item]));
+          snapshot = snapshot.map(g => {
+            const q = byCode.get(normalizeInviteCode(g.code));
+            if (!q || g.checkedIn) return g;
+            return { ...g, checkedIn: true, checkedInAt: q.queuedAt, actualAttendees: q.actualAttendees ?? g.groupSize, pendingOfflineSync: true };
+          });
+        }
+      } catch { /* queue unreadable: fall back to the plain server copy */ }
+
       await dbPut(STORE_CACHE, {
         eventId,
-        snapshot: data.snapshot,
+        snapshot,
         builtAt:  data.builtAt || new Date().toISOString(),
-        total:    data.total   || data.snapshot.length,
+        total:    data.total   || snapshot.length,
       });
       _currentEventId = eventId;
-      _buildMap(data.snapshot);
-      console.log(`[offlineCheckin] Cache refreshed: ${data.snapshot.length} guests for event ${eventId}`);
+      _buildMap(snapshot);
+      this.lastRefreshError = null;
+      console.log(`[offlineCheckin] Cache refreshed: ${snapshot.length} guests for event ${eventId}`);
       return true;
     } catch (err) {
+      this.lastRefreshError = err;
       console.error('[offlineCheckin] refreshCache failed:', err);
       // Try to hydrate from existing IndexedDB cache so map is populated even if fetch failed
       await this.loadCacheFromDB(eventId);
@@ -224,6 +263,29 @@ const offlineCheckin = {
     } catch { return Infinity; }
   },
 
+  /** True when a guest list is loaded in memory (so offline scanning can work). */
+  hasCache() {
+    return _guestMap.size > 0;
+  },
+
+  /** Request failed for lack of a usable connection (as opposed to the server answering an error). */
+  isNetworkError,
+
+  /**
+   * verifyPinLocally(inviteCode, pin)
+   * Offline PIN check against the salted hash in the cached snapshot.
+   * Returns true / false, or null if this guest has no cached PIN hash (cache too old to verify).
+   */
+  async verifyPinLocally(inviteCode, pin) {
+    const guest = _guestMap.get(normalizeInviteCode(inviteCode));
+    if (!guest || !guest.hasPin) return true;           // no PIN on this ticket
+    if (!guest.pinHash) return null;                    // cached before hashes existed
+    try { return (await hashPin(inviteCode, pin)) === guest.pinHash; }
+    catch { return null; }
+  },
+
+  hashPin,
+
   /**
    * lookupGuest(inviteCode)
    * O(1) in-memory lookup from the snapshot map.
@@ -262,7 +324,7 @@ const offlineCheckin = {
    * Adds a check-in to the offline queue stored in IndexedDB.
    * Items are flushed against the server when connectivity returns.
    */
-  async queueCheckin(eventId, inviteCode, actualAttendees) {
+  async queueCheckin(eventId, inviteCode, actualAttendees, opts = {}) {
     try {
       const normalizedCode = normalizeInviteCode(inviteCode);
       const all = await dbGetAll(STORE_QUEUE);
@@ -271,6 +333,7 @@ const offlineCheckin = {
         await dbPut(STORE_QUEUE, {
           ...existing,
           actualAttendees: actualAttendees ?? existing.actualAttendees ?? null,
+          pinVerified: !!(opts.pinVerified || existing.pinVerified),
           updatedAt: new Date().toISOString(),
         });
         return existing.id;
@@ -280,7 +343,10 @@ const offlineCheckin = {
         inviteCode: normalizedCode,
         dedupeKey: `${eventId}:${normalizedCode}`,
         actualAttendees: actualAttendees ?? null,
-        queuedAt: new Date().toISOString(),
+        // Set once the staff member typed the right PIN on this device (checked against the
+        // cached hash). Without it the server rejects a PIN-protected guest on sync.
+        pinVerified: !!opts.pinVerified,
+        queuedAt: new Date().toISOString(),   // = the moment the guest was actually admitted
         attempts: 0,
         lastError: null,
       });
@@ -306,18 +372,23 @@ const offlineCheckin = {
   /**
    * flushQueue(eventId, apiCallFn)
    * Drains the offline queue, calling apiCallFn for each item.
-   * apiCallFn(inviteCode, actualAttendees) should call
-   *   eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: false })
+   * apiCallFn(inviteCode, actualAttendees, meta) should call
+   *   eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: meta.pinVerified,
+   *                                           offlineSync: true, scannedAt: meta.scannedAt })
    * and return the axios response.
    *
    * Returns:
-   *   { synced, failed, conflicts }
+   *   { synced, failed, conflicts, offline, authExpired }
    *   conflicts: array of { inviteCode, guestName, error, serverMessage }
    *     — items the server rejected after accepting them offline.
    *     These are surfaced to the organizer as security flags.
+   *   offline:     the flush stopped because there is still no connection (nothing was lost)
+   *   authExpired: the staff session expired; items stay queued until they log in again
    */
   async flushQueue(eventId, apiCallFn) {
-    const results = { synced: 0, failed: 0, conflicts: [] };
+    const results = { synced: 0, failed: 0, conflicts: [], offline: false, authExpired: false };
+    if (_flushing) return results;           // never run two flushes at once (double check-ins)
+    _flushing = true;
     try {
       const all   = await dbGetAll(STORE_QUEUE);
       const items = all.filter(item => item.eventId === eventId)
@@ -325,15 +396,30 @@ const offlineCheckin = {
 
       for (const item of items) {
         try {
-          await apiCallFn(item.inviteCode, item.actualAttendees);
+          await apiCallFn(item.inviteCode, item.actualAttendees, {
+            pinVerified: !!item.pinVerified,
+            scannedAt:   item.queuedAt,
+          });
           await dbDelete(STORE_QUEUE, item.id);
           await updateCachedGuest(eventId, item.inviteCode, { pendingOfflineSync: false });
           results.synced++;
         } catch (err) {
           const status  = err?.response?.status;
-          const message = err?.response?.data?.error || 'Unknown error';
+          const message = err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Unknown error';
 
-          if (status === 400 && message.toLowerCase().includes('already checked in')) {
+          if (isNetworkError(err)) {
+            // Still no real connection. Keep everything queued and stop — retrying the rest just
+            // burns 30s timeouts one after another.
+            results.offline = true;
+            results.failed += 1;
+            break;
+          } else if (status === 401) {
+            // Session expired: the check-ins are safe on this device, they need a fresh login.
+            results.authExpired = true;
+            results.failed += 1;
+            await dbUpdateQueueItem({ ...item, attempts: (item.attempts || 0) + 1, lastError: 'session expired', lastAttemptAt: new Date().toISOString() });
+            break;
+          } else if (status === 400 && message.toLowerCase().includes('already checked in')) {
             // Another device checked in this guest while we were offline — conflict
             const guest = this.lookupGuest(item.inviteCode);
             results.conflicts.push({
@@ -344,8 +430,9 @@ const offlineCheckin = {
               queuedAt:      item.queuedAt,
             });
             await dbDelete(STORE_QUEUE, item.id);
-          } else if (status === 403) {
-            // Server-side security block (blocked ticket, wrong event, capacity)
+            await updateCachedGuest(eventId, item.inviteCode, { pendingOfflineSync: false });
+          } else if (status === 403 || status === 404) {
+            // Server-side security block (blocked ticket, wrong event, capacity, wrong access)
             const guest = this.lookupGuest(item.inviteCode);
             results.conflicts.push({
               inviteCode:    item.inviteCode,
@@ -355,8 +442,9 @@ const offlineCheckin = {
               queuedAt:      item.queuedAt,
             });
             await dbDelete(STORE_QUEUE, item.id);
+            await updateCachedGuest(eventId, item.inviteCode, { pendingOfflineSync: false });
           } else {
-            // Network / server error — keep in queue for next flush attempt
+            // 5xx / 409 lock / anything else transient — keep in queue for the next flush
             results.failed++;
             await dbUpdateQueueItem({ ...item, attempts: (item.attempts || 0) + 1, lastError: message, lastAttemptAt: new Date().toISOString() });
             console.warn(`[offlineCheckin] Flush failed for ${item.inviteCode} (status ${status}):`, message);
@@ -367,6 +455,8 @@ const offlineCheckin = {
       console.log(`[offlineCheckin] Queue flush: synced=${results.synced} failed=${results.failed} conflicts=${results.conflicts.length}`);
     } catch (err) {
       console.error('[offlineCheckin] flushQueue error:', err);
+    } finally {
+      _flushing = false;
     }
     return results;
   },
