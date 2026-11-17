@@ -240,10 +240,18 @@ function MaintenanceGate({ children }) {
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const check = () =>
-      fetch(`${ROUTER_URL}/maintenance`, { cache: 'no-store' }).then(r => r.json())
+    // This gate renders NOTHING until the first check finishes. With no connection (or wifi that
+    // accepts the request and never answers) a bare fetch can hang for minutes, which left guests
+    // and door staff on a blank screen. Skip the check offline and give it a hard 4s limit.
+    const check = () => {
+      if (navigator.onLine === false) { setChecked(true); return; }
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 4000);
+      fetch(`${ROUTER_URL}/maintenance`, { cache: 'no-store', signal: ctl.signal }).then(r => r.json())
         .then(d => { setInfo((d.active || d.upcoming) ? d : null); setChecked(true); })
-        .catch(() => { setInfo(null); setChecked(true); });
+        .catch(() => { setInfo(null); setChecked(true); })   // can't tell: fail open, keep the app usable
+        .finally(() => clearTimeout(timer));
+    };
     check();
     const t = setInterval(check, 30_000);
     return () => clearInterval(t);
