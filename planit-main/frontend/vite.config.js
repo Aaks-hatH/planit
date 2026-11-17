@@ -48,14 +48,15 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Never precache index.html — it must always be fetched fresh so
-        // Safari picks up new deployments immediately instead of serving
-        // the stale shell from the service-worker cache.
-        globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
-        // generateSW defaults to navigateFallback: 'index.html', which calls
-        // createHandlerBoundToURL('index.html') and throws "non-precached-url" because
-        // index.html is deliberately excluded above. Navigations are already handled by the
-        // NetworkFirst runtime route below, so turn the precache fallback off.
+        // Navigations are fetched fresh (network first); see sw-offline-shell.js for the offline fallback.
+        // index.html IS precached now (as the offline app shell). It used to be excluded so Safari would
+        // always pick up new deployments. That is still guaranteed: sw-offline-shell.js only serves
+        // the cached shell when the network fails, times out or answers 5xx; online users always get
+        // the fresh HTML. Without a cached shell, any page not visited before could not open offline.
+        globPatterns: ['index.html', '**/*.{js,css,ico,png,svg,woff,woff2}'],
+        importScripts: ['sw-offline-shell.js'],
+        // Navigations are handled by sw-offline-shell.js (network first, precached shell as fallback)
+        // and the NetworkFirst runtime route below, so the built-in precache fallback stays off.
         navigateFallback: null,
         runtimeCaching: [
           {
