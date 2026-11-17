@@ -372,6 +372,12 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
       let vpRecoveryCode = null;
+      // A check-in staff account must never go through the guest join flow: it would
+      // hand back a 'participant' token (which the check-in page rejects) and the
+      // upsert below could overwrite the staff role. Point them at the staff login.
+      if (existing && existing.role === 'staff') {
+        return res.status(403).json({ error: 'That name is a check-in staff account. Use the staff login on the check-in page with your PIN.', staffAccount: true });
+      }
       // An organizer name with no password must never be claimable through the public
       // join flow (that would let a stranger set the password and become organizer).
       // Access for such legacy accounts is re-issued by an admin.
@@ -499,6 +505,10 @@ router.post('/join/:eventId',
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
       let joinRecoveryCode = null;
+      // See verify-password above: staff accounts use the staff login, not the guest join.
+      if (existing && existing.role === 'staff') {
+        return res.status(403).json({ error: 'That name is a check-in staff account. Use the staff login on the check-in page with your PIN.', staffAccount: true });
+      }
       // An organizer name with no password must never be claimable through the public
       // join flow (that would let a stranger set the password and become organizer).
       // Access for such legacy accounts is re-issued by an admin.
@@ -2712,7 +2722,7 @@ const {
 } = require('../middleware/antifraud');
 
 router.get('/:eventId/verify-scan/:inviteCode', 
-  verifyEventAccess,
+  verifyCheckinAccess,     // staff/organizer token for THIS event only (was verifyEventAccess: open events let anyone through)
   enforceBlocks,           // ✅ Check emergency lockdown, blocks, trust scores
   detectDuplicates,        // ✅ Check for duplicate guests
   detectSuspiciousPatterns, // ✅ Check for rapid scans, multiple devices
@@ -2819,7 +2829,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
 });
 
 // STEP 2: Verify PIN (called if requiresPin === true, before committing admission)
-router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, res, next) => {
+router.post('/:eventId/verify-pin/:inviteCode', verifyCheckinAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
@@ -2858,15 +2868,27 @@ router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, r
 
 // STEP 3: Commit check-in — only called after staff reviews profile (and PIN if required)
 router.post('/:eventId/checkin/:inviteCode', 
-  verifyEventAccess,
+  verifyCheckinAccess,
   preventReentrancy,  // ✅ Prevent simultaneous check-ins
   async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
-    const { actualAttendees, pinVerified } = req.body;
+    const { actualAttendees, pinVerified, offlineSync, scannedAt } = req.body;
     const ip = realIp(req);
     const staffUser = req.eventAccess?.username || 'staff';
+
+    // A check-in that was admitted while the scanner had no connection and is only now being
+    // synced. Record when the guest was really admitted (clamped: never in the future, never
+    // older than a week) instead of stamping the time the queue happened to flush.
+    let admittedAt = new Date();
+    if (offlineSync && scannedAt) {
+      const t = new Date(scannedAt);
+      const now = Date.now();
+      if (!isNaN(t.getTime()) && t.getTime() <= now && t.getTime() > now - 7 * 24 * 60 * 60 * 1000) {
+        admittedAt = t;
+      }
+    }
 
     // Re-verify event ownership on commit (belt-and-suspenders)
     const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim() });
@@ -2911,7 +2933,7 @@ router.post('/:eventId/checkin/:inviteCode',
     }
 
     invite.checkedIn    = true;
-    invite.checkedInAt  = new Date();
+    invite.checkedInAt  = admittedAt;
     invite.checkedInBy  = staffUser;
     invite.status       = 'checked-in';
     invite.actualAttendees = (actualAttendees !== undefined && actualAttendees !== null)
@@ -2920,7 +2942,7 @@ router.post('/:eventId/checkin/:inviteCode',
     
     // Add to check-in history
     invite.checkInHistory.push({
-      checkedInAt: new Date(),
+      checkedInAt: admittedAt,
       checkedInBy: staffUser,
       actualAttendees: invite.actualAttendees,
     });
@@ -3202,8 +3224,13 @@ router.post('/:eventId/staff-login', authLimiter, async (req, res, next) => {
       return res.status(400).json({ error: 'Username and PIN are required' });
     }
 
+    // A subdomain or garbage id used to hit a Mongoose CastError and surface as a 500.
+    if (!mongoose.isValidObjectId(eventId)) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
     const staff = await EventParticipant
-      .findOne({ eventId, username: username.trim(), role: 'staff' })
+      .findOne({ eventId, username: String(username).trim(), role: 'staff' })
       .select('+password');
 
     if (!staff || !staff.password) {
@@ -3221,7 +3248,8 @@ router.post('/:eventId/staff-login', authLimiter, async (req, res, next) => {
     const token = jwt.sign(
       { eventId: eventId.toString(), username: staff.username, role: 'staff' },
       secrets.jwt,
-      { expiresIn: '12h' }
+      // 24h so a door shift that starts in the morning is still valid at close.
+      { expiresIn: '24h' }
     );
 
     console.log(`[STAFF-LOGIN] Success: ${username} for event ${eventId}`);
@@ -3260,10 +3288,16 @@ router.post('/:eventId/staff', verifyOrganizer, async (req, res, next) => {
       return res.status(400).json({ error: 'PIN must contain only numbers' });
     }
 
-    // Prevent duplicate username within this event (any role)
-    const existing = await EventParticipant.findOne({ eventId, username: username.trim(), role: 'staff' });
+    // Prevent duplicate username within this event (any role). The unique index is on
+    // (eventId, username) regardless of role, so checking only role:'staff' let a clash with a
+    // guest/organizer name through and then crashed on create with an E11000 500.
+    const existing = await EventParticipant.findOne({ eventId, username: username.trim() });
     if (existing) {
-      return res.status(409).json({ error: 'A staff account with that username already exists for this event' });
+      return res.status(409).json({
+        error: existing.role === 'staff'
+          ? 'A staff account with that username already exists for this event'
+          : `"${username.trim()}" is already used by another person in this event. Pick a different staff username.`
+      });
     }
 
     const hashed = await bcrypt.hash(String(pin), 10);
@@ -4204,8 +4238,13 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
 
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId })
-      .select('inviteCode guestName guestEmail groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel')
+      .select('inviteCode guestName guestEmail groupSize adults children checkedIn checkedInAt securityPin isBlocked status notes tableId tableLabel seatNumber tableType guestRole actualAttendees')
       .lean();
+
+    // The PIN itself is never sent. A salted SHA-256 lets the scanner verify a typed PIN with no
+    // connection (the client builds the same hash with Web Crypto). Salt = the invite code.
+    const pinHash = (code, pin) =>
+      crypto.createHash('sha256').update(`${String(code).toUpperCase()}:${String(pin).trim()}`).digest('hex');
 
     const snapshot = invites.map(inv => ({
       code:       inv.inviteCode,
@@ -4215,12 +4254,18 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
       adults:     inv.adults           || 1,
       children:   inv.children         || 0,
       checkedIn:  !!inv.checkedIn,
-      hasPin:     !!(inv.securityPin),
+      checkedInAt: inv.checkedInAt     || null,
+      actualAttendees: inv.actualAttendees || 0,
+      hasPin:     !!(inv.securityPin && String(inv.securityPin).trim()),
+      pinHash:    (inv.securityPin && String(inv.securityPin).trim()) ? pinHash(inv.inviteCode, inv.securityPin) : null,
       isBlocked:  !!(inv.isBlocked),
       status:     inv.status           || 'active',
       notes:      inv.notes            || '',
       tableId:    inv.tableId          || null,
       tableLabel: inv.tableLabel       || null,
+      seatNumber: inv.seatNumber       || null,
+      tableType:  inv.tableType        || null,
+      guestRole:  inv.guestRole        || 'GUEST',
     }));
 
     res.json({
