@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import OfflineEventNotice from '../components/OfflineEventNotice';
+import { saveEventMeta, readEventMeta, saveEventSnapshot, readEventSnapshot, isNetworkFailure } from '../utils/offlineEvent';
 import Modal from '../components/ui/Modal';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -110,6 +112,7 @@ export function JoinGate({ eventId, onJoined }) {
   const [pendingJoinCallback, setPendingJoinCallback] = useState(null);
 
   // Full-event state
+  const [offlineFail, setOfflineFail] = useState(false);   // can't reach the server at all
   const [isFull, setIsFull]         = useState(false);
   const [fullMode, setFullMode]     = useState('waitlist');
   // Waitlist
@@ -148,11 +151,13 @@ export function JoinGate({ eventId, onJoined }) {
             return;
           }
           // Timeout / network error / 5xx → retry on cold-start, don't redirect
-          if (!err.response && retries < 2) {
+          if (!err.response && navigator.onLine !== false && retries < 2) {
             retries++;
             setTimeout(tryLoad, retries * 2500);
             return;
           }
+          // Offline: say so instead of bouncing the person to the home page.
+          if (isNetworkFailure(err)) { setOfflineFail(true); return; }
           didNavigate = true; navigate('/');
         })
         .finally(() => { if (!didNavigate) setLoading(false); });
@@ -336,6 +341,9 @@ export function JoinGate({ eventId, onJoined }) {
       </div>
     </div>
   );
+  if (offlineFail && !publicInfo) {
+    return <OfflineEventNotice title={readEventMeta(eventId)?.title} checkinPath={`/event/${eventId}/checkin`} onRetry={() => window.location.reload()} />;
+  }
   // publicInfo is null only when the event genuinely doesn't exist (navigate
   // already called inside the catch handler). Return null to avoid a flash.
   if (!publicInfo) { return null; }
@@ -931,6 +939,9 @@ export default function EventSpace() {
   const [resolving, setResolving] = useState(!paramEventId && subdomain);
 
   const [needsJoin, setNeedsJoin] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);     // showing the saved copy of the event
+  const [offlineBlock, setOfflineBlock] = useState(null);     // offline and nothing saved: { title }
+  const offlineTimerRef = useRef(null);
   const [joinKey, setJoinKey] = useState(0);   // bump to remount JoinGate after a declined request
   const [event, setEvent]         = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -1039,6 +1050,7 @@ export default function EventSpace() {
               navigate(`/e/${subdomain}/floor`, { replace: true });
               return;
             }
+            saveEventMeta(subdomain, { id: ev.id, eventType: ev.eventType || 'standard', title: ev.title || ev.name || '', subdomain });
             setEventId(ev.id);
             setResolving(false);
           })
@@ -1056,13 +1068,18 @@ export default function EventSpace() {
               navigate('/429', { replace: true, state: { retryAfter: Math.ceil(delay / 1000), blockedAt: Date.now(), returnTo: window.location.pathname } });
               return;
             }
+            // No connection: open the event this address pointed to last time, from the saved copy.
+            const saved = !err.response ? readEventMeta(subdomain) : null;
+            if (saved?.id) { setEventId(saved.id); setResolving(false); return; }
             attempts++;
-            if (attempts < 3) {
+            if (attempts < 3 && navigator.onLine !== false) {
               // Exponential back-off: 2s, 4s
               setTimeout(tryResolve, attempts * 2000);
+            } else if (!err.response) {
+              // Offline and never opened here before: say so. "Not found" would be wrong.
+              setOfflineBlock({ title: '', subdomain });
+              setResolving(false);
             } else {
-              // Three strikes — server is truly unreachable; show not-found
-              // rather than spinning forever.
               navigate('/not-found', { replace: true });
             }
           });
@@ -1084,7 +1101,10 @@ export default function EventSpace() {
       // Check eventId match and token expiry
       const expired = decoded?.exp && decoded.exp * 1000 < Date.now();
       const wrongEvent = decoded?.eventId && decoded.eventId !== eventId;
-      if (expired || wrongEvent || !decoded) {
+      // An expired token is not thrown away while a saved copy exists: offline, nobody can log in again,
+      // and the server still gets the final say (it answers 401 if the token is really dead).
+      const keepExpired = expired && !wrongEvent && decoded && readEventSnapshot(eventId);
+      if ((expired && !keepExpired) || wrongEvent || !decoded) {
         localStorage.removeItem('eventToken');
         localStorage.removeItem('username');
         setNeedsJoin(true);
@@ -1101,6 +1121,16 @@ export default function EventSpace() {
 
     loadEvent();
   }, [eventId, resolving]);
+
+  // Offline copy on screen: reload the real event the moment the connection returns; stop timers on leave.
+  useEffect(() => {
+    if (!offlineMode) return undefined;
+    const back = () => loadEvent(0);
+    window.addEventListener('online', back);
+    return () => window.removeEventListener('online', back);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offlineMode, eventId]);
+  useEffect(() => () => clearTimeout(offlineTimerRef.current), []);
 
   useEffect(() => {
     if (!event || !eventId) return;
@@ -1253,6 +1283,8 @@ export default function EventSpace() {
   };
 
   const loadEvent = async (attempt = 0) => {
+    let keepSpinner = false;
+    clearTimeout(offlineTimerRef.current);
     try {
       const res = await eventAPI.getById(eventId);
       const ev  = res.data.event;
@@ -1263,6 +1295,9 @@ export default function EventSpace() {
         return;
       }
 
+      saveEventSnapshot(eventId, ev);
+      setOfflineMode(false);
+      setOfflineBlock(null);
       setEvent(ev);
       setParticipants(ev.participants || []);
       setRsvps(ev.rsvps || []);
@@ -1281,16 +1316,31 @@ export default function EventSpace() {
         // Rate limited — navigate to the 429 page with a countdown
         const retryAfter = err.response.headers?.['retry-after'];
         navigate('/429', { state: { retryAfter: retryAfter ? parseInt(retryAfter) : 60, blockedAt: Date.now(), returnTo: window.location.pathname } });
+        keepSpinner = true;
         return; // Keep spinner visible until navigation completes
-      } else if (!err.response && attempt < 2) {
+      } else if (isNetworkFailure(err) && readEventSnapshot(eventId)) {
+        // No connection: open the saved copy right away and keep trying in the background.
+        const snap = readEventSnapshot(eventId);
+        setEvent(snap);
+        setParticipants(snap.participants || []);
+        setRsvps(snap.rsvps || []);
+        setRsvpSummary(snap.rsvpSummary || { yes: 0, maybe: 0, no: 0 });
+        setAgenda(snap.agenda ? [...snap.agenda].sort((a, b) => a.order - b.order) : []);
+        setOfflineMode(true);
+        offlineTimerRef.current = setTimeout(() => loadEvent(0), 15000);
+      } else if (!err.response && attempt < 2 && navigator.onLine !== false) {
         // Network error or timeout (Render cold-start). Retry up to 2 times
         // with back-off before giving up. Do NOT navigate — the URL is correct.
-        setTimeout(() => loadEvent(attempt + 1), (attempt + 1) * 3000);
+        offlineTimerRef.current = setTimeout(() => loadEvent(attempt + 1), (attempt + 1) * 3000);
+        keepSpinner = true;
         return; // Don't call setLoading(false) — keep spinner visible
+      } else if (!err.response) {
+        // Offline with nothing saved yet.
+        setOfflineBlock({ title: '' });
       } else {
         toast.error('Failed to load event — please refresh the page');
       }
-    } finally { setLoading(false); }
+    } finally { if (!keepSpinner) setLoading(false); }
   };
 
   const handleJoined = () => { setNeedsJoin(false); setLoading(true); loadEvent(); };
@@ -1526,6 +1576,9 @@ export default function EventSpace() {
   }, [settings.allowChat, settings.allowPolls, settings.allowFileSharing]);
 
   /* ── Gate / Loading ── */
+  if (offlineBlock && !event) {
+    return <OfflineEventNotice title={readEventMeta(eventId || subdomain)?.title || offlineBlock.title} checkinPath={eventId ? `/event/${eventId}/checkin` : (subdomain ? `/e/${subdomain}/checkin` : null)} onRetry={() => window.location.reload()} />;
+  }
   if (resolving || (loading && !event)) return <SkeletonPage />;
   if (needsJoin) return <JoinGate key={joinKey} eventId={eventId} onJoined={handleJoined} />;
   if (!event)   return null;
@@ -1535,6 +1588,14 @@ export default function EventSpace() {
     <>
     {showCasualAd && <CrossPlatformAd trigger="casual" onClose={() => setShowCasualAd(false)} />}
     <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
+      {offlineMode && (
+        <div role="status" data-testid="event-offline-banner" className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 bg-amber-50 border-b border-amber-300 text-sm text-amber-900">
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+          <span className="flex-1 min-w-[12rem]"><strong>Offline</strong> — showing the last saved copy of this event. Chat, polls and files update when you're back online.</span>
+          <button onClick={() => navigate(`/event/${eventId}/checkin`)} className="min-h-[44px] px-4 rounded-xl bg-neutral-900 text-white text-xs font-semibold">Open check-in</button>
+          <button onClick={() => loadEvent(0)} className="min-h-[44px] px-3 rounded-xl border border-amber-300 text-xs font-semibold">Retry</button>
+        </div>
+      )}
       <DeletionWarningBanner eventId={eventId} />
       {/* Recovery code banner — shown to any authenticated user with a password but no recovery code */}
       {eventId && currentUser && (
