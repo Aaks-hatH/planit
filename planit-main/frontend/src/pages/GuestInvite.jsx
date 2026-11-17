@@ -36,13 +36,61 @@ export default function GuestInvite() {
   const [showShareCard, setShowShareCard] = useState(false);
   const [expired, setExpired] = useState(false);
   const [expiredAt, setExpiredAt] = useState(null);
+  // Offline support: the ticket is saved on this device the first time it loads, and the QR is
+  // drawn in the browser, so showing it at the door needs no connection.
+  const [savedAt, setSavedAt] = useState(null);        // set when we are showing the saved copy
+  const [noSavedTicket, setNoSavedTicket] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState(null);
+
+  const ticketKey = `planit_ticket_${String(inviteCode || '').toUpperCase()}`;
 
   useEffect(() => { loadInvite(); }, [inviteCode]);
 
+  // Retry automatically when the connection comes back while the saved copy is on screen.
+  useEffect(() => {
+    const onOnline = () => { if (savedAt) loadInvite(); };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [savedAt, inviteCode]);
+
+  // Draw the QR locally from the invite link. Works with no network (the server-made SVG did not).
+  useEffect(() => {
+    if (!inviteCode) return;
+    let cancelled = false;
+    import('qrcode').then(({ default: QR }) =>
+      QR.toDataURL(`${window.location.origin}/invite/${inviteCode}`, {
+        width: 640, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' },
+      })
+    ).then(url => { if (!cancelled) setQrDataUrl(url); }).catch(() => { /* falls back to the server image */ });
+    return () => { cancelled = true; };
+  }, [inviteCode]);
+
+  const readSavedTicket = () => {
+    try { return JSON.parse(localStorage.getItem(ticketKey) || 'null'); } catch { return null; }
+  };
+
   const loadInvite = async () => {
+    let response, data;
     try {
-      const response = await fetch(`${API}/events/invite/${inviteCode}`);
-      const data = await response.json();
+      response = await fetch(`${API}/events/invite/${inviteCode}`);
+      data = await response.json();
+    } catch (error) {
+      // No connection (or the server is down / sent something that is not JSON). If this ticket was
+      // opened before, show the saved copy so the guest can still get in.
+      const saved = readSavedTicket();
+      if (saved?.invite && saved?.event) {
+        setInvite(saved.invite);
+        setEvent(saved.event);
+        setSavedAt(saved.savedAt || null);
+        setNoSavedTicket(false);
+      } else {
+        setNoSavedTicket(true);
+      }
+      setLoading(false);
+      return;
+    }
+
+    try {
       if (response.status === 410 || data.expired) {
         setExpired(true);
         setExpiredAt(data.expiresAt || null);
@@ -50,12 +98,27 @@ export default function GuestInvite() {
         return;
       }
       if (!response.ok) {
+        // 5xx while we hold a saved copy: keep showing it rather than kicking the guest out.
+        const saved = response.status >= 500 ? readSavedTicket() : null;
+        if (saved?.invite && saved?.event) {
+          setInvite(saved.invite);
+          setEvent(saved.event);
+          setSavedAt(saved.savedAt || null);
+          setLoading(false);
+          return;
+        }
+        if (response.status === 404) { try { localStorage.removeItem(ticketKey); } catch { /* ignore */ } }
         toast.error(data.error || 'Invite not found');
         navigate('/');
         return;
       }
       setInvite(data.invite);
       setEvent(data.event);
+      setSavedAt(null);
+      setNoSavedTicket(false);
+      try {
+        localStorage.setItem(ticketKey, JSON.stringify({ invite: data.invite, event: data.event, savedAt: new Date().toISOString() }));
+      } catch { /* storage full or blocked: the live copy still works */ }
 
       // Load RSVP summary separately (public endpoint, no auth needed)
       if (data.event?.id) {
@@ -79,6 +142,10 @@ export default function GuestInvite() {
   const handleRSVP = async (status) => {
     if (rsvpInfo?.deadlinePast) {
       toast.error('The RSVP deadline has passed. No changes can be made.');
+      return;
+    }
+    if (savedAt || navigator.onLine === false) {
+      toast.error('You are offline. Connect to the internet to change your RSVP.');
       return;
     }
     setRsvpLoading(true);
@@ -114,10 +181,8 @@ export default function GuestInvite() {
   };
 
   const handleDownloadQR = () => {
-    const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-    const qrUrl = `${API}/events/invite/${inviteCode}/qr.svg`;
     const link = document.createElement('a');
-    link.href = qrUrl;
+    link.href = qrDataUrl || `${API}/events/invite/${inviteCode}/qr.svg`;
     link.download = `${event.title}-${invite.guestName}-QR.png`;
     document.body.appendChild(link);
     link.click();
@@ -208,10 +273,30 @@ export default function GuestInvite() {
     );
   }
 
+  if (noSavedTicket && (!invite || !event)) {
+    return (
+      <div className="min-h-screen relative overflow-hidden flex items-center justify-center" style={{ background: '#040407' }}>
+        <div className="relative z-10 max-w-md w-full mx-auto px-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-10 h-10 text-amber-400" />
+          </div>
+          <h1 className="text-2xl font-black text-white mb-3">Can't load your ticket</h1>
+          <p className="text-neutral-400 mb-2">You're offline and this ticket hasn't been saved on this device yet.</p>
+          <p className="text-sm text-neutral-500 mb-8">Reconnect and open this link once. After that it opens without internet.</p>
+          <button onClick={() => { setLoading(true); setNoSavedTicket(false); loadInvite(); }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all">
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!invite || !event) return null;
 
   const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-  const qrUrl = `${API}/events/invite/${inviteCode}/qr.svg`;
+  // Prefer the QR drawn in the browser (works offline); the server's branded card is the fallback.
+  const qrUrl = qrDataUrl || `${API}/events/invite/${inviteCode}/qr.svg`;
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: '#040407' }}>
@@ -252,6 +337,16 @@ export default function GuestInvite() {
           transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
           className="max-w-4xl mx-auto px-6 py-12"
         >
+          {savedAt && (
+            <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200/90 leading-relaxed">
+                <strong className="font-semibold">Offline — showing your saved ticket.</strong>{' '}
+                Your QR code still works at the door. Check-in status and RSVP changes update when you're back online
+                (saved {new Date(savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}).
+              </p>
+            </div>
+          )}
           <div className="relative">
             {/* Main Ticket */}
             <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden">
@@ -545,7 +640,7 @@ export default function GuestInvite() {
               <p className="text-neutral-400 text-lg">{invite.guestName}</p>
             </div>
             <div className="bg-white p-12 rounded-3xl shadow-2xl">
-              <img src={`${API}/events/invite/${inviteCode}/qr.svg`} alt="QR Code Fullscreen" className="w-full max-w-lg mx-auto" />
+              <img src={qrUrl} alt="QR Code Fullscreen" className="w-full max-w-lg mx-auto" />
               <p className="text-4xl font-mono font-black text-neutral-900 text-center mt-8 tracking-[0.3em]">{inviteCode}</p>
             </div>
             <p className="text-center text-neutral-400 text-sm mt-8 flex items-center justify-center gap-2">
