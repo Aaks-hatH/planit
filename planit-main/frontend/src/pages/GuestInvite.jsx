@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import InstallBanner from '../components/InstallBanner';
+import { requestPersistentStorage } from '../utils/persistentStorage';
+import { setUpdateBlocker } from '../utils/appUpdate';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Users, QrCode, Check, X, Clock, Mail,
@@ -38,11 +41,18 @@ export default function GuestInvite() {
   const [expiredAt, setExpiredAt] = useState(null);
   // Offline support: the ticket is saved on this device the first time it loads, and the QR is
   // drawn in the browser, so showing it at the door needs no connection.
+  const [ticketSaved, setTicketSaved] = useState(false);   // true once the ticket is stored on this device
   const [savedAt, setSavedAt] = useState(null);        // set when we are showing the saved copy
   const [noSavedTicket, setNoSavedTicket] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState(null);
 
   const ticketKey = `planit_ticket_${String(inviteCode || '').toUpperCase()}`;
+
+  // Never reload for an app update while the fullscreen boarding pass is open.
+  useEffect(() => {
+    setUpdateBlocker('guest-pass', () => (showQRFullscreen ? 'Close your ticket QR, then update.' : false));
+    return () => setUpdateBlocker('guest-pass', null);
+  }, [showQRFullscreen]);
 
   useEffect(() => { loadInvite(); }, [inviteCode]);
 
@@ -118,6 +128,8 @@ export default function GuestInvite() {
       setNoSavedTicket(false);
       try {
         localStorage.setItem(ticketKey, JSON.stringify({ invite: data.invite, event: data.event, savedAt: new Date().toISOString() }));
+        setTicketSaved(true);
+        requestPersistentStorage();   // keep the saved ticket from being evicted
       } catch { /* storage full or blocked: the live copy still works */ }
 
       // Load RSVP summary separately (public endpoint, no auth needed)
@@ -337,6 +349,7 @@ export default function GuestInvite() {
           transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
           className="max-w-4xl mx-auto px-6 py-12"
         >
+          {ticketSaved && !savedAt && <InstallBanner variant="dark" className="mb-6" />}
           {savedAt && (
             <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
