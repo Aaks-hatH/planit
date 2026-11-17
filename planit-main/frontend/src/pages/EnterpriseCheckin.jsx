@@ -1729,14 +1729,14 @@ function EnterpriseCheckinInner() {
   // added their first guest and the wizard step key indicates they should
   // continue to the QR / settings steps.
   useEffect(() => {
-    if (loading || invitesLoading || invitesError || authState.role !== 'organizer') return;
+    if (isOffline || loading || invitesLoading || invitesError || authState.role !== 'organizer') return;
     if (localStorage.getItem(`checkin_setup_done_${eventId}`) === 'true') return;
     const pendingStep = localStorage.getItem(`checkin_wizard_step_${eventId}`);
     // Show if no guests yet, OR if they added guests and should continue
     if (invites.length === 0 || pendingStep !== null) {
       setShowSetupWizard(true);
     }
-  }, [loading, invitesLoading, invitesError, authState.role, invites.length, eventId]);
+  }, [isOffline, loading, invitesLoading, invitesError, authState.role, invites.length, eventId]);
 
   // Real-time socket updates + offline cache bootstrap
   useEffect(() => {
