@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Component, useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   QrCode, UserCheck, Users, X, ArrowLeft, Camera, CameraOff, Plus,
@@ -27,21 +27,31 @@ const GUEST_PAGE_SIZE = 50;
 
 // Same shape the backend's /checkin-cache builds, so the offline cache can be
 // refreshed from the /invites response we already have.
-const inviteToSnapshot = (inv) => ({
-  code:       inv.inviteCode,
-  name:       inv.guestName,
-  email:      inv.guestEmail || '',
-  groupSize:  inv.groupSize  || 1,
-  adults:     inv.adults     || 1,
-  children:   inv.children   || 0,
-  checkedIn:  !!inv.checkedIn,
-  hasPin:     !!inv.securityPin,
-  isBlocked:  !!inv.isBlocked,
-  status:     inv.status     || 'active',
-  notes:      inv.notes      || '',
-  tableId:    inv.tableId    || null,
-  tableLabel: inv.tableLabel || null,
-});
+const inviteToSnapshot = async (inv) => {
+  const pin = inv.securityPin && String(inv.securityPin).trim();
+  return {
+    code:       inv.inviteCode,
+    name:       inv.guestName,
+    email:      inv.guestEmail || '',
+    groupSize:  inv.groupSize  || 1,
+    adults:     inv.adults     || 1,
+    children:   inv.children   || 0,
+    checkedIn:  !!inv.checkedIn,
+    checkedInAt: inv.checkedInAt || null,
+    actualAttendees: inv.actualAttendees || 0,
+    hasPin:     !!pin,
+    // Only a salted hash is kept on the device so a PIN can be checked with no connection.
+    pinHash:    pin ? await offlineCheckin.hashPin(inv.inviteCode, pin) : null,
+    isBlocked:  !!inv.isBlocked,
+    status:     inv.status     || 'active',
+    notes:      inv.notes      || '',
+    tableId:    inv.tableId    || null,
+    tableLabel: inv.tableLabel || null,
+    seatNumber: inv.seatNumber || null,
+    tableType:  inv.tableType  || null,
+    guestRole:  inv.guestRole  || 'GUEST',
+  };
+};
 
 // Read-only stand-in for an invite, built from the on-device snapshot.
 const snapshotToInvite = (g) => ({
@@ -52,7 +62,9 @@ const snapshotToInvite = (g) => ({
   groupSize: g.groupSize, adults: g.adults, children: g.children,
   checkedIn: g.checkedIn, isBlocked: g.isBlocked, status: g.status,
   notes: g.notes, tableId: g.tableId, tableLabel: g.tableLabel,
-  guestRole: 'GUEST',
+  checkedInAt: g.checkedInAt || null,
+  seatNumber: g.seatNumber || null,
+  guestRole: g.guestRole || 'GUEST',
 });
 
 // Simple JWT decode (not for security — only for reading role/username from stored token)
@@ -104,9 +116,69 @@ const hapticError = () => triggerHaptic([200, 100, 200]); // Double vibration fo
 const hapticWarning = () => triggerHaptic([100, 50, 100]); // Quick double for warning
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ERROR BOUNDARY
+// Without this, any exception while rendering this page unmounts the whole app and the
+// door staff are left with a blank black screen and no idea why.
+// ═══════════════════════════════════════════════════════════════════════════
+class CheckinErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('[checkin] render crash:', error, info?.componentStack); }
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    const detail = `${error?.name || 'Error'}: ${error?.message || String(error)}`;
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+        <div className="w-full max-w-md text-center">
+          <AlertTriangle className="w-14 h-14 text-amber-400 mx-auto mb-4" />
+          <h1 className="text-white text-2xl font-black mb-2">Check-in hit a problem</h1>
+          <p className="text-neutral-400 text-sm mb-5">
+            Nothing was lost. Guests you admitted offline are saved on this device and will sync automatically.
+          </p>
+          <pre className="text-left text-xs text-red-300 bg-neutral-900 border border-neutral-800 rounded-xl p-3 mb-5 whitespace-pre-wrap break-words max-h-40 overflow-auto">{detail}</pre>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => window.location.reload()} className="w-full bg-white text-neutral-900 font-black rounded-xl py-3">Reload check-in</button>
+            <button
+              onClick={() => { try { localStorage.removeItem('eventToken'); } catch {} window.location.reload(); }}
+              className="w-full bg-neutral-800 text-neutral-200 font-semibold rounded-xl py-3 border border-neutral-700"
+            >
+              Sign out and log in again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+// Reads the stored event token and says whether this device may use the check-in page.
+// An expired token is tolerated while OFFLINE: the door must keep scanning, nobody can log in
+// again without a connection, and the server re-checks every queued check-in when it syncs.
+function readCheckinAuth(expectedEventId) {
+  try {
+    const token = localStorage.getItem('eventToken');
+    if (!token) return { ready: false, role: null };
+    const decoded = decodeJWT(token);
+    if (!decoded) return { ready: false, role: null };
+    if (decoded.role !== 'organizer' && decoded.role !== 'staff') return { ready: false, role: null, reason: 'wrong_role' };
+    if (expectedEventId && decoded.eventId && !decoded.isAdminAccess && String(decoded.eventId) !== String(expectedEventId)) {
+      return { ready: false, role: null, reason: 'other_event' };
+    }
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      if (navigator.onLine === false) return { ready: true, role: decoded.role, username: decoded.username, expired: true };
+      return { ready: false, role: null, reason: 'expired' };
+    }
+    return { ready: true, role: decoded.role, username: decoded.username };
+  } catch {
+    return { ready: false, role: null };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STAFF LOGIN SCREEN
 // ═══════════════════════════════════════════════════════════════════════════
-function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
+function StaffLoginScreen({ eventId, eventTitle, onLogin, onOrganizer, notice }) {
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -132,7 +204,11 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
       localStorage.setItem('eventToken', token);
       onLogin({ token, role, username: response.data.username });
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid username or PIN');
+      setError(
+        !err.response
+          ? 'No connection. Staff must log in once while online; after that scanning works offline.'
+          : (err.response?.data?.error || 'Invalid username or PIN')
+      );
       setPin('');
     } finally {
       setLoading(false);
@@ -150,6 +226,12 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
           <h1 className="text-white text-2xl font-black mb-1">Check-in Staff Login</h1>
           <p className="text-neutral-400 text-sm">{eventTitle || 'Event Check-in'}</p>
         </div>
+
+        {notice && (
+          <div className="mb-4 bg-amber-900/30 border border-amber-700/60 rounded-xl px-4 py-3">
+            <p className="text-sm text-amber-200 font-medium">{notice}</p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
@@ -207,6 +289,11 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
         <p className="text-center text-xs text-neutral-600 mt-6">
           Contact your event organizer if you don't have a staff account
         </p>
+        {onOrganizer && (
+          <button type="button" onClick={onOrganizer} className="block mx-auto mt-3 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-300">
+            I'm the organizer — open the event
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1501,28 +1588,19 @@ function ActivityLogDialog({ eventId, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════
-export default function EnterpriseCheckin() {
-  const { eventId, subdomain } = useParams();
+function EnterpriseCheckinInner() {
+  const { eventId: eventIdParam, subdomain } = useParams();
   const navigate = useNavigate();
-  
+
+  // /e/:subdomain/checkin carries no event id in the URL. It used to leave eventId undefined, so
+  // nothing ever loaded. Resolve it from the subdomain (and remember it for offline reloads).
+  const [eventId, setEventId] = useState(eventIdParam || null);
+  const [resolveError, setResolveError] = useState(null);
+  const [gateTitle, setGateTitle] = useState('');
+  const [gateNotice, setGateNotice] = useState('');
+
   // Auth / staff gate
-  const [authState, setAuthState] = useState(() => {
-    const token = localStorage.getItem('eventToken');
-    if (!token) return { ready: false, role: null };
-    const decoded = decodeJWT(token);
-    if (!decoded) return { ready: false, role: null };
-    // Check token not expired
-    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      localStorage.removeItem('eventToken');
-      return { ready: false, role: null };
-    }
-    // Must be organizer or staff
-    if (decoded.role !== 'organizer' && decoded.role !== 'staff') return { ready: false, role: null };
-    return { ready: true, role: decoded.role, username: decoded.username };
-  });
+  const [authState, setAuthState] = useState(() => readCheckinAuth(eventIdParam || null));
 
   const [event, setEvent] = useState(null);
   const [invites, setInvites] = useState([]);
@@ -1568,10 +1646,14 @@ export default function EnterpriseCheckin() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const { alerts: secAlerts, addAlert: addSecAlert, addConflicts, dismissAlert: dismissSecAlert, dismissAll: dismissAllSecAlerts } = useSecurityAlerts();
   const [isOffline, setIsOffline]     = useState(!navigator.onLine);
+  const isOfflineRef  = useRef(!navigator.onLine);   // timers/handlers read this, state would be stale
+  const syncingRef    = useRef(false);
+  const pinAttemptsRef = useRef({});                  // offline PIN attempts per ticket
   const [pendingSync, setPendingSync] = useState(0);
   const [cacheReady, setCacheReady]   = useState(false);
   const [cacheInfo, setCacheInfo]     = useState(null);
   const [syncError, setSyncError]     = useState(null);
+  isOfflineRef.current = isOffline;
 
   // ── Seating map state ────────────────────────────────────────────────────
   const [seatingData,    setSeatingData]    = useState(null); // { seatingMap, guestsByTable }
@@ -1592,6 +1674,47 @@ export default function EnterpriseCheckin() {
     token,
     authState.username || ''
   );
+
+  // Resolve the event id for /e/:subdomain/checkin
+  useEffect(() => {
+    if (eventIdParam) { setEventId(eventIdParam); return; }
+    if (!subdomain) return;
+    const key = `checkin_subdomain_${subdomain}`;
+    let cancelled = false;
+    let haveSaved = false;
+    try { const saved = localStorage.getItem(key); if (saved) { haveSaved = true; setEventId(saved); } } catch { /* ignore */ }
+    eventAPI.getBySubdomain(subdomain).then(res => {
+      if (cancelled) return;
+      const id = res.data.event?.id || res.data.event?._id;
+      if (!id) { setResolveError('Event not found'); return; }
+      try { localStorage.setItem(key, String(id)); } catch { /* ignore */ }
+      setEventId(String(id));
+    }).catch(err => {
+      if (cancelled) return;
+      if (err.response?.status === 404) setResolveError('Event not found');
+      else if (!haveSaved) setResolveError('Could not reach the server to find this event. Check your connection and try again.');
+    });
+    return () => { cancelled = true; };
+  }, [eventIdParam, subdomain]);
+
+  // Once we know which event this is, re-check the stored token against it (a token left over from a
+  // different event, or a guest/participant token, must not open the scanner).
+  useEffect(() => {
+    if (!eventId) return;
+    const next = readCheckinAuth(eventId);
+    setAuthState(prev => (prev.ready === next.ready && prev.role === next.role && prev.username === next.username) ? prev : next);
+    if (!next.ready) {
+      if (next.reason === 'expired') setGateNotice('Your session expired. Log in again with your staff username and PIN.');
+      else if (next.reason === 'other_event') setGateNotice('You are logged in to a different event. Log in with the staff account for this one.');
+      else if (next.reason === 'wrong_role') setGateNotice('Guest sign-ins cannot scan tickets. Log in with your staff username and PIN.');
+    }
+  }, [eventId]);
+
+  // Event name for the staff login screen (public endpoint, no token needed)
+  useEffect(() => {
+    if (!eventId || authState.ready) return;
+    eventAPI.getPublicInfo(eventId).then(r => setGateTitle(r.data.event?.title || '')).catch(() => {});
+  }, [eventId, authState.ready]);
 
   useEffect(() => {
     if (eventId && authState.ready) {
@@ -1680,45 +1803,77 @@ export default function EnterpriseCheckin() {
     // same /invites response, so we no longer fetch /checkin-cache on mount.
 
     // ── Count pending offline check-ins ───────────────────────────────────
-    offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+    offlineCheckin.pendingCount(eventId).then(n => {
+      setPendingSync(n);
+      // Check-ins saved by an earlier session (app closed while offline) go out as soon as we can reach the server.
+      if (n > 0 && navigator.onLine) syncOfflineWork();
+    });
 
     // ── Connectivity listeners ─────────────────────────────────────────────
+    // navigator.onLine only knows whether the device has a network interface, not whether the
+    // internet works (venue wifi with no uplink, captive portals, dead mobile data). So "offline"
+    // is decided by real request failures too, and cleared only by a request that really succeeds.
     async function syncOfflineWork() {
+      if (syncingRef.current) return;
+      syncingRef.current = true;
       try {
         setSyncError(null);
-        const cacheOk = await offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId));
-        if (cacheOk) setCacheReady(true);
-        await refreshCacheInfo();
-        const results = await offlineCheckin.flushQueue(eventId, (inviteCode, actualAttendees) =>
-          eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: false })
+
+        // 1) Push queued check-ins FIRST. Refreshing the guest list first would overwrite the
+        //    local "already admitted" marks with the server's older copy.
+        const results = await offlineCheckin.flushQueue(eventId, (inviteCode, actualAttendees, meta = {}) =>
+          eventAPI.checkIn(eventId, inviteCode, {
+            actualAttendees,
+            pinVerified: !!meta.pinVerified,
+            offlineSync: true,
+            scannedAt: meta.scannedAt,
+          })
         );
-        if (results.synced > 0) {
-          loadInvites();
-          loadStats();
-        }
-        if (results.conflicts.length > 0) {
-          addConflicts(results.conflicts);
-        }
-        if (results.failed > 0) {
+        offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+        if (results.offline) { setIsOffline(true); return; }
+
+        if (results.authExpired) {
+          setSyncError('Your session expired. Log out and back in to sync the saved check-ins (they are safe on this device).');
+        } else if (results.failed > 0) {
           setSyncError(`${results.failed} queued check-in${results.failed !== 1 ? 's' : ''} still need another sync attempt.`);
         }
-        offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+        if (results.synced > 0) { loadInvites(); loadStats(); }
+        if (results.conflicts.length > 0) addConflicts(results.conflicts);
+
+        // 2) Then refresh the saved guest list. A success proves the connection is real.
+        const cacheOk = await offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId));
+        if (cacheOk) {
+          setCacheReady(true);
+          setIsOffline(false);
+        } else if (offlineCheckin.isNetworkError(offlineCheckin.lastRefreshError)) {
+          setIsOffline(true);
+        }
+        await refreshCacheInfo();
       } catch (err) {
         setSyncError('Offline sync could not finish. PlanIt will retry automatically.');
+      } finally {
+        syncingRef.current = false;
       }
     }
 
     function handleOnline() {
-      setIsOffline(false);
+      setIsOffline(false);       // optimistic; a failed request flips it back
       syncOfflineWork();
     }
     function handleOffline() {
       setIsOffline(true);
     }
 
-    const syncTimer = setInterval(() => {
-      if (navigator.onLine) syncOfflineWork();
-    }, 30000);
+    // Light-weight heartbeat. It only does real work when there is something to do: we think we are
+    // offline (probe the server), check-ins are waiting, or the saved list is stale. It used to
+    // download the entire guest list every 30 seconds on every device.
+    const syncTimer = setInterval(async () => {
+      if (navigator.onLine === false) return;
+      try {
+        const [pending, age] = await Promise.all([offlineCheckin.pendingCount(eventId), offlineCheckin.cacheAge(eventId)]);
+        if (isOfflineRef.current || pending > 0 || age > 5 * 60 * 1000) syncOfflineWork();
+      } catch { /* ignore */ }
+    }, 15000);
 
     window.addEventListener('online',  handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -1797,11 +1952,17 @@ export default function EnterpriseCheckin() {
   }, [eventId]);
 
   const handleStaffLogin = ({ token, role, username }) => {
+    // The shared socket may still be connected with a previous token (e.g. the organizer's).
+    try { socketService.disconnect(); } catch { /* ignore */ }
+    setGateNotice('');
+    setLoadError(null);
+    setLoading(true);
     setAuthState({ ready: true, role, username });
   };
 
   const handleStaffLogout = () => {
     // Restore organiser token if it was preserved before a staff test-login
+    try { socketService.disconnect(); } catch { /* ignore */ }
     const savedOrgToken = localStorage.getItem(`_orgToken_${eventId}`);
     localStorage.removeItem('eventToken');
     localStorage.removeItem(`_orgToken_${eventId}`);
@@ -1836,9 +1997,13 @@ export default function EnterpriseCheckin() {
       console.error('Failed to load check-in data:', error);
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
-        localStorage.removeItem('eventToken');
-        localStorage.removeItem('username');
-        navigate(`/event/${eventId}/login`);
+        // Don't send staff to /login (that page is organizer-only and has no staff form for
+        // normal events). Show the staff PIN screen again. Anything admitted offline is in
+        // IndexedDB and syncs after they log back in.
+        try { localStorage.removeItem('eventToken'); } catch { /* ignore */ }
+        setGateNotice(error?.response?.data?.error || 'Your session expired or does not cover this event. Log in again.');
+        setLoading(false);
+        setAuthState({ ready: false, role: null });
         return;
       }
       const errorMsg = error.response?.data?.error || error.message || 'Failed to load check-in data';
@@ -1867,6 +2032,16 @@ export default function EnterpriseCheckin() {
             return;
           }
         } catch { /* fall through to the error */ }
+        // First time on this device with no saved event copy, but a guest list is saved: the scanner
+        // only needs the guest list, so open with a placeholder title instead of a dead end.
+        try {
+          const info = await offlineCheckin.cacheInfo(eventId);
+          if (info && info.total > 0) {
+            setEvent({ id: eventId, title: 'Event (offline)' });
+            toast('Offline — using the saved guest list', { icon: '📴' });
+            return;
+          }
+        } catch { /* fall through to the error */ }
       }
       console.error('Failed to load event:', error);
       throw error;
@@ -1887,7 +2062,7 @@ export default function EnterpriseCheckin() {
       // the same guest list a second time from /checkin-cache.
       offlineCheckin.refreshCache(eventId, async () => ({
         data: {
-          snapshot: list.map(inviteToSnapshot),
+          snapshot: await Promise.all(list.map(inviteToSnapshot)),
           total: list.length,
           builtAt: new Date().toISOString(),
         },
@@ -1942,13 +2117,83 @@ export default function EnterpriseCheckin() {
     }
   };
   
+  // ── Offline verification ──────────────────────────────────────────────────
+  // Checks the scanned code against the guest list saved on this device. Nothing is marked as
+  // admitted here — that only happens when the staff member taps Admit (see admitOffline), so
+  // tapping Deny leaves no trace. (It used to queue the check-in at scan time, before Admit/Deny.)
+  const scanOffline = async (inviteCode) => {
+    if (!offlineCheckin.hasCache()) {
+      const saved = await offlineCheckin.loadCacheFromDB(eventId);
+      if (saved) setCacheReady(true);
+    }
+    const haveList = offlineCheckin.hasCache();
+    const cached = offlineCheckin.lookupGuest(inviteCode);
+
+    if (!cached) {
+      hapticError();
+      setDenyDetails({
+        reason: 'not_found',
+        severity: 'critical',
+        message: haveList
+          ? 'QR code not found in the offline guest list. Deny entry, or send the guest to the organizer.'
+          : 'No guest list is saved on this device. Open check-in once while online to enable offline scanning.',
+        displayMessage: haveList ? 'NOT FOUND (OFFLINE)' : 'NO OFFLINE LIST',
+      });
+      setShowDenyScreen(true);
+      return;
+    }
+    if (cached.isBlocked) {
+      hapticError();
+      setDenyDetails({
+        reason: 'blocked', severity: 'critical',
+        message: 'This guest is blocked.', displayMessage: 'BLOCKED',
+        guestName: cached.name, inviteCode,
+      });
+      setShowDenyScreen(true);
+      return;
+    }
+    if (cached.checkedIn) {
+      hapticError();
+      setDenyDetails({
+        reason: 'already_checked_in', severity: 'high',
+        message: 'This ticket has already been used.', displayMessage: 'TICKET ALREADY USED',
+        guestName: cached.name, inviteCode, requiresOverride: false,
+        checkedInAt: cached.checkedInAt || undefined,
+        checkedInBy: cached.checkedInBy || undefined,
+      });
+      setShowDenyScreen(true);
+      return;
+    }
+
+    // Valid — show the boarding pass; admission is committed by handleAdmit.
+    hapticSuccess();
+    setCurrentGuest({
+      id: inviteCode, inviteCode,
+      guestName:  cached.name,
+      guestEmail: cached.email     || '',
+      groupSize:  cached.groupSize || 1,
+      adults:     cached.adults    || 1,
+      children:   cached.children  || 0,
+      notes:      cached.notes     || '',
+      hasPin:     !!cached.hasPin,
+      guestRole:  cached.guestRole  || 'GUEST',
+      tableId:    cached.tableId    || null,
+      tableLabel: cached.tableLabel || null,
+      seatNumber: cached.seatNumber || null,
+      tableType:  cached.tableType  || null,
+      _offlineAdmit: true,
+    });
+    setCurrentSecurity({ trustScore: 100, warnings: [], flags: [] });
+    setCurrentStaffNote(settings?.staffNote || '');
+    setRequiresPin(!!(cached.hasPin && settings?.requirePin));
+    setPinVerified(false);
+  };
+
   const handleScan = async (code) => {
     if (!code || !code.trim()) {
       toast.error('Invalid code');
       return;
     }
-
-    console.log('[checkin] Raw QR scan result:', code);
 
     let inviteCode = code.trim();
 
@@ -1959,10 +2204,8 @@ export default function EnterpriseCheckin() {
     const match = inviteCode.match(/\/invite\/([A-Z0-9]+)(?:[?#]|$)/i);
     if (match) {
       inviteCode = match[1];
-      console.log('✅ Extracted invite code from URL:', inviteCode);
     } else {
       inviteCode = inviteCode.replace(/^https?:\/\/[^/]+\/?/i, '');
-      console.log('ℹ️ Using cleaned input as invite code:', inviteCode);
     }
 
     inviteCode = inviteCode.toUpperCase().trim();
@@ -1972,65 +2215,8 @@ export default function EnterpriseCheckin() {
     setManualCode('');
 
     // ── OFFLINE PATH ────────────────────────────────────────────────────
-    if (isOffline || !navigator.onLine) {
-      const cached = offlineCheckin.lookupGuest(inviteCode);
-      if (!cached) {
-        hapticError();
-        setDenyDetails({
-          reason: 'not_found',
-          severity: 'critical',
-          message: cacheReady
-            ? 'QR code not found in offline guest list. Deny entry.'
-            : 'No offline guest list cached. Go online and reload to enable offline scanning.',
-          displayMessage: cacheReady ? 'NOT FOUND (OFFLINE)' : 'NO CACHE',
-        });
-        setShowDenyScreen(true);
-        return;
-      }
-      if (cached.isBlocked) {
-        hapticError();
-        setDenyDetails({
-          reason: 'blocked', severity: 'critical',
-          message: 'This guest is blocked.', displayMessage: 'BLOCKED',
-          guestName: cached.name, inviteCode,
-        });
-        setShowDenyScreen(true);
-        return;
-      }
-      if (cached.checkedIn) {
-        hapticError();
-        setDenyDetails({
-          reason: 'already_checked_in', severity: 'high',
-          message: 'This ticket has already been used.', displayMessage: 'TICKET ALREADY USED',
-          guestName: cached.name, inviteCode, requiresOverride: false,
-        });
-        setShowDenyScreen(true);
-        return;
-      }
-      // Valid — optimistically admit offline
-      hapticSuccess();
-      await offlineCheckin.markCheckedInLocally(inviteCode, cached.groupSize, authState.username, eventId);
-      await offlineCheckin.queueCheckin(eventId, inviteCode, cached.groupSize);
-      offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
-      offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
-      setCurrentGuest({
-        id: inviteCode, inviteCode,
-        guestName:  cached.name,
-        guestEmail: cached.email    || '',
-        groupSize:  cached.groupSize || 1,
-        adults:     cached.adults    || 1,
-        children:   cached.children  || 0,
-        notes:      cached.notes     || '',
-        hasPin:     cached.hasPin,
-        guestRole:  cached.guestRole  || 'GUEST',
-        tableId:    cached.tableId   || null,
-        tableLabel: cached.tableLabel || null,
-        seatNumber: cached.seatNumber || null,
-        _offlineAdmit: true,
-      });
-      setCurrentSecurity({ trustScore: 100, warnings: [], flags: [] });
-      setRequiresPin(cached.hasPin && settings?.requirePin);
-      setPinVerified(false);
+    if (isOffline || navigator.onLine === false) {
+      await scanOffline(inviteCode);
       return;
     }
 
@@ -2066,10 +2252,12 @@ export default function EnterpriseCheckin() {
       setPinVerified(false);
 
     } catch (error) {
-      // If connectivity just dropped mid-scan, switch to offline path
-      if (!navigator.onLine) {
+      // The request never reached the server (no signal, wifi with no internet, timeout, server
+      // down). That is exactly when the saved guest list is needed, so fall back to it instead of
+      // a dead-end "could not verify" screen. navigator.onLine alone misses all of these cases.
+      if (navigator.onLine === false || offlineCheckin.isNetworkError(error)) {
         setIsOffline(true);
-        handleScan(inviteCode);
+        await scanOffline(inviteCode);
         return;
       }
 
@@ -2131,6 +2319,34 @@ export default function EnterpriseCheckin() {
   };
 
   const handlePinVerify = async (pin) => {
+    // Offline (or the server can't be reached): check against the salted hash saved with the guest list.
+    const verifyLocally = async () => {
+      const code = currentGuest.inviteCode;
+      const limit = settings?.maxFailedAttempts || 3;
+      if ((pinAttemptsRef.current[code] || 0) >= limit) {
+        throw new Error('PIN locked — too many failed attempts. Escalate to the organizer.');
+      }
+      const ok = await offlineCheckin.verifyPinLocally(code, pin);
+      if (ok === null) {
+        throw new Error('This PIN cannot be checked offline yet. Reconnect once so the guest list refreshes, or escalate to the organizer.');
+      }
+      if (!ok) {
+        hapticError();
+        pinAttemptsRef.current[code] = (pinAttemptsRef.current[code] || 0) + 1;
+        const left = Math.max(0, limit - pinAttemptsRef.current[code]);
+        throw new Error(left > 0
+          ? `Incorrect PIN. ${left} attempt${left !== 1 ? 's' : ''} remaining.`
+          : 'PIN locked — too many failed attempts. Escalate to the organizer.');
+      }
+      hapticSuccess();
+      setPinVerified(true);
+      toast.success('PIN verified (offline)');
+    };
+
+    if (currentGuest?._offlineAdmit || isOffline || navigator.onLine === false) {
+      return verifyLocally();
+    }
+
     try {
       const response = await eventAPI.verifyPin(eventId, currentGuest.inviteCode, pin);
       if (response.data.valid) {
@@ -2141,6 +2357,10 @@ export default function EnterpriseCheckin() {
         throw new Error(response.data.message || 'Incorrect PIN. Please try again.');
       }
     } catch (error) {
+      if (offlineCheckin.isNetworkError(error)) {
+        setIsOffline(true);
+        return verifyLocally();
+      }
       hapticError();
       const errData = error.response?.data;
       const status  = error.response?.status;
@@ -2161,13 +2381,23 @@ export default function EnterpriseCheckin() {
       throw new Error(msg);
     }
   };
-  
+
+  // Admit a guest from the saved list: mark them admitted on this device and queue the check-in for
+  // the server. The queue lives in IndexedDB, so it survives a reload or the app being closed.
+  const admitOffline = async (guest) => {
+    const size = guest.groupSize || 1;
+    await offlineCheckin.markCheckedInLocally(guest.inviteCode, size, authState.username, eventId);
+    await offlineCheckin.queueCheckin(eventId, guest.inviteCode, size, { pinVerified });
+    offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+    offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
+    setAdmittedGuest({ ...guest, checkedIn: true });
+    setCurrentGuest(null);
+    setShowAdmitSuccess(true);
+  };
+
   const handleAdmit = async () => {
-    // Offline guests were already queued in handleScan — just advance the UI
     if (currentGuest?._offlineAdmit) {
-      setAdmittedGuest({ ...currentGuest, checkedIn: true });
-      setCurrentGuest(null);
-      setShowAdmitSuccess(true);
+      await admitOffline(currentGuest);
       return;
     }
     try {
@@ -2191,6 +2421,16 @@ export default function EnterpriseCheckin() {
       loadStats();
     } catch (error) {
       console.error('Check-in error:', error);
+
+      // Connection dropped between scan and Admit: don't lose the admission. Save it on this
+      // device (if the guest is in the saved list) and let the queue sync it.
+      if (offlineCheckin.isNetworkError(error) && offlineCheckin.lookupGuest(currentGuest.inviteCode)) {
+        setIsOffline(true);
+        toast('No connection — admitted and saved on this device. It will sync automatically.', { icon: '📴' });
+        await admitOffline(currentGuest);
+        return;
+      }
+
       const errData = error.response?.data;
       const status  = error.response?.status;
       setCurrentGuest(null);
@@ -2310,12 +2550,36 @@ export default function EnterpriseCheckin() {
     return 0;
   });
 
-  // Staff login gate — redirect to the event join gate instead of inline login
+  // Could not work out which event this is (bad subdomain, or offline on a device that never opened it)
+  if (resolveError) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+        <div className="text-center max-w-sm">
+          <AlertTriangle className="w-14 h-14 text-amber-400 mx-auto mb-4" />
+          <h2 className="text-xl font-black text-white mb-2">Can't open check-in</h2>
+          <p className="text-sm text-neutral-400 mb-6">{resolveError}</p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => navigate('/')} className="px-4 py-2 border border-neutral-700 text-neutral-200 rounded-xl font-semibold hover:bg-neutral-900">Home</button>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-neutral-900 rounded-xl font-bold">Retry</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!eventId) return <SkeletonPage cards={4} />;   // resolving /e/:subdomain
+
+  // Staff login gate. Staff sign in HERE with the username + PIN the organizer gave them. They used
+  // to be bounced to the guest join page, which has no staff option and only issues guest tokens.
   if (!authState.ready) {
-    if (subdomain) navigate(`/e/${subdomain}`, { replace: true });
-    else if (eventId) navigate(`/event/${eventId}`, { replace: true });
-    else navigate('/', { replace: true });
-    return null;
+    return (
+      <StaffLoginScreen
+        eventId={eventId}
+        eventTitle={gateTitle}
+        notice={gateNotice}
+        onLogin={handleStaffLogin}
+        onOrganizer={() => navigate(subdomain ? `/e/${subdomain}` : `/event/${eventId}`)}
+      />
+    );
   }
 
   if (loading) {
@@ -2508,14 +2772,16 @@ export default function EnterpriseCheckin() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setShowSettingsPanel(true)}
-              className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
-              title="Security Settings"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Settings</span>
-            </button>
+            {authState.role === 'organizer' && (
+              <button
+                onClick={() => setShowSettingsPanel(true)}
+                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+                title="Security Settings"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
+            )}
 
             {/* Seating map button:
                 - If map is enabled: show for everyone (organizer gets editor, staff gets display)
@@ -2642,6 +2908,23 @@ export default function EnterpriseCheckin() {
       </header>
       
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-8">
+        {(isOffline || authState.expired) && (
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
+            <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            <div className="text-sm text-amber-900">
+              <p className="font-bold">
+                {isOffline ? 'Offline mode' : 'Session expired'} — scanning works from the saved guest list
+                {cacheInfo?.total ? ` (${cacheInfo.total} guests)` : ''}.
+              </p>
+              <p className="text-amber-800/90 mt-0.5">
+                {cacheReady || cacheInfo?.total
+                  ? `Admitted guests are saved on this device${pendingSync > 0 ? ` (${pendingSync} waiting to sync)` : ''} and upload automatically when the connection returns.`
+                  : 'No guest list is saved on this device yet. Open this page once while online to enable offline scanning.'}
+                {authState.expired && ' Log out and back in when you are online so they can sync.'}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-4 mb-4 sm:mb-8">
           {[
             { label: 'Total Groups', value: stats?.total ?? (invites.length || null), color: 'text-neutral-900' },
@@ -2802,23 +3085,29 @@ export default function EnterpriseCheckin() {
                         </div>
                       ) : (
                         <>
-                          <button
-                            onClick={() => {
-                              setEditingInvite(invite);
-                              setShowInviteDialog(true);
-                            }}
-                            className="p-3 sm:p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteInvite(invite._id)}
-                            className="p-3 sm:p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {/* Edit / delete are organizer-only on the server (staff would just get 403s),
+                              and cached rows have no server id to act on while offline. */}
+                          {authState.role === 'organizer' && !String(invite._id).startsWith('cached-') && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingInvite(invite);
+                                  setShowInviteDialog(true);
+                                }}
+                                className="p-3 sm:p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteInvite(invite._id)}
+                                className="p-3 sm:p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => handleScan(invite.inviteCode)}
                             className="order-first sm:order-none flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-1.5 px-4 sm:px-3 py-3 sm:py-1.5 bg-neutral-900 text-white text-sm sm:text-xs font-semibold rounded-xl hover:bg-black active:bg-black transition-all"
@@ -2852,7 +3141,7 @@ export default function EnterpriseCheckin() {
         {isOffline && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-xs font-bold text-amber-400">
+            <span className="text-xs font-bold text-amber-700">
               Offline{pendingSync > 0 ? ` — ${pendingSync} check-in${pendingSync !== 1 ? 's' : ''} queued` : ' — using cached guest list'}
             </span>
           </div>
@@ -2860,7 +3149,7 @@ export default function EnterpriseCheckin() {
         {isOffline && cacheInfo && (
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800">
             <Clock className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="text-xs font-semibold text-neutral-400">
+            <span className="text-xs font-semibold text-neutral-300">
               Cache: {cacheInfo.total} guests · {cacheInfo.builtAt ? new Date(cacheInfo.builtAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'saved'}
             </span>
           </div>
@@ -2868,13 +3157,13 @@ export default function EnterpriseCheckin() {
         {!isOffline && pendingSync > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-bold text-blue-400">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
+            <span className="text-xs font-bold text-blue-700">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
           </div>
         )}
         {syncError && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-            <span className="text-xs font-bold text-red-400">{syncError}</span>
+            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-xs font-bold text-red-700">{syncError}</span>
           </div>
         )}
         {!isOffline && pendingSync === 0 && !syncError && (
@@ -2909,5 +3198,13 @@ export default function EnterpriseCheckin() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function EnterpriseCheckin() {
+  return (
+    <CheckinErrorBoundary>
+      <EnterpriseCheckinInner />
+    </CheckinErrorBoundary>
   );
 }
