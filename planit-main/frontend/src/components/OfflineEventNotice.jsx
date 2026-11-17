@@ -21,6 +21,7 @@ export default function OfflineEventNotice({ title, onRetry, checkinPath }) {
           <button onClick={onRetry} className="min-h-[44px] rounded-xl bg-neutral-900 text-white text-sm font-semibold flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4" /> Try again
           </button>
+          <a href="/" className="min-h-[44px] rounded-xl border border-neutral-200 text-neutral-800 text-sm font-semibold flex items-center justify-center">Back to home</a>
           {checkinPath && (
             <a href={checkinPath} className="min-h-[44px] rounded-xl border border-neutral-200 text-neutral-800 text-sm font-semibold flex items-center justify-center gap-2">
               <ScanLine className="w-4 h-4" /> Open check-in
