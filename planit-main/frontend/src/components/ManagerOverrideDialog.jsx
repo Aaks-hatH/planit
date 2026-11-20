@@ -127,17 +127,17 @@ export default function ManagerOverrideDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div data-field16="" className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl w-full shadow-2xl max-h-[94dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain">
         {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-600 p-6 rounded-t-3xl">
+        <div className="bg-gradient-to-r from-yellow-500 to-orange-600 p-4 sm:p-6 rounded-t-3xl">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-white">MANAGER OVERRIDE</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-white">MANAGER OVERRIDE</h2>
                 <p className="text-yellow-100 text-sm font-semibold">
                   Security authorization required
                 </p>
@@ -146,7 +146,7 @@ export default function ManagerOverrideDialog({
             <button
               onClick={onCancel}
               disabled={loading}
-              className="p-2 hover:bg-white/20 rounded-xl transition-colors text-white disabled:opacity-50"
+              aria-label="Cancel override" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/20 rounded-xl transition-colors text-white disabled:opacity-50"
             >
               <X className="w-6 h-6" />
             </button>
@@ -154,7 +154,7 @@ export default function ManagerOverrideDialog({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-5 sm:space-y-6">
           {/* Block Details */}
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
             <div className="flex items-start gap-3">

@@ -136,7 +136,7 @@ export default function SecurityAlerts({ alerts = [], onDismiss, onDismissAll })
       {/* ── Floating trigger badge ── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl
+        className={`fixed bottom-[8.5rem] right-4 sm:right-6 z-50 flex min-h-[48px] items-center gap-2 px-4 py-3 rounded-2xl shadow-2xl
           ${highestSeverity === 'critical' ? 'bg-red-600 animate-pulse' : 'bg-neutral-800 border border-neutral-700'}
           text-white font-bold text-sm transition-all hover:scale-105 active:scale-95`}
         aria-label={`${alerts.length} security alert${alerts.length !== 1 ? 's' : ''}`}
@@ -151,7 +151,7 @@ export default function SecurityAlerts({ alerts = [], onDismiss, onDismissAll })
       {open && (
         <div
           ref={panelRef}
-          className="fixed bottom-20 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] max-h-[70vh] flex flex-col
+          className="fixed bottom-[11.5rem] inset-x-3 sm:inset-x-auto sm:right-6 z-50 sm:w-96 max-h-[60vh] flex flex-col
             bg-neutral-950 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}

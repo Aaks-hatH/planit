@@ -13,6 +13,7 @@ import { trackFeature, flushTracker } from '../services/tracker';
 import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import SavedEvents from '../components/SavedEvents';
+import InstallAppButton from '../components/InstallAppButton';
 import { findSavedEvent } from '../utils/offlineEvent';
 import TurnstileWidget from '../components/TurnstileWidget';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
@@ -1289,6 +1290,10 @@ background:var(--bg);color:var(--ink);font:400 16px/1.6 'Hanken Grotesk',system-
 .btn.pri{background:var(--hl);box-shadow:4px 4px 0 var(--ink)}.btn.dk{background:var(--ink);color:#fff;box-shadow:4px 4px 0 var(--ac)}
 .btn.pri:hover,.btn.dk:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}.btn.dk:hover{box-shadow:2px 2px 0 var(--ac)}
 .btn:not(.pri):not(.dk):hover{background:var(--ink);color:#fff}
+.btn.inst{background:#fff;padding:11px 18px;box-shadow:4px 4px 0 var(--ink)}.btn.inst:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+.hero-app{display:flex;align-items:center;gap:6px 16px;flex-wrap:wrap;margin-top:28px}.hero-app small{color:rgba(255,255,255,.85);font-size:14px}
+.menu .btn.inst{width:100%;margin-top:6px}
+.foot li .finst{background:none;border:0;padding:0;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:8px;cursor:pointer}.foot li .finst:hover{color:#fff}
 .btn.sm{padding:8px 14px;font-size:14px;box-shadow:3px 3px 0 var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.btn.wide{width:100%;padding:16px 20px;font-size:16px}
 .nav .btn.sm{border-color:#fff;box-shadow:3px 3px 0 var(--ink)}
 .lnk{background:none;border:0;padding:0 0 2px;font-weight:700;border-bottom:2px solid var(--ac);color:var(--ink)}.lnk:hover{background:var(--hl)}
@@ -2407,6 +2412,7 @@ export default function Home() {
           <button className="burger" aria-label="Toggle menu" aria-expanded={menu} onClick={() => setMenu((o) => !o)}>{menu ? <X /> : <Menu />}</button>
         </div>
         {menu && <div className="menu">{nav.map(([l, h]) => <a key={l} href={h} onClick={(e) => goHash(e, h)}>{l}</a>)}<a href="/terms">Terms</a><a href="/privacy">Privacy</a>
+          <InstallAppButton className="btn inst" appName={brand} onOpen={() => setMenu(false)}>Install the app</InstallAppButton>
           <a href="#start" className="btn pri" onClick={startFree}>Start free</a></div>}
       </header>
 
@@ -2420,6 +2426,7 @@ export default function Home() {
               <p className="lead">{isWL ? (wlHome.subheadline || wlName || 'Your event platform') : 'One workspace for events and hospitality: team chat, tasks, RSVPs, check-in, and a live floor manager for restaurants.'}</p>
               <SlugFinder />
               <SavedEvents />
+              <InstallAppButton className="btn inst" wrapperClassName="hero-app" hint="iPhone, iPad, Android and Mac" appName={brand}>Install the app</InstallAppButton>
             </div>
             <div className="panel" id="start">
               <span className="stick" aria-hidden="true">Free<br />forever</span>
@@ -2682,7 +2689,7 @@ export default function Home() {
             {[['Product', [['Features', '#features'], ['Event types', '#modes'], ['RSVP pages', '#planit-rsvp'], ['Venue', '#planit-venue'], ['Claude integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get started', '#start']]],
               ['Company', [['About', '/about'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']]],
               ['Connect', [['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']]]].map(([t, ls]) => (
-              <div key={t}><h4>{t}</h4><ul>{ls.map(([l, h]) => <li key={l}><a href={h} onClick={(e) => goHash(e, h)}>{l}</a></li>)}</ul></div>))}
+              <div key={t}><h4>{t}</h4><ul>{ls.map(([l, h]) => <li key={l}><a href={h} onClick={(e) => goHash(e, h)}>{l}</a></li>)}{t === 'Connect' && <li><InstallAppButton className="finst" appName={brand} iconSize={15}>Install the app</InstallAppButton></li>}</ul></div>))}
           </div>
           <div className="fine"><span>© 2026 {brand}. All rights reserved.</span>{!isWL && <span>Built by Aakshat Hariharan</span>}</div>
         </div>

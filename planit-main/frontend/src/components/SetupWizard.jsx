@@ -434,16 +434,16 @@ export default function SetupWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div data-field16="" className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
       {/* Panel */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
-           style={{ minHeight: 520 }}>
+      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-y-auto overscroll-contain max-h-[94dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
+           style={{ minHeight: 'min(520px, 94dvh)' }}>
 
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-neutral-100">
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-neutral-100">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
               <QrCode className="w-4 h-4 text-white" />
@@ -454,8 +454,8 @@ export default function SetupWizard({
             <StepDots current={step} total={4} />
             <button
               onClick={handleDone}
-              className="p-1 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-700"
-              title="Close wizard"
+              className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center rounded-xl hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-neutral-700"
+              title="Close wizard" aria-label="Close wizard"
             >
               <X className="w-4 h-4" />
             </button>
@@ -463,7 +463,7 @@ export default function SetupWizard({
         </div>
 
         {/* Step content */}
-        <div className="flex-1 p-6 flex flex-col">
+        <div className="flex-1 p-5 sm:p-6 flex flex-col">
           {step === 0 && (
             <Step1
               eventId={eventId}

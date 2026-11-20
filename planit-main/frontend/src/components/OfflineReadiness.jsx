@@ -1,19 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CheckCircle2, XCircle, Loader2, WifiOff } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, WifiOff, ChevronRight, RefreshCw, Download } from 'lucide-react';
 import offlineCheckin from '../services/offlineCheckin';
 import { requestPersistentStorage, getStorageStatus } from '../utils/persistentStorage';
+import { ResponsivePanel } from './ui/Sheet';
+import InstallGuide from './InstallGuide';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 const FRESH_MS = 15 * 60 * 1000;
 
 /**
- * OfflineReadiness — header chip: Ready (green) / Not ready (red) / Checking (grey).
- * Tap to see the checklist. Ready needs ALL four items. Re-checked on online/offline and every 30s.
+ * OfflineReadiness: a full-width status card (not a tiny chip, which got crushed on phones):
+ * Ready (green) / Not ready (red) / Checking (grey). Tap it to open the checklist: a bottom sheet on
+ * phones, a popover on desktop. Ready needs ALL four items. Re-checked on online/offline and every 30s.
  * Props: eventId, cacheVersion (any value that changes when the saved list changes), onRefresh (async).
  */
 export default function OfflineReadiness({ eventId, cacheVersion, onRefresh }) {
   const [checks, setChecks] = useState(null);       // null = still checking
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const { isInstalled } = useInstallPrompt();
   const alive = useRef(true);
 
   const evaluate = useCallback(async () => {
@@ -81,46 +87,79 @@ export default function OfflineReadiness({ eventId, cacheVersion, onRefresh }) {
   }
 
   const state = checks === null ? 'checking' : checks.every((c) => c.ok) ? 'ready' : 'not-ready';
+  const okCount = (checks || []).filter((c) => c.ok).length;
+  const firstBad = (checks || []).find((c) => !c.ok);
   const chip = {
-    ready:       { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', text: 'Ready for offline' },
-    'not-ready': { cls: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-500',     text: 'Not ready for offline' },
-    checking:    { cls: 'bg-neutral-100 text-neutral-600 border-neutral-200', dot: 'bg-neutral-400', text: 'Checking…' },
+    ready:       { cls: 'bg-emerald-50 text-emerald-900 border-emerald-200', dot: 'bg-emerald-500', text: 'Ready for offline', sub: `All ${checks?.length || 4} checks passed` },
+    'not-ready': { cls: 'bg-red-50 text-red-900 border-red-200',             dot: 'bg-red-500',     text: 'Not ready for offline', sub: firstBad ? `Needs attention: ${firstBad.label}` : 'Tap to see what is missing' },
+    checking:    { cls: 'bg-neutral-100 text-neutral-700 border-neutral-200', dot: 'bg-neutral-400 animate-pulse', text: 'Checking offline setup\u2026', sub: 'One moment' },
   }[state];
 
   return (
-    <div className="relative flex-1 sm:flex-none">
+    <div className="relative w-full sm:w-auto">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         data-testid="offline-ready-chip"
         data-state={state}
-        className={`w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-3 text-xs font-semibold rounded-xl border ${chip.cls}`}
+        className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors sm:w-auto sm:min-w-[19rem] sm:py-2.5 ${chip.cls}`}
       >
-        <span className={`w-2 h-2 rounded-full ${chip.dot}`} />
-        <span>{chip.text}</span>
+        <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${chip.dot}`} aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold leading-tight">{chip.text}</span>
+          <span className="mt-0.5 block truncate text-xs opacity-80">{chip.sub}</span>
+        </span>
+        <ChevronRight className={`h-4 w-4 flex-shrink-0 opacity-60 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true" />
       </button>
-      {open && (
-        <div className="absolute right-0 left-0 sm:left-auto top-full mt-2 z-30 sm:w-80 rounded-2xl border border-neutral-200 bg-white shadow-xl p-3 text-left">
-          <p className="text-xs font-bold text-neutral-900 mb-2 flex items-center gap-1.5"><WifiOff className="w-3.5 h-3.5" /> Offline checklist</p>
-          {checks === null && <p className="text-xs text-neutral-500 py-2">Checking…</p>}
-          <ul className="space-y-2">
-            {(checks || []).map((c) => (
-              <li key={c.id} className="flex items-start gap-2">
-                {c.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" /> : <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />}
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-neutral-900">{c.label}</p>
-                  <p className="text-xs text-neutral-500 leading-snug">{c.why}</p>
-                  {!c.ok && c.fix && (
-                    <button onClick={() => runFix(c.id)} disabled={busy === c.id} className="mt-1.5 min-h-[44px] px-3 text-xs font-semibold rounded-lg bg-neutral-900 text-white disabled:opacity-60 inline-flex items-center gap-1.5">
-                      {busy === c.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}{c.fix}
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+
+      <ResponsivePanel
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Offline readiness"
+        subtitle={checks ? `${okCount} of ${checks.length} checks passed. All four must pass to scan with no signal.` : 'Checking this device\u2026'}
+        icon={WifiOff}
+        align="left"
+        widthClass="w-[25rem]"
+        footer={(
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-neutral-500">Re-checked every 30 seconds.</p>
+            <button onClick={() => evaluate()} className="inline-flex min-h-[44px] flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200 px-3.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 sm:min-h-[36px]">
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Check again
+            </button>
+          </div>
+        )}
+      >
+        {checks === null && <p className="py-4 text-sm text-neutral-500">Checking…</p>}
+        <ul className="space-y-3 pb-1">
+          {(checks || []).map((c) => (
+            <li key={c.id} className={`flex items-start gap-3 rounded-2xl border p-3.5 ${c.ok ? 'border-neutral-200 bg-white' : 'border-red-200 bg-red-50/60'}`}>
+              {c.ok
+                ? <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" aria-label="Passed" />
+                : <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" aria-label="Needs attention" />}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-snug text-neutral-900">{c.label}</p>
+                <p className="mt-0.5 text-sm leading-snug text-neutral-600">{c.why}</p>
+                {!c.ok && (c.fix || c.id === 'storage') && (
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    {c.fix && (
+                      <button onClick={() => runFix(c.id)} disabled={busy === c.id} className="inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white hover:bg-black disabled:opacity-60 sm:min-h-[40px] sm:w-auto">
+                        {busy === c.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}{c.fix}
+                      </button>
+                    )}
+                    {c.id === 'storage' && !isInstalled && (
+                      <button onClick={() => { setOpen(false); setGuideOpen(true); }} className="inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 sm:min-h-[40px] sm:w-auto">
+                        <Download className="h-4 w-4" aria-hidden="true" /> How to install the app
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </ResponsivePanel>
+
+      <InstallGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
   );
 }

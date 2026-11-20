@@ -289,15 +289,15 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={handleClose}>
-      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl my-8" onClick={e => e.stopPropagation()}>
+    <div data-field16="" className="fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center sm:p-4" onClick={handleClose}>
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl sm:max-w-5xl w-full max-h-[94dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl p-6 text-white sticky top-0 z-10">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8" />
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-3xl sm:rounded-t-2xl p-4 sm:p-6 text-white sticky top-0 z-10">
+          <div className="flex items-center justify-between mb-1 sm:mb-2 gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <Shield className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0" />
               <div>
-                <h1 className="text-2xl font-black">Security Settings</h1>
+                <h1 className="text-xl sm:text-2xl font-black">Security Settings</h1>
                 {hasUnsavedChanges && (
                   <span className="text-xs bg-yellow-400 text-yellow-900 font-bold px-2 py-0.5 rounded ml-2">
                     Unsaved changes
@@ -305,11 +305,11 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
                 )}
               </div>
             </div>
-            <button onClick={handleClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+            <button onClick={handleClose} aria-label="Close" className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 hover:bg-white/20 rounded-xl transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
-          <p className="text-blue-100">Configure anti-fraud protection and manage check-in staff</p>
+          <p className="text-blue-100 text-sm sm:text-base">Configure anti-fraud protection and manage check-in staff</p>
           {offlineCopy && (
             <p className="mt-2 text-xs font-bold bg-amber-400 text-amber-950 inline-block px-2 py-1 rounded">
               Offline — showing the settings saved on this device. Changes can't be saved until you're back online.
@@ -317,7 +317,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
           )}
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {/* Quick Presets — only show on security tabs */}
           {['general','duplicate','patterns','advanced'].includes(activeTab) && isOrganizer && (
             <div className="mb-6">
@@ -352,12 +352,12 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
+          <div className="flex gap-1 sm:gap-2 mb-6 border-b border-neutral-200 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3.5 sm:px-4 min-h-[48px] font-semibold text-sm transition-all whitespace-nowrap flex-shrink-0 ${
                   activeTab === id
                     ? 'text-blue-600 border-b-2 border-blue-600'
                     : 'text-neutral-500 hover:text-neutral-700'

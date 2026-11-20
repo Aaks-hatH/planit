@@ -545,3 +545,13 @@
 [data-wl] [class*="text-indigo-600"] { color: var(--wl-primary, inherit) !important; }
 [data-wl] [class*="border-blue-"],
 [data-wl] [class*="border-indigo-"] { border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important; }
+
+/* ─── Check-in and sheets: stop iOS zooming the page when a field is focused ───
+   iOS Safari zooms any input whose text is smaller than 16px. Tailwind sizes here are 13-15px, so
+   everything inside a [data-field16] container (the check-in page and every Sheet) is bumped to 16px on
+   touch devices. Desktop keeps the compact sizes. */
+@media (pointer: coarse) {
+  [data-field16] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  [data-field16] select,
+  [data-field16] textarea { font-size: 16px; }
+}

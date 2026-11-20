@@ -5,7 +5,7 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin, LayoutGrid, Home as HomeIcon,
+  TrendingUp, ScanLine, BarChart2, Info, Upload, Download, Star, Mic, Shield, MapPin, LayoutGrid, Home as HomeIcon, Search, ChevronDown,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { saveEventMeta, readEventMeta } from '../utils/offlineEvent';
@@ -23,6 +23,8 @@ import SetupWizard from '../components/SetupWizard';
 import InstallBanner from '../components/InstallBanner';
 import OfflineReadiness from '../components/OfflineReadiness';
 import OfflineQueuePanel from '../components/OfflineQueuePanel';
+import CheckinToolsMenu from '../components/CheckinToolsMenu';
+import Sheet from '../components/ui/Sheet';
 import { requestPersistentStorage } from '../utils/persistentStorage';
 import { setUpdateBlocker } from '../utils/appUpdate';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
@@ -232,7 +234,7 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin, onOrganizer, notice })
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6" data-field16="">
       <div className="w-full max-w-sm">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
@@ -1107,52 +1109,23 @@ function InviteDialog({ invite, eventId, event, tables = [], onClose, onSave }) 
     return `${apiBase}/events/invite/${createdInvite.inviteCode}/qr.svg`;
   };
 
+  const field = 'min-h-[48px] sm:min-h-[44px] border border-neutral-200 rounded-xl px-4 py-2.5 bg-white focus:outline-none focus:border-neutral-400';
+  const fw = `${field} w-full`;
+  const lbl = 'block text-sm font-semibold text-neutral-800 mb-1.5';
+  const hint = 'text-sm sm:text-xs text-neutral-500 mt-1.5 leading-snug';
+
   if (showSuccess && createdInvite) {
+    const finish = () => { setShowSuccess(false); setCreatedInvite(null); onSave(); };
     return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-lg max-h-[92dvh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
-          <div className="text-center mb-6">
-            <CheckCircle className="w-16 h-16 text-emerald-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Invite Created!</h2>
-            <p className="text-neutral-600">Send this link to {formData.guestName}</p>
-          </div>
-
-          {/* QR Code */}
-          <div className="bg-neutral-50 rounded-xl p-6 mb-4">
-            <img src={getQRCodeUrl()} alt="QR Code" className="w-48 h-auto mx-auto mb-4" />
-            <p className="text-center font-mono font-bold text-lg">{createdInvite.inviteCode}</p>
-          </div>
-
-          {/* Invite Link */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Invite Link</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={getInviteLink()}
-                readOnly
-                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono bg-neutral-50"
-              />
-              <button
-                onClick={copyInviteLink}
-                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Copy className="w-4 h-4" />
-                Copy
-              </button>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setShowSuccess(false);
-                setCreatedInvite(null);
-                onSave();
-              }}
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black"
-            >
+      <Sheet
+        open
+        onClose={finish}
+        title="Invite created"
+        subtitle={`Send this link to ${formData.guestName}`}
+        size="md"
+        footer={(
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <button onClick={finish} className="min-h-[48px] flex-1 rounded-xl bg-neutral-900 px-4 font-semibold text-white hover:bg-black">
               Done
             </button>
             <button
@@ -1166,177 +1139,213 @@ function InviteDialog({ invite, eventId, event, tables = [], onClose, onSave }) 
                   window.open(`mailto:${guestEmail || ''}?subject=${encodeURIComponent(`You're invited: ${event?.title}`)}&body=${encodeURIComponent(emailBody)}`);
                 }
               }}
-              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50 flex items-center justify-center gap-2"
+              className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-neutral-200 px-4 font-semibold hover:bg-neutral-50"
             >
-              <Mail className="w-4 h-4" />
-              {formData.guestEmail ? 'Send Invite Email' : 'Share Invite'}
+              <Mail className="h-4 w-4" />
+              {formData.guestEmail ? 'Send invite email' : 'Share invite'}
             </button>
           </div>
+        )}
+      >
+        <div className="mb-4 rounded-2xl bg-neutral-50 p-5 text-center">
+          <CheckCircle className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
+          <img src={getQRCodeUrl()} alt="QR code for this invite" className="mx-auto mb-3 h-auto w-44" />
+          <p className="font-mono text-lg font-bold tracking-wider">{createdInvite.inviteCode}</p>
         </div>
-      </div>
+        <label className={lbl} htmlFor="invite-link">Invite link</label>
+        <div className="flex gap-2">
+          <input id="invite-link" type="text" value={getInviteLink()} readOnly onFocus={(e) => e.target.select()} className={`${field} min-w-0 flex-1 bg-neutral-50 font-mono text-sm`} />
+          <button onClick={copyInviteLink} className="flex min-h-[48px] flex-shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white hover:bg-blue-700 sm:min-h-[44px]">
+            <Copy className="h-4 w-4" />
+            Copy
+          </button>
+        </div>
+      </Sheet>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-lg max-h-[92dvh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">{invite ? 'Edit' : 'Create'} Invite</h2>
-          <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+    <Sheet
+      open
+      onClose={onClose}
+      title={invite ? 'Edit invite' : 'Create invite'}
+      subtitle="Guest details, role and seating"
+      size="lg"
+      footer={(
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="min-h-[48px] flex-1 rounded-xl border border-neutral-200 px-4 font-semibold hover:bg-neutral-50">
+            Cancel
+          </button>
+          <button type="submit" form="invite-form" disabled={saving} className="min-h-[48px] flex-1 rounded-xl bg-neutral-900 px-4 font-semibold text-white hover:bg-black disabled:opacity-50">
+            {saving ? 'Saving…' : invite ? 'Update' : 'Create'}
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Guest Name *</label>
-            <input
-              type="text"
-              value={formData.guestName}
-              onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
-              placeholder="John Smith"
-              required
-            />
-          </div>
-          {/* Role picker */}
-          <div>
-            <label className="block text-sm font-semibold mb-1">Guest Role</label>
-            <div className="grid grid-cols-3 gap-2">
-              {['GUEST', 'VIP', 'SPEAKER'].map(role => {
-                const cfg = ROLE_CONFIG[role];
-                const Icon = cfg.icon;
-                const active = formData.guestRole === role;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, guestRole: role })}
-                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition-all
-                      ${active
-                        ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
-                        : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'
-                      }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {role}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-neutral-400 mt-1">Shown to staff at check-in and printed on their pass. Defaults to Guest.</p>
-          </div>
+      )}
+    >
+      <form id="invite-form" onSubmit={handleSubmit} className="space-y-5 pt-1">
+        <div>
+          <label className={lbl} htmlFor="invite-name">Guest name <span className="text-red-500">*</span></label>
+          <input
+            id="invite-name"
+            type="text"
+            value={formData.guestName}
+            onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+            className={fw}
+            placeholder="John Smith"
+            autoComplete="off"
+            required
+          />
+        </div>
 
-          {/* Table + seat (only once a floor plan has tables) */}
-          {tables.length > 0 && (
-            <div>
-              <label className="block text-sm font-semibold mb-1">Table <span className="text-xs font-normal text-neutral-500">(optional)</span></label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.tableId}
-                  onChange={(e) => setFormData({ ...formData, tableId: e.target.value, seatNumber: '' })}
-                  className="flex-1 min-w-0 border border-neutral-200 rounded-xl px-4 py-2.5 text-base sm:text-sm bg-white focus:outline-none focus:border-neutral-400"
+        {/* Role picker */}
+        <div>
+          <span className={lbl}>Guest role</span>
+          <div className="grid grid-cols-3 gap-2">
+            {['GUEST', 'VIP', 'SPEAKER'].map(role => {
+              const cfg = ROLE_CONFIG[role];
+              const Icon = cfg.icon;
+              const active = formData.guestRole === role;
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFormData({ ...formData, guestRole: role })}
+                  className={`flex min-h-[64px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition-all
+                    ${active ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm` : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
                 >
-                  <option value="">No table yet</option>
-                  {[...tables]
-                    .map(t => ({ id: t.id, label: (t.label && t.label.trim()) || (t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Table'), capacity: t.capacity }))
-                    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
-                    .map(t => (
-                      <option key={t.id} value={t.id}>{t.label}{t.capacity ? ` · seats ${t.capacity}` : ''}</option>
-                    ))}
-                </select>
-                <input
-                  type="text"
-                  value={formData.seatNumber}
-                  onChange={(e) => setFormData({ ...formData, seatNumber: e.target.value.slice(0, 20) })}
-                  disabled={!formData.tableId}
-                  placeholder="Seat"
-                  className="w-24 flex-shrink-0 border border-neutral-200 rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:border-neutral-400 disabled:bg-neutral-50 disabled:text-neutral-300"
-                />
-              </div>
-              <p className="text-xs text-neutral-400 mt-1">Shows on the guest&apos;s pass. Seat is optional. Use <span className="font-semibold">Assign</span> to seat many guests at once.</p>
-            </div>
-          )}
+                  <Icon className="h-4 w-4" />
+                  {role}
+                </button>
+              );
+            })}
+          </div>
+          <p className={hint}>Shown to staff at check-in and printed on their pass. Defaults to Guest.</p>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-semibold mb-1">Adults</label>
+        {/* Table + seat (only once a floor plan has tables) */}
+        {tables.length > 0 && (
+          <div>
+            <label className={lbl} htmlFor="invite-table">Table <span className="text-xs font-normal text-neutral-500">(optional)</span></label>
+            <div className="flex gap-2">
+              <select
+                id="invite-table"
+                value={formData.tableId}
+                onChange={(e) => setFormData({ ...formData, tableId: e.target.value, seatNumber: '' })}
+                className={`${field} min-w-0 flex-1`}
+              >
+                <option value="">No table yet</option>
+                {[...tables]
+                  .map(t => ({ id: t.id, label: (t.label && t.label.trim()) || (t.type ? t.type.charAt(0).toUpperCase() + t.type.slice(1) : 'Table'), capacity: t.capacity }))
+                  .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+                  .map(t => (
+                    <option key={t.id} value={t.id}>{t.label}{t.capacity ? ` · seats ${t.capacity}` : ''}</option>
+                  ))}
+              </select>
               <input
-                type="number"
-                value={formData.adults}
-                onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
-                min="0"
+                type="text"
+                aria-label="Seat"
+                value={formData.seatNumber}
+                onChange={(e) => setFormData({ ...formData, seatNumber: e.target.value.slice(0, 20) })}
+                disabled={!formData.tableId}
+                placeholder="Seat"
+                className={`${field} w-24 flex-shrink-0 disabled:bg-neutral-50 disabled:text-neutral-300`}
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Children</label>
-              <input
-                type="number"
-                value={formData.children}
-                onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
-                min="0"
-              />
-            </div>
+            <p className={hint}>Shows on the guest&apos;s pass. Seat is optional. Use <span className="font-semibold">Assign</span> to seat many guests at once.</p>
           </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-semibold mb-1">
-              Email <span className="text-red-500">*</span>
-              <span className="ml-1.5 text-xs font-normal text-neutral-500">(required)</span>
-            </label>
+            <label className={lbl} htmlFor="invite-adults">Adults</label>
             <input
-              type="email"
-              value={formData.guestEmail}
-              onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
-              placeholder="john@email.com"
-              required
+              id="invite-adults"
+              type="number"
+              inputMode="numeric"
+              value={formData.adults}
+              onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 0 })}
+              className={fw}
+              min="0"
             />
-            <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1">
-              <Info className="w-3 h-3 flex-shrink-0" />
-              Used for duplicate detection and sending invite links. PlanIt does not auto-send emails — use the Share button after saving.
-            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1">Phone</label>
+            <label className={lbl} htmlFor="invite-children">Children</label>
             <input
-              type="tel"
-              value={formData.guestPhone}
-              onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
-              placeholder="555-1234"
+              id="invite-children"
+              type="number"
+              inputMode="numeric"
+              value={formData.children}
+              onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
+              className={fw}
+              min="0"
             />
           </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1">Security PIN (optional)</label>
-            <input
-              type="text"
-              value={formData.securityPin}
-              onChange={(e) => setFormData({ ...formData, securityPin: e.target.value.toUpperCase() })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 font-mono"
-              placeholder="ABC123"
-              maxLength={6}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1">Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 resize-none"
-              rows={3}
-              placeholder="Special requirements, dietary restrictions, etc."
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
-              Cancel
-            </button>
-            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-50">
-              {saving ? 'Saving...' : invite ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div>
+          <label className={lbl} htmlFor="invite-email">
+            Email <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="invite-email"
+            type="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            value={formData.guestEmail}
+            onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
+            className={fw}
+            placeholder="john@email.com"
+            required
+          />
+          <p className={`${hint} flex items-start gap-1.5`}>
+            <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>Used for duplicate detection and sending invite links. PlanIt does not auto-send emails. Use the Share button after saving.</span>
+          </p>
+        </div>
+
+        <div>
+          <label className={lbl} htmlFor="invite-phone">Phone <span className="text-xs font-normal text-neutral-500">(optional)</span></label>
+          <input
+            id="invite-phone"
+            type="tel"
+            inputMode="tel"
+            value={formData.guestPhone}
+            onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
+            className={fw}
+            placeholder="555-1234"
+          />
+        </div>
+
+        <div>
+          <label className={lbl} htmlFor="invite-pin">Security PIN <span className="text-xs font-normal text-neutral-500">(optional)</span></label>
+          <input
+            id="invite-pin"
+            type="text"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            value={formData.securityPin}
+            onChange={(e) => setFormData({ ...formData, securityPin: e.target.value.toUpperCase() })}
+            className={`${fw} font-mono tracking-widest`}
+            placeholder="ABC123"
+            maxLength={6}
+          />
+        </div>
+
+        <div>
+          <label className={lbl} htmlFor="invite-notes">Notes <span className="text-xs font-normal text-neutral-500">(staff will see these at the door)</span></label>
+          <textarea
+            id="invite-notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            className={`${fw} resize-none`}
+            rows={3}
+            placeholder="Special requirements, dietary restrictions, etc."
+          />
+        </div>
+      </form>
+    </Sheet>
   );
 }
 
@@ -1384,123 +1393,125 @@ Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy,Table 2,`;
     }
   };
 
+  const rowCls = 'text-sm leading-snug';
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Import Guests from CSV</h2>
-            <p className="text-sm text-neutral-500 mt-0.5">Bulk-add guests with roles, group sizes, and notes</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {/* Format guide */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
-            <p className="font-bold text-blue-900">Required CSV format</p>
-            <p className="text-blue-800 font-mono text-xs leading-relaxed break-all">
-              guestName, <span className="underline decoration-dotted">guestEmail</span>, guestRole, adults, children, securityPin, notes, table, seat
-            </p>
-            <div className="space-y-1 text-xs text-blue-700">
-              <p><span className="font-bold">guestName</span> — required</p>
-              <p><span className="font-bold">guestEmail</span> — <span className="font-bold text-red-600">required</span>. Used for duplicate detection and sending invite links.</p>
-              <p><span className="font-bold">guestRole</span> — optional. Must be <code className="bg-blue-100 px-1 rounded">GUEST</code>, <code className="bg-blue-100 px-1 rounded">VIP</code>, or <code className="bg-blue-100 px-1 rounded">SPEAKER</code>. Defaults to GUEST.</p>
-              <p><span className="font-bold">adults</span> — optional, defaults to 1</p>
-              <p><span className="font-bold">children</span> — optional, defaults to 0</p>
-              <p><span className="font-bold">securityPin</span> — optional, up to 6 chars</p>
-              <p><span className="font-bold">notes</span> — optional</p>
-              <p><span className="font-bold">table</span> — optional. Must match a table name on your seating map (e.g. <code className="bg-blue-100 px-1 rounded">Table 3</code>). Unmatched names import the guest without a table.</p>
-              <p><span className="font-bold">seat</span> — optional, e.g. <code className="bg-blue-100 px-1 rounded">4</code> or <code className="bg-blue-100 px-1 rounded">A2</code></p>
-            </div>
-          </div>
-
-          {/* Template download */}
-          <button
-            onClick={() => {
-              const blob = new Blob([TEMPLATE], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url; a.download = 'guest-import-template.csv'; a.click();
-              URL.revokeObjectURL(url);
-            }}
-            className="flex items-center gap-2 text-sm text-blue-700 font-semibold hover:text-blue-900"
-          >
-            <Upload className="w-4 h-4" />
-            Download template CSV
+    <Sheet
+      open
+      onClose={onClose}
+      title="Import guests from CSV"
+      subtitle="Bulk-add guests with roles, group sizes and notes"
+      size="xl"
+      footer={result?.imported > 0 ? (
+        <button onClick={onImported} className="min-h-[48px] w-full rounded-xl bg-neutral-900 px-4 font-semibold text-white hover:bg-black">
+          Done
+        </button>
+      ) : (
+        <div className="flex gap-3">
+          <button onClick={onClose} className="min-h-[48px] flex-1 rounded-xl border border-neutral-200 px-4 font-semibold hover:bg-neutral-50">
+            Cancel
           </button>
-
-          {/* File picker */}
-          <div>
-            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed border-neutral-200 rounded-xl py-6 text-sm text-neutral-500 font-medium hover:border-neutral-400 hover:text-neutral-700 transition-all flex flex-col items-center gap-2"
-            >
-              <Upload className="w-6 h-6" />
-              Click to upload a .csv file, or paste below
-            </button>
+          <button
+            onClick={handleImport}
+            disabled={importing || !csvText.trim()}
+            className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 font-semibold text-white hover:bg-black disabled:opacity-40"
+          >
+            {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> Importing…</> : 'Import guests'}
+          </button>
+        </div>
+      )}
+    >
+      <div className="space-y-5 pt-1">
+        {/* Results first, so they are the first thing seen after pressing Import */}
+        {result && (
+          <div className={`space-y-2 rounded-2xl p-4 ${result.imported > 0 ? 'border border-emerald-200 bg-emerald-50' : 'border border-amber-200 bg-amber-50'}`} role="status">
+            <p className="font-bold">{result.imported} imported, {result.skipped} skipped</p>
+            {result.errors?.length > 0 && (
+              <div className="space-y-1 text-sm text-red-700">
+                {result.errors.slice(0, 10).map((e, i) => (
+                  <p key={i}>Row {e.row}{e.guestName ? ` (${e.guestName})` : ''}: {e.reason}</p>
+                ))}
+                {result.errors.length > 10 && <p>…and {result.errors.length - 10} more</p>}
+              </div>
+            )}
+            {result.warnings?.length > 0 && (
+              <div className="space-y-1 text-sm text-amber-700">
+                {result.warnings.slice(0, 10).map((w, i) => (
+                  <p key={i}>Row {w.row}{w.guestName ? ` (${w.guestName})` : ''}: {w.reason}</p>
+                ))}
+                {result.warnings.length > 10 && <p>…and {result.warnings.length - 10} more</p>}
+              </div>
+            )}
           </div>
+        )}
 
-          {/* Paste area */}
-          <div>
-            <label className="block text-sm font-semibold mb-1.5">Or paste CSV content</label>
-            <textarea
-              value={csvText}
-              onChange={e => setCsvText(e.target.value)}
-              rows={7}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-neutral-400 resize-none"
-              placeholder={TEMPLATE}
-              spellCheck={false}
-            />
-          </div>
-
-          {/* Results */}
-          {result && (
-            <div className={`rounded-xl p-4 text-sm space-y-2 ${result.imported > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
-              <p className="font-bold">{result.imported} imported, {result.skipped} skipped</p>
-              {result.errors?.length > 0 && (
-                <div className="space-y-1 text-xs text-red-700">
-                  {result.errors.slice(0, 10).map((e, i) => (
-                    <p key={i}>Row {e.row}{e.guestName ? ` (${e.guestName})` : ''}: {e.reason}</p>
-                  ))}
-                  {result.errors.length > 10 && <p>…and {result.errors.length - 10} more</p>}
-                </div>
-              )}
-              {result.warnings?.length > 0 && (
-                <div className="space-y-1 text-xs text-amber-700">
-                  {result.warnings.slice(0, 10).map((w, i) => (
-                    <p key={i}>Row {w.row}{w.guestName ? ` (${w.guestName})` : ''}: {w.reason}</p>
-                  ))}
-                  {result.warnings.length > 10 && <p>…and {result.warnings.length - 10} more</p>}
-                </div>
-              )}
-            </div>
-          )}
+        {/* File picker */}
+        <div>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex min-h-[96px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neutral-300 px-4 py-5 text-base font-semibold text-neutral-700 transition-all hover:border-neutral-400 hover:bg-neutral-50 active:bg-neutral-100"
+          >
+            <Upload className="h-6 w-6" />
+            Choose a .csv file
+          </button>
         </div>
 
-        <div className="p-6 border-t border-neutral-100 flex gap-3">
-          {result?.imported > 0 ? (
-            <button onClick={onImported} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black">
-              Done
-            </button>
-          ) : (
-            <>
-              <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
-                Cancel
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || !csvText.trim()}
-                className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</> : 'Import Guests'}
-              </button>
-            </>
-          )}
+        {/* Paste area */}
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-neutral-800" htmlFor="csv-paste">Or paste CSV content</label>
+          <textarea
+            id="csv-paste"
+            value={csvText}
+            onChange={e => setCsvText(e.target.value)}
+            rows={6}
+            className="w-full resize-none rounded-xl border border-neutral-200 px-4 py-3 font-mono text-sm focus:border-neutral-400 focus:outline-none"
+            placeholder={TEMPLATE}
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
         </div>
+
+        {/* Template download */}
+        <button
+          onClick={() => {
+            const blob = new Blob([TEMPLATE], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'guest-import-template.csv'; a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="flex min-h-[44px] items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900"
+        >
+          <Download className="h-4 w-4" />
+          Download template CSV
+        </button>
+
+        {/* Format guide: reference material, collapsed by default so the actions above stay in view */}
+        <details className="group rounded-2xl border border-blue-200 bg-blue-50">
+          <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-4 text-sm font-bold text-blue-900 [&::-webkit-details-marker]:hidden">
+            Required CSV format
+            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-3 px-4 pb-4 text-blue-900">
+            <p className="break-words font-mono text-xs leading-relaxed text-blue-800">
+              guestName, guestEmail, guestRole, adults, children, securityPin, notes, table, seat
+            </p>
+            <ul className="space-y-1.5 text-blue-800">
+              <li className={rowCls}><span className="font-bold">guestName</span>: required</li>
+              <li className={rowCls}><span className="font-bold">guestEmail</span>: <span className="font-bold text-red-600">required</span>. Used for duplicate detection and sending invite links.</li>
+              <li className={rowCls}><span className="font-bold">guestRole</span>: optional. <code className="rounded bg-blue-100 px-1">GUEST</code>, <code className="rounded bg-blue-100 px-1">VIP</code> or <code className="rounded bg-blue-100 px-1">SPEAKER</code>. Defaults to GUEST.</li>
+              <li className={rowCls}><span className="font-bold">adults</span>: optional, defaults to 1</li>
+              <li className={rowCls}><span className="font-bold">children</span>: optional, defaults to 0</li>
+              <li className={rowCls}><span className="font-bold">securityPin</span>: optional, up to 6 characters</li>
+              <li className={rowCls}><span className="font-bold">notes</span>: optional</li>
+              <li className={rowCls}><span className="font-bold">table</span>: optional. Must match a table name on your seating map (e.g. <code className="rounded bg-blue-100 px-1">Table 3</code>). Unmatched names import the guest without a table.</li>
+              <li className={rowCls}><span className="font-bold">seat</span>: optional, e.g. <code className="rounded bg-blue-100 px-1">4</code> or <code className="rounded bg-blue-100 px-1">A2</code></li>
+            </ul>
+          </div>
+        </details>
       </div>
-    </div>
+    </Sheet>
   );
 }
 
@@ -1540,70 +1551,59 @@ function ActivityLogDialog({ eventId, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[92dvh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 className="text-xl font-bold">Activity Log</h2>
-            <p className="text-sm text-neutral-500 mt-0.5">Organizer and staff actions for this event</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
-
-        {/* Filter */}
-        <div className="px-6 py-3 border-b border-neutral-100 flex gap-2 flex-wrap flex-shrink-0">
+    <Sheet
+      open
+      onClose={onClose}
+      title="Activity log"
+      subtitle="Organizer and staff actions for this event"
+      size="xl"
+      fullHeight
+      footer={<button onClick={onClose} className="min-h-[48px] w-full rounded-xl border border-neutral-200 px-4 text-sm font-semibold hover:bg-neutral-50">Close</button>}
+    >
+      {/* Filters stay pinned while the list scrolls; chips scroll sideways rather than wrapping into a wall */}
+      <div className="sticky top-0 z-10 -mx-5 border-b border-neutral-100 bg-white px-5 py-3">
+        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {['all', 'checkin', 'invite_created', 'invite_deleted', 'guest_import'].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all
-                ${filter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+              aria-pressed={filter === f}
+              className={`min-h-[40px] flex-shrink-0 rounded-full px-4 text-sm font-semibold transition-all
+                ${filter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
             >
               {f === 'all' ? 'All' : ACTION_LABELS[f]?.label || f}
             </button>
           ))}
         </div>
-
-        <div className="overflow-y-auto flex-1">
-          {loading && <SkeletonRows rows={7} />}
-          {error && (
-            <div className="text-center py-16 text-red-500 text-sm">{error}</div>
-          )}
-          {!loading && !error && filtered.length === 0 && (
-            <div className="text-center py-16 text-neutral-400 text-sm">No activity yet</div>
-          )}
-          {!loading && !error && filtered.map((entry, i) => {
-            const cfg = ACTION_LABELS[entry.action] || { label: entry.action, color: 'text-neutral-600 bg-neutral-50 border-neutral-200' };
-            return (
-              <div key={i} className="flex items-start gap-4 px-6 py-4 border-b border-neutral-50 hover:bg-neutral-50 transition-colors">
-                <div className="flex-shrink-0 pt-0.5">
-                  <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
-                    {cfg.label}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-neutral-800">{entry.details || entry.target || '—'}</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">
-                    <span className="font-semibold text-neutral-600">{entry.actor}</span>
-                    {entry.actorRole && <span className="ml-1 text-neutral-400">({entry.actorRole})</span>}
-                    {entry.target && entry.details && <span className="ml-1">· {entry.target}</span>}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 text-xs text-neutral-400 whitespace-nowrap">
-                  {fmt(entry.timestamp)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="p-4 border-t border-neutral-100 flex-shrink-0">
-          <button onClick={onClose} className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold text-sm hover:bg-neutral-50">
-            Close
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div className="-mx-5">
+        {loading && <SkeletonRows rows={7} />}
+        {error && <div className="py-16 text-center text-sm text-red-600">{error}</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="py-16 text-center text-sm text-neutral-500">No activity yet</div>
+        )}
+        {!loading && !error && filtered.map((entry, i) => {
+          const cfg = ACTION_LABELS[entry.action] || { label: entry.action, color: 'text-neutral-600 bg-neutral-50 border-neutral-200' };
+          return (
+            <div key={i} className="border-b border-neutral-100 px-5 py-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`inline-block rounded border px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${cfg.color}`}>
+                  {cfg.label}
+                </span>
+                <span className="whitespace-nowrap text-xs text-neutral-500">{fmt(entry.timestamp)}</span>
+              </div>
+              <p className="mt-1.5 break-words text-sm text-neutral-800">{entry.details || entry.target || '—'}</p>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                <span className="font-semibold text-neutral-700">{entry.actor}</span>
+                {entry.actorRole && <span className="ml-1">({entry.actorRole})</span>}
+                {entry.target && entry.details && <span className="ml-1">· {entry.target}</span>}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </Sheet>
   );
 }
 
@@ -1631,6 +1631,7 @@ function EnterpriseCheckinInner() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');   // 'all' | 'waiting' | 'in'
   // The guest list loads separately from the page shell so a big list never
   // holds the whole screen hostage behind a skeleton.
   const [invitesLoading, setInvitesLoading] = useState(true);
@@ -1777,7 +1778,7 @@ function EnterpriseCheckinInner() {
     }
   }, [eventId, authState.ready]);
 
-  useEffect(() => { setVisibleCount(GUEST_PAGE_SIZE); }, [searchQuery]);
+  useEffect(() => { setVisibleCount(GUEST_PAGE_SIZE); }, [searchQuery, statusFilter]);
   invitesRef.current = invites;
 
   // ── Setup wizard: show on first run for organizers, or when they've just
@@ -2603,8 +2604,18 @@ function EnterpriseCheckinInner() {
     );
   });
 
+  // Counts for the filter chips reflect the current search, so they always add up to what is on screen.
+  const statusCounts = {
+    all: filtered.length,
+    waiting: filtered.filter((i) => !i.checkedIn).length,
+    in: filtered.filter((i) => i.checkedIn).length,
+  };
+  const byStatus = statusFilter === 'waiting' ? filtered.filter((i) => !i.checkedIn)
+    : statusFilter === 'in' ? filtered.filter((i) => i.checkedIn)
+    : filtered;
+
   // Sort: pending guests first, checked-in guests at bottom
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = [...byStatus].sort((a, b) => {
     if (a.checkedIn && !b.checkedIn) return 1;
     if (!a.checkedIn && b.checkedIn) return -1;
     return 0;
@@ -2678,7 +2689,7 @@ function EnterpriseCheckinInner() {
     : null;
   
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50" data-field16="">
       {showAdmitSuccess && admittedGuest && (
         <AdmitSuccessScreen
           guest={admittedGuest}
@@ -2811,161 +2822,108 @@ function EnterpriseCheckinInner() {
         />
       )}
       
-      <header className="bg-white border-b border-neutral-100 sm:sticky sm:top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-2.5 sm:py-0 sm:h-16 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
-            {authState.role === 'organizer' ? (
-              <button onClick={() => navigate(`/event/${eventId}`)} className="p-2.5 sm:p-1.5 -ml-1 sm:ml-0 flex-shrink-0 hover:bg-neutral-100 rounded-lg transition-colors" aria-label="Back to event">
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            ) : (
-              // Staff have no event page. An installed app has no address bar, so give them a way home.
-              <button onClick={() => navigate('/')} className="min-w-[44px] min-h-[44px] -ml-1 sm:ml-0 flex items-center justify-center flex-shrink-0 hover:bg-neutral-100 rounded-lg transition-colors" aria-label="Home">
-                <HomeIcon className="w-4 h-4" />
-              </button>
-            )}
-            <div className="min-w-0">
-              <h1 className="text-base font-bold text-neutral-900 truncate max-w-full sm:max-w-[240px]">{event?.title || 'Event'}</h1>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs text-neutral-400">Check-in</p>
-                {authState.username && (
-                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${authState.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {authState.role === 'staff' ? ' ' : ' '}{authState.username}
-                  </span>
-                )}
-              </div>
+      <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/95 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-10">
+          {authState.role === 'organizer' ? (
+            <button onClick={() => navigate(`/event/${eventId}`)} className="-ml-1 flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-neutral-100 active:bg-neutral-200" aria-label="Back to event">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          ) : (
+            // Staff have no event page. An installed app has no address bar, so give them a way home.
+            <button onClick={() => navigate('/')} className="-ml-1 flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-neutral-100 active:bg-neutral-200" aria-label="Home">
+              <HomeIcon className="h-5 w-5" />
+            </button>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold leading-tight text-neutral-900">{event?.title || 'Event'}</h1>
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+              <p className="flex-shrink-0 text-xs text-neutral-500">Check-in</p>
+              {authState.username && (
+                <span className={`truncate rounded px-1.5 py-0.5 text-xs font-semibold ${authState.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {authState.username}
+                </span>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <OfflineReadiness eventId={eventId} cacheVersion={cacheInfo?.builtAt || cacheInfo?.lastLocalUpdate || 0} onRefresh={syncNow} />
+
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {/* Door-time actions stay one tap away. Everything else is in "More". */}
             {authState.role === 'organizer' && (
               <button
-                onClick={() => setShowSettingsPanel(true)}
-                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
-                title="Security Settings"
+                onClick={() => setShowInviteDialog(true)}
+                className="hidden min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 sm:flex md:px-3.5"
+                title="Add guest"
+                aria-label="Add guest"
               >
-                <Settings className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Settings</span>
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline">Add guest</span>
               </button>
-            )}
-
-            {/* Seating map button:
-                - If map is enabled: show for everyone (organizer gets editor, staff gets display)
-                - If map is NOT enabled: show a "Set Up Seating" button ONLY for organizers
-                  so they can create the first layout (fixes the chicken-and-egg where the button
-                  was only visible after enabling, but enabling required clicking the button) */}
-            {seatingEnabled ? (
-              <button
-                onClick={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
-                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Seating</span>
-              </button>
-            ) : authState.role === 'organizer' && (
-              <button
-                onClick={() => {
-                  // Ensure seatingData is initialised so the modal renders
-                  if (!seatingData) setSeatingData({ seatingMap: { enabled: false, objects: [] }, guestsByTable: {} });
-                  setSeatingFocusId(null);
-                  setShowSeatingMap(true);
-                }}
-                title="Create a seating chart for this event"
-                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-500 border border-dashed border-neutral-300 rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Set Up Seating</span>
-              </button>
-            )}
-
-            {authState.role === 'organizer' && (
-              <>
-                {seatingEnabled && (
-                  <button
-                    onClick={() => setShowAssignPanel(true)}
-                    className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
-                    title="Assign tables & ticket types"
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Assign</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowActivityLog(true)}
-                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
-                  title="Activity Log"
-                >
-                  <BarChart2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Log</span>
-                </button>
-                <button
-                  onClick={() => setShowCsvImport(true)}
-                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Import CSV</span>
-                </button>
-                <button
-                  onClick={() => setShowInviteDialog(true)}
-                  className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Add Guest</span>
-                </button>
-              </>
             )}
             <button
               onClick={() => setShowManual(v => !v)}
-              className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              aria-expanded={showManual}
+              aria-label="Type an invite code"
+              title="Type an invite code"
+              className={`flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-xl border px-0 text-sm font-semibold transition-colors sm:px-3 md:px-3.5 ${showManual ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'}`}
             >
-              <Keyboard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Manual</span>
+              <Keyboard className="h-4 w-4" />
+              <span className="hidden md:inline">Type code</span>
             </button>
+            <CheckinToolsMenu
+              role={authState.role}
+              seatingEnabled={seatingEnabled}
+              onAddGuest={() => setShowInviteDialog(true)}
+              onImportCsv={() => setShowCsvImport(true)}
+              onSettings={() => setShowSettingsPanel(true)}
+              onSeating={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
+              onSetupSeating={() => {
+                // Ensure seatingData is initialised so the modal renders (first layout for this event)
+                if (!seatingData) setSeatingData({ seatingMap: { enabled: false, objects: [] }, guestsByTable: {} });
+                setSeatingFocusId(null);
+                setShowSeatingMap(true);
+              }}
+              onAssign={() => setShowAssignPanel(true)}
+              onActivityLog={() => setShowActivityLog(true)}
+              onLogout={handleStaffLogout}
+            />
             <button
               onClick={() => {
                 resetScan();
                 setScanMode(true);
               }}
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-sm"
+              className="hidden min-h-[44px] items-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-bold text-white shadow-sm transition-all hover:bg-black sm:flex"
             >
-              <Camera className="w-4 h-4" />
+              <Camera className="h-4 w-4" />
               Scan QR
-              <span className="hidden lg:inline text-xs text-white/60 font-normal ml-1">[S]</span>
+              <span className="ml-1 hidden text-xs font-normal text-white/60 lg:inline">[S]</span>
             </button>
-            {authState.role === 'staff' && (
-              <button
-                onClick={handleStaffLogout}
-                title="Log out of check-in"
-                className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2.5 sm:py-2 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Log Out</span>
-              </button>
-            )}
           </div>
         </div>
+
         {showManual && (
-          <div className="border-t border-neutral-100 bg-neutral-50 px-3 sm:px-6 py-3">
+          <div className="border-t border-neutral-100 bg-neutral-50 px-3 py-3 sm:px-6 lg:px-10">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleScan(manualCode);
               }}
-              className="flex gap-2 max-w-lg"
+              className="mx-auto flex max-w-7xl gap-2"
             >
               <input
                 type="text"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                 placeholder="Invite code, e.g. AB12CD34"
-                className="flex-1 min-w-0 border border-neutral-200 rounded-xl px-3 sm:px-4 py-2.5 text-base sm:text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
+                aria-label="Invite code"
+                className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-4 font-mono text-base tracking-widest focus:border-neutral-400 focus:outline-none sm:max-w-md"
                 autoFocus
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
                 inputMode="text"
               />
-              <button type="submit" disabled={!manualCode.trim()} className="flex-shrink-0 px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
+              <button type="submit" disabled={!manualCode.trim()} className="min-h-[48px] flex-shrink-0 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white transition-all hover:bg-black disabled:opacity-40">
                 Verify
               </button>
             </form>
@@ -2973,18 +2931,22 @@ function EnterpriseCheckinInner() {
         )}
       </header>
       
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-8">
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-10">
+        {/* Offline status: a full-width card on phones, a compact one on desktop. Opens the checklist. */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+          <OfflineReadiness eventId={eventId} cacheVersion={cacheInfo?.builtAt || cacheInfo?.lastLocalUpdate || 0} onRefresh={syncNow} />
+        </div>
         <InstallBanner variant="light" className="mb-4" />
         <OfflineQueuePanel eventId={eventId} pendingCount={pendingSync} onSync={syncNow} />
         {(isOffline || authState.expired) && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
-            <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
-            <div className="text-sm text-amber-900">
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3.5">
+            <span className="mt-1.5 h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-amber-500" />
+            <div className="text-sm leading-snug text-amber-900">
               <p className="font-bold">
-                {isOffline ? 'Offline mode' : 'Session expired'} — scanning works from the saved guest list
+                {isOffline ? 'Offline mode' : 'Session expired'}. Scanning works from the saved guest list
                 {cacheInfo?.total ? ` (${cacheInfo.total} guests)` : ''}.
               </p>
-              <p className="text-amber-800/90 mt-0.5">
+              <p className="mt-1 text-amber-800/90">
                 {cacheReady || cacheInfo?.total
                   ? `Admitted guests are saved on this device${pendingSync > 0 ? ` (${pendingSync} waiting to sync)` : ''} and upload automatically when the connection returns.`
                   : 'No guest list is saved on this device yet. Open this page once while online to enable offline scanning.'}
@@ -2993,84 +2955,127 @@ function EnterpriseCheckinInner() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-4 mb-4 sm:mb-8">
-          {[
-            { label: 'Total Groups', value: stats?.total ?? (invites.length || null), color: 'text-neutral-900' },
-            { label: 'Checked In', value: stats ? (stats.checkedIn ?? 0) : (invites.length ? invites.filter(i => i.checkedIn).length : null), color: 'text-emerald-600' },
-            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? (invites.length ? invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0) : null), color: 'text-emerald-700' },
-            { label: 'Adults Expected', value: stats ? (stats.totalExpectedAdults ?? 0) : null, color: 'text-neutral-600' },
+
+        {/* ── Stats: one headline card with progress, then four small numbers ── */}
+        {(() => {
+          const totalGroups = stats?.total ?? (invites.length || null);
+          const checkedInGroups = stats ? (stats.checkedIn ?? 0) : (invites.length ? invites.filter(i => i.checkedIn).length : null);
+          const pct = totalGroups ? Math.min(100, Math.round(((checkedInGroups || 0) / totalGroups) * 100)) : 0;
+          const loadingStat = statsLoading || invitesLoading;
+          const small = [
+            { label: 'Total admitted', value: stats?.totalActualAttendees ?? (invites.length ? invites.filter(i => i.checkedIn).reduce((sum, i) => sum + (i.actualAttendees || i.groupSize || 1), 0) : null), color: 'text-emerald-700' },
+            { label: 'Total groups', value: totalGroups, color: 'text-neutral-900' },
+            { label: 'Adults expected', value: stats ? (stats.totalExpectedAdults ?? 0) : null, color: 'text-neutral-700' },
             { label: 'Children', value: stats ? (stats.totalExpectedChildren ?? 0) : null, color: 'text-indigo-600' },
-          ].map(({ label, value, color }, idx) => (
-            <div key={label} className={`bg-white rounded-2xl border border-neutral-150 p-3.5 sm:p-5 shadow-sm ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}>
-              {value === null
-                ? ((statsLoading || invitesLoading)
-                    ? <div className="h-9 w-14 rounded-lg bg-neutral-100 animate-pulse" aria-label={`${label} loading`} />
-                    : <div className="text-3xl font-black tabular-nums text-neutral-300" title="Unavailable offline">—</div>)
-                : <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>}
-              <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="bg-white rounded-2xl border border-neutral-150 shadow-sm overflow-hidden">
-          {/* Progress bar */}
-          {invites.length > 0 && (() => {
-            const pct = Math.round(((stats?.checkedIn ?? invites.filter(i => i.checkedIn).length) / invites.length) * 100);
-            return (
-              <div className="px-4 sm:px-8 pt-5 pb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-neutral-500">Check-in progress</span>
-                  <span className="text-xs font-bold text-emerald-600">{pct}%</span>
+          ];
+          const Missing = ({ label }) => (loadingStat
+            ? <div className="h-9 w-16 animate-pulse rounded-lg bg-neutral-100" aria-label={`${label} loading`} />
+            : <div className="text-3xl font-black tabular-nums text-neutral-300" title="Unavailable offline">—</div>);
+          return (
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:grid-cols-6 sm:gap-4">
+              <div className="col-span-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-500">Checked in</p>
+                    {checkedInGroups === null ? <div className="mt-1"><Missing label="Checked in" /></div> : (
+                      <p className="mt-1 flex items-baseline gap-1.5">
+                        <span className="text-4xl font-black tabular-nums text-emerald-600">{checkedInGroups}</span>
+                        <span className="text-base font-semibold text-neutral-400">/ {totalGroups ?? 0} groups</span>
+                      </p>
+                    )}
+                  </div>
+                  {checkedInGroups !== null && <span className="text-2xl font-black tabular-nums text-emerald-600">{pct}%</span>}
                 </div>
-                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
+                <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-neutral-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Check-in progress">
+                  <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                 </div>
               </div>
-            );
-          })()}
-          <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-neutral-100 flex items-center gap-3 sm:gap-4 flex-wrap">
-            <h2 className="text-lg font-bold text-neutral-900 flex-1">Guest List</h2>
-            <input
-              type="text"
-              placeholder="Search guests…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-neutral-200 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-neutral-400 w-full sm:w-56"
-            />
+              {small.map(({ label, value, color }) => (
+                <div key={label} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:col-span-1 sm:p-5">
+                  {value === null ? <Missing label={label} /> : <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>}
+                  <div className="mt-1 text-sm font-medium text-neutral-500">{label}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        <section aria-label="Guest list" className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          <div className="space-y-3 border-b border-neutral-100 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-neutral-900">Guest list</h2>
+              <span className="text-sm tabular-nums text-neutral-500">{sorted.length} {sorted.length === 1 ? 'group' : 'groups'}</span>
+            </div>
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder="Search name, code or email"
+                  aria-label="Search guests"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoComplete="off"
+                  enterKeyHint="search"
+                  className="min-h-[48px] w-full rounded-xl border border-neutral-200 bg-white pl-10 pr-3 text-base focus:border-neutral-400 focus:outline-none sm:min-h-[44px] sm:text-sm"
+                />
+              </div>
+              {authState.role === 'organizer' && (
+                <button onClick={() => setShowInviteDialog(true)} aria-label="Add guest" className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 active:bg-emerald-100 sm:hidden">
+                  <Plus className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+            <div role="group" aria-label="Filter guests" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+              {[['all', 'All'], ['waiting', 'Waiting'], ['in', 'Admitted']].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setStatusFilter(id)}
+                  aria-pressed={statusFilter === id}
+                  className={`flex min-h-[40px] flex-shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${statusFilter === id ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'}`}
+                >
+                  {label}
+                  <span className={`rounded-full px-1.5 text-xs tabular-nums ${statusFilter === id ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'}`}>{statusCounts[id]}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          
+
           {invitesStale && invitesLoading && (
-            <div className="px-4 sm:px-8 py-2 text-xs font-medium text-neutral-500 bg-neutral-50 border-b border-neutral-100">
+            <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-2.5 text-sm font-medium text-neutral-500 sm:px-6">
               Showing saved guest list · updating…
             </div>
           )}
           {invitesError && (
-            <div className="px-4 sm:px-8 py-3 text-sm bg-amber-50 border-b border-amber-100 text-amber-800 flex items-center justify-between gap-3">
-              <span>{invitesError}{invites.length ? ' — showing the last saved list.' : ''}</span>
-              <button onClick={loadInvites} className="font-bold underline">Retry</button>
+            <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:px-6">
+              <span>{invitesError}{invites.length ? ' Showing the last saved list.' : ''}</span>
+              <button onClick={loadInvites} className="min-h-[44px] flex-shrink-0 px-2 font-bold underline">Retry</button>
             </div>
           )}
-          <div className={`divide-y divide-neutral-100 ${invitesStale ? 'opacity-70 pointer-events-none select-none' : ''}`}>
+
+          <div className={`divide-y divide-neutral-100 ${invitesStale ? 'pointer-events-none select-none opacity-70' : ''}`}>
             {invitesLoading && invites.length === 0 ? (
               <SkeletonRows rows={8} />
             ) : sorted.length === 0 ? (
-              <div className="text-center py-12 text-neutral-400 text-sm">
+              <div className="px-4 py-12 text-center text-sm text-neutral-500">
                 {invites.length === 0 ? (
                   <div>
                     <p className="mb-4">No guests yet.</p>
                     <button
                       onClick={() => setShowInviteDialog(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black"
+                      className="inline-flex min-h-[48px] items-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white hover:bg-black"
                     >
-                      <Plus className="w-4 h-4" />
-                      Add First Guest
+                      <Plus className="h-4 w-4" />
+                      Add first guest
                     </button>
                   </div>
                 ) : (
-                  'No guests match your search.'
+                  <div>
+                    <p>{searchQuery.trim() ? 'No guests match your search.' : statusFilter === 'in' ? 'Nobody has been admitted yet.' : 'Everyone is checked in.'}</p>
+                    {(searchQuery.trim() || statusFilter !== 'all') && (
+                      <button onClick={() => { setSearchQuery(''); setStatusFilter('all'); }} className="mt-3 min-h-[44px] px-3 text-sm font-semibold text-neutral-800 underline">Clear search and filters</button>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (
@@ -3078,130 +3083,138 @@ function EnterpriseCheckinInner() {
                 const adults = invite.adults || 1;
                 const children = invite.children || 0;
                 const total = adults + children;
-                
+                const canEdit = authState.role === 'organizer' && !String(invite._id).startsWith('cached-');
+
                 return (
                   <div
                     key={invite._id}
-                    className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 px-4 sm:px-8 py-4 sm:py-5 hover:bg-neutral-50 transition-colors ${
-                      invite.checkedIn ? 'bg-emerald-50/40 hover:bg-emerald-50' : ''
-                    }`}
+                    className={`px-4 py-3.5 transition-colors hover:bg-neutral-50 sm:px-6 sm:py-4 ${invite.checkedIn ? 'bg-emerald-50/50 hover:bg-emerald-50' : ''}`}
                   >
-                    <div className="flex items-center gap-3 sm:gap-5 flex-1 min-w-0">
-                    <div
-                      className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold ${
-                        invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
-                      }`}
-                    >
-                      {invite.guestName.charAt(0).toUpperCase()}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-base font-semibold text-neutral-900 break-words min-w-0">{invite.guestName}</p>
-                        <RoleBadge role={invite.guestRole || 'GUEST'} />
-                        {/* Table assignment badge */}
-                        {invite.tableLabel && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold border border-violet-200">
-                            <MapPin className="w-2.5 h-2.5" />
-                            {invite.tableLabel}
-                          </span>
-                        )}
-                        {invite.notes && (
-                          <span title={invite.notes} className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded bg-neutral-200 text-neutral-500 text-xs font-bold cursor-help" aria-label="Has notes">N</span>
-                        )}
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div
+                        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-base font-bold ${invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}
+                        aria-hidden="true"
+                      >
+                        {invite.guestName.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
-                        <span className="font-mono font-medium">{invite.inviteCode}</span>
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {adults} adult{adults !== 1 ? 's' : ''}
-                        </span>
-                        {children > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Baby className="w-3 h-3 text-blue-400" />
-                            {children} child{children !== 1 ? 'ren' : ''}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {total} total
-                        </span>
-                      </div>
-                    </div>
-                    </div>
-                    
-                    <div className="sm:flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
-                      {invite.checkedIn ? (
-                        <div className="sm:text-right w-full sm:w-auto flex sm:block items-center justify-between gap-3">
-                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold sm:mb-0.5">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Admitted
-                          </div>
-                          <p className="text-xs text-neutral-400 flex items-center gap-1 sm:justify-end">
-                            <Clock className="w-3 h-3" />
-                            {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {/* Show on map shortcut for checked-in guests with a table */}
-                          {invite.tableId && seatingEnabled && (
-                            <button
-                              onClick={() => { setSeatingFocusId(invite.tableId); setShowSeatingMap(true); }}
-                              className="mt-1 text-[10px] text-violet-600 hover:text-violet-800 font-semibold flex items-center gap-0.5 justify-end"
-                            >
-                              <MapPin className="w-2.5 h-2.5" /> Show table
-                            </button>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="min-w-0 break-words text-base font-semibold leading-snug text-neutral-900">{invite.guestName}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <RoleBadge role={invite.guestRole || 'GUEST'} />
+                          {invite.tableLabel && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-100 px-1.5 py-0.5 text-xs font-bold text-violet-700">
+                              <MapPin className="h-3 w-3" />
+                              {invite.tableLabel}
+                            </span>
                           )}
                         </div>
-                      ) : (
-                        <>
-                          {/* Edit / delete are organizer-only on the server (staff would just get 403s),
-                              and cached rows have no server id to act on while offline. */}
-                          {authState.role === 'organizer' && !String(invite._id).startsWith('cached-') && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingInvite(invite);
-                                  setShowInviteDialog(true);
-                                }}
-                                className="p-3 sm:p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteInvite(invite._id)}
-                                className="p-3 sm:p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleScan(invite.inviteCode)}
-                            className="order-first sm:order-none flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-1.5 px-4 sm:px-3 py-3 sm:py-1.5 bg-neutral-900 text-white text-sm sm:text-xs font-semibold rounded-xl hover:bg-black active:bg-black transition-all"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            Check In
-                          </button>
-                        </>
-                      )}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-neutral-500">
+                          <span className="font-mono font-medium text-neutral-600">{invite.inviteCode}</span>
+                          <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" aria-hidden="true" />{adults} adult{adults !== 1 ? 's' : ''}</span>
+                          {children > 0 && <span className="flex items-center gap-1"><Baby className="h-3.5 w-3.5 text-blue-400" aria-hidden="true" />{children} child{children !== 1 ? 'ren' : ''}</span>}
+                          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden="true" />{total} total</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-shrink-0 items-center gap-1.5">
+                        {invite.checkedIn ? (
+                          <div className="text-right">
+                            <div className="flex items-center justify-end gap-1 text-sm font-bold text-emerald-600">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Admitted
+                            </div>
+                            <p className="mt-0.5 flex items-center justify-end gap-1 text-xs text-neutral-500">
+                              <Clock className="h-3 w-3" />
+                              {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Edit / delete are organizer-only on the server (staff would just get 403s),
+                                and cached rows have no server id to act on while offline. On phones they move
+                                to their own line below so the row stays readable. */}
+                            {canEdit && (
+                              <>
+                                <button
+                                  onClick={() => { setEditingInvite(invite); setShowInviteDialog(true); }}
+                                  className="hidden h-10 w-10 items-center justify-center rounded-lg text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-700 sm:flex"
+                                  title="Edit"
+                                  aria-label={`Edit ${invite.guestName}`}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteInvite(invite._id)}
+                                  className="hidden h-10 w-10 items-center justify-center rounded-lg text-neutral-400 transition-all hover:bg-red-50 hover:text-red-600 sm:flex"
+                                  title="Delete"
+                                  aria-label={`Delete ${invite.guestName}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => handleScan(invite.inviteCode)}
+                              className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white transition-all hover:bg-black active:bg-black sm:min-h-[40px]"
+                            >
+                              <UserCheck className="h-4 w-4" />
+                              Check in
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Notes matter at the door (allergies, access needs), so show them rather than hiding them in a tooltip */}
+                    {invite.notes && (
+                      <p className="mt-2.5 line-clamp-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-900 sm:ml-[3.75rem]">
+                        <span className="font-semibold">Note: </span>{invite.notes}
+                      </p>
+                    )}
+
+                    {invite.checkedIn && invite.tableId && seatingEnabled && (
+                      <button
+                        onClick={() => { setSeatingFocusId(invite.tableId); setShowSeatingMap(true); }}
+                        className="mt-2 flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-violet-700 hover:text-violet-900 sm:ml-[3.75rem]"
+                      >
+                        <MapPin className="h-4 w-4" /> Show table on map
+                      </button>
+                    )}
+
+                    {!invite.checkedIn && canEdit && (
+                      <div className="-mb-1 mt-1 flex gap-1 pl-[3.75rem] sm:hidden">
+                        <button
+                          onClick={() => { setEditingInvite(invite); setShowInviteDialog(true); }}
+                          className="-ml-3 flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-sm font-semibold text-neutral-600 active:bg-neutral-100"
+                        >
+                          <Edit2 className="h-4 w-4" /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteInvite(invite._id)}
+                          className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-sm font-semibold text-red-600 active:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })
             )}
             {sorted.length > visibleCount && (
-              <div className="px-4 sm:px-8 py-4 text-center">
+              <div className="px-4 py-4 text-center sm:px-6">
                 <button
                   onClick={() => setVisibleCount(c => c + GUEST_PAGE_SIZE)}
-                  className="px-5 py-2.5 text-sm font-bold text-neutral-700 border border-neutral-200 rounded-xl hover:bg-neutral-50"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 px-5 text-sm font-bold text-neutral-700 hover:bg-neutral-50 sm:inline-flex sm:w-auto"
                 >
+                  <ChevronDown className="h-4 w-4" />
                   Show {Math.min(GUEST_PAGE_SIZE, sorted.length - visibleCount)} more · {sorted.length - visibleCount} remaining
                 </button>
               </div>
             )}
           </div>
-        </div>
+        </section>
       </main>
 
       <footer className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 pt-6 pb-28 sm:pb-6 flex flex-wrap items-center justify-between gap-2">
@@ -3259,7 +3272,7 @@ function EnterpriseCheckinInner() {
         <button
           onClick={() => { resetScan(); setScanMode(true); }}
           aria-label="Scan QR code"
-          className="sm:hidden fixed bottom-6 left-4 z-40 flex items-center gap-2 pl-4 pr-5 py-3.5 bg-neutral-900 text-white text-sm font-bold rounded-2xl shadow-2xl active:scale-95 transition-transform"
+          className="sm:hidden fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-4 z-40 flex min-h-[56px] items-center gap-2.5 pl-5 pr-6 bg-neutral-900 text-white text-base font-bold rounded-2xl shadow-2xl active:scale-95 transition-transform"
         >
           <Camera className="w-5 h-5" />
           Scan QR
