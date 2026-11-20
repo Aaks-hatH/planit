@@ -3,23 +3,31 @@
  *
  * Staff Walkie-Talkie — WebRTC Push-to-Talk
  *
- * Fixes vs original:
- *  1. ICE candidate queuing — candidates that arrive before setRemoteDescription
- *     are queued per-peer and flushed once the remote description is set.
- *  2. Crypto key race — if a peer joins before PBKDF2 finishes (200k iterations
- *     can take 300ms+), the peer is queued and the offer is sent once the key
- *     is ready, rather than silently dropped.
- *  3. isSpeaking ref — startPTT/stopPTT use a ref mirror so they never capture
- *     stale closure state regardless of React render timing.
- *  4. AudioContext resumption — browsers suspend AudioContext before a user
- *     gesture; we resume it explicitly before creating the silent stream.
+ * Fixes in this version (on top of the earlier ones):
+ *  A. Incoming offers / answers / ICE candidates were silently DROPPED if they
+ *     arrived before the PBKDF2 key finished deriving (200k iterations, often
+ *     1s+ on phones). The existing staff send their offer the instant you join,
+ *     so on a cold page load the handshake usually died and nobody heard anyone.
+ *     Every handler now awaits the key, and we don't join the room until the key
+ *     is ready.
+ *  B. Double join: the "connect" re-join handler and the initial join could both
+ *     fire, producing two peer_joined events and two competing offers. There is
+ *     now a single join path (joins immediately if connected, otherwise on connect).
+ *  C. After a socket reconnect the socket id changes, so old peer connections are
+ *     torn down before re-joining.
+ *  D. ICE candidates that arrive before the peer connection exists are queued
+ *     instead of dropped.
+ *  E. Releasing the button while the mic permission prompt / getUserMedia was
+ *     still pending used to leave the mic stuck "on". Now the late stream is
+ *     discarded.
+ *  F. Removed the sampleRate constraint (can trigger OverconstrainedError on
+ *     some devices; WebRTC resamples anyway).
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// ICE config: prefer env-var TURN servers (set VITE_TURN_URL, VITE_TURN_USERNAME,
-// VITE_TURN_CREDENTIAL in .env for a reliable paid TURN service).
-// Falls back to free openrelay servers — fine for demos, unreliable for production.
+// ICE config: set VITE_TURN_URL, VITE_TURN_USERNAME, VITE_TURN_CREDENTIAL for a
+// real TURN service. The free openrelay fallback is unreliable and often dead.
 const TURN_URL        = import.meta.env.VITE_TURN_URL;
 const TURN_USERNAME   = import.meta.env.VITE_TURN_USERNAME;
 const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL;
@@ -32,19 +40,16 @@ const ICE_CONFIG = {
     ...(TURN_URL ? [
       { urls: TURN_URL, username: TURN_USERNAME, credential: TURN_CREDENTIAL },
     ] : [
-      // Free fallback — works for same-network; may fail across carrier-grade NAT
-      { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:80',               username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',              username: 'openrelayproject', credential: 'openrelayproject' },
       { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
     ]),
   ],
   iceCandidatePoolSize: 4,
 };
 
-// Key is derived from the eventId (shared by all peers in the same event room)
-// so that every participant can encrypt/decrypt each other's signaling payloads.
-// Using the per-user JWT token here would give every user a different key, making
-// cross-peer decryption impossible and silently breaking the WebRTC handshake.
+// Key is derived from the eventId (shared by everyone in the event) so every
+// participant can decrypt each other's signaling payloads.
 async function deriveSignalingKey(eventId) {
   const enc         = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -57,6 +62,18 @@ async function deriveSignalingKey(eventId) {
     false,
     ['encrypt', 'decrypt']
   );
+}
+
+// Derive once per event per page load, share the promise.
+const keyCache = new Map();
+function getSignalingKey(eventId) {
+  const id = String(eventId);
+  if (!keyCache.has(id)) {
+    const p = deriveSignalingKey(id);
+    p.catch(() => keyCache.delete(id));
+    keyCache.set(id, p);
+  }
+  return keyCache.get(id);
 }
 
 async function encrypt(key, obj) {
@@ -87,9 +104,9 @@ export function useWalkieTalkie(socket, eventId, token, username) {
   const keyRef            = useRef(null);
   const pcsRef            = useRef({});
   const localStreamRef    = useRef(null);
-  const pendingCandidates = useRef({});   // FIX 1: per-peer ICE candidate queue
-  const pendingPeers      = useRef([]);   // FIX 2: peers queued until key ready
-  const isSpeakingRef     = useRef(false);// FIX 3: ref mirror avoids stale closures
+  const pendingCandidates = useRef({});   // per-peer ICE candidate queue
+  const isSpeakingRef     = useRef(false);
+  const wantSpeakingRef   = useRef(false); // true from button-down until button-up
   const silentCtxRef      = useRef(null);
   const silentStreamRef   = useRef(null);
   const eventIdRef        = useRef(eventId);
@@ -98,8 +115,15 @@ export function useWalkieTalkie(socket, eventId, token, username) {
   eventIdRef.current = eventId;
   socketRef.current  = socket;
 
-  // Keep isSpeakingRef in sync with state
   useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
+
+  // ── Key helper: returns the key, waiting for derivation if needed ─────
+  async function getKey() {
+    if (keyRef.current) return keyRef.current;
+    const k = await getSignalingKey(eventIdRef.current);
+    keyRef.current = k;
+    return k;
+  }
 
   // ── Silent placeholder stream ─────────────────────────────────────────
   function ensureSilentStream() {
@@ -127,44 +151,41 @@ export function useWalkieTalkie(socket, eventId, token, username) {
     }
   }
 
-  // ── Crypto key derivation ─────────────────────────────────────────────
+  // ── Pre-warm the crypto key as soon as we know the event ──────────────
   useEffect(() => {
     if (!eventId) return;
+    keyRef.current = null;
     let cancelled = false;
-    deriveSignalingKey(eventId)
-      .then(k => {
-        if (cancelled) return;
-        keyRef.current = k;
-        // FIX 2: process any peers that arrived before key was ready
-        const queued = pendingPeers.current.splice(0);
-        queued.forEach(peerId => initiateOffer(peerId));
-      })
-      .catch(e => setError(`Crypto init failed: ${e.message}`));
+    getSignalingKey(eventId)
+      .then(k => { if (!cancelled) keyRef.current = k; })
+      .catch(e => { if (!cancelled) setError(`Crypto init failed: ${e.message}`); });
     return () => { cancelled = true; };
   }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Re-join walkie room after socket reconnect ────────────────────────
-  // Socket.IO fires 'connect' on every successful connection — including
-  // reconnects. Without this the walkie room is lost after any network blip
-  // because the server drops room membership on disconnect.
-  useEffect(() => {
-    if (!socket) return;
-    const onReconnect = () => {
-      if (eventIdRef.current) {
-        socket.emit('walkie:join', { eventId: eventIdRef.current });
-      }
-    };
-    socket.on('connect', onReconnect);
-    return () => socket.off('connect', onReconnect);
-  }, [socket]);
-
-  // ── Join / leave walkie room ──────────────────────────────────────────
+  // ── Join / re-join the walkie room (single path) ──────────────────────
+  // Joins right away if the socket is connected, otherwise on 'connect'.
+  // 'connect' also fires after every reconnect, when our socket id has changed,
+  // so stale peer connections are dropped first. We wait for the key BEFORE
+  // joining so incoming offers can always be decrypted.
   useEffect(() => {
     if (!socket || !eventId) return;
-    socket.emit('walkie:join', { eventId });
-    setIsConnected(true);
+    let cancelled = false;
+
+    const join = async () => {
+      cleanupAllPeers();
+      try { await getKey(); } catch { return; }
+      if (cancelled || !socket.connected) return;
+      socket.emit('walkie:join', { eventId });
+      setIsConnected(true);
+    };
+
+    if (socket.connected) join();
+    socket.on('connect', join);
+
     return () => {
-      socket.emit('walkie:leave', { eventId });
+      cancelled = true;
+      socket.off('connect', join);
+      if (socket.connected) socket.emit('walkie:leave', { eventId });
       setIsConnected(false);
       cleanupAllPeers();
     };
@@ -181,12 +202,7 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     const onPeerJoined = ({ socketId, username: u }) => {
       setPeers(prev => [...prev.filter(p => p.socketId !== socketId), { socketId, username: u }]);
-      if (!keyRef.current) {
-        // FIX 2: key not ready yet — queue this peer
-        pendingPeers.current.push(socketId);
-      } else {
-        initiateOffer(socketId);
-      }
+      initiateOffer(socketId);
     };
 
     const onPeerLeft = ({ socketId }) => {
@@ -197,8 +213,8 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     const onOffer = async ({ from, fromUsername, encryptedPayload }) => {
       try {
-        if (!keyRef.current) return;
-        const { sdp } = await decrypt(keyRef.current, encryptedPayload);
+        const key = await getKey();
+        const { sdp } = await decrypt(key, encryptedPayload);
         await handleRemoteOffer(from, fromUsername, sdp);
       } catch (e) {
         console.warn('[walkie] offer error:', e.message);
@@ -207,12 +223,11 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     const onAnswer = async ({ from, encryptedPayload }) => {
       try {
-        if (!keyRef.current) return;
-        const { sdp } = await decrypt(keyRef.current, encryptedPayload);
+        const key = await getKey();
+        const { sdp } = await decrypt(key, encryptedPayload);
         const pc = pcsRef.current[from];
         if (!pc || pc.signalingState !== 'have-local-offer') return;
         await pc.setRemoteDescription({ type: 'answer', sdp });
-        // FIX 1: flush candidates that arrived before remote desc was set
         await flushCandidates(from);
       } catch (e) {
         console.warn('[walkie] answer error:', e.message);
@@ -221,12 +236,11 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     const onCandidate = async ({ from, encryptedPayload }) => {
       try {
-        if (!keyRef.current) return;
-        const candidate = await decrypt(keyRef.current, encryptedPayload);
+        const key = await getKey();
+        const candidate = await decrypt(key, encryptedPayload);
         const pc = pcsRef.current[from];
-        if (!pc) return;
-        if (!pc.remoteDescription) {
-          // FIX 1: queue until remote description is available
+        if (!pc || !pc.remoteDescription) {
+          // Queue until the peer connection exists AND has a remote description
           if (!pendingCandidates.current[from]) pendingCandidates.current[from] = [];
           pendingCandidates.current[from].push(candidate);
         } else {
@@ -297,10 +311,10 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     pc.onicecandidate = async ({ candidate }) => {
       if (!candidate) return;
-      const key  = keyRef.current;
       const sock = socketRef.current;
-      if (!key || !sock) return;
+      if (!sock) return;
       try {
+        const key = await getKey();
         const encryptedPayload = await encrypt(key, candidate.toJSON());
         sock.emit('walkie:candidate', {
           eventId: eventIdRef.current,
@@ -319,6 +333,7 @@ export function useWalkieTalkie(socket, eventId, token, username) {
         audio.setAttribute('data-walkie', peerId);
         audio.muted    = false;
         audio.autoplay = true;
+        audio.playsInline = true;
         document.body.appendChild(audio);
       }
       audio.srcObject = evt.streams[0];
@@ -338,20 +353,15 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'failed') {
-        if (pc.signalingState === 'stable') {
-          const key  = keyRef.current;
-          const sock = socketRef.current;
-          if (key && sock) {
-            pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
-              .then(offer => pc.setLocalDescription(offer))
-              .then(async () => {
-                const encryptedPayload = await encrypt(keyRef.current, { sdp: pc.localDescription.sdp });
-                socketRef.current?.emit('walkie:offer', { eventId: eventIdRef.current, to: peerId, encryptedPayload });
-              })
-              .catch(() => closePeer(peerId));
-          } else {
-            closePeer(peerId);
-          }
+        if (pc.signalingState === 'stable' && socketRef.current) {
+          pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
+            .then(offer => pc.setLocalDescription(offer))
+            .then(async () => {
+              const key = await getKey();
+              const encryptedPayload = await encrypt(key, { sdp: pc.localDescription.sdp });
+              socketRef.current?.emit('walkie:offer', { eventId: eventIdRef.current, to: peerId, encryptedPayload });
+            })
+            .catch(() => closePeer(peerId));
         } else {
           closePeer(peerId);
         }
@@ -373,9 +383,11 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
   // ── Initiate WebRTC offer ─────────────────────────────────────────────
   async function initiateOffer(peerId) {
-    const key  = keyRef.current;
     const sock = socketRef.current;
-    if (!key || !sock) return;
+    if (!sock) return;
+    let key;
+    try { key = await getKey(); } catch { return; }
+    if (pcsRef.current[peerId]) return; // already negotiating with this peer
     const pc = getOrCreatePC(peerId);
     try {
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
@@ -389,10 +401,10 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
   // ── Handle incoming offer ─────────────────────────────────────────────
   async function handleRemoteOffer(peerId, _peerUsername, sdp) {
-    const key  = keyRef.current;
     const sock = socketRef.current;
-    if (!key || !sock) return;
-    const pc = getOrCreatePC(peerId);
+    if (!sock) return;
+    const key = await getKey();
+    const pc  = getOrCreatePC(peerId);
     try {
       await pc.setRemoteDescription({ type: 'offer', sdp });
       if (localStreamRef.current) {
@@ -404,7 +416,6 @@ export function useWalkieTalkie(socket, eventId, token, username) {
       await pc.setLocalDescription(answer);
       const encryptedPayload = await encrypt(key, { sdp: answer.sdp });
       sock.emit('walkie:answer', { eventId: eventIdRef.current, to: peerId, encryptedPayload });
-      // FIX 1: flush any candidates that arrived before remote desc was set
       await flushCandidates(peerId);
     } catch (e) {
       console.warn('[walkie] handleRemoteOffer failed:', e.message);
@@ -413,18 +424,26 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
   // ── PTT start ─────────────────────────────────────────────────────────
   const startPTT = useCallback(async () => {
-    if (isSpeakingRef.current) return; // FIX 3: ref, not stale state
-    ensureSilentStream(); // resume AudioContext before getUserMedia
+    if (isSpeakingRef.current || wantSpeakingRef.current) return;
+    wantSpeakingRef.current = true;
+    ensureSilentStream(); // resume AudioContext inside the user gesture
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl:  true,
-          sampleRate:       16000,
         },
         video: false,
       });
+
+      // Button was released while the mic was still opening (e.g. permission
+      // prompt) — discard the stream instead of getting stuck transmitting.
+      if (!wantSpeakingRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
       localStreamRef.current = stream;
       const micTrack = stream.getAudioTracks()[0];
       for (const [peerId, pc] of Object.entries(pcsRef.current)) {
@@ -439,16 +458,18 @@ export function useWalkieTalkie(socket, eventId, token, username) {
       setIsSpeaking(true);
       socketRef.current?.emit('walkie:ptt_start', { eventId: eventIdRef.current });
     } catch (e) {
+      wantSpeakingRef.current = false;
       const msg = e.name === 'NotAllowedError'
         ? 'Microphone access denied. Allow mic permission in browser settings.'
         : `Could not open mic: ${e.message}`;
       setError(msg);
     }
-  }, []);  
+  }, []);
 
   // ── PTT stop ──────────────────────────────────────────────────────────
   const stopPTT = useCallback(async () => {
-    if (!isSpeakingRef.current) return; // FIX 3: ref, not stale state
+    wantSpeakingRef.current = false;
+    if (!isSpeakingRef.current) return;
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
     const silentStream = ensureSilentStream();
@@ -464,7 +485,7 @@ export function useWalkieTalkie(socket, eventId, token, username) {
     isSpeakingRef.current = false;
     setIsSpeaking(false);
     socketRef.current?.emit('walkie:ptt_stop', { eventId: eventIdRef.current });
-  }, []);  
+  }, []);
 
   // ── Cleanup ───────────────────────────────────────────────────────────
   function closePeer(peerId) {
@@ -478,11 +499,11 @@ export function useWalkieTalkie(socket, eventId, token, username) {
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
     Object.keys(pcsRef.current).forEach(closePeer);
-    isSpeakingRef.current = false;
+    isSpeakingRef.current   = false;
+    wantSpeakingRef.current = false;
     setIsSpeaking(false);
     setActiveSpeakers([]);
     setPeers([]);
-    pendingPeers.current      = [];
     pendingCandidates.current = {};
   }
 
