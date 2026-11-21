@@ -21,7 +21,7 @@ const LAST_SHOWN_KEY = 'planit_beta_teaser_last_shown_v1';
 const SESSION_KEY = 'planit_beta_teaser_session_v1';
 
 // Add new lab teaser ids here as they ship.
-export const TEASER_ORDER = ['face-ticket', 'venue-walk', 'qr-pass', 'venue-map'];
+export const TEASER_ORDER = ['face-ticket', 'venue-walk', 'qr-pass', 'venue-map', 'door-count'];
 
 const SHOW_CHANCE = 0.25;   // share of sessions that show any teaser at all
 const COOLDOWN_DAYS = 4;    // quiet period after a teaser has been shown
