@@ -64,6 +64,7 @@ const RSVPPageBuilder   = lazy(() => import('./pages/RSVPPageBuilder'));
 const Credits           = lazy(() => import('./pages/Credits'));
 const FaceTicket         = lazy(() => import('./pages/FaceTicket'));
 const VenueWalk          = lazy(() => import('./pages/VenueWalk'));
+const DoorCount          = lazy(() => import('./pages/DoorCount'));
 const QRPass             = lazy(() => import('./pages/QRPass'));
 const VenueMap           = lazy(() => import('./pages/VenueMap'));
 const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
@@ -456,6 +457,7 @@ const PAGE_TITLES = {
   '/beta/venue-walk':           'Venue Walk \u00b7 Dead-Reckoning Table Finder Beta \u00b7 PlanIt Labs',
   '/beta/qr-pass':              'QR Pass \u00b7 Rotating Signed Check-In Codes \u00b7 PlanIt Labs',
   '/beta/venue-map':            'Venue Map \u00b7 Landmark Table Finder \u00b7 PlanIt Labs',
+  '/beta/door-count':           'Door Count \u00b7 On-Device Headcount Beta \u00b7 PlanIt Labs',
 };
 
 // Titles for dynamic routes — matched by pattern in order (first match wins)
@@ -612,6 +614,7 @@ function App() {
         <Route path="/beta/venue-walk"           element={<VenueWalk />} />
         <Route path="/beta/qr-pass"              element={<QRPass />} />
         <Route path="/beta/venue-map"            element={<VenueMap />} />
+        <Route path="/beta/door-count"           element={<DoorCount />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
