@@ -7,6 +7,8 @@ import {
 import toast from 'react-hot-toast';
 import { BetaBar } from '../components/BetaBar';
 import LabLanding from '../components/LabLanding';
+import { loadFaceModels, detectAllFacesWithDescriptors } from '../utils/faceTicket';
+import { listEvents, getEvent, matchAgainstRoster } from '../utils/eventRoster';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Door Count — on-device doorway people counter (PlanIt Labs beta).
@@ -20,9 +22,8 @@ const MODELS = {
 };
 const MIN_H = 0.08, MIN_HITS = 3, TRACK_TTL = 700, TTL_OCC = 1500, MAX_PRED = 300, DEADBAND = 0.015;
 const KEY = 'planit_doorcount_v1';
-const FT_KEY = 'planit_facecheckins_v1';   // written by Face Ticket on a successful match
 const MIN_TAPS = 10, MATCH_MS = 1500;
-const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false, guide: true, expected: 0, fullMsg: 'Please wait. We are at capacity.' };
+const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false, guide: true, expected: 0, eventId: '', recognise: false, fullMsg: 'Please wait. We are at capacity.' };
 const GUIDE = [
   { t: 'Choose a source', b: 'Point a camera at a doorway, or try a video file first: a 1 to 2 minute clip from a fixed camera, with people walking through a door in both directions, works well.' },
   { t: 'Place the line', b: 'Drag the two white dots so the line spans the doorway and people must cross it fully. The arrow points toward IN. If it points the wrong way, tap Flip direction.' },
@@ -37,9 +38,6 @@ const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 const fmt = (v, d = 1) => (v ? v.toFixed(d) : '-');
 const lvOf = (occ, cap) => (cap > 0 ? (occ >= cap ? 2 : occ >= cap * 0.85 ? 1 : 0) : 0);
 
-function ftCount(since) {
-  try { return JSON.parse(localStorage.getItem(FT_KEY) || '[]').filter((x) => x.t >= since).length; } catch { return 0; }
-}
 const cover = (a, b) => {   // share of box a that box b covers
   const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
   return w > 0 && h > 0 ? (w * h) / (a.w * a.h) : 0;
@@ -91,9 +89,9 @@ function report(e) {
   const { C } = e;
   return {
     door: e.cfg.door, sessionStart: new Date(e.start).toISOString(), exported: new Date().toISOString(),
-    totals: { in: C.in, out: C.out, inside: C.in - C.out }, capacity: e.cfg.cap || null, expected: e.cfg.expected || null, faceTicketVerified: e.ft,
+    totals: { in: C.in, out: C.out, inside: C.in - C.out }, capacity: e.cfg.cap || null, expected: e.cfg.expected || e.roster.length || null,
     peak: { occupancy: C.peak, at: C.pt ? new Date(C.pt).toISOString() : null }, bucketMinutes: 5, buckets,
-    events: e.events.map((ev) => ({ time: new Date(ev.t).toISOString(), direction: ev.dir, source: ev.src })),
+    events: e.events.map((ev) => ({ time: new Date(ev.t).toISOString(), direction: ev.dir, source: ev.src, guest: ev.name || null })),
   };
 }
 function download(name, type, text) {
@@ -114,6 +112,15 @@ function Section({ title, defaultOpen = false, children }) {
         <ChevronDown className={`w-4 h-4 text-neutral-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+function NameList({ title, items }) {
+  return (
+    <div>
+      <div className="mb-1 font-mono text-[11px] tracking-widest uppercase text-neutral-500">{title}</div>
+      <p className="text-sm text-neutral-300 leading-relaxed">{items.length ? `${items.slice(0, 40).join(', ')}${items.length > 40 ? ` and ${items.length - 40} more` : ''}` : 'None'}</p>
     </div>
   );
 }
@@ -162,7 +169,7 @@ function Counter() {
     E.current = {
       cfg, line: s.line || { a: [0.1, 0.55], b: [0.9, 0.55] }, roi: s.roi || null,
       events: Array.isArray(s.events) ? s.events : [], series: Array.isArray(s.series) ? s.series : [], start: s.start || Date.now(),
-      autoLog: [], autoN: 0, ft: 0, ftN: 0, tracks: [], nextId: 1, running: false, flash: null, C: { in: 0, out: 0, peak: 0, pt: 0 },
+      autoLog: [], autoN: 0, roster: [], rosC: 0, rosT: 0, faceBusy: false, faceT: 0, faceOn: false, tracks: [], nextId: 1, running: false, flash: null, C: { in: 0, out: 0, peak: 0, pt: 0 },
       P: { inf: [], lat: [], fps: 0, latLast: 0 }, lastT: -1, fc: 0, ff: 0, fpsT: performance.now(), lastTs: 0, tick: 0,
       det: null, vision: null, fileset: null, loadId: 0, work: null, h: 0, hk: '', wl: null, ac: null, fileUrl: null,
       prevLv: null, roiMode: false, drag: null, display: false,
@@ -184,12 +191,37 @@ function Counter() {
   const [cams, setCams] = useState([]);
   const [camId, setCamId] = useState('');
   const [ar, setAr] = useState(16 / 9);
-  const [snap, setSnap] = useState({ in: 0, out: 0, peak: 0, occ: 0, lv: 0, fps: 0, infL: 0, infA: 0, latL: 0, latA: 0, nAuto: 0, nEv: 0, nSer: 0, ft: 0 });
+  const [snap, setSnap] = useState({ in: 0, out: 0, peak: 0, occ: 0, lv: 0, fps: 0, infL: 0, infA: 0, latL: 0, latA: 0, nAuto: 0, nEv: 0, nSer: 0, rosN: 0, rosC: 0 });
   const [testOn, setTestOn] = useState(false);
   const [testStart, setTestStart] = useState(0);
   const [taps, setTaps] = useState([]);
   e.display = display;
   const [gs, setGs] = useState(0);
+  const [faceState, setFaceState] = useState('off'); // off | loading | ready | failed
+  const [evList, setEvList] = useState(() => listEvents());
+  const refreshRoster = () => {
+    e.roster = e.cfg.eventId ? getEvent(e.cfg.eventId)?.attendees || [] : [];
+    e.rosC = e.roster.filter((a) => a.checkedIn).length;
+  };
+  useEffect(() => {
+    refreshRoster();
+    if (!cfg.recognise || !cfg.eventId) { setFaceState('off'); return undefined; }
+    let alive = true;
+    setFaceState('loading');
+    loadFaceModels().then(() => alive && setFaceState('ready')).catch(() => alive && setFaceState('failed'));
+    return () => { alive = false; };
+  }, [cfg.eventId, cfg.recognise]); // eslint-disable-line react-hooks/exhaustive-deps
+  e.faceOn = faceState === 'ready';
+  const guests = useMemo(() => {
+    const last = new Map();
+    let anon = 0;
+    for (const ev of e.events) { if (ev.who) last.set(ev.who, ev); else if (ev.src === 'auto' && ev.dir === 'in') anon++; }
+    return {
+      anon,
+      inside: [...last.values()].filter((v) => v.dir === 'in').map((v) => v.name),
+      waiting: e.roster.filter((a) => !last.has(a.id) && !a.checkedIn).map((a) => a.name),
+    };
+  }, [snap.nEv, snap.rosN, snap.rosC, cfg.eventId, e]);
   useEffect(() => { if (running && gs === 0) setGs(1); }, [running, gs]);
 
   useEffect(() => { save(e); }, [cfg, e]);
@@ -268,6 +300,7 @@ function Counter() {
     e.lastT = v.currentTime; e.fc++; e.ff++;
     if (tF - e.fpsT >= 1000) { e.P.fps = (e.ff * 1000) / (tF - e.fpsT); e.ff = 0; e.fpsT = tF; }
     if (e.det && e.fc % e.cfg.n === 0) detect(tF);   // detect every N frames, track in between
+    if (e.faceOn && e.roster.length && e.tracks.length && !e.faceBusy && tF - e.faceT > 1200) faceScan(tF);
     draw(tF);
   };
 
@@ -282,6 +315,26 @@ function Counter() {
     try { res = e.det.detectForVideo(w, nextTs()); } catch { return; }
     push(e.P.inf, performance.now() - t0);
     track(res.detections.map((d) => { const b = d.boundingBox; return { x: (cx + b.originX / sc) / vw, y: (cy + b.originY / sc) / vh, w: b.width / sc / vw, h: b.height / sc / vh }; }), tF);
+  };
+
+  // Guest recognition: runs about once a second, off the frame loop. Only confident matches against the
+  // linked Face Ticket roster are used; the guest is attached to the body track that holds the face.
+  const faceScan = async (tF) => {
+    e.faceBusy = true; e.faceT = tF;
+    try {
+      const v = videoRef.current, vw = v.videoWidth, vh = v.videoHeight;
+      for (const f of await detectAllFacesWithDescriptors(v)) {
+        const m = matchAgainstRoster(f.descriptor, e.roster);
+        if (!m.confident) continue;
+        const b = f.detection.box, cx = (b.x + b.width / 2) / vw, cy = (b.y + b.height / 2) / vh, now = performance.now();
+        let best = null;
+        for (const t of e.tracks) {
+          const p = pred(t, now);
+          if (cx >= p.x && cx <= p.x + p.w && cy >= p.y && cy <= p.y + p.h && (!best || p.w * p.h < best.a)) best = { t, a: p.w * p.h };
+        }
+        if (best) best.t.guest = { id: m.top.attendee.id, name: m.top.attendee.name };
+      }
+    } catch { /* recognition is best-effort; counting continues without it */ } finally { e.faceBusy = false; }
   };
 
   // Tracker: greedy IoU matching on velocity-extrapolated boxes, then a centre-distance pass for fast movers.
@@ -329,15 +382,15 @@ function Counter() {
       const dir = (ns > 0) !== e.cfg.flip ? 'in' : 'out';
       e.autoLog.push({ t: Date.now(), dir }); e.autoN++;   // every automatic crossing, for the accuracy check
       if (e.autoLog.length > 2000) e.autoLog.shift();
-      record(dir, 'auto', performance.now() - tF);
+      record(dir, 'auto', performance.now() - tF, t.guest);
     }
     t.side = ns;
   };
   const resetSides = () => e.tracks.forEach((t) => { t.side = 0; });
 
-  const record = (dir, src, lat) => {
+  const record = (dir, src, lat, who) => {
     if (dir === 'out' && e.C.in - e.C.out <= 0) return;   // occupancy never goes below zero
-    e.events.push({ t: Date.now(), dir, src }); recount(e);
+    e.events.push({ t: Date.now(), dir, src, ...(who ? { who: who.id, name: who.name } : {}) }); recount(e);
     e.series.push([Date.now(), e.C.in - e.C.out]);
     if (lat != null) { push(e.P.lat, lat); e.P.latLast = lat; }
     e.flash = { dir, t: performance.now() }; save(e);
@@ -421,13 +474,13 @@ function Counter() {
     const timer = setInterval(() => {
       const { C, P } = e;
       if (e.running && ++e.tick % 40 === 0) e.series.push([Date.now(), C.in - C.out]);   // occupancy sample every 10 s
-      if (e.ftN++ % 8 === 0) e.ft = ftCount(e.start);   // Face Ticket verified count, refreshed every 2 s
+      if (e.rosT++ % 20 === 0 && e.cfg.eventId) refreshRoster();   // pick up Face Ticket changes every 5 s
       const occ = C.in - C.out, lv = lvOf(occ, e.cfg.cap);
       if (e.prevLv != null && lv > e.prevLv) beep(lv === 2 ? 2 : 1);
       e.prevLv = lv;
       const next = {
         in: C.in, out: C.out, peak: C.peak, occ, lv, fps: P.fps, infL: P.inf.at(-1) || 0, infA: avg(P.inf),
-        latL: P.lat.length ? P.latLast : 0, latA: avg(P.lat), nAuto: e.autoN, nEv: e.events.length, nSer: e.series.length, ft: e.ft,
+        latL: P.lat.length ? P.latLast : 0, latA: avg(P.lat), nAuto: e.autoN, nEv: e.events.length, nSer: e.series.length, rosN: e.roster.length, rosC: e.rosC,
       };
       const k = JSON.stringify(next);
       if (k !== e.snapKey) { e.snapKey = k; setSnap(next); }   // at most 4 React updates per second
@@ -512,6 +565,7 @@ function Counter() {
   const label = { error: 'Error', loading: 'Loading model', counting: 'Counting', ready: 'Ready' }[status];
   const showVideo = !display || cfg.live;
   const lvc = LV_COLOR[snap.lv];
+  const expectedN = cfg.expected > 0 ? cfg.expected : snap.rosN;
   const capTxt = cfg.cap > 0 ? `of ${cfg.cap}${snap.lv === 2 ? ' - FULL' : ''}` : '';
 
   const g = GUIDE[gs];
@@ -605,7 +659,7 @@ function Counter() {
             <div className="absolute left-4 bottom-4 rounded-2xl bg-black/70 px-6 py-3 text-center" style={{ bottom: 'max(16px, env(safe-area-inset-bottom))', left: 'max(16px, env(safe-area-inset-left))' }}>
               <div className="font-mono font-medium leading-none tabular-nums" style={{ fontSize: 'min(22vw, 160px)', color: snap.lv ? lvc : '#fff' }}>{snap.occ}</div>
               <div className="mt-1 font-mono text-xs tracking-widest uppercase text-neutral-400">Inside {capTxt}</div>
-              {cfg.expected > 0 && <div className="mt-1 font-mono text-xs text-neutral-400">Entries {snap.in} of {cfg.expected} expected</div>}
+              {expectedN > 0 && <div className="mt-1 font-mono text-xs text-neutral-400">Entries {snap.in} of {expectedN} expected</div>}
             </div>
             )}
           </div>
@@ -658,10 +712,9 @@ function Counter() {
               <span>{cfg.cap > 0 ? `${snap.occ} / ${cfg.cap}${snap.lv === 2 ? ' - FULL' : snap.lv === 1 ? ' - nearly full' : ''}` : 'No capacity limit set'}</span>
               <span>Peak {snap.peak}</span>
             </div>
-            {(cfg.expected > 0 || snap.ft > 0) && (
-              <div className="mt-3 grid gap-1 border-t border-white/10 pt-3 font-mono text-xs text-neutral-400">
-                {cfg.expected > 0 && <span>Expected {cfg.expected}: {snap.in} entries counted, {Math.max(0, cfg.expected - snap.in)} still to come</span>}
-                {snap.ft > 0 && <span>Face Ticket verified this session: {snap.ft} of {snap.in} counted entries</span>}
+            {expectedN > 0 && (
+              <div className="mt-3 border-t border-white/10 pt-3 font-mono text-xs text-neutral-400">
+                Expected {expectedN}: {snap.in} entries counted, {Math.max(0, expectedN - snap.in)} still to come
               </div>
             )}
           </div>
@@ -743,7 +796,7 @@ function Counter() {
               <label className="block text-xs text-neutral-400">People allowed inside at once (0 = off)
                 <input className={`${field} mt-1`} type="number" inputMode="numeric" min="0" value={cfg.cap || ''} placeholder="0" onChange={(ev) => patch({ cap: Math.max(0, +ev.target.value || 0) })} />
               </label>
-              <label className="block text-xs text-neutral-400">Guests expected in total (0 = off)
+              <label className="block text-xs text-neutral-400">Guests expected in total (0 = use the linked Face Ticket guest list)
                 <input className={`${field} mt-1`} type="number" inputMode="numeric" min="0" value={cfg.expected || ''} placeholder="0" onChange={(ev) => patch({ expected: Math.max(0, +ev.target.value || 0) })} />
               </label>
               <label className="block text-xs text-neutral-400">Message on the full screen
@@ -753,7 +806,36 @@ function Counter() {
                 <button className={`${btn} min-h-14 flex items-center justify-center gap-2`} onClick={() => record('in', 'manual+')}><Plus className="w-4 h-4" />1 manual</button>
                 <button className={`${btn} min-h-14 flex items-center justify-center gap-2`} onClick={() => record('out', 'manual-')}><Minus className="w-4 h-4" />1 manual</button>
               </div>
-              <p className="text-xs text-neutral-500">A beep sounds at 85% and again at 100% of the limit. In display mode, reaching the limit shows a full-screen FULL message. The Face Ticket count only includes verifications done in this same browser. Manual corrections count toward IN and OUT and are marked in the export.</p>
+              <p className="text-xs text-neutral-500">A beep sounds at 85% and again at 100% of the limit. In display mode, reaching the limit shows a full-screen FULL message. Manual corrections count toward IN and OUT and are marked in the export.</p>
+            </Section>
+
+            <Section title="Guests (Face Ticket)" defaultOpen={!!cfg.eventId}>
+              <select className={field} aria-label="Face Ticket event" value={cfg.eventId} onChange={(ev) => patch({ eventId: ev.target.value, recognise: ev.target.value ? cfg.recognise : false })}>
+                <option value="">No event linked</option>
+                {evList.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.attendeeCount} guests)</option>)}
+              </select>
+              {!evList.length && <p className="text-xs text-neutral-500">No Face Ticket events were found in this browser. Create one in Face Ticket on this device, then refresh.</p>}
+              <button className={btn} onClick={() => setEvList(listEvents())}>Refresh events</button>
+              <button onClick={() => patch({ recognise: !cfg.recognise })} disabled={!cfg.eventId} aria-pressed={cfg.recognise} className={`${btn} w-full flex items-center justify-between`}>
+                <span>Recognise guests at the door</span>
+                <span className="font-mono text-xs text-neutral-400">{{ off: 'Off', loading: 'Loading face models', ready: 'On', failed: 'Failed to load' }[faceState]}</span>
+              </button>
+              <p className="text-xs text-neutral-500">
+                Off by default. When on, faces are compared only with guests enrolled in the linked event on this device. Anyone else stays an anonymous body count
+                and nothing about them is kept. No image is saved or uploaded. Names appear only on this staff screen, never on the door display.
+                Faces far from the camera may not be recognised.
+              </p>
+              {cfg.eventId && (
+                <>
+                  <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                    {[['Inside (named)', guests.inside.length], ['Still to arrive', guests.waiting.length], ['Unrecognised in', guests.anon]].map(([k, v]) => (
+                      <div key={k} className="rounded-xl bg-black/30 py-2"><div className="text-xl tabular-nums">{v}</div><div className="text-[10px] tracking-widest uppercase text-neutral-500">{k}</div></div>
+                    ))}
+                  </div>
+                  <NameList title="Inside now" items={guests.inside} />
+                  <NameList title="Still to arrive" items={guests.waiting} />
+                </>
+              )}
             </Section>
 
             <Section title="Display and privacy">
@@ -772,7 +854,7 @@ function Counter() {
               <OccChart e={e} snap={snap} />
               <div className="grid grid-cols-2 gap-3">
                 <button className={`${btn} flex items-center justify-center gap-2`} onClick={() => download(fname('json'), 'application/json', JSON.stringify(report(e), null, 2))}><Download className="w-4 h-4" />Report (JSON)</button>
-                <button className={`${btn} flex items-center justify-center gap-2`} onClick={() => download(fname('csv'), 'text/csv', `timestamp,direction,source\n${e.events.map((ev) => `${new Date(ev.t).toISOString()},${ev.dir},${ev.src}`).join('\n')}`)}><Download className="w-4 h-4" />Crossings (CSV)</button>
+                <button className={`${btn} flex items-center justify-center gap-2`} onClick={() => download(fname('csv'), 'text/csv', `timestamp,direction,source,guest\n${e.events.map((ev) => `${new Date(ev.t).toISOString()},${ev.dir},${ev.src},${(ev.name || '').replace(/[,\n]/g, ' ')}`).join('\n')}`)}><Download className="w-4 h-4" />Crossings (CSV)</button>
               </div>
               <button className={`${btn} w-full !text-red-300`} onClick={resetSession}>Reset session</button>
             </Section>
@@ -819,8 +901,8 @@ export default function DoorCount() {
     <div className="min-h-screen bg-[#05050f] text-white" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <BetaBar
         featureId="door-count"
-        title="BETA DEMO — counts bodies in a camera view, not identities"
-        description="Door Count detects people in the camera picture on this device and counts them crossing a line you draw. Crowds, low light and steep camera angles reduce accuracy, so test it at your real door before relying on it. Video is processed on this device and is never uploaded or saved."
+        title="BETA DEMO — counts bodies in a camera view; guest names are optional"
+        description="Door Count detects people in the camera picture on this device and counts them crossing a line you draw. Crowds, low light and steep camera angles reduce accuracy, so test it at your real door before relying on it. Video is processed on this device and is never uploaded or saved. Guest recognition is off unless you link a Face Ticket event and switch it on."
       />
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
         <button onClick={() => (mode === 'tool' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 min-h-11 rounded-lg">
@@ -846,7 +928,7 @@ export default function DoorCount() {
           notes={[
             'Crowds and people walking close together are undercounted.',
             'Low light and steep camera angles hurt accuracy.',
-            'It counts bodies, not identities. It cannot tell who anyone is.',
+            'It counts bodies, not identities, unless you link a Face Ticket event and switch on guest recognition. Even then it only names guests enrolled in that event.',
             'Test at the real door, with the real camera position, before relying on the numbers.',
             'The detection library and model file are downloaded from public CDNs when the counter opens. No video, frame or image is uploaded or saved.',
           ]}
