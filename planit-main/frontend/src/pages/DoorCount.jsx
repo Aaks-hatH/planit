@@ -18,10 +18,11 @@ const MODELS = {
   lite: { size: 320, name: 'EfficientDet-Lite0', url: 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite' },
   large: { size: 448, name: 'EfficientDet-Lite2', url: 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/float16/1/efficientdet_lite2.tflite' },
 };
-const MIN_H = 0.08, MIN_HITS = 3, TRACK_TTL = 700, MAX_PRED = 300, DEADBAND = 0.015;
+const MIN_H = 0.08, MIN_HITS = 3, TRACK_TTL = 700, TTL_OCC = 1500, MAX_PRED = 300, DEADBAND = 0.015;
 const KEY = 'planit_doorcount_v1';
+const FT_KEY = 'planit_facecheckins_v1';   // written by Face Ticket on a successful match
 const MIN_TAPS = 10, MATCH_MS = 1500;
-const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false, guide: true };
+const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false, guide: true, expected: 0, fullMsg: 'Please wait. We are at capacity.' };
 const GUIDE = [
   { t: 'Choose a source', b: 'Point a camera at a doorway, or try a video file first: a 1 to 2 minute clip from a fixed camera, with people walking through a door in both directions, works well.' },
   { t: 'Place the line', b: 'Drag the two white dots so the line spans the doorway and people must cross it fully. The arrow points toward IN. If it points the wrong way, tap Flip direction.' },
@@ -36,6 +37,13 @@ const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
 const fmt = (v, d = 1) => (v ? v.toFixed(d) : '-');
 const lvOf = (occ, cap) => (cap > 0 ? (occ >= cap ? 2 : occ >= cap * 0.85 ? 1 : 0) : 0);
 
+function ftCount(since) {
+  try { return JSON.parse(localStorage.getItem(FT_KEY) || '[]').filter((x) => x.t >= since).length; } catch { return 0; }
+}
+const cover = (a, b) => {   // share of box a that box b covers
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? (w * h) / (a.w * a.h) : 0;
+};
 function loadSaved() { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { return {}; } }
 function save(e) {
   try {
@@ -83,7 +91,7 @@ function report(e) {
   const { C } = e;
   return {
     door: e.cfg.door, sessionStart: new Date(e.start).toISOString(), exported: new Date().toISOString(),
-    totals: { in: C.in, out: C.out, inside: C.in - C.out }, capacity: e.cfg.cap || null,
+    totals: { in: C.in, out: C.out, inside: C.in - C.out }, capacity: e.cfg.cap || null, expected: e.cfg.expected || null, faceTicketVerified: e.ft,
     peak: { occupancy: C.peak, at: C.pt ? new Date(C.pt).toISOString() : null }, bucketMinutes: 5, buckets,
     events: e.events.map((ev) => ({ time: new Date(ev.t).toISOString(), direction: ev.dir, source: ev.src })),
   };
@@ -154,7 +162,7 @@ function Counter() {
     E.current = {
       cfg, line: s.line || { a: [0.1, 0.55], b: [0.9, 0.55] }, roi: s.roi || null,
       events: Array.isArray(s.events) ? s.events : [], series: Array.isArray(s.series) ? s.series : [], start: s.start || Date.now(),
-      autoLog: [], autoN: 0, tracks: [], nextId: 1, running: false, flash: null, C: { in: 0, out: 0, peak: 0, pt: 0 },
+      autoLog: [], autoN: 0, ft: 0, ftN: 0, tracks: [], nextId: 1, running: false, flash: null, C: { in: 0, out: 0, peak: 0, pt: 0 },
       P: { inf: [], lat: [], fps: 0, latLast: 0 }, lastT: -1, fc: 0, ff: 0, fpsT: performance.now(), lastTs: 0, tick: 0,
       det: null, vision: null, fileset: null, loadId: 0, work: null, h: 0, hk: '', wl: null, ac: null, fileUrl: null,
       prevLv: null, roiMode: false, drag: null, display: false,
@@ -176,7 +184,7 @@ function Counter() {
   const [cams, setCams] = useState([]);
   const [camId, setCamId] = useState('');
   const [ar, setAr] = useState(16 / 9);
-  const [snap, setSnap] = useState({ in: 0, out: 0, peak: 0, occ: 0, lv: 0, fps: 0, infL: 0, infA: 0, latL: 0, latA: 0, nAuto: 0, nEv: 0, nSer: 0 });
+  const [snap, setSnap] = useState({ in: 0, out: 0, peak: 0, occ: 0, lv: 0, fps: 0, infL: 0, infA: 0, latL: 0, latA: 0, nAuto: 0, nEv: 0, nSer: 0, ft: 0 });
   const [testOn, setTestOn] = useState(false);
   const [testStart, setTestStart] = useState(0);
   const [taps, setTaps] = useState([]);
@@ -276,15 +284,30 @@ function Counter() {
     track(res.detections.map((d) => { const b = d.boundingBox; return { x: (cx + b.originX / sc) / vw, y: (cy + b.originY / sc) / vh, w: b.width / sc / vw, h: b.height / sc / vh }; }), tF);
   };
 
-  // Tracker: greedy IoU matching against velocity-extrapolated boxes.
+  // Tracker: greedy IoU matching on velocity-extrapolated boxes, then a centre-distance pass for fast movers.
+  // A track hidden behind another person lives longer (TTL_OCC) so it can re-attach when it reappears.
   const track = (boxes, tF) => {
-    const T = e.tracks, pairs = [];
-    T.forEach((t, i) => boxes.forEach((b, j) => { const v = iou(pred(t, tF), b); if (v > 0.15) pairs.push([v, i, j]); }));
-    pairs.sort((a, b) => b[0] - a[0]);
-    const ut = new Set(), ub = new Set();
-    for (const [, i, j] of pairs) { if (ut.has(i) || ub.has(j)) continue; ut.add(i); ub.add(j); update(T[i], boxes[j], tF); }
-    boxes.forEach((b, j) => { if (!ub.has(j)) T.push({ id: e.nextId++, ...b, vx: 0, vy: 0, t: tF, hits: 1, side: 0 }); });
-    e.tracks = T.filter((t) => tF - t.t < TRACK_TTL);
+    const T = e.tracks, ut = new Set(), ub = new Set(), P = T.map((t) => pred(t, tF));
+    const run = (pairs) => {
+      pairs.sort((a, b) => b[0] - a[0]);
+      for (const [, i, j] of pairs) { if (ut.has(i) || ub.has(j)) continue; ut.add(i); ub.add(j); update(T[i], boxes[j], tF); }
+    };
+    const byIou = [];
+    T.forEach((t, i) => boxes.forEach((b, j) => { const v = iou(P[i], b); if (v > 0.15) byIou.push([v, i, j]); }));
+    run(byIou);
+    const v = videoRef.current, ar = v.videoWidth / v.videoHeight || 1, byDist = [];
+    T.forEach((t, i) => {
+      if (ut.has(i)) return;
+      boxes.forEach((b, j) => {
+        if (ub.has(j)) return;
+        const d = Math.hypot((P[i].x + P[i].w / 2 - b.x - b.w / 2) * ar, P[i].y + P[i].h / 2 - b.y - b.h / 2), lim = 0.6 * Math.max(P[i].h, b.h);
+        if (d < lim) byDist.push([1 - d / lim, i, j]);
+      });
+    });
+    run(byDist);
+    T.forEach((t, i) => { t.occ = !ut.has(i) && boxes.some((b) => cover(P[i], b) > 0.3); });
+    boxes.forEach((b, j) => { if (!ub.has(j)) T.push({ id: e.nextId++, ...b, vx: 0, vy: 0, t: tF, hits: 1, side: 0, occ: false }); });
+    e.tracks = T.filter((t) => tF - t.t < (t.occ ? TTL_OCC : TRACK_TTL));
   };
   const update = (t, b, tF) => {
     const dt = tF - t.t;   // smoothed velocity (per ms) from measured positions only
@@ -398,12 +421,13 @@ function Counter() {
     const timer = setInterval(() => {
       const { C, P } = e;
       if (e.running && ++e.tick % 40 === 0) e.series.push([Date.now(), C.in - C.out]);   // occupancy sample every 10 s
+      if (e.ftN++ % 8 === 0) e.ft = ftCount(e.start);   // Face Ticket verified count, refreshed every 2 s
       const occ = C.in - C.out, lv = lvOf(occ, e.cfg.cap);
       if (e.prevLv != null && lv > e.prevLv) beep(lv === 2 ? 2 : 1);
       e.prevLv = lv;
       const next = {
         in: C.in, out: C.out, peak: C.peak, occ, lv, fps: P.fps, infL: P.inf.at(-1) || 0, infA: avg(P.inf),
-        latL: P.lat.length ? P.latLast : 0, latA: avg(P.lat), nAuto: e.autoN, nEv: e.events.length, nSer: e.series.length,
+        latL: P.lat.length ? P.latLast : 0, latA: avg(P.lat), nAuto: e.autoN, nEv: e.events.length, nSer: e.series.length, ft: e.ft,
       };
       const k = JSON.stringify(next);
       if (k !== e.snapKey) { e.snapKey = k; setSnap(next); }   // at most 4 React updates per second
@@ -560,8 +584,15 @@ function Counter() {
           )}
         </div>
 
+        {display && snap.lv === 2 && (
+          <div role="alert" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-red-700/95 p-6 text-center text-white pointer-events-none">
+            <div className="font-mono font-medium leading-none" style={{ fontSize: 'min(28vw, 220px)' }}>FULL</div>
+            <p className="font-display font-bold text-2xl sm:text-4xl max-w-xl">{cfg.fullMsg}</p>
+            <p className="font-mono text-sm tracking-widest uppercase opacity-80">{snap.occ} of {cfg.cap} inside</p>
+          </div>
+        )}
         {display && (
-          <div className="absolute inset-0 pointer-events-none" style={{ padding: 'max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))' }}>
+          <div className="absolute inset-0 z-20 pointer-events-none" style={{ padding: 'max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))' }}>
             <div className="flex items-start justify-between">
               <span className="rounded-full bg-black/60 px-3 py-1.5 font-mono text-[11px] tracking-widest uppercase text-neutral-300">
                 {cfg.live ? 'Live video' : 'Privacy view - no video shown'}
@@ -570,10 +601,13 @@ function Counter() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {snap.lv < 2 && (
             <div className="absolute left-4 bottom-4 rounded-2xl bg-black/70 px-6 py-3 text-center" style={{ bottom: 'max(16px, env(safe-area-inset-bottom))', left: 'max(16px, env(safe-area-inset-left))' }}>
               <div className="font-mono font-medium leading-none tabular-nums" style={{ fontSize: 'min(22vw, 160px)', color: snap.lv ? lvc : '#fff' }}>{snap.occ}</div>
               <div className="mt-1 font-mono text-xs tracking-widest uppercase text-neutral-400">Inside {capTxt}</div>
+              {cfg.expected > 0 && <div className="mt-1 font-mono text-xs text-neutral-400">Entries {snap.in} of {cfg.expected} expected</div>}
             </div>
+            )}
           </div>
         )}
       </div>
@@ -624,6 +658,12 @@ function Counter() {
               <span>{cfg.cap > 0 ? `${snap.occ} / ${cfg.cap}${snap.lv === 2 ? ' - FULL' : snap.lv === 1 ? ' - nearly full' : ''}` : 'No capacity limit set'}</span>
               <span>Peak {snap.peak}</span>
             </div>
+            {(cfg.expected > 0 || snap.ft > 0) && (
+              <div className="mt-3 grid gap-1 border-t border-white/10 pt-3 font-mono text-xs text-neutral-400">
+                {cfg.expected > 0 && <span>Expected {cfg.expected}: {snap.in} entries counted, {Math.max(0, cfg.expected - snap.in)} still to come</span>}
+                {snap.ft > 0 && <span>Face Ticket verified this session: {snap.ft} of {snap.in} counted entries</span>}
+              </div>
+            )}
           </div>
 
           <button onClick={toggleTest} aria-pressed={testOn} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 min-h-12">
@@ -700,14 +740,20 @@ function Counter() {
             </Section>
 
             <Section title="Capacity and manual correction">
-              <label className="block text-xs text-neutral-400">Limit (0 = off)
+              <label className="block text-xs text-neutral-400">People allowed inside at once (0 = off)
                 <input className={`${field} mt-1`} type="number" inputMode="numeric" min="0" value={cfg.cap || ''} placeholder="0" onChange={(ev) => patch({ cap: Math.max(0, +ev.target.value || 0) })} />
+              </label>
+              <label className="block text-xs text-neutral-400">Guests expected in total (0 = off)
+                <input className={`${field} mt-1`} type="number" inputMode="numeric" min="0" value={cfg.expected || ''} placeholder="0" onChange={(ev) => patch({ expected: Math.max(0, +ev.target.value || 0) })} />
+              </label>
+              <label className="block text-xs text-neutral-400">Message on the full screen
+                <input className={`${field} mt-1`} maxLength={80} value={cfg.fullMsg} onChange={(ev) => patch({ fullMsg: ev.target.value })} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button className={`${btn} min-h-14 flex items-center justify-center gap-2`} onClick={() => record('in', 'manual+')}><Plus className="w-4 h-4" />1 manual</button>
                 <button className={`${btn} min-h-14 flex items-center justify-center gap-2`} onClick={() => record('out', 'manual-')}><Minus className="w-4 h-4" />1 manual</button>
               </div>
-              <p className="text-xs text-neutral-500">A beep sounds at 85% and again at 100% of the limit. Manual corrections count toward IN and OUT and are marked in the export.</p>
+              <p className="text-xs text-neutral-500">A beep sounds at 85% and again at 100% of the limit. In display mode, reaching the limit shows a full-screen FULL message. The Face Ticket count only includes verifications done in this same browser. Manual corrections count toward IN and OUT and are marked in the export.</p>
             </Section>
 
             <Section title="Display and privacy">
