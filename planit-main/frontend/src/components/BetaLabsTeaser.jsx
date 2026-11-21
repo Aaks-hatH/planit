@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ScanFace, Compass, QrCode, Map as MapIcon, X, Sparkles } from 'lucide-react';
+import { ScanFace, Compass, QrCode, Map as MapIcon, Users, X, Sparkles } from 'lucide-react';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 import {
   teaserForThisSession, claimTeaserPage, dismissTeaserForever, isTeaserDismissed,
@@ -28,6 +28,11 @@ const TEASERS = {
     to: '/beta/venue-map', Icon: MapIcon, tint: '#F0B429',
     short: 'Try Venue Map', title: 'Tap where you are',
     sub: 'Get directions to your table from any landmark',
+  },
+  'door-count': {
+    to: '/beta/door-count', Icon: Users, tint: '#2F6BFF',
+    short: 'Try Door Count', title: 'Count your own door',
+    sub: 'On-device headcount, then test its accuracy',
   },
 };
 
