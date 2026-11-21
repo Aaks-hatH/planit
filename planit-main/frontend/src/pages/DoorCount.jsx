@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Camera, Users, Move, ClipboardCheck, ChevronDown, Maximize, X,
-  Play, Square, Upload, Download, Copy, Plus, Minus, Eye, EyeOff, Undo2,
+  Play, Square, Upload, Download, Copy, Plus, Minus, Eye, EyeOff, Undo2, Check, HelpCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BetaBar } from '../components/BetaBar';
@@ -21,7 +21,13 @@ const MODELS = {
 const MIN_H = 0.08, MIN_HITS = 3, TRACK_TTL = 700, MAX_PRED = 300, DEADBAND = 0.015;
 const KEY = 'planit_doorcount_v1';
 const MIN_TAPS = 10, MATCH_MS = 1500;
-const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false };
+const DEFAULTS = { n: 3, conf: 0.4, model: 'lite', flip: false, cap: 0, door: '', live: false, guide: true };
+const GUIDE = [
+  { t: 'Choose a source', b: 'Point a camera at a doorway, or try a video file first: a 1 to 2 minute clip from a fixed camera, with people walking through a door in both directions, works well.' },
+  { t: 'Place the line', b: 'Drag the two white dots so the line spans the doorway and people must cross it fully. The arrow points toward IN. If it points the wrong way, tap Flip direction.' },
+  { t: 'Watch it count', b: 'Let people walk through. Each crossing adds to IN or OUT. If nothing counts, check that whole bodies are visible and the line is across their path, then try a lower confidence or the larger model.' },
+  { t: 'Test your accuracy', b: 'Turn on Test accuracy, then tap Real IN or Real OUT each time a person really crosses. After 10 taps you get a result. With a video file, watch the video and tap in time with it.' },
+];
 const LV_COLOR = ['#3ecf8e', '#f5b942', '#ff5d5d'];
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -175,6 +181,8 @@ function Counter() {
   const [testStart, setTestStart] = useState(0);
   const [taps, setTaps] = useState([]);
   e.display = display;
+  const [gs, setGs] = useState(0);
+  useEffect(() => { if (running && gs === 0) setGs(1); }, [running, gs]);
 
   useEffect(() => { save(e); }, [cfg, e]);
 
@@ -482,6 +490,36 @@ function Counter() {
   const lvc = LV_COLOR[snap.lv];
   const capTxt = cfg.cap > 0 ? `of ${cfg.cap}${snap.lv === 2 ? ' - FULL' : ''}` : '';
 
+  const g = GUIDE[gs];
+  const gBtn = `${btn} flex items-center gap-2`;
+  const guideCard = cfg.guide ? (
+    <div className="rounded-2xl border border-[#2F6BFF]/40 bg-[#2F6BFF]/[0.06] p-4">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] tracking-widest uppercase" style={{ color: ACCENT }}>Guide - step {gs + 1} of {GUIDE.length}</span>
+        <button onClick={() => patch({ guide: false })} aria-label="Hide guide" className="w-10 h-10 -mr-2 flex items-center justify-center text-neutral-400 hover:text-white"><X className="w-4 h-4" /></button>
+      </div>
+      <div className="flex gap-1.5 my-2">{GUIDE.map((x, i) => <span key={x.t} className="h-1 flex-1 rounded-full" style={{ background: i <= gs ? ACCENT : 'rgba(255,255,255,0.12)' }} />)}</div>
+      <h3 className="font-display font-bold text-lg mb-1">{g.t}</h3>
+      <p className="text-sm text-neutral-300 leading-relaxed mb-3">{g.b}</p>
+      {gs === 2 && <p className="font-mono text-xs text-neutral-400 mb-3">Counted so far: IN {snap.in}, OUT {snap.out}{snap.in + snap.out === 0 && running ? ' (nothing yet)' : ''}</p>}
+      {gs === 3 && testOn && <p className="font-mono text-xs text-neutral-400 mb-3">{acc ? verdict(acc) : `${taps.length} of ${MIN_TAPS} taps. Keep tapping as people cross.`}</p>}
+      <div className="flex flex-wrap gap-2">
+        {gs > 0 && <button className={gBtn} onClick={() => setGs(gs - 1)}>Back</button>}
+        {gs === 0 && <button className={gBtn} disabled={modelState !== 'ready'} onClick={() => startCam(camId)}><Camera className="w-4 h-4" />Start camera</button>}
+        {gs === 0 && <button className={gBtn} disabled={modelState !== 'ready'} onClick={() => fileRef.current.click()}><Upload className="w-4 h-4" />Choose video file</button>}
+        {gs === 0 && running && <button className={gBtn} onClick={() => setGs(1)}>Next</button>}
+        {gs === 1 && <button className={gBtn} onClick={() => { patch({ flip: !cfg.flip }); resetSides(); }}>Flip direction</button>}
+        {gs === 1 && <button className={gBtn} style={{ borderColor: ACCENT }} onClick={() => setGs(2)}><Check className="w-4 h-4" />Line is set</button>}
+        {gs === 2 && <button className={gBtn} style={{ borderColor: ACCENT }} onClick={() => setGs(3)}>Next</button>}
+        {gs === 3 && !testOn && <button className={gBtn} style={{ borderColor: ACCENT }} onClick={toggleTest}><ClipboardCheck className="w-4 h-4" />Turn on Test accuracy</button>}
+        {gs === 3 && acc && <button className={gBtn} onClick={copyResult}><Copy className="w-4 h-4" />Copy result</button>}
+        {gs === 3 && acc && <button className={gBtn} style={{ borderColor: ACCENT }} onClick={() => patch({ guide: false })}><Check className="w-4 h-4" />Finish</button>}
+      </div>
+    </div>
+  ) : (
+    <button onClick={() => { patch({ guide: true }); setGs(0); }} className="min-h-11 flex items-center gap-2 text-xs font-mono text-neutral-400 hover:text-white"><HelpCircle className="w-4 h-4" />Show guide</button>
+  );
+
   return (
     <div className={display ? '' : 'max-w-3xl mx-auto px-4 sm:px-6 py-5 space-y-4'}>
       <div ref={wrapRef} className={display ? 'fixed inset-0 z-50 flex items-center justify-center bg-[#05050f]' : ''}>
@@ -551,6 +589,8 @@ function Counter() {
           {gpuWarn && modelState === 'ready' && (
             <div role="status" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">GPU unavailable: running on the CPU, which is slower.</div>
           )}
+
+          {guideCard}
 
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -641,7 +681,7 @@ function Counter() {
                 <option value="">Default camera</option>
                 {cams.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${i + 1}`}</option>)}
               </select>
-              <p className="text-xs text-neutral-500">Camera names appear after you allow camera access once.</p>
+              <p className="text-xs text-neutral-500">Camera names appear after you allow camera access once. A video file plays on a loop on this device and is never uploaded.</p>
             </Section>
 
             <Section title="Counting line and detection">
