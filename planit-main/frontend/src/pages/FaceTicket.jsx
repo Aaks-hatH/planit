@@ -905,6 +905,18 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
   const livenessPassed = !!verify.liveness?.passed;
   const isMatch = livenessPassed && similarity >= MATCH_THRESHOLD;
 
+  // Door Count reads this counter (time and event name only, no name, face or embedding).
+  const logged = useRef(false);
+  useEffect(() => {
+    if (!isMatch || logged.current) return;
+    logged.current = true;
+    try {
+      const k = 'planit_facecheckins_v1', a = JSON.parse(localStorage.getItem(k) || '[]');
+      a.push({ t: Date.now(), event: ticket.eventName });
+      localStorage.setItem(k, JSON.stringify(a.slice(-2000)));
+    } catch { /* best-effort */ }
+  }, [isMatch, ticket.eventName]);
+
   return (
     <div className="max-w-md mx-auto px-5 py-10">
       <div className={`flex flex-col items-center text-center mb-8 ${isMatch ? '' : ''}`}>
