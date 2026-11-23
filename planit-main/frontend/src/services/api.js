@@ -656,6 +656,7 @@ export const bugReportAPI = {
 // ─── Discover API ─────────────────────────────────────────────────────────────
 export const discoverAPI = {
   getPublicEvents: (params) => api.get('/events/public', { params }),
+  getLanding: (key) => api.get(`/events/public/landing/${encodeURIComponent(key)}`),
   uploadCover: (eventId, formData) => api.post(`/events/${eventId}/cover`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
