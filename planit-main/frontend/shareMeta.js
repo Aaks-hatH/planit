@@ -224,6 +224,21 @@ async function resolveEventWorkspace([, eventId], apiBase) {
   };
 }
 
+// Public landing page for a listed event (/discover/:key) — link-preview card with the
+// event's own title, date/location line and cover image. Only public events resolve.
+async function resolveDiscoverEvent([, key], apiBase) {
+  const data = await getJSON(`${apiBase}/events/public/landing/${encodeURIComponent(key)}`);
+  const ev = data?.event;
+  if (!ev?.title) return null;
+  const subtitle = dateAndLocation(ev.date, ev.location);
+  return {
+    title: ev.title,
+    tabTitle: `${ev.title} · PlanIt`,
+    description: truncate([subtitle, ev.description].filter(Boolean).join(' — ') || `${ev.title} — join on PlanIt.`, 200),
+    image: shareableImage(ev.coverImage) || undefined,
+  };
+}
+
 // Section labels for every event sub-page (/e/:sub/<section>, /event/:id/<section>).
 // Mirrors SECTIONS in src/utils/eventBrand.js — keep the two in sync.
 const EVENT_SECTIONS = [
@@ -280,6 +295,7 @@ const DYNAMIC_ROUTES = [
   { test: /^\/(invite|card|badge)\/([^/]+)$/, resolve: resolveInvite },
   { test: /^\/e\/([^/]+)\/reserve$/, resolve: resolveReserve, humans: true },
   { test: /^\/event\/([a-f0-9]{24})$/i, resolve: resolveEventWorkspace, humans: true },
+  { test: /^\/discover\/([^/]+)$/, resolve: resolveDiscoverEvent },
   { test: /^\/blog\/([^/]+)$/, resolve: resolveBlog },
   // Catch-all for every other event page — must stay after the specific ones above.
   { test: /^\/(?:e|event)\/([^/]+)(?:\/(.+))?$/, resolve: resolveEventBrand, humans: true },
