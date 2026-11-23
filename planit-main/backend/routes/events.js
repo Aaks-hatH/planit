@@ -270,6 +270,57 @@ router.get('/public/brand/:key', availabilityLimiter, async (req, res, next) => 
   } catch (error) { next(error); }
 });
 
+// ── Public landing page data ───────────────────────────────────────────────
+// Powers /discover/:key (the per-event landing page reached from Discover).
+// `key` is a subdomain or a 24-char event id. Only events the organizer has
+// marked public are returned; everything else 404s so private events can't be
+// probed through this route. No participant names, tokens or admin fields.
+router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '');
+    if (!key || key.length > 100) return res.status(404).json({ error: 'Not found' });
+    const isId = /^[a-f0-9]{24}$/i.test(key);
+
+    if (!isId) {
+      const banned = await Blocklist.findOne({ type: 'event', value: key, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
+      if (banned) return res.status(404).json({ error: 'Not found' });
+    }
+
+    const ev = await Event.findOne({ ...(isId ? { _id: key } : { subdomain: key }), 'settings.isPublic': true, status: { $ne: 'draft' } })
+      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda participants.username waitlist.username')
+      .lean();
+    if (!ev || ev.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    res.set('Cache-Control', 'public, max-age=30');
+    res.json({
+      event: {
+        id: ev._id, subdomain: ev.subdomain, title: ev.title,
+        description: ev.description || '', date: ev.date, timezone: ev.timezone || 'UTC',
+        location: ev.location || '', organizerName: ev.organizerName,
+        coverImage: ev.coverImage || null, themeColor: ev.themeColor || null, tags: ev.tags || [],
+        maxParticipants: ev.maxParticipants, participantCount: (ev.participants || []).length,
+        waitlistCount: (ev.waitlist || []).length,
+        status: ev.status,
+        isPasswordProtected: !!ev.isPasswordProtected,
+        requireApproval: !!ev.settings?.requireApproval,
+        isEnterpriseMode: !!ev.isEnterpriseMode,
+        eventType: ev.eventType || 'standard',
+        rsvpPageOpen: !!(ev.rsvpPage?.enabled && ev.rsvpPage?.accessMode !== 'closed'),
+        features: {
+          chat:  ev.settings?.allowChat !== false,
+          polls: ev.settings?.allowPolls !== false,
+          files: ev.settings?.allowFileSharing !== false,
+        },
+        // Agenda is withheld for password-protected events (same rule as /subdomain/:subdomain)
+        agenda: ev.isPasswordProtected ? [] : [...(ev.agenda || [])]
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .slice(0, 30)
+          .map(a => ({ id: a.id, time: a.time || '', title: a.title, description: a.description || '', duration: a.duration || 0 })),
+      },
+    });
+  } catch (error) { next(error); }
+});
+
 router.get('/public/:eventId', async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
