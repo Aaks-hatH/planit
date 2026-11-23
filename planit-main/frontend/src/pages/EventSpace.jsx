@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect, memo } from 'react';
 import OfflineEventNotice from '../components/OfflineEventNotice';
 import { saveEventMeta, readEventMeta, saveEventSnapshot, readEventSnapshot, isNetworkFailure } from '../utils/offlineEvent';
 import Modal from '../components/ui/Modal';
@@ -925,6 +925,86 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
   );
 }
 
+/* ─── Chat helpers: mentions + memoized message row ───────────────────────── */
+const escapeRe = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Matches "@Name" for any known participant (longest names first so
+// "@Ana Maria" wins over "@Ana"). Usernames may contain spaces, so we match
+// against the real member list instead of guessing where a name ends.
+function buildMentionRegex(names) {
+  const list = [...new Set(names.filter(Boolean))].sort((a, b) => b.length - a.length).map(escapeRe);
+  list.push('everyone');
+  return new RegExp(`(^|[^\\w])@(${list.join('|')})(?![\\w])`, 'gi');
+}
+
+function contentMentions(content, mentionRe, user) {
+  if (!content || !user) return false;
+  mentionRe.lastIndex = 0;
+  let m;
+  while ((m = mentionRe.exec(content)) !== null) {
+    const who = m[2].toLowerCase();
+    if (who === user.toLowerCase() || who === 'everyone') return true;
+  }
+  return false;
+}
+
+function MentionText({ content, mentionRe, currentUser, mine }) {
+  const parts = [];
+  let last = 0, m, k = 0;
+  mentionRe.lastIndex = 0;
+  while ((m = mentionRe.exec(content)) !== null) {
+    const start = m.index + m[1].length;      // skip the leading boundary char
+    const end   = m.index + m[0].length;
+    if (start > last) parts.push(content.slice(last, start));
+    const who = m[2].toLowerCase();
+    const me  = who === 'everyone' || who === (currentUser || '').toLowerCase();
+    parts.push(
+      <span key={k++} className={`font-semibold rounded px-1 ${
+        me ? 'bg-blue-600 text-white'
+           : mine ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
+      }`}>{content.slice(start, end)}</span>
+    );
+    last = end;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  return <>{parts.length ? parts : content}</>;
+}
+
+// Memoized: a row only re-renders when ITS message changes. Typing in the
+// input, typing indicators, polls, etc. no longer re-render the whole chat.
+const MessageItem = memo(function MessageItem({ msg, currentUser, isOrganizer, eventId, mentionRe, onDelete }) {
+  const isMine  = msg.username === currentUser;
+  const msgId   = msg._id || msg.id;
+  const pinged  = !isMine && contentMentions(msg.content, mentionRe, currentUser);
+  return (
+    <div className={`flex gap-2.5 group ${isMine ? 'flex-row-reverse' : ''}`}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 64px' }}>
+      <Avatar name={msg.username} />
+      <div className={`max-w-[74%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+        <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
+          <span className="text-xs font-bold text-neutral-700">{msg.username}</span>
+          <span className="text-[10px] text-neutral-400">{formatRelativeTime(msg.createdAt)}</span>
+          {(msg.edited || msg.isEdited) && <span className="text-[10px] text-neutral-300 italic">edited</span>}
+        </div>
+        <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+          isMine ? 'bg-neutral-900 text-white rounded-tr-sm' : 'bg-neutral-100 text-neutral-900 rounded-tl-sm'
+        } ${pinged ? 'ring-2 ring-blue-500' : ''}`}>
+          <p className="whitespace-pre-wrap break-words">
+            <MentionText content={msg.content} mentionRe={mentionRe} currentUser={currentUser} mine={isMine} />
+          </p>
+        </div>
+        <ReactionBar messageId={msgId} reactions={msg.reactions || []} currentUser={currentUser} eventId={eventId} />
+        {(isOrganizer || isMine) && (
+          <button onClick={() => onDelete(msgId)}
+            className="text-[10px] text-neutral-400 hover:text-red-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            Delete
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 /* ─── Main EventSpace ─────────────────────────────────────────────────────── */
 export default function EventSpace() {
   const { wl, isWL } = useWhiteLabel();
@@ -955,6 +1035,14 @@ export default function EventSpace() {
   const [messageInput, setMessageInput]   = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [typingUsers, setTypingUsers]     = useState([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [loadingOlder, setLoadingOlder]       = useState(false);
+  const [mentionQuery, setMentionQuery]       = useState(null);   // null = closed, string = filter text after "@"
+  const [mentionIndex, setMentionIndex]       = useState(0);
+  const chatScrollRef     = useRef(null);
+  const prependAnchorRef  = useRef(null);   // keeps scroll position steady when older messages are prepended
+  const activeTabRef      = useRef('chat');
+  const messageInputRef   = useRef(null);
 
   const [polls, setPolls]                 = useState([]);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
@@ -993,6 +1081,17 @@ export default function EventSpace() {
   const isOrganizer = event?.organizerName === currentUser ||
     participants.some(p => p.username === currentUser && p.role === 'organizer');
   const myRsvp      = rsvps.find(r => r.username === currentUser)?.status || null;
+  activeTabRef.current = activeTab;
+  const memberNames = useMemo(() => participants.map(p => p.username), [participants]);
+  const mentionRe   = useMemo(() => buildMentionRegex(memberNames), [memberNames]);
+  const mentionMatches = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return ['everyone', ...memberNames.filter(n => n !== currentUser)]
+      .filter(n => n.toLowerCase().includes(q))
+      .sort((a, b) => (a.toLowerCase().startsWith(q) ? 0 : 1) - (b.toLowerCase().startsWith(q) ? 0 : 1))
+      .slice(0, 6);
+  }, [mentionQuery, memberNames, currentUser]);
 
   const [searchParams]    = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -1140,7 +1239,19 @@ export default function EventSpace() {
     socketService.connect(token);
     socketService.joinEvent(eventId);
 
-    socketService.on('new_message', (msg) => { setMessages(prev => [...prev, msg]); scrollToBottom(); });
+    socketService.on('new_message', (msg) => {
+      const id = msg._id || msg.id;
+      setMessages(prev => prev.some(m => (m._id || m.id) === id) ? prev : [...prev, msg]);
+      // only yank the view down if the user is already near the bottom (or sent it)
+      const el = chatScrollRef.current;
+      const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+      if (msg.username === currentUser || nearBottom) scrollToBottom();
+      // ping when mentioned and not looking at the chat
+      if (msg.username !== currentUser && activeTabRef.current !== 'chat') {
+        const re = new RegExp(`(^|[^\\w])@(${escapeRe(currentUser || '')}|everyone)(?![\\w])`, 'i');
+        if (currentUser && re.test(msg.content || '')) toast(`${msg.username} mentioned you in chat`, { icon: '💬' });
+      }
+    });
     // Listen for organizer approval decision
     socketService.on('approval_request', ({ username }) => {
       if (isOrganizer) {
@@ -1176,8 +1287,10 @@ export default function EventSpace() {
         setNeedsJoin(true);
       }
     });
-    socketService.on('message_edited', ({ messageId, content }) =>
-      setMessages(prev => prev.map(m => m.id === messageId || m._id === messageId ? { ...m, content, edited: true } : m)));
+    socketService.on('message_edited', (p) => {
+      const messageId = p.messageId || p._id;   // server emits the full message document
+      setMessages(prev => prev.map(m => m.id === messageId || m._id === messageId ? { ...m, content: p.content, edited: true } : m));
+    });
     socketService.on('message_deleted', ({ messageId }) =>
       setMessages(prev => prev.filter(m => m.id !== messageId && m._id !== messageId)));
     socketService.on('reaction_added', ({ messageId, emoji, username }) =>
@@ -1241,7 +1354,7 @@ export default function EventSpace() {
     let timer;
     const poll = () => {
       if (!socketService.isConnected()) {
-        chatAPI.getMessages(eventId).then(res => setMessages(res.data.messages || [])).catch(() => {});
+        chatAPI.getMessages(eventId).then(res => mergeLatestMessages(res.data.messages || [])).catch(() => {});
         pollAPI.getAll(eventId).then(res => setPolls(res.data.polls || [])).catch(() => {});
         // back off up to 60s while disconnected to avoid hammering the API
         delay = Math.min(delay * 1.5, 60000);
@@ -1303,7 +1416,9 @@ export default function EventSpace() {
       setRsvps(ev.rsvps || []);
       setRsvpSummary(ev.rsvpSummary || { yes: 0, maybe: 0, no: 0 });
       setAgenda(ev.agenda ? [...ev.agenda].sort((a, b) => a.order - b.order) : []);
-      await Promise.all([loadMessages(), loadPolls(), loadFiles(), loadRsvpGuests(eventId)]);
+      // Fire-and-forget: the page renders as soon as the event is in; chat, polls and
+      // files stream in behind it instead of holding the spinner.
+      loadMessages(); loadPolls(); loadFiles(); loadRsvpGuests(eventId);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('eventToken'); localStorage.removeItem('username');
@@ -1346,15 +1461,77 @@ export default function EventSpace() {
   const handleJoined = () => { setNeedsJoin(false); setLoading(true); loadEvent(); };
 
   const loadMessages = async () => {
-    try { const r = await chatAPI.getMessages(eventId); setMessages(r.data.messages || []); scrollToBottom(); } catch {}
+    try {
+      const r = await chatAPI.getMessages(eventId, { limit: 40 });
+      setMessages(r.data.messages || []);
+      setHasMoreMessages(!!r.data.hasMore);
+      scrollToBottom('auto');
+    } catch {}
   };
+
+  // Merge the latest page into what we already have (used by the offline poll) so
+  // older pages the user has scrolled back through are not thrown away.
+  const mergeLatestMessages = (latest) => setMessages(prev => {
+    const byId = new Map(prev.map(m => [m._id || m.id, m]));
+    latest.forEach(m => byId.set(m._id || m.id, m));
+    return [...byId.values()].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  });
+
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlder || !hasMoreMessages) return;
+    const oldest = messages[0];
+    if (!oldest) return;
+    setLoadingOlder(true);
+    try {
+      const el = chatScrollRef.current;
+      prependAnchorRef.current = el ? { h: el.scrollHeight, top: el.scrollTop } : null;
+      const r = await chatAPI.getMessages(eventId, { limit: 40, before: oldest._id || oldest.id });
+      const older = r.data.messages || [];
+      setHasMoreMessages(!!r.data.hasMore);
+      setMessages(prev => {
+        const seen = new Set(prev.map(m => m._id || m.id));
+        return [...older.filter(m => !seen.has(m._id || m.id)), ...prev];
+      });
+    } catch { prependAnchorRef.current = null; toast.error('Could not load earlier messages'); }
+    finally { setLoadingOlder(false); }
+  }, [loadingOlder, hasMoreMessages, messages, eventId]);
+
+  // After older messages are prepended, restore the scroll offset so the view doesn't jump
+  useLayoutEffect(() => {
+    const a = prependAnchorRef.current, el = chatScrollRef.current;
+    if (a && el) { el.scrollTop = el.scrollHeight - a.h + a.top; prependAnchorRef.current = null; }
+  }, [messages]);
+
+  const handleChatScroll = (e) => { if (e.currentTarget.scrollTop < 120) loadOlderMessages(); };
   const loadPolls  = async () => { try { const r = await pollAPI.getAll(eventId);  setPolls(r.data.polls   || []); } catch {} };
   const loadFiles  = async () => { try { const r = await fileAPI.getAll(eventId);  setFiles(r.data.files   || []); } catch {} };
 
-  const scrollToBottom = () => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+  const scrollToBottom = (behavior = 'smooth') => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior }), 100);
+
+  const insertMention = (name) => {
+    const el = messageInputRef.current;
+    const caret = el?.selectionStart ?? messageInput.length;
+    const before = messageInput.slice(0, caret).replace(/@[^@\n]*$/, `@${name} `);
+    const next = before + messageInput.slice(caret);
+    setMessageInput(next);
+    setMentionQuery(null);
+    setTimeout(() => { el?.focus(); el?.setSelectionRange(before.length, before.length); }, 0);
+  };
+
+  const handleMessageKeyDown = (e) => {
+    if (mentionQuery === null || mentionMatches.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => (i + 1) % mentionMatches.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => (i - 1 + mentionMatches.length) % mentionMatches.length); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionMatches[mentionIndex] || mentionMatches[0]); }
+    else if (e.key === 'Escape') { setMentionQuery(null); }
+  };
 
   const handleMessageInputChange = (e) => {
     setMessageInput(e.target.value);
+    // open the mention picker when the text before the caret ends in "@something"
+    const upToCaret = e.target.value.slice(0, e.target.selectionStart ?? e.target.value.length);
+    const m = upToCaret.match(/(?:^|\s)@([^@\n]{0,30})$/);
+    if (m) { setMentionQuery(m[1]); setMentionIndex(0); } else if (mentionQuery !== null) setMentionQuery(null);
     if (socketService.isConnected()) {
       socketService.startTyping(eventId);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -1376,13 +1553,13 @@ export default function EventSpace() {
     finally { setSendingMessage(false); }
   };
 
-  const handleDeleteMessage = async (messageId) => {
+  const handleDeleteMessage = useCallback(async (messageId) => {
     if (!confirm('Delete this message?')) return;
     try {
       if (socketService.isConnected()) socketService.deleteMessage(eventId, messageId);
       else await chatAPI.deleteMessage(eventId, messageId, { username: currentUser });
     } catch { toast.error('Failed to delete'); }
-  };
+  }, [eventId, currentUser]);
 
   const handleCreatePoll = async (e) => {
     e.preventDefault();
@@ -1870,7 +2047,15 @@ export default function EventSpace() {
             {/* ── Chat ── */}
             {activeTab === 'chat' && (
               <div className="flex flex-col flex-1 min-h-0">
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                <div ref={chatScrollRef} onScroll={handleChatScroll} className="flex-1 overflow-y-auto p-5 space-y-4">
+                  {hasMoreMessages && (
+                    <div className="flex justify-center">
+                      <button onClick={loadOlderMessages} disabled={loadingOlder}
+                        className="text-xs font-semibold text-neutral-500 hover:text-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 disabled:opacity-60">
+                        {loadingOlder ? 'Loading…' : 'Load earlier messages'}
+                      </button>
+                    </div>
+                  )}
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-16">
                       <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
@@ -1879,34 +2064,10 @@ export default function EventSpace() {
                       <p className="text-sm font-bold text-neutral-700">No messages yet</p>
                       <p className="text-xs text-neutral-400 mt-1">Be the first to say hello 👋</p>
                     </div>
-                  ) : messages.map((msg) => {
-                    const isMine = msg.username === currentUser;
-                    const msgId  = msg._id || msg.id;
-                    return (
-                      <div key={msgId} className={`flex gap-2.5 group ${isMine ? 'flex-row-reverse' : ''}`}>
-                        <Avatar name={msg.username} />
-                        <div className={`max-w-[74%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                          <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
-                            <span className="text-xs font-bold text-neutral-700">{msg.username}</span>
-                            <span className="text-[10px] text-neutral-400">{formatRelativeTime(msg.createdAt)}</span>
-                            {msg.edited && <span className="text-[10px] text-neutral-300 italic">edited</span>}
-                          </div>
-                          <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                            isMine ? 'bg-neutral-900 text-white rounded-tr-sm' : 'bg-neutral-100 text-neutral-900 rounded-tl-sm'
-                          }`}>
-                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                          </div>
-                          <ReactionBar messageId={msgId} reactions={msg.reactions || []} currentUser={currentUser} eventId={eventId} />
-                          {(isOrganizer || isMine) && (
-                            <button onClick={() => handleDeleteMessage(msgId)}
-                              className="text-[10px] text-neutral-400 hover:text-red-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  ) : messages.map((msg) => (
+                    <MessageItem key={msg._id || msg.id} msg={msg} currentUser={currentUser}
+                      isOrganizer={isOrganizer} eventId={eventId} mentionRe={mentionRe} onDelete={handleDeleteMessage} />
+                  ))}
                   {typingUsers.length > 0 && (
                     <p className="text-xs text-neutral-400 italic pl-9">
                       {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
@@ -1915,9 +2076,24 @@ export default function EventSpace() {
                   <div ref={messagesEndRef} />
                 </div>
                 <div className="border-t border-neutral-100 p-3.5">
-                  <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <input type="text" value={messageInput} onChange={handleMessageInputChange}
-                      placeholder="Send a message…" className="input flex-1 text-sm rounded-xl" maxLength={MAX_MESSAGE_LENGTH} />
+                  <form onSubmit={handleSendMessage} className="flex gap-2 relative">
+                    {mentionQuery !== null && mentionMatches.length > 0 && (
+                      <div className="absolute bottom-12 left-0 w-64 bg-white border border-neutral-200 rounded-xl shadow-xl overflow-hidden z-30">
+                        {mentionMatches.map((name, i) => (
+                          <button type="button" key={name} onMouseDown={(e) => { e.preventDefault(); insertMention(name); }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm ${i === mentionIndex ? 'bg-neutral-100' : 'hover:bg-neutral-50'}`}>
+                            {name === 'everyone'
+                              ? <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">@</span>
+                              : <Avatar name={name} />}
+                            <span className="font-semibold text-neutral-800 truncate">{name === 'everyone' ? 'everyone' : name}</span>
+                            {onlineUsers.includes(name) && <span className="ml-auto text-[10px] text-emerald-600 font-semibold">online</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input ref={messageInputRef} type="text" value={messageInput} onChange={handleMessageInputChange}
+                      onKeyDown={handleMessageKeyDown} onBlur={() => setTimeout(() => setMentionQuery(null), 120)}
+                      placeholder="Send a message… use @ to mention" className="input flex-1 text-sm rounded-xl" maxLength={MAX_MESSAGE_LENGTH} />
                     <button type="submit" disabled={!messageInput.trim() || sendingMessage}
                       className="w-10 h-10 rounded-xl bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors">
                       <Send className="w-4 h-4 text-white" />
