@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Message = require('../models/Message');
@@ -15,33 +16,34 @@ const validate = (req, res, next) => {
   next();
 };
 
-// Get messages for an event
+// Get messages for an event (cursor-paginated, newest page first)
+// ?limit=<1-100, default 50>&before=<message _id>
+// Uses an _id cursor so older pages are a single indexed range scan
+// (no extra findById round-trip, no skip()).
 router.get('/:eventId/messages', verifyEventAccess, async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit) || 50;
-    const before = req.query.before; // Message ID for pagination
+    const limit  = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+    const before = req.query.before;
 
-    let query = { 
-      eventId: req.params.eventId,
-      isDeleted: false
-    };
-
+    const query = { eventId: req.params.eventId, isDeleted: false };
     if (before) {
-      const beforeMessage = await Message.findById(before);
-      if (beforeMessage) {
-        query.createdAt = { $lt: beforeMessage.createdAt };
+      if (!mongoose.Types.ObjectId.isValid(before)) {
+        return res.status(400).json({ error: 'Invalid cursor' });
       }
+      query._id = { $lt: before };
     }
 
-    const messages = await Message.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
+    // Fetch one extra row so hasMore is exact (no empty "load more" at the end)
+    const rows = await Message.find(query)
+      .sort({ _id: -1 })
+      .limit(limit + 1)
+      .select('-__v -deletedAt')
       .lean();
 
-    res.json({
-      messages: messages.reverse(),
-      hasMore: messages.length === limit
-    });
+    const hasMore = rows.length > limit;
+    if (hasMore) rows.pop();
+
+    res.json({ messages: rows.reverse(), hasMore });
   } catch (error) {
     next(error);
   }
