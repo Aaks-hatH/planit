@@ -2753,7 +2753,7 @@ const FRONTEND_ONLY_PATHS = new Set([
   '/', '/blog', '/discover', '/about', '/help',
   '/status', '/terms', '/privacy', '/license', '/support', '/waitlist',
 ]);
-const FRONTEND_PREFIX_PATHS = ['/blog/', '/invite/'];
+const FRONTEND_PREFIX_PATHS = ['/blog/', '/invite/', '/discover/'];
 
 function _isFrontendPath(p) {
   if (FRONTEND_ONLY_PATHS.has(p)) return true;
