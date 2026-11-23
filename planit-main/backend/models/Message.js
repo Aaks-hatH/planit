@@ -51,6 +51,8 @@ const messageSchema = new mongoose.Schema({
 // Indexes
 messageSchema.index({ eventId: 1, createdAt: -1 });
 messageSchema.index({ eventId: 1, isDeleted: 1, createdAt: -1 });
+// Serves the _id-cursor pagination in routes/chat.js (equality, equality, sorted range)
+messageSchema.index({ eventId: 1, isDeleted: 1, _id: -1 });
 
 // Methods
 messageSchema.methods.addReaction = function(emoji, username) {
