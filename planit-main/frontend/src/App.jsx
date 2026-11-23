@@ -38,6 +38,7 @@ const WallOfSupporters = lazy(() => import('./pages/WallOfSupporters'));
 const About            = lazy(() => import('./pages/About'));
 const Status           = lazy(() => import('./pages/Status'));
 const Discover         = lazy(() => import('./pages/Discover'));
+const EventLanding     = lazy(() => import('./pages/EventLanding'));
 const Waitlist         = lazy(() => import('./pages/Waitlist'));
 const LiveWaitBoard    = lazy(() => import('./pages/LiveWaitBoard'));
 const Help             = lazy(() => import('./pages/Help'));
@@ -631,6 +632,7 @@ function App() {
         <Route path="/about"           element={<About />} />
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
+        <Route path="/discover/:key"   element={<EventLanding />} />
         <Route path="/mcp-docs"        element={<McpDocs  />} />     
         <Route path="/help"            element={<Help />} />
         <Route path="/blog"            element={<Blog />} />
