@@ -126,7 +126,7 @@ function Skeleton() {
 }
 
 function SharePopover({ ev, onClose }) {
-  const link = ev.subdomain ? `${window.location.origin}/e/${ev.subdomain}` : `${window.location.origin}/event/${ev._id}`;
+  const link = `${window.location.origin}/discover/${ev.subdomain || ev._id}`;
   const [copied, setCopied] = useState(false);
   const twitterUrl  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out: ${ev.title}`)}&url=${encodeURIComponent(link)}`;
   const snapchatUrl = `https://www.snapchat.com/scan?attachmentUrl=${encodeURIComponent(link)}`;
@@ -267,7 +267,7 @@ function EventCard({ ev, index, onClick }) {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 group-hover:text-white transition-colors">
-          {full ? 'View event' : 'Join event'}
+          View event
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
@@ -436,7 +436,7 @@ export default function Discover() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((ev, i) => (
               <div key={ev._id} className="card-in" style={{ animationDelay: `${i * 35}ms` }}>
-                <EventCard ev={ev} index={i} onClick={() => navigate(ev.subdomain ? `/e/${ev.subdomain}` : `/event/${ev._id}`)} />
+                <EventCard ev={ev} index={i} onClick={() => navigate(`/discover/${ev.subdomain || ev._id}`)} />
               </div>
             ))}
           </div>
