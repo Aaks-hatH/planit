@@ -11,6 +11,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Calendar, CalendarPlus, Check, Clock, FileText, Link2,
   Lock, MapPin, MessageSquare, BarChart3, Navigation, ShieldCheck, Users, Compass, ListChecks,
+  Star, Ticket, Gift, Car, Utensils, Heart, Shirt, Accessibility, Wifi, Music, Camera, Sparkles,
+  Mail, ExternalLink, ChevronDown,
 } from 'lucide-react';
 import PublicNav from '../components/ui/PublicNav';
 import PublicFooter from '../components/ui/PublicFooter';
@@ -19,6 +21,12 @@ import StarBackground from '../components/StarBackground';
 import { discoverAPI } from '../services/api';
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
+const ICON_MAP = {
+  star: Star, clock: Clock, map: MapPin, ticket: Ticket, gift: Gift, car: Car, utensils: Utensils,
+  heart: Heart, shirt: Shirt, accessibility: Accessibility, wifi: Wifi, music: Music, camera: Camera,
+  users: Users, sparkles: Sparkles,
+};
+
 const safeHex = (c) => (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c) ? c : null);
 
 function fmt(date, tz, opts) {
@@ -153,8 +161,10 @@ export default function EventLanding() {
   const full      = ev ? spotsLeft === 0 : false;
   const closed    = cancelled || ended;
 
+  const lp = ev?.landing || {};
   const ctaLabel = cancelled ? 'Event cancelled'
     : ended ? 'Event has ended'
+    : lp.ctaLabel && !full ? lp.ctaLabel
     : ev?.eventType === 'rsvpOnly' && ev?.rsvpPageOpen ? 'RSVP now'
     : full ? 'Open event space'
     : ev?.requireApproval ? 'Request to join'
@@ -168,7 +178,7 @@ export default function EventLanding() {
     let meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute('content');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.setAttribute('content', (ev.description || `${ev.title} — join on PlanIt`).slice(0, 155));
+    meta.setAttribute('content', (ev.landing?.tagline || ev.description || `${ev.title} — join on PlanIt`).slice(0, 155));
 
     const ld = document.createElement('script');
     ld.type = 'application/ld+json';
@@ -189,7 +199,7 @@ export default function EventLanding() {
   }, [ev]);
 
   const features = useMemo(() => {
-    if (!ev) return [];
+    if (!ev || !ev.landing?.showEventSpaceInfo) return [];
     return [
       ev.features.chat  && { icon: MessageSquare, title: 'Live chat', body: 'Talk with organizers and other guests in real time, with @mentions.' },
       ev.features.polls && { icon: BarChart3,     title: 'Polls',     body: 'Vote on decisions and see results as they come in.' },
@@ -279,6 +289,7 @@ export default function EventLanding() {
               {ev.tags.slice(0, 4).map(t => <Chip key={t} tone="accent" accent={accent}>{t}</Chip>)}
             </div>
             <h1 className="t-h1 max-w-[20ch] text-white" style={{ textShadow: '0 2px 30px rgba(0,0,0,0.5)' }}>{ev.title}</h1>
+            {lp.tagline && <p className="mt-4 max-w-2xl text-lg leading-snug text-neutral-200">{lp.tagline}</p>}
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2.5 text-sm text-neutral-200">
               {ev.date && <span className="flex items-center gap-2"><Calendar className="h-4 w-4" style={{ color: accent }} />{fmtDay(ev.date, ev.timezone)}</span>}
               {ev.date && <span className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} />{fmtTime(ev.date, ev.timezone)}</span>}
@@ -293,6 +304,25 @@ export default function EventLanding() {
         <div className="grid gap-12 lg:grid-cols-[1fr_360px]">
           {/* left column */}
           <div className="min-w-0">
+            {lp.highlights?.length > 0 && (
+              <div className="mb-12 grid gap-3 sm:grid-cols-2">
+                {lp.highlights.map((h, i) => {
+                  const Icon = ICON_MAP[h.icon] || Star;
+                  return (
+                    <Reveal key={i} delay={i * 0.04} y={10}>
+                      <div className="flex h-full gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <div className="grid h-10 w-10 flex-none place-items-center rounded-xl" style={{ background: `${accent}22`, color: accent }}><Icon className="h-5 w-5" /></div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white">{h.title}</p>
+                          {h.text && <p className="mt-0.5 text-xs leading-relaxed text-neutral-400">{h.text}</p>}
+                        </div>
+                      </div>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            )}
+
             {ev.description && (
               <Section title="About this event">
                 <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-neutral-300">{ev.description}</p>
@@ -317,6 +347,29 @@ export default function EventLanding() {
               </Section>
             )}
 
+            {lp.sections?.map((sec, i) => (
+              <Section key={i} title={sec.title} delay={0.05}>
+                <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-neutral-300">{sec.body}</p>
+              </Section>
+            ))}
+
+            {lp.faqs?.length > 0 && (
+              <Section title="Questions" delay={0.05}>
+                <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  {lp.faqs.map((f, i) => (
+                    <details key={i} className="group px-4 py-3.5">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+                        {f.q}
+                        <ChevronDown className="h-4 w-4 flex-none text-neutral-500 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-400">{f.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {features.length > 0 && (
             <Section title="Inside the event space" delay={0.05}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {features.map(({ icon: Icon, title, body }) => (
@@ -329,6 +382,7 @@ export default function EventLanding() {
               </div>
               <p className="mt-4 text-xs text-neutral-500">No account needed — you pick a name when you join.</p>
             </Section>
+            )}
 
             <Section title="Hosted by" delay={0.05}>
               <div className="flex items-center gap-3">
@@ -340,6 +394,12 @@ export default function EventLanding() {
                   <p className="text-xs text-neutral-500">Organizer</p>
                 </div>
               </div>
+              {lp.hostBio && <p className="mt-4 max-w-xl whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-400">{lp.hostBio}</p>}
+              {lp.contactEmail && (
+                <a href={`mailto:${lp.contactEmail}`} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:brightness-125" style={{ color: accent }}>
+                  <Mail className="h-4 w-4" />{lp.contactEmail}
+                </a>
+              )}
             </Section>
           </div>
 
@@ -372,9 +432,11 @@ export default function EventLanding() {
                   </div>
 
                   <div className="hidden lg:block">{cta}</div>
-                  <p className="hidden text-center text-[11px] text-neutral-500 lg:block">
-                    {ev.isPasswordProtected ? 'You’ll need the event password on the next screen.' : ev.requireApproval ? 'The host approves new guests.' : 'Takes about 10 seconds.'}
-                  </p>
+                  {(ev.isPasswordProtected || ev.requireApproval) && (
+                    <p className="hidden text-center text-[11px] text-neutral-500 lg:block">
+                      {ev.isPasswordProtected ? 'You’ll need the event password on the next screen.' : 'The host approves new guests.'}
+                    </p>
+                  )}
 
                   <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-4">
                     {ev.date && (
@@ -385,6 +447,12 @@ export default function EventLanding() {
                     <button onClick={share} className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-white/10">
                       {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" />Link copied</> : <><Link2 className="h-3.5 w-3.5" />Share</>}
                     </button>
+                    {lp.links?.map((l, i) => (
+                      <a key={i} href={l.url} target="_blank" rel="noopener noreferrer nofollow" className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:brightness-125"
+                        style={{ borderColor: `${accent}55`, background: `${accent}18` }}>
+                        <ExternalLink className="h-3.5 w-3.5" />{l.label}
+                      </a>
+                    ))}
                     {mapsUrl && (
                       <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-neutral-200 transition-colors hover:bg-white/10">
                         <Navigation className="h-3.5 w-3.5" />Get directions
