@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import { eventAPI, fileAPI } from '../services/api';
 import RSVPSettings from './RSVPSettings';
+import LandingPageEditor, { normalizeLanding } from './LandingPageEditor';
 import RSVPDashboard from './RSVPDashboard';
 import CloneEventButton from './CloneEventButton';
 import { SkeletonList } from './ui/Feedback';
@@ -83,6 +84,9 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  const [allowParticipantAgenda, setAllowParticipantAgenda] = useState(event?.settings?.allowParticipantAgenda === true);
  const [requireApproval, setRequireApproval] = useState(event?.settings?.requireApproval === true);
  const [isPublic, setIsPublic] = useState(event?.settings?.isPublic === true);
+ const [landing, setLanding] = useState(() => normalizeLanding(event?.landingPage));
+ const [landingDirty, setLandingDirty] = useState(false);
+ const updateLanding = (next) => { setLanding(next); setLandingDirty(true); };
 
  // RSVP settings
  const [rsvpEnabled, setRsvpEnabled] = useState(event?.settings?.rsvpEnabled !== false);
@@ -264,6 +268,9 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  tags: tags,
  });
 
+ // 1b. Public landing page content (only when it was edited)
+ if (landingDirty) await eventAPI.updateLandingPage(eventId, landing);
+
  // 2. Update RSVP-specific settings via PATCH /events/:id/rsvp-settings
  await eventAPI.updateRsvpSettings(eventId, {
  rsvpEnabled,
@@ -316,6 +323,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  { id: 'rsvp-page', label: 'RSVP Page', icon: FileText },
  { id: 'rsvp-guests', label: 'RSVP Guests', icon: Users },
  { id: 'theme', label: 'Theme', icon: Palette },
+ { id: 'public-page', label: 'Public page', icon: Globe },
  { id: 'integrations', label: 'Integrations', icon: Webhook },
  ].map(tab => {
  const Icon = tab.icon;
@@ -658,6 +666,11 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
      event={event}
      eventId={event?._id || event?.id}
    />
+ )}
+
+ {/* ── Public page tab ── */}
+ {activeTab === 'public-page' && (
+ <LandingPageEditor value={landing} onChange={updateLanding} isPublic={isPublic} slug={event?.subdomain || eventId} />
  )}
 
  {/* ── Theme tab ── */}
