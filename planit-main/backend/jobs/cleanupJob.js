@@ -10,6 +10,8 @@ const UptimeReport = require('../models/UptimeReport');
 const Incident = require('../models/Incident');
 const BlogPost = require('../models/BlogPost');
 const WLLead = require('../models/WLLead');
+const RSVPSubmission = require('../models/RSVPSubmission');
+const RSVPPageView = require('../models/RSVPPageView');
 
 /**
  * AUTO-CLEANUP SERVICE
@@ -43,6 +45,8 @@ async function deleteEventCompletely(event) {
       File.deleteMany({ eventId: event._id }),
       EventParticipant.deleteMany({ eventId: event._id }),
       Invite ? Invite.deleteMany({ eventId: event._id }) : Promise.resolve(),
+      RSVPSubmission.deleteMany({ eventId: event._id }),
+      RSVPPageView.deleteMany({ eventId: event._id }),
       Event.findByIdAndDelete(event._id)
     ]);
 
