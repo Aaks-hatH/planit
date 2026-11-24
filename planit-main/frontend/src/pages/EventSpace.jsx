@@ -1812,14 +1812,6 @@ export default function EventSpace() {
           onClose={() => setShowOnboarding(false)} />
       )}
 
-      {/* Cover banner */}
-      {event?.coverImage && (
-        <div className="w-full h-40 md:h-52 overflow-hidden flex-shrink-0 relative">
-          <img src={event.coverImage} alt="Event cover" className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom,transparent 50%,#f7f7f9 100%)' }} />
-        </div>
-      )}
-
       {/* ── Header ── */}
       <header className="bg-white/90 backdrop-blur-md border-b border-[var(--pi-border)] sticky top-0 z-50">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
