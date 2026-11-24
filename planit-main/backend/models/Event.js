@@ -259,6 +259,20 @@ const eventSchema = new mongoose.Schema({
   themeColor: { type: String, default: null },
   tags:       [{ type: String, trim: true, maxlength: 30 }],
 
+  // Organizer-written content for the public landing page (/discover/:key).
+  // Everything here is shown to anyone, so it is sanitised by PATCH /:eventId/landing-page.
+  landingPage: {
+    tagline:   { type: String, default: '', maxlength: 160 },
+    ctaLabel:  { type: String, default: '', maxlength: 40 },
+    hostBio:   { type: String, default: '', maxlength: 500 },
+    contactEmail: { type: String, default: '', maxlength: 120 },
+    showEventSpaceInfo: { type: Boolean, default: false },  // generic "what's in the event space" block (off by default)
+    highlights: [{ _id: false, icon: { type: String, default: 'star', maxlength: 20 }, title: { type: String, maxlength: 60 }, text: { type: String, maxlength: 160 } }],
+    sections:   [{ _id: false, title: { type: String, maxlength: 80 }, body: { type: String, maxlength: 3000 } }],
+    faqs:       [{ _id: false, q: { type: String, maxlength: 160 }, a: { type: String, maxlength: 800 } }],
+    links:      [{ _id: false, label: { type: String, maxlength: 40 }, url: { type: String, maxlength: 300 } }],
+  },
+
   status: {
     type: String,
     enum: ['draft', 'active', 'completed', 'cancelled'],
