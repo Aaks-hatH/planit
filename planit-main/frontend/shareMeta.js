@@ -234,7 +234,7 @@ async function resolveDiscoverEvent([, key], apiBase) {
   return {
     title: ev.title,
     tabTitle: `${ev.title} · PlanIt`,
-    description: truncate([subtitle, ev.description].filter(Boolean).join(' — ') || `${ev.title} — join on PlanIt.`, 200),
+    description: truncate([subtitle, ev.landing?.tagline || ev.description].filter(Boolean).join(' — ') || `${ev.title} — join on PlanIt.`, 200),
     image: shareableImage(ev.coverImage) || undefined,
   };
 }
