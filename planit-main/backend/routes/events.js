@@ -287,7 +287,7 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
     }
 
     const ev = await Event.findOne({ ...(isId ? { _id: key } : { subdomain: key }), 'settings.isPublic': true, status: { $ne: 'draft' } })
-      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda participants.username waitlist.username')
+      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda landingPage participants.username waitlist.username')
       .lean();
     if (!ev || ev.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
@@ -311,6 +311,7 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
           polls: ev.settings?.allowPolls !== false,
           files: ev.settings?.allowFileSharing !== false,
         },
+        landing: sanitizeLanding(ev.landingPage || {}),
         // Agenda is withheld for password-protected events (same rule as /subdomain/:subdomain)
         agenda: ev.isPasswordProtected ? [] : [...(ev.agenda || [])]
           .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -1479,6 +1480,8 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         isTableServiceMode: !!event.isTableServiceMode,
         eventType: event.eventType || 'standard',
         isClone: !!event.clonedFrom,
+        coverImage: event.coverImage || null, themeColor: event.themeColor || null, tags: event.tags || [],
+        landingPage: event.landingPage || {},
         seatingMap: { enabled: !!event.seatingMap?.enabled, tableCount: (event.seatingMap?.objects || []).length },
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
@@ -2324,6 +2327,52 @@ router.patch('/:eventId/participants/:username/role',
 );
 
 // Update event (organizer only)
+// ── Public landing page content ─────────────────────────────────────────────
+const LANDING_ICONS = ['star', 'clock', 'map', 'ticket', 'gift', 'car', 'utensils', 'heart', 'shirt', 'accessibility', 'wifi', 'music', 'camera', 'users', 'sparkles'];
+const _s = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+function sanitizeLanding(input) {
+  const i = input || {};
+  const arr = (v, n) => (Array.isArray(v) ? v.slice(0, n) : []);
+  const links = [];
+  for (const l of arr(i.links, 6)) {
+    const label = _s(l?.label, 40);
+    let url = _s(l?.url, 300);
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+    try { const u = new URL(url); if (!['http:', 'https:'].includes(u.protocol)) continue; url = u.toString(); } catch { continue; }
+    if (label) links.push({ label, url });
+  }
+  const email = _s(i.contactEmail, 120);
+  return {
+    tagline:  _s(i.tagline, 160),
+    ctaLabel: _s(i.ctaLabel, 40),
+    hostBio:  _s(i.hostBio, 500),
+    contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '',
+    showEventSpaceInfo: i.showEventSpaceInfo === true,
+    highlights: arr(i.highlights, 6)
+      .map(h => ({ icon: LANDING_ICONS.includes(h?.icon) ? h.icon : 'star', title: _s(h?.title, 60), text: _s(h?.text, 160) }))
+      .filter(h => h.title),
+    sections: arr(i.sections, 8)
+      .map(x => ({ title: _s(x?.title, 80), body: _s(x?.body, 3000) }))
+      .filter(x => x.title && x.body),
+    faqs: arr(i.faqs, 10)
+      .map(f => ({ q: _s(f?.q, 160), a: _s(f?.a, 800) }))
+      .filter(f => f.q && f.a),
+    links,
+  };
+}
+
+// Organizer-only. Replaces the landing-page content wholesale with the sanitised version.
+router.patch('/:eventId/landing-page', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = req.event;
+    event.landingPage = sanitizeLanding(req.body);
+    event.markModified('landingPage');
+    await event.save();
+    res.json({ landingPage: event.landingPage });
+  } catch (error) { next(error); }
+});
+
 router.put('/:eventId', verifyOrganizer,
   [
     body('title').optional().trim().isLength({ min: 1, max: 200 }),
