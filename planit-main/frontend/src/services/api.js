@@ -138,6 +138,7 @@ export const eventAPI = {
   // RSVP
   rsvp:               (eventId, data)     => api.post(`/events/${eventId}/rsvp`, data),
   updateRsvpSettings: (eventId, settings) => api.patch(`/events/${eventId}/rsvp-settings`, settings),
+  updateLandingPage:  (eventId, data)     => api.patch(`/events/${eventId}/landing-page`, data),
   getRsvpSummary:     (eventId)           => api.get(`/events/${eventId}/rsvp-summary`),
 
   // Agenda
