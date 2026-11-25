@@ -355,6 +355,8 @@ function WLSuspendedPage() {
 
 // ─── White-label theme injector ────────────────────────────────────────────────
 // Reads branding from context and applies CSS variables + favicon + title.
+import { readableOn, textOnLight } from './utils/color';
+
 function WhiteLabelTheme({ children }) {
   const { wl, isWL, resolved, blocked, blockReason } = useWhiteLabel();
 
@@ -370,6 +372,19 @@ function WhiteLabelTheme({ children }) {
     if (b.primaryColor) root.style.setProperty('--wl-primary', b.primaryColor);
     if (b.accentColor)  root.style.setProperty('--wl-accent',  b.accentColor);
     if (b.fontFamily)   root.style.setProperty('--wl-font',    `'${b.fontFamily}'`);
+
+    // Contrast-safe companions: text ON the brand colour (buttons) and brand-coloured TEXT on light
+    // backgrounds (links). Without these a light brand such as yellow gets white-on-yellow buttons and
+    // near-invisible yellow links.
+    const accentSrc = b.accentColor || b.primaryColor;
+    if (b.primaryColor) {
+      root.style.setProperty('--wl-on-primary',   readableOn(b.primaryColor));
+      const pt = textOnLight(b.primaryColor); if (pt) root.style.setProperty('--wl-primary-text', pt);
+    }
+    if (accentSrc) {
+      root.style.setProperty('--wl-on-accent',   readableOn(accentSrc));
+      const at = textOnLight(accentSrc); if (at) root.style.setProperty('--wl-accent-text', at);
+    }
 
     // Document title
     const name = b.companyName || wl.clientName;
@@ -401,6 +416,7 @@ function WhiteLabelTheme({ children }) {
       root.style.removeProperty('--wl-primary');
       root.style.removeProperty('--wl-accent');
       root.style.removeProperty('--wl-font');
+      ['--wl-on-primary','--wl-primary-text','--wl-on-accent','--wl-accent-text'].forEach(v => root.style.removeProperty(v));
       document.getElementById('wl-custom-css')?.remove();
     };
   }, [isWL, wl]);
