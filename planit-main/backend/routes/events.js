@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const Event = require('../models/Event');
+const { resolveJoinTarget, withJoinTarget, JOIN_TARGET_SELECT } = require('../utils/joinTarget');
 const { recordIdentity } = require('../services/identityService');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
@@ -227,13 +228,13 @@ router.get('/public/wl', async (req, res, next) => {
       'settings.isPublic': true,
       status: 'active',
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode eventType')
+    .select(`subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode ${JOIN_TARGET_SELECT}`)
     .sort({ date: 1 })
     .limit(limit)
     .lean();
     res.json({
       events: events.map(e => ({
-        ...e,
+        ...withJoinTarget(e),
         participantCount: e.participants?.length || 0,
         participants: undefined,
       })),
@@ -287,7 +288,7 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
     }
 
     const ev = await Event.findOne({ ...(isId ? { _id: key } : { subdomain: key }), 'settings.isPublic': true, status: { $ne: 'draft' } })
-      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda landingPage participants.username waitlist.username')
+      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda landingPage participants.username waitlist.username')  // landingPage incl. joinMode
       .lean();
     if (!ev || ev.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
@@ -306,6 +307,7 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
         isEnterpriseMode: !!ev.isEnterpriseMode,
         eventType: ev.eventType || 'standard',
         rsvpPageOpen: !!(ev.rsvpPage?.enabled && ev.rsvpPage?.accessMode !== 'closed'),
+        joinTarget: resolveJoinTarget(ev),   // 'rsvp' | 'space' | 'closed' — where the main button goes
         features: {
           chat:  ev.settings?.allowChat !== false,
           polls: ev.settings?.allowPolls !== false,
@@ -817,7 +819,7 @@ router.get('/public', async (req, res, next) => {
     };
 
     const events = await Event.find(query)
-      .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+      .select(`subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt ${JOIN_TARGET_SELECT}`)
       .sort({ date: 1 })
       .skip(skip)
       .limit(limit)
@@ -827,7 +829,7 @@ router.get('/public', async (req, res, next) => {
 
     res.json({
       events: events.map(ev => ({
-        ...ev,
+        ...withJoinTarget(ev),
         participantCount: (ev.participants || []).length,
         participants: undefined,
       })),
@@ -2349,6 +2351,7 @@ function sanitizeLanding(input) {
     hostBio:  _s(i.hostBio, 500),
     contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '',
     showEventSpaceInfo: i.showEventSpaceInfo === true,
+    joinMode: i.joinMode === 'space' ? 'space' : 'rsvp',
     highlights: arr(i.highlights, 6)
       .map(h => ({ icon: LANDING_ICONS.includes(h?.icon) ? h.icon : 'star', title: _s(h?.title, 60), text: _s(h?.text, 160) }))
       .filter(h => h.title),
