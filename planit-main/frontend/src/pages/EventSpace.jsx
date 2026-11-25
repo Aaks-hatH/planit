@@ -621,8 +621,8 @@ export function JoinGate({ eventId, onJoined }) {
         <div className="flex items-center gap-2.5">
           {isWL && wl?.branding?.logoUrl
             ? <img src={wl.branding.logoUrl} alt={wl.branding.companyName || wl.clientName || ''} style={{ height: 26, objectFit: 'contain', maxWidth: 120 }} />
-            : isWL && wl?.branding?.hidePoweredBy
-            ? null
+: (isWL && wl?.branding?.hidePoweredBy) || publicInfo?.hideBranding
+? null
             : (
               <>
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center"
