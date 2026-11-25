@@ -24,7 +24,13 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').re
 
 const fmtDay   = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const fmtTime  = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-const eventUrl = (e) => (e.isTableServiceMode ? `/e/${e.subdomain}/reserve` : `/e/${e.subdomain}`);
+// Table-service venues take reservations; everything else follows the organizer's choice
+// (Settings → Public page): RSVP page by default, or the live event space.
+const eventUrl = (e) => {
+  if (e.isTableServiceMode) return `/e/${e.subdomain}/reserve`;
+  if (e.joinTarget === 'rsvp') return `/rsvp/${e.subdomain}`;
+  return `/e/${e.subdomain}`;
+};
 
 export default function WLHome() {
   const navigate = useNavigate();
