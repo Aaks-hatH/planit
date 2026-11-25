@@ -6,8 +6,9 @@ import {
  Image, Palette, Tag, Upload, Bell, UserCheck, UserX, Sliders
 } from 'lucide-react';
 import toast from '../utils/toast';
-import { eventAPI, fileAPI } from '../services/api';
+import { eventAPI, fileAPI, rsvpAPI } from '../services/api';
 import RSVPSettings from './RSVPSettings';
+import { TicketOption, BrandingOption } from './RsvpOptions';
 import LandingPageEditor, { normalizeLanding } from './LandingPageEditor';
 import RSVPDashboard from './RSVPDashboard';
 import CloneEventButton from './CloneEventButton';
@@ -85,8 +86,17 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  const [requireApproval, setRequireApproval] = useState(event?.settings?.requireApproval === true);
  const [isPublic, setIsPublic] = useState(event?.settings?.isPublic === true);
  const [landing, setLanding] = useState(() => normalizeLanding(event?.landingPage));
- const [landingDirty, setLandingDirty] = useState(false);
- const updateLanding = (next) => { setLanding(next); setLandingDirty(true); };
+const [landingDirty, setLandingDirty] = useState(false);
+const updateLanding = (next) => { setLanding(next); setLandingDirty(true); };
+
+// Two switches that live on the RSVP page settings but are offered here too, so they can be
+// reached from the landing-page tab and the RSVP tab without opening the builder.
+const isEnterprise = event?.isEnterpriseMode === true;
+const [issueTicket, setIssueTicket]     = useState(event?.rsvpPage?.issueTicket === true);
+const [hideBranding, setHideBranding]   = useState(event?.rsvpPage?.hideBranding === true);
+const [rsvpOptsDirty, setRsvpOptsDirty] = useState(false);
+const changeIssueTicket  = (v) => { setIssueTicket(v);  setRsvpOptsDirty(true); };
+const changeHideBranding = (v) => { setHideBranding(v); setRsvpOptsDirty(true); };
 
  // RSVP settings
  const [rsvpEnabled, setRsvpEnabled] = useState(event?.settings?.rsvpEnabled !== false);
@@ -269,7 +279,15 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  });
 
  // 1b. Public landing page content (only when it was edited)
- if (landingDirty) await eventAPI.updateLandingPage(eventId, landing);
+if (landingDirty) await eventAPI.updateLandingPage(eventId, landing);
+
+// 1c. Tickets + branding (stored on the RSVP page settings)
+if (rsvpOptsDirty) {
+  await rsvpAPI.updateSettings(eventId, {
+    hideBranding,
+    ...(isEnterprise ? { issueTicket } : {}),
+  });
+}
 
  // 2. Update RSVP-specific settings via PATCH /events/:id/rsvp-settings
  await eventAPI.updateRsvpSettings(eventId, {
@@ -315,18 +333,25 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* Sidebar nav */}
  <div className="w-52 flex-shrink-0 border-r border-neutral-100 bg-neutral-50/70 overflow-y-auto py-4 px-3 space-y-1">
- {[
- { id: 'general', label: 'General', icon: Calendar },
- { id: 'features', label: 'Features', icon: Sliders },
- { id: 'approvals', label: 'Approvals', icon: UserCheck, badge: pendingCount },
- { id: 'rsvp', label: 'RSVP', icon: CheckCircle },
- { id: 'rsvp-page', label: 'RSVP Page', icon: FileText },
- { id: 'rsvp-guests', label: 'RSVP Guests', icon: Users },
- { id: 'theme', label: 'Theme', icon: Palette },
- { id: 'public-page', label: 'Public page', icon: Globe },
- { id: 'integrations', label: 'Integrations', icon: Webhook },
- ].map(tab => {
- const Icon = tab.icon;
+{[
+{ heading: 'Your event' },
+{ id: 'general', label: 'General', icon: Calendar },
+{ id: 'features', label: 'Features', icon: Sliders },
+{ id: 'theme', label: 'Look & feel', icon: Palette },
+{ heading: 'Public page' },
+{ id: 'public-page', label: 'Landing page', icon: Globe },
+{ heading: 'RSVPs & guests' },
+{ id: 'rsvp-page', label: 'RSVP page & tickets', icon: FileText },
+{ id: 'rsvp-guests', label: 'RSVP guest list', icon: Users },
+{ id: 'approvals', label: 'Join requests', icon: UserCheck, badge: pendingCount },
+{ id: 'rsvp', label: 'In-app RSVP', icon: CheckCircle },
+{ heading: 'Advanced' },
+{ id: 'integrations', label: 'Integrations', icon: Webhook },
+].map(tab => {
+if (tab.heading) {
+  return <p key={tab.heading} className="px-3.5 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 first:pt-0">{tab.heading}</p>;
+}
+const Icon = tab.icon;
  const active = activeTab === tab.id;
  return (
  <button
@@ -528,9 +553,16 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
   </div>
  )}
 
- {activeTab === 'rsvp' && (
- <div className="space-y-4">
- <Section title="RSVP Options" icon={CheckCircle} defaultOpen>
+{activeTab === 'rsvp' && (
+<div className="space-y-4">
+<div className="flex gap-2.5 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 text-xs leading-relaxed text-neutral-600">
+  <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-neutral-400" />
+  <p>
+    This is for people who <strong>join your event space</strong> and answer Yes / Maybe / No inside it.
+    Guests who RSVP from your shared link use <button type="button" onClick={() => setActiveTab('rsvp-page')} className="font-semibold underline">RSVP page &amp; tickets</button> instead.
+  </p>
+</div>
+<Section title="RSVP Options" icon={CheckCircle} defaultOpen>
  <Toggle
  label="Enable RSVP"
  description="Allow participants to RSVP to your event"
@@ -618,9 +650,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  )}
 
  {/* ── RSVP Page tab ── */}
- {activeTab === 'rsvp-page' && (
-   <div className="space-y-4">
-     <div className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col gap-4">
+{activeTab === 'rsvp-page' && (
+<div className="space-y-4">
+<div className="space-y-3">
+  <TicketOption isEnterprise={isEnterprise} checked={issueTicket} onChange={changeIssueTicket} />
+  <BrandingOption checked={hideBranding} onChange={changeHideBranding} />
+  <p className="text-[11px] text-neutral-400">These switches are the same ones on the Landing page tab and in the RSVP page builder. Press Save to apply.</p>
+</div>
+<div className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col gap-4">
        <div className="flex items-start gap-3">
          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -671,7 +708,9 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {/* ── Public page tab ── */}
  {activeTab === 'public-page' && (
  <LandingPageEditor value={landing} onChange={updateLanding} isPublic={isPublic} slug={event?.subdomain || eventId}
- eventType={event?.eventType} rsvpEnabled={event?.rsvpPage?.enabled === true} rsvpAccess={event?.rsvpPage?.accessMode} />
+eventType={event?.eventType} rsvpEnabled={event?.rsvpPage?.enabled === true} rsvpAccess={event?.rsvpPage?.accessMode}
+isEnterprise={isEnterprise} issueTicket={issueTicket} onIssueTicketChange={changeIssueTicket}
+hideBranding={hideBranding} onHideBrandingChange={changeHideBranding} />
  )}
 
  {/* ── Theme tab ── */}
