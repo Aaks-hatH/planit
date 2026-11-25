@@ -1488,6 +1488,14 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         isClone: !!event.clonedFrom,
         coverImage: event.coverImage || null, themeColor: event.themeColor || null, tags: event.tags || [],
         landingPage: event.landingPage || {},
+        // Only the two switches the organizer/landing editors read. Never expose the
+        // full rsvpPage here (it holds the RSVP password and Gmail tokens).
+        rsvpPage: {
+          issueTicket:  event.rsvpPage?.issueTicket === true,
+          hideBranding: event.rsvpPage?.hideBranding === true,
+          enabled:      event.rsvpPage?.enabled === true,
+          accessMode:   event.rsvpPage?.accessMode,
+        },
         seatingMap: { enabled: !!event.seatingMap?.enabled, tableCount: (event.seatingMap?.objects || []).length },
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
