@@ -251,12 +251,32 @@ router.get('/events', verifyWLClient, async (req, res) => {
   try {
     const Event = require('../models/Event');
     const events = await Event.find({ wlDomain: req.wlClient.domain, status: 'active' })
-      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType')
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType settings.isPublic')
       .sort({ createdAt: -1 }).lean();
-    res.json({ events });
+    res.json({ events: events.map(e => ({ ...e, isPublic: e.settings?.isPublic === true, settings: undefined })) });
   } catch (err) {
     console.error('[wl-portal] event list error', err.message);
     res.status(500).json({ error: 'Could not load events.' });
+  }
+});
+
+// Show/hide one of this tenant's events on the branded homepage.
+router.patch('/events/:subdomain/visibility', verifyWLClient, [
+  body('isPublic').isBoolean(),
+], async (req, res) => {
+  if (!validationResult(req).isEmpty()) return res.status(400).json({ error: 'isPublic must be a boolean.' });
+  try {
+    const Event = require('../models/Event');
+    const ev = await Event.findOneAndUpdate(
+      { subdomain: String(req.params.subdomain).toLowerCase(), wlDomain: req.wlClient.domain },
+      { $set: { 'settings.isPublic': req.body.isPublic === true || req.body.isPublic === 'true' } },
+      { new: true },
+    ).select('settings.isPublic').lean();
+    if (!ev) return res.status(404).json({ error: 'Event not found.' });
+    res.json({ ok: true, isPublic: ev.settings?.isPublic === true });
+  } catch (err) {
+    console.error('[wl-portal] visibility error', err.message);
+    res.status(500).json({ error: 'Could not update event.' });
   }
 });
 
