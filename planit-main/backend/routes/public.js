@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
+const { withJoinTarget, JOIN_TARGET_SELECT } = require('../utils/joinTarget');
 
 // ─── GET /api/invite/:inviteCode/qr.svg ──────────────────────────────────────
 // Branded PlanIt QR code for a guest invite. No auth required.
@@ -228,7 +229,7 @@ router.get('/events/public', async (req, res, next) => {
       status: 'active',
       date: { $gte: new Date() }
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+    .select(`subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt ${JOIN_TARGET_SELECT}`)
     .sort({ date: 1 })
     .skip(skip)
     .limit(limit)
@@ -242,7 +243,7 @@ router.get('/events/public', async (req, res, next) => {
 
     res.json({
       events: events.map(event => ({
-        ...event,
+        ...withJoinTarget(event),
         participantCount: event.participants.length,
         participants: undefined // Don't expose participant details
       })),
@@ -274,14 +275,14 @@ router.get('/events/public/wl', async (req, res, next) => {
       'settings.isPublic': true,
       status: 'active',
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode eventType')
+    .select(`subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode ${JOIN_TARGET_SELECT}`)
     .sort({ date: 1 })
     .limit(limit)
     .lean();
 
     res.json({
       events: events.map(e => ({
-        ...e,
+        ...withJoinTarget(e),
         participantCount: e.participants?.length || 0,
         participants: undefined,
       })),
