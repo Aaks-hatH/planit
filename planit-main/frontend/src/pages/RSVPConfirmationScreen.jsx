@@ -10,7 +10,7 @@
  * removes that ~256kb from the initial guest-facing load.
  */
 import { useState } from 'react';
-import { Calendar, ArrowRight, Share2 } from 'lucide-react';
+import { Calendar, ArrowRight, Share2, Ticket } from 'lucide-react';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import ShareCardModal from '../components/ShareCardModal';
 import { FONTS, getBgStyle } from '../components/rsvpBlocks/theme';
@@ -39,7 +39,7 @@ export default function RSVPConfirmationScreen({ data, rsvpPage, event, accent, 
         {rsvpPage.confirmationImageUrl && <img src={rsvpPage.confirmationImageUrl} alt="Confirmation" className="w-full max-h-48 object-cover rounded-2xl" />}
         <div>
           <h1 className={`text-3xl mb-3 ${fonts.heading}`} style={{ color: isLight ? '#111' : '#fff' }}>
-            {rsvpPage.confirmationTitle || (data.status === 'pending' ? 'Request Submitted' : data.waitlisted ? 'Added to Waitlist' : "You're on the list")}
+{rsvpPage.confirmationTitle || (data.ticket ? 'Your ticket is ready' : data.status === 'pending' ? 'Request Submitted' : data.waitlisted ? 'Added to Waitlist' : "You're on the list")}
           </h1>
           {data.waitlisted && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#f59e0b22', border: '1px solid #f59e0b44', color: '#f59e0b' }}>Waitlisted</div>}
           {data.isPending && <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-3" style={{ background: '#6366f122', border: '1px solid #6366f144', color: '#a5b4fc' }}>Pending Approval</div>}
@@ -47,8 +47,19 @@ export default function RSVPConfirmationScreen({ data, rsvpPage, event, accent, 
             {rsvpPage.confirmationMessage || (data.status === 'pending' ? 'Your RSVP has been submitted and is awaiting approval from the organizer.' : data.waitlisted ? (rsvpPage.waitlistMessage || "You've been added to the waitlist. We'll notify you if a spot opens up.") : 'Your RSVP has been confirmed. We look forward to seeing you!')}
           </p>
         </div>
-        <div className="space-y-2.5">
-          {rsvpPage.showAddToCalendar !== false && event.date && (
+<div className="space-y-2.5">
+{data.ticket?.path && (
+  <a href={data.ticket.path} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold transition-all hover:opacity-90" style={{ background: accent, color: '#fff' }}>
+    <Ticket className="w-4 h-4" /> View my ticket
+  </a>
+)}
+{data.ticket?.path && (
+  <p className="text-xs opacity-60 -mt-1" style={{ color: isLight ? '#374151' : undefined }}>Show the QR code on your ticket at the door. We also emailed it if you gave an email address.</p>
+)}
+{!data.ticket && data.isPending && event.ticketsEnabled && (
+  <p className="text-xs opacity-60" style={{ color: isLight ? '#374151' : undefined }}>You’ll get your ticket as soon as the organizer approves your RSVP.</p>
+)}
+{rsvpPage.showAddToCalendar !== false && event.date && (
             <button onClick={addToCalendar} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90" style={{ background: accent, color: '#fff' }}>
               <Calendar className="w-4 h-4" /> Add to Calendar
             </button>
