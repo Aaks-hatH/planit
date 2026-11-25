@@ -9,14 +9,18 @@
  */
 import {
   ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Search, Filter,
-  Download, RefreshCw, Check, Clock, X, UserCheck2,
+  Download, RefreshCw, Check, Clock, X, UserCheck2, Users, BarChart3,
 } from 'lucide-react';
 import TourEngine from './TourEngine';
 
 const STEPS = [
   { id: 'hdr-title', title: 'RSVP-only event', body: 'This event type is stripped down to just what an RSVP needs \u2014 no chat, tasks, or files. Just the guest form, the guest list, and check-in.' },
   { id: 'hdr-live',  title: 'View live page', body: 'Opens the actual public RSVP page in a new tab \u2014 exactly what your guests see when they open the link.' },
-  { id: 'builder',   title: 'RSVP Page Builder', body: 'Tap in here to design the page guests fill out \u2014 drag-and-drop sections, a cover image, and page styling, all without touching code.' },
+  { id: 'builder',   title: 'RSVP Page Builder', body: 'Tap in here to open the builder. It is where you design the page guests fill out and where all of your RSVP settings live.' },
+  { id: 'builder-tabs', title: 'Design and Settings', body: 'Once you are inside the builder, the two pills at the top switch between Design (drag-and-drop sections, cover image, styling) and Settings. This sketch shows that switch.' },
+  { id: 'builder-settings', title: 'RSVP settings', body: 'The Settings pill controls how RSVPs behave: who can open the page (anyone, password, or closed), whether you approve each RSVP, the deadline, capacity and waitlist, the attending / maybe / not attending options, what guest details you collect, whether guests can edit their RSVP, and (on enterprise events) turning each RSVP into a ticket.' },
+  { id: 'tab-guests',    title: 'Guests tab', body: 'The default view: your full guest list with search, filters, export and check-in.' },
+  { id: 'tab-analytics', title: 'Analytics tab', body: 'Shows how many people opened your RSVP page and how many submitted, so you can tell whether guests are seeing it.' },
   { id: 'search',    title: 'Search guests', body: 'Find any guest instantly by name or email once your list starts growing.' },
   { id: 'filter',    title: 'Filter', body: 'Narrow the list down \u2014 by response (attending / maybe / declined), check-in status, or tags you\u2019ve added to guests.' },
   { id: 'export',    title: 'Export', body: 'Download your full guest list as a CSV \u2014 useful for a door list, a caterer headcount, or your own records.' },
@@ -54,7 +58,19 @@ export default function RsvpTour({ onClose }) {
           <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
         </div>
 
+        <div data-tour="builder-tabs" className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-neutral-900 text-white cursor-pointer">
+          <span className="text-[11px] opacity-60">Inside the builder</span>
+          <div data-tour="builder-settings" className="flex items-center gap-1 rounded-full p-0.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/15">Design</span>
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold opacity-60">Settings</span>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden">
+          <div className="flex border-b border-neutral-200/80 px-2">
+            <div data-tour="tab-guests" className="flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 border-neutral-900 text-neutral-900 cursor-pointer"><Users className="w-3.5 h-3.5" /> Guests</div>
+            <div data-tour="tab-analytics" className="flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 border-transparent text-neutral-400 cursor-pointer"><BarChart3 className="w-3.5 h-3.5" /> Analytics</div>
+          </div>
           <div className="p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
               <div data-tour="search" className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border border-neutral-200 bg-neutral-50 cursor-pointer">
