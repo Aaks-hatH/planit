@@ -267,6 +267,10 @@ const eventSchema = new mongoose.Schema({
     hostBio:   { type: String, default: '', maxlength: 500 },
     contactEmail: { type: String, default: '', maxlength: 120 },
     showEventSpaceInfo: { type: Boolean, default: false },  // generic "what's in the event space" block (off by default)
+    // Where the public "RSVP / Join" button sends guests (see utils/joinTarget.js).
+    // 'rsvp'  → the guest-facing RSVP page (default; /e/ stays organizer-only)
+    // 'space' → the live event space (chat, polls, files)
+    joinMode:  { type: String, enum: ['rsvp', 'space'], default: 'rsvp' },
     highlights: [{ _id: false, icon: { type: String, default: 'star', maxlength: 20 }, title: { type: String, maxlength: 60 }, text: { type: String, maxlength: 160 } }],
     sections:   [{ _id: false, title: { type: String, maxlength: 80 }, body: { type: String, maxlength: 3000 } }],
     faqs:       [{ _id: false, q: { type: String, maxlength: 160 }, a: { type: String, maxlength: 800 } }],
