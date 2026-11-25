@@ -11,6 +11,7 @@ import {
   Megaphone, DollarSign, StickyNote, Share2, QrCode, Copy, UserCheck,
 } from 'lucide-react';
 import TourEngine from './TourEngine';
+import OrganizerPanelMock from './OrganizerPanelMock';
 
 const TABS = [
   { id: 'chat',          label: 'Chat',      icon: MessageSquare, count: 4 },
@@ -42,6 +43,8 @@ const STEPS = [
   { id: 'tab-expenses',      title: 'Budget', body: 'Track event costs and who\u2019s responsible for what \u2014 useful when multiple departments are splitting a budget.' },
   { id: 'tab-notes',         title: 'Notes', body: 'A shared space for planning notes that don\u2019t belong anywhere else.' },
   { id: 'tab-utilities',     title: 'Share', body: 'Get your master link and QR code for signage or marketing \u2014 remember, individual guests still check in with their own personal invite.' },
+  { id: 'org-panel',    title: 'Organizer tools', body: 'Only organizers see this card. It sits beside your event on a computer and below it on a phone, and it holds the tools that run the event: seating, check-in on enterprise events, and Event Settings.' },
+  { id: 'org-settings', title: 'Event Settings', body: 'Opens the control center for your event. The red badge counts people waiting for your approval to join. Inside: General (title, description, date, location, and how to get your event password changed), Features (switch chat, polls, files and more on or off), Look & feel, Landing page, RSVP page & tickets, RSVP guest list, Join requests, In-app RSVP, and Integrations.' },
 ];
 
 export default function EnterpriseTour({ onClose }) {
@@ -90,7 +93,8 @@ export default function EnterpriseTour({ onClose }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div className="lg:grid lg:grid-cols-[1fr_280px] gap-5 items-start flex flex-col">
+        <div className="w-full bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
           <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide" style={{ background: '#fafafa' }}>
             {TABS.map(({ id, label, icon: Icon, count }) => (
               <div key={id} data-tour={`tab-${id}`}
@@ -122,6 +126,8 @@ export default function EnterpriseTour({ onClose }) {
               </div>
             ))}
           </div>
+        </div>
+        <div className="w-full"><OrganizerPanelMock enterprise /></div>
         </div>
       </div>
 
