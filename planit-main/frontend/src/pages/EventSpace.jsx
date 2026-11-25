@@ -557,6 +557,11 @@ export function JoinGate({ eventId, onJoined }) {
             </div>
           )}
 
+          <p className="text-xs text-neutral-400 text-center">
+            Don't have the password? Ask your organizer. Organizers can reset it by emailing{' '}
+            <a href="mailto:planit.userhelp@gmail.com?subject=Event%20password%20change" className="underline">planit.userhelp@gmail.com</a>.
+          </p>
+
           <button type="submit" disabled={joining || !password}
             className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
