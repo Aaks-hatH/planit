@@ -171,14 +171,16 @@ export default function EventLanding() {
     : ended ? 'Event has ended'
     : noJoin ? 'RSVPs closed'
     : lp.ctaLabel && !full ? lp.ctaLabel
-    : joinTarget === 'rsvp' ? 'RSVP now'
+: joinTarget === 'rsvp' ? (ev?.ticketOnRsvp ? 'Get my ticket' : 'RSVP now')
     : full ? 'Open event space'
     : ev?.requireApproval ? 'Request to join'
     : 'Join event';
   // One plain sentence under the button so guests know what the click does.
   const ctaHint = closed ? null
     : joinTarget === 'rsvp'
-      ? 'Takes you to the RSVP page to reserve your spot. No account needed.'
+? (ev?.ticketOnRsvp
+          ? 'Takes you to the RSVP page. Once you RSVP, your ticket with a QR code is ready straight away. No account needed.'
+          : 'Takes you to the RSVP page to reserve your spot. No account needed.')
       : ev?.isPasswordProtected ? 'Opens the live event space. You’ll need the event password on the next screen.'
       : ev?.requireApproval ? 'Opens the live event space. The host approves new guests.'
       : 'Opens the live event space, where guests chat, vote and see updates.';
@@ -187,11 +189,11 @@ export default function EventLanding() {
   useEffect(() => {
     if (!ev) return undefined;
     const prevTitle = document.title;
-    document.title = `${ev.title} · PlanIt`;
+document.title = ev.hideBranding ? ev.title : `${ev.title} · PlanIt`;
     let meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute('content');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
-    meta.setAttribute('content', (ev.landing?.tagline || ev.description || `${ev.title} — join on PlanIt`).slice(0, 155));
+    meta.setAttribute('content',(ev.landing?.tagline || ev.description || (ev.hideBranding ? `${ev.title}` : `${ev.title} — join on PlanIt`)).slice(0, 155));
 
     const ld = document.createElement('script');
     ld.type = 'application/ld+json';
@@ -491,7 +493,7 @@ export default function EventLanding() {
         </div>
       </div>
 
-      <PublicFooter />
+<PublicFooter hideBranding={ev.hideBranding === true} brandName={ev.organizerName || ''} />
     </div>
   );
 }
