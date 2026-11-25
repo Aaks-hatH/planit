@@ -240,11 +240,11 @@
 [data-wl] {
   --pi-action:       var(--wl-primary, var(--pi-ink-900));
   --pi-action-hover: color-mix(in srgb, var(--wl-primary, #0f0f14) 86%, black);
-  --pi-action-ink:   #ffffff;
+  --pi-action-ink:   var(--wl-on-primary, #ffffff);
   --pi-accent:       var(--wl-accent, var(--wl-primary, var(--pi-blue-500)));
   --pi-accent-hover: color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 86%, black);
   --pi-accent-soft:  color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 10%, transparent);
-  --pi-accent-ink:   color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 80%, black);
+  --pi-accent-ink:   var(--wl-accent-text, color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 80%, black));
   --pi-focus:        var(--wl-accent, var(--wl-primary, var(--pi-blue-500)));
   --ring-focus:      0 0 0 3px color-mix(in srgb, var(--wl-accent, var(--wl-primary, #2f5bff)) 30%, transparent);
 }
