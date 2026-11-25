@@ -241,8 +241,17 @@ export default function RSVPManage() {
           </div>
         </div>
 
-        {/* Back to RSVP page */}
-        {event?.subdomain && (
+{/* Ticket (enterprise events with RSVPs-as-tickets) */}
+{submission.inviteCode && submission.response === 'yes' && submission.status === 'confirmed' && (
+  <div className="text-center">
+    <a href={`/invite/${submission.inviteCode}`} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-90" style={{ background: accent, color: '#fff' }}>
+      View my ticket
+    </a>
+  </div>
+)}
+
+{/* Back to RSVP page */}
+{event?.subdomain && (
           <div className="text-center">
             <a href={`/rsvp/${event.subdomain}`} className="text-xs underline opacity-30 hover:opacity-50 transition-opacity">
               Back to event RSVP page
@@ -250,9 +259,11 @@ export default function RSVPManage() {
           </div>
         )}
 
-        <p className="text-center text-xs opacity-20 pb-4">
-          Powered by <a href="/" className="underline">PlanIt</a>
-        </p>
+{!rsvpPage.hideBranding && (
+  <p className="text-center text-xs opacity-20 pb-4">
+    Powered by <a href="/" className="underline">PlanIt</a>
+  </p>
+)}
       </div>
     </div>
   );
