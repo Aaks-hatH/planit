@@ -12,13 +12,14 @@ import PlanItMark from './PlanItMark';
  *
  * props: compact (drop the Start free button, for pages that already have one)
  */
-export default function PublicFooter({ compact = false }) {
+export default function PublicFooter({ compact = false, hideBranding = false, brandName = '' }) {
   const { wl, isWL } = useWhiteLabel();
   const year = new Date().getFullYear();
 
-  if (isWL) {
-    const name = wl?.branding?.companyName || wl?.clientName || '';
-    const hide = wl?.branding?.hidePoweredBy;
+if (isWL || hideBranding) {
+// White-label domains, or an event whose organizer hid "Powered by PlanIt": a quiet footer, no marketing.
+const name = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : brandName;
+const hide = hideBranding || wl?.branding?.hidePoweredBy;
     return (
       <footer className="pi-footer" data-surface="dark" style={{ background: 'var(--pi-ink-950)', paddingTop: 0 }}>
         <div className="mx-auto flex max-w-[var(--content-max)] flex-wrap items-center justify-between gap-3 px-[var(--gutter)] py-8 text-sm">
