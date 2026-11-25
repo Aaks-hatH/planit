@@ -8426,6 +8426,15 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const toggleVisible = async (ev) => {
+    const next = !ev.isPublic;
+    if (isDemo) { setData(d => ({ ...d, events: d.events.map(e => e.id === ev.id ? { ...e, isPublic: next } : e) })); return; }
+    try {
+      await api.patch(`${API}/${selected._id}/events/${ev.id}/visibility`, { isPublic: next });
+      setData(d => ({ ...d, events: d.events.map(e => e.id === ev.id ? { ...e, isPublic: next } : e) }));
+    } catch (e) { toast.error(e?.response?.data?.error || 'Could not update visibility'); }
+  };
+
   const atLimit = data && data.maxEvents != null && data.count >= data.maxEvents;
 
   return (
@@ -8463,6 +8472,12 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
                 <div className="text-neutral-400 font-mono truncate">{ev.subdomain}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button
+                  title={ev.isPublic ? 'Shown on homepage — click to hide' : 'Hidden from homepage — click to show'}
+                  onClick={() => toggleVisible(ev)}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${ev.isPublic ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}>
+                  {ev.isPublic ? 'Public' : 'Hidden'}
+                </button>
                 <button
                   title="Set organizer password / issue new recovery code"
                   onClick={() => setAccessFor(ev)}
