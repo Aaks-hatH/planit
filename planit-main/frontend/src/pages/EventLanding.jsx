@@ -7,6 +7,7 @@
  * handles the event login / join gate. Nothing here needs an account.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { readableOn } from '../utils/color';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Calendar, CalendarPlus, Check, Clock, FileText, Link2,
@@ -253,7 +254,7 @@ export default function EventLanding() {
       onClick={() => !closed && navigate(joinPath)}
       disabled={closed}
       className="group flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-      style={{ background: closed ? '#404040' : accent, boxShadow: closed ? 'none' : `0 10px 30px -10px ${accent}` }}
+      style={{ background: closed ? '#404040' : accent, color: closed ? '#ffffff' : readableOn(accent), boxShadow: closed ? 'none' : `0 10px 30px -10px ${accent}` }}
     >
       {ctaLabel}{!closed && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
     </button>
