@@ -7,6 +7,7 @@
  */
 import { useState } from 'react';
 import { Plus, Trash2, ExternalLink, Info, Copy, Check } from 'lucide-react';
+import { TicketOption, BrandingOption } from './RsvpOptions';
 
 export const EMPTY_LANDING = {
   tagline: '', ctaLabel: '', hostBio: '', contactEmail: '',
@@ -137,7 +138,18 @@ function Counter({ value, max }) {
   return <span className="text-[10px] text-neutral-400 ml-auto">{(value || '').length}/{max}</span>;
 }
 
-export default function LandingPageEditor({ value, onChange, isPublic, slug, eventType, rsvpEnabled, rsvpAccess }) {
+/**
+ * Props beyond the landing-page content:
+ *   isEnterprise / issueTicket / onIssueTicketChange : "RSVPs become tickets" (rsvpPage.issueTicket)
+ *   hideBranding / onHideBrandingChange              : "Hide Powered by PlanIt" (rsvpPage.hideBranding)
+ * Those two live on the RSVP page settings, not on the landing page itself, so the parent
+ * (OrganizerSettings) owns them and saves them with everything else.
+ */
+export default function LandingPageEditor({
+  value, onChange, isPublic, slug, eventType, rsvpEnabled, rsvpAccess,
+  isEnterprise = false, issueTicket = false, onIssueTicketChange,
+  hideBranding = false, onHideBrandingChange,
+}) {
   const v = value;
   const set = (patch) => onChange({ ...v, ...patch });
   const setItem = (key, idx, patch) => set({ [key]: v[key].map((it, i) => (i === idx ? { ...it, ...patch } : it)) });
@@ -157,6 +169,18 @@ export default function LandingPageEditor({ value, onChange, isPublic, slug, eve
 
       <JoinTargetBlock v={v} set={set} slug={slug} eventType={eventType} rsvpEnabled={rsvpEnabled} rsvpAccess={rsvpAccess} />
 
+      {/* Tickets + branding: both apply to the whole guest journey, not just this page */}
+      {(onIssueTicketChange || onHideBrandingChange) && (
+        <Block title="Tickets and branding" hint="Applies to your landing page, RSVP page and everything guests receive.">
+          {onIssueTicketChange && (
+            <TicketOption isEnterprise={isEnterprise} checked={issueTicket} onChange={onIssueTicketChange} />
+          )}
+          {onHideBrandingChange && (
+            <BrandingOption checked={hideBranding} onChange={onHideBrandingChange} />
+          )}
+        </Block>
+      )}
+
       {/* Tagline + button */}
       <Block title="Headline and button" hint="A short line under your event title, and what the main button says.">
         <div>
@@ -167,7 +191,7 @@ export default function LandingPageEditor({ value, onChange, isPublic, slug, eve
         <div>
           <div className="flex items-center mb-1.5"><label className="text-xs font-medium text-neutral-600">Join button text (optional)</label><Counter value={v.ctaLabel} max={40} /></div>
           <input className="input text-sm rounded-xl" maxLength={40} value={v.ctaLabel} onChange={e => set({ ctaLabel: e.target.value })}
-            placeholder="e.g. Save my seat" />
+            placeholder={issueTicket && isEnterprise ? 'e.g. Get my ticket' : 'e.g. Save my seat'} />
         </div>
       </Block>
 
