@@ -20,6 +20,7 @@ import {
 import { eventAPI } from '../services/api';
 import toast from '../utils/toast';
 import SeatingMap from '../components/SeatingMap';
+import QrScanner from '../components/QrScanner';
 import FeatureTour from '../components/tour/FeatureTour';
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -1151,97 +1152,30 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
 function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onResult, onSeatAtTable }) {
   const [scanResult, setScanResult]   = useState(null); // null | { ok, reservation?, message? }
   const [verifying, setVerifying]     = useState(false);
-  const html5QrCodeRef  = useRef(null);
-  const isMountedRef    = useRef(true);
-  const isStoppingRef   = useRef(false);
-
+  const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
-    startScanner();
-    return () => {
-      isMountedRef.current = false;
-      stopScanner();
-    };
+    return () => { isMountedRef.current = false; };
   }, []);
 
-  const stopScanner = async () => {
-    const scanner = html5QrCodeRef.current;
-    if (!scanner || isStoppingRef.current) return;
-    isStoppingRef.current = true;
-    html5QrCodeRef.current = null;
-    try {
-      if (scanner.getState() === 2) await scanner.stop();
-    } catch (_) {}
-    finally { isStoppingRef.current = false; }
-  };
-
-  const startScanner = async () => {
+  // <QrScanner> releases the camera before calling this, so it's safe to
+  // swap the UI straight away.
+  const onDetected = async (raw) => {
     if (!isMountedRef.current) return;
     setScanResult(null);
+    setVerifying(true);
     try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      if (!isMountedRef.current) return;
-
-      const config = {
-        fps: 15,
-        qrbox: (viewW, viewH) => {
-          const side = Math.floor(Math.min(viewW, viewH) * 0.75);
-          return { width: side, height: side };
-        },
-        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
-      };
-
-      const onDetected = async (raw) => {
-        await stopScanner();
-        if (!isMountedRef.current) return;
-        setVerifying(true);
-        try {
-          const res = await eventAPI.verifyReservationQR(eventId, raw);
-          setScanResult({ ok: true, reservation: res.data.reservation });
-        } catch (e) {
-          setScanResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
-        } finally {
-          if (isMountedRef.current) setVerifying(false);
-        }
-      };
-
-      // Try back camera first, fall back to front
-      try {
-        const scanner = new Html5Qrcode('ts-qr-reader');
-        html5QrCodeRef.current = scanner;
-        await scanner.start({ facingMode: { exact: 'environment' } }, config, onDetected, () => {});
-      } catch (_) {
-        if (!isMountedRef.current) return;
-        try {
-          const s2 = html5QrCodeRef.current;
-          if (s2) { try { if (s2.getState() === 2) await s2.stop(); } catch (_) {} }
-        } catch (_) {}
-        const fallback = new Html5Qrcode('ts-qr-reader');
-        html5QrCodeRef.current = fallback;
-        await fallback.start({ facingMode: 'user' }, config, onDetected, () => {});
-      }
-
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      let msg;
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission'))
-        msg = 'Camera permission denied. Allow camera access in your browser and try again.';
-      else if (err.name === 'NotFoundError')
-        msg = 'No camera found on this device.';
-      else if (err.name === 'NotReadableError' || err.message?.includes('in use'))
-        msg = 'Camera is in use by another app. Close it and retry.';
-      else if (err.name === 'AbortError' || err.message?.includes('Timeout'))
-        msg = 'Camera took too long to start. Close other apps and retry.';
-      else
-        msg = `Could not start camera: ${err.message || 'unknown error'}`;
-      setScanResult({ ok: false, message: msg, isCameraError: true });
+      const res = await eventAPI.verifyReservationQR(eventId, raw);
+      if (isMountedRef.current) setScanResult({ ok: true, reservation: res.data.reservation });
+    } catch (e) {
+      if (isMountedRef.current) setScanResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
+    } finally {
+      if (isMountedRef.current) setVerifying(false);
     }
   };
 
-  const handleRetry = async () => {
-    await stopScanner();
-    setTimeout(() => { if (isMountedRef.current) startScanner(); }, 800);
-  };
+  // Remounting <QrScanner> (result cleared) restarts the camera.
+  const handleRetry = () => setScanResult(null);
 
   const [showSeatModal, setShowSeatModal] = useState(false);
 
@@ -1352,10 +1286,7 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
               </div>
             ) : (
               <>
-                {/* QR reader div — html5-qrcode mounts video here. DO NOT REMOVE. */}
-                <div id="ts-qr-reader" className="rounded-2xl overflow-hidden shadow-2xl" />
-                <p className="text-white text-center mt-6 text-sm">Position QR code within the frame</p>
-                <p className="text-neutral-400 text-center mt-2 text-xs">Scanning automatically when detected</p>
+                <QrScanner onScan={onDetected} hint="Position the guest's QR code within the frame" />
               </>
             )}
           </div>
