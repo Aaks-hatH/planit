@@ -388,6 +388,11 @@ const Icon = tab.icon;
  onChange={e => setTitle(e.target.value)} placeholder="Event title"
  />
  </div>
+ <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-relaxed text-neutral-600">
+ <span className="font-semibold text-neutral-800">Need to change or reset your event password?</span>{' '}
+ Email <a href="mailto:planit.userhelp@gmail.com?subject=Event%20password%20change" className="text-indigo-600 underline">planit.userhelp@gmail.com</a> from
+ the address on your event and include your event link. We'll set a new one for you.
+ </div>
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
  <textarea
