@@ -5,11 +5,13 @@
  * controlled: OrganizerSettings owns the state and saves it with the rest of
  * the settings. Everything typed here is shown publicly.
  */
-import { Plus, Trash2, ExternalLink, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Trash2, ExternalLink, Info, Copy, Check } from 'lucide-react';
 
 export const EMPTY_LANDING = {
   tagline: '', ctaLabel: '', hostBio: '', contactEmail: '',
   showEventSpaceInfo: false,
+  joinMode: 'rsvp',   // 'rsvp' → guests go to the RSVP page · 'space' → guests go to the event space
   highlights: [], sections: [], faqs: [], links: [],
 };
 
@@ -40,11 +42,102 @@ function Block({ title, hint, count, max, children }) {
   );
 }
 
+/* ─── Where the public button sends guests ────────────────────────────────── */
+function JoinTargetBlock({ v, set, slug, eventType, rsvpEnabled, rsvpAccess }) {
+  const [copied, setCopied] = useState('');
+  const rsvpOnly = eventType === 'rsvpOnly';
+  const mode = rsvpOnly ? 'rsvp' : (v.joinMode === 'space' ? 'space' : 'rsvp');
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const rsvpUrl  = `${origin}/rsvp/${slug}`;
+  const spaceUrl = `${origin}/e/${slug}`;
+  const rsvpClosed = rsvpEnabled && rsvpAccess === 'closed';
+
+  const copy = async (key, url) => {
+    try { await navigator.clipboard.writeText(url); setCopied(key); setTimeout(() => setCopied(''), 1800); } catch { /* ignore */ }
+  };
+
+  let warning = null;
+  if (mode === 'rsvp') {
+    if (rsvpClosed) warning = 'Your RSVP page is set to closed, so the button will say “RSVPs closed”. Reopen it in the RSVP builder when you’re ready.';
+    else if (!rsvpEnabled && rsvpOnly) warning = 'Your RSVP page isn’t turned on, so the button will say “RSVPs closed”. Turn it on in the RSVP builder.';
+    else if (!rsvpEnabled) warning = 'Your RSVP page isn’t turned on yet, so guests are sent to the event space for now. Turn it on in the RSVP builder and they’ll go to the RSVP page instead.';
+  }
+
+  const Option = ({ value, title, tag, body }) => {
+    const active = mode === value;
+    return (
+      <button type="button" role="radio" aria-checked={active} onClick={() => set({ joinMode: value })}
+        className={`flex-1 text-left rounded-xl border p-3.5 transition-all ${active ? 'border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900' : 'border-neutral-200 hover:border-neutral-400'}`}>
+        <div className="flex items-center gap-2">
+          <span className={`grid h-4 w-4 place-items-center rounded-full border ${active ? 'border-neutral-900' : 'border-neutral-300'}`}>
+            {active && <span className="h-2 w-2 rounded-full bg-neutral-900" />}
+          </span>
+          <span className="text-sm font-semibold text-neutral-800">{title}</span>
+          {tag && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">{tag}</span>}
+        </div>
+        <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">{body}</p>
+      </button>
+    );
+  };
+
+  const LinkRow = ({ id, label, note, url }) => (
+    <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-neutral-700">{label}</p>
+        <p className="truncate text-[11px] text-neutral-400" title={url}>{url}</p>
+        <p className="text-[11px] text-neutral-500">{note}</p>
+      </div>
+      <button type="button" onClick={() => copy(id, url)} className="flex flex-none items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50">
+        {copied === id ? <><Check className="w-3.5 h-3.5 text-emerald-600" />Copied</> : <><Copy className="w-3.5 h-3.5" />Copy</>}
+      </button>
+    </div>
+  );
+
+  return (
+    <Block title="Where guests go when they click" hint="Controls the main button on Discover and on your public page.">
+      {rsvpOnly ? (
+        <p className="rounded-lg bg-neutral-50 px-3 py-2.5 text-xs leading-relaxed text-neutral-600">
+          This is an RSVP-only event, so guests always go to your RSVP page. Your event link (<span className="font-mono">/e/{slug}</span>) is your organizer dashboard.
+        </p>
+      ) : (
+        <div role="radiogroup" aria-label="Where the join button goes" className="flex flex-col gap-2.5 sm:flex-row">
+          <Option value="rsvp" tag="Recommended" title="RSVP page"
+            body="Guests reserve a spot on a simple page. Planning, check-in and settings stay with you and your team." />
+          <Option value="space" title="Event space"
+            body="Guests join the live event space to chat, vote in polls and see updates. Pick this when guests take part online." />
+        </div>
+      )}
+
+      {warning && (
+        <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+          <Info className="w-4 h-4 flex-shrink-0 mt-px" />
+          <p>{warning} <a href={`/e/${slug}/rsvp-builder`} className="font-semibold underline">Open RSVP builder</a></p>
+        </div>
+      )}
+
+      <div className="space-y-2 pt-1">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Your links</p>
+        {mode === 'rsvp' ? (
+          <>
+            <LinkRow id="rsvp" label="Guest link — share this" note="Send it in invites, texts and posts. No account needed." url={rsvpUrl} />
+            <LinkRow id="space" label="Organizer link — keep this private" note="Planning, check-in, guest list and settings. For you and your team." url={spaceUrl} />
+          </>
+        ) : (
+          <>
+            <LinkRow id="space" label="Event space link — share this" note="Guests pick a name and join. Organizers sign in from here too." url={spaceUrl} />
+            <LinkRow id="rsvp" label="RSVP page link (optional)" note="Handy if you also want a simple sign-up page." url={rsvpUrl} />
+          </>
+        )}
+      </div>
+    </Block>
+  );
+}
+
 function Counter({ value, max }) {
   return <span className="text-[10px] text-neutral-400 ml-auto">{(value || '').length}/{max}</span>;
 }
 
-export default function LandingPageEditor({ value, onChange, isPublic, slug }) {
+export default function LandingPageEditor({ value, onChange, isPublic, slug, eventType, rsvpEnabled, rsvpAccess }) {
   const v = value;
   const set = (patch) => onChange({ ...v, ...patch });
   const setItem = (key, idx, patch) => set({ [key]: v[key].map((it, i) => (i === idx ? { ...it, ...patch } : it)) });
@@ -61,6 +154,8 @@ export default function LandingPageEditor({ value, onChange, isPublic, slug }) {
             : <>The public page only goes live when <strong>Public Event</strong> is turned on in the Features tab. You can write it now and publish later.</>}
         </div>
       </div>
+
+      <JoinTargetBlock v={v} set={set} slug={slug} eventType={eventType} rsvpEnabled={rsvpEnabled} rsvpAccess={rsvpAccess} />
 
       {/* Tagline + button */}
       <Block title="Headline and button" hint="A short line under your event title, and what the main button says.">
