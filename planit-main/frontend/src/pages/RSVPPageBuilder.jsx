@@ -200,6 +200,9 @@ export default function RSVPPageBuilder() {
           location: pageRes.data.location,
           organizerName: pageRes.data.organizerName,
           subdomain: pageRes.data.subdomain,
+          // Without this the "Turn RSVPs into tickets" switch is locked as
+          // "enterprise only" in the builder, even on enterprise events.
+          isEnterpriseMode: pageRes.data.isEnterpriseMode === true,
         });
 
         const [cfgRes, settingsRes] = await Promise.all([
