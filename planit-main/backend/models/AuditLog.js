@@ -157,6 +157,7 @@ const auditSchema = new mongoose.Schema(
         'permission_denied',
         // Events
         'event_created', 'event_updated', 'event_deleted', 'admin_event_access',
+        'admin_event_password_set', 'admin_event_password_removed', 'wl_event_password_set', 'wl_event_password_removed',
         // Data
         'data_exported',
         // System
