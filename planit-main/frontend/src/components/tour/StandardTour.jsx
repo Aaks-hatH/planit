@@ -13,6 +13,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import TourEngine from './TourEngine';
+import OrganizerPanelMock from './OrganizerPanelMock';
 
 const TABS = [
   { id: 'chat',          label: 'Chat',    icon: MessageSquare, count: 12 },
@@ -43,6 +44,8 @@ const STEPS = [
   { id: 'tab-expenses',      title: 'Budget', body: 'Track shared costs and who owes what \u2014 useful for anything with split expenses, from a road trip to a group gift.' },
   { id: 'tab-notes',         title: 'Notes', body: 'A shared notes space for anything that doesn\u2019t fit elsewhere \u2014 planning details, ideas, or things to remember.' },
   { id: 'tab-utilities',     title: 'Share & discovery', body: 'Get your link, a QR code, and one-tap social sharing. If your event is public, this is also where you make it discoverable to anyone browsing PlanIt.' },
+  { id: 'org-panel',    title: 'Organizer tools', body: 'Only organizers see this card. It sits beside your event on a computer and below it on a phone, and it holds the tools that run the event: seating, check-in on enterprise events, and Event Settings.' },
+  { id: 'org-settings', title: 'Event Settings', body: 'Opens the control center for your event. The red badge counts people waiting for your approval to join. Inside: General (title, description, date, location, and how to get your event password changed), Features (switch chat, polls, files and more on or off), Look & feel, Landing page, RSVP page & tickets, RSVP guest list, Join requests, In-app RSVP, and Integrations.' },
 ];
 
 export default function StandardTour({ onClose }) {
@@ -84,7 +87,8 @@ export default function StandardTour({ onClose }) {
       </header>
 
       <div className="max-w-screen-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div className="lg:grid lg:grid-cols-[1fr_280px] gap-5 items-start flex flex-col">
+        <div className="w-full bg-white rounded-2xl border border-neutral-200/80 overflow-hidden" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
           {/* Tabs */}
           <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide" style={{ background: '#fafafa' }}>
             {TABS.map(({ id, label, icon: Icon, count }) => (
@@ -118,6 +122,8 @@ export default function StandardTour({ onClose }) {
               </div>
             ))}
           </div>
+        </div>
+        <div className="w-full"><OrganizerPanelMock /></div>
         </div>
       </div>
 
