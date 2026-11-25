@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import PublicNav from '../components/ui/PublicNav';
 import PublicFooter from '../components/ui/PublicFooter';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { readableOn } from '../utils/color';
 import {
   Calendar, MapPin, Users, Search, ArrowRight, Compass,
-  Zap, Clock, ChevronLeft, ChevronRight, X, Sparkles, Share2, Tag, CornerDownRight, Lock
+  Zap, Clock, ChevronLeft, ChevronRight, X, Sparkles, Share2, Tag, CornerDownRight, Lock, Info
 } from 'lucide-react';
 import { discoverAPI } from '../services/api';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
@@ -166,6 +167,40 @@ function SharePopover({ ev, onClose }) {
   );
 }
 
+// Where the primary button goes is decided by the organizer (Settings → Public page).
+// Older API responses without joinTarget keep the previous behaviour (event space).
+function JoinActions({ ev, accent }) {
+  const slug   = ev.subdomain || ev._id;
+  const target = ev.joinTarget || 'space';
+  const base   = 'inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl text-xs font-bold transition-all';
+
+  return (
+    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+      {target === 'rsvp' && (
+        <Link to={`/rsvp/${slug}`} title="Reserve your spot — no account needed"
+          className={`${base} hover:brightness-110 active:scale-[0.98]`}
+          style={{ background: accent, color: readableOn(accent) }}>
+          RSVP <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
+      {target === 'space' && (
+        <Link to={`/e/${slug}`} title="Opens the live event space (chat, polls, updates)"
+          className={`${base} hover:brightness-110 active:scale-[0.98]`}
+          style={{ background: accent, color: readableOn(accent) }}>
+          Join <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
+      {target === 'closed' && (
+        <span className={`${base} cursor-not-allowed border border-neutral-700 text-neutral-500`}>RSVPs closed</span>
+      )}
+      <Link to={`/discover/${slug}`} title="Read the time, place and agenda first"
+        className={`${base} border border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white`}>
+        Details
+      </Link>
+    </div>
+  );
+}
+
 function EventCard({ ev, index, onClick }) {
   const [showShare, setShowShare] = useState(false);
   const shareRef = useRef(null);
@@ -266,10 +301,7 @@ function EventCard({ ev, index, onClick }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 group-hover:text-white transition-colors">
-          View event
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-        </div>
+        <JoinActions ev={ev} accent={ac.hex || ac.bar} />
       </div>
     </div>
   );
@@ -289,6 +321,7 @@ export default function Discover() {
   const [page,      setPage]      = useState(1);
   const [total,     setTotal]     = useState(0);
   const [activeTag, setActiveTag] = useState(null);
+  const [showHelp,  setShowHelp]  = useState(false);
   const navigate = useNavigate();
   const LIMIT = 12;
 
@@ -374,6 +407,28 @@ export default function Discover() {
               <span className="t-num">{total}</span> event{total !== 1 ? 's' : ''} available
             </p>
           )}
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setShowHelp(s => !s)}
+              aria-expanded={showHelp}
+              aria-controls="discover-help"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-white transition-colors"
+            >
+              <Info className="h-3.5 w-3.5" /> Which button do I click?
+            </button>
+            {showHelp && (
+              <div id="discover-help" role="note" className="mt-3 max-w-xl space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs leading-relaxed text-neutral-300">
+                <p><strong className="text-white">RSVP</strong> — reserve your spot on the event’s RSVP page. No account needed, and you can change your answer later.</p>
+                <p><strong className="text-white">Join</strong> — opens the live event space, where guests chat, vote in polls and see updates. Some events use this instead of RSVP.</p>
+                <p><strong className="text-white">Details</strong> — read about the event first: when, where and what’s planned.</p>
+                <p className="border-t border-white/10 pt-2.5 text-neutral-500">
+                  Hosting an event? Your planning tools are for you and your team only — guests never need your organizer link. You choose which button guests see under Settings → Public page.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {!loading && allTags.length > 0 && (
