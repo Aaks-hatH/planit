@@ -61,6 +61,7 @@ const { sendRsvpGuestConfirmation, sendRsvpOrganizerNotification, buildRsvpGuest
 const { analyzeRsvp } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
+const { ticketsEnabled, syncTicket, backfillTickets, ticketUrlFor } = require('../utils/rsvpTicket');
 
 const CALLER     = process.env.BACKEND_LABEL || 'Backend';
 const ROUTER_URL = () => process.env.ROUTER_URL || '';
@@ -330,6 +331,7 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
       location:      event.location,
       organizerName: event.organizerName,
       isEnterpriseMode: event.isEnterpriseMode,
+      ticketsEnabled: ticketsEnabled(event),   // RSVPs become tickets (enterprise events only)
       rsvpPage:      safePage,
       rsvpPageConfig,
       coverUrlsById,
@@ -660,12 +662,17 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
 
     recordGuestIdentity(req, { event, firstName, lastName, email, phone, rsvpStatus: ['yes', 'maybe', 'no'].includes(response) ? response : null });
 
+    // Enterprise "RSVPs become tickets": confirmed + attending → issue the ticket now.
+    // (Pending RSVPs get theirs when the organizer approves them.)
+    const ticketCode = await syncTicket(event, submission);
+
     res.status(201).json({
       success:     true,
       submissionId: submission._id,
       editToken,
       status,
       isPending:   status === 'pending',
+      ticket:      ticketCode ? { inviteCode: ticketCode, path: `/invite/${ticketCode}` } : null,
       message:     status === 'pending'
         ? 'Your RSVP has been submitted and is awaiting approval.'
         : (rsvpPage.confirmationMessage || 'Your RSVP has been confirmed.'),
@@ -685,6 +692,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
         status,
         plusOnes:       Number(plusOnes) || 0,
         editToken,
+        ticketUrl:      ticketUrlFor(ticketCode),
         customSubject:  rsvpPage.confirmationEmailSubject || null,
         customBody:     rsvpPage.confirmationEmailBody    || null,
         // Used as Reply-To when the send falls back to the no-reply relay,
@@ -792,7 +800,7 @@ router.patch('/submission/:editToken', async (req, res, next) => {
     if (!submission) return res.status(404).json({ error: 'RSVP not found.' });
 
     // Check edit cutoff
-    const event = await Event.findById(submission.eventId).select('rsvpPage').lean();
+    const event = await Event.findById(submission.eventId).select('rsvpPage isEnterpriseMode').lean();
     const rsvpPage = event?.rsvpPage || {};
     const cutoffHours = rsvpPage.editCutoffHours ?? 24;
     if (rsvpPage.allowGuestEdit === false) {
@@ -834,7 +842,8 @@ router.patch('/submission/:editToken', async (req, res, next) => {
     submission.updatedAt = new Date();
 
     await submission.save();
-    res.json({ success: true, submission });
+    const ticketCode = await syncTicket(event, submission);
+    res.json({ success: true, submission, ticket: ticketCode ? { inviteCode: ticketCode, path: `/invite/${ticketCode}` } : null });
   } catch (err) { next(err); }
 });
 
@@ -912,7 +921,7 @@ router.patch('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
     const ALLOWED = [
       'enabled', 'accessMode', 'rsvpPassword', 'confirmationMode',
       'coverImageUrl', 'logoUrl', 'backgroundImageUrl', 'accentColor', 'backgroundStyle', 'fontStyle',
-      'bannerText', 'bannerColor', 'bannerEnabled', 'hideBranding',
+      'bannerText', 'bannerColor', 'bannerEnabled', 'hideBranding', 'issueTicket',
       'heroTagline', 'welcomeTitle', 'welcomeMessage',
       'deadline', 'deadlineMessage', 'capacityLimit', 'enableWaitlist', 'waitlistMessage',
       'allowYes', 'allowMaybe', 'allowNo', 'yesButtonLabel', 'maybeButtonLabel', 'noButtonLabel',
@@ -933,9 +942,16 @@ router.patch('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
 
     if (!event.rsvpPage) event.rsvpPage = {};
 
+    // Tickets are an enterprise feature: refuse to switch them on for anything else.
+    const wantsTickets = req.body.issueTicket === true;
+    if (wantsTickets && !event.isEnterpriseMode) {
+      return res.status(400).json({ error: 'Turning RSVPs into tickets is only available for enterprise events.' });
+    }
+    const ticketsWereOff = event.rsvpPage.issueTicket !== true;
+
     ALLOWED.forEach(key => {
       if (req.body[key] !== undefined) {
-        event.rsvpPage[key] = req.body[key];
+        event.rsvpPage[key] = key === 'issueTicket' ? req.body[key] === true : req.body[key];
       }
     });
 
@@ -954,6 +970,12 @@ router.patch('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
       : event.rsvpPage;
 
     res.json({ success: true, rsvpPage: safePage });
+
+    // Just switched on? Give everyone who already RSVP'd "Attending" a ticket too,
+    // so early and late guests end up in the same place. Runs after the response.
+    if (wantsTickets && ticketsWereOff) {
+      backfillTickets(event.toObject ? event.toObject() : event).catch(() => {});
+    }
   } catch (err) { next(err); }
 });
 
@@ -1148,6 +1170,9 @@ router.patch('/:eventId/submissions/:submissionId', verifyOrganizer, async (req,
     submission.updatedAt = new Date();
     await submission.save();
 
+    const evForTicket = await Event.findById(req.params.eventId).select('rsvpPage isEnterpriseMode').lean();
+    await syncTicket(evForTicket, submission);
+
     res.json({ success: true, submission });
   } catch (err) { next(err); }
 });
@@ -1166,6 +1191,8 @@ router.delete('/:eventId/submissions/:submissionId', verifyOrganizer, async (req
 
     submission.deletedAt = new Date();
     await submission.save();
+    const evForTicket = await Event.findById(req.params.eventId).select('rsvpPage isEnterpriseMode').lean();
+    await syncTicket(evForTicket, submission);
     res.json({ success: true });
   } catch (err) { next(err); }
 });
@@ -1224,6 +1251,11 @@ router.post('/:eventId/submissions/bulk-approve', verifyOrganizer, async (req, r
       { _id: { $in: ids }, eventId: req.params.eventId, status: 'pending' },
       { $set: { status: 'confirmed', updatedAt: new Date() } }
     );
+    const evForTicket = await Event.findById(req.params.eventId).select('rsvpPage isEnterpriseMode').lean();
+    if (ticketsEnabled(evForTicket)) {
+      const approved = await RSVPSubmission.find({ _id: { $in: ids }, eventId: req.params.eventId, status: 'confirmed' });
+      for (const sub of approved) await syncTicket(evForTicket, sub); // eslint-disable-line no-await-in-loop
+    }
     res.json({ success: true });
   } catch (err) { next(err); }
 });
@@ -1242,6 +1274,11 @@ router.post('/:eventId/submissions/bulk-decline', verifyOrganizer, async (req, r
       { _id: { $in: ids }, eventId: req.params.eventId },
       { $set: { status: 'declined', updatedAt: new Date() } }
     );
+    const evForTicket = await Event.findById(req.params.eventId).select('rsvpPage isEnterpriseMode').lean();
+    if (ticketsEnabled(evForTicket)) {
+      const declined = await RSVPSubmission.find({ _id: { $in: ids }, eventId: req.params.eventId, inviteCode: { $ne: '' } });
+      for (const sub of declined) await syncTicket(evForTicket, sub); // eslint-disable-line no-await-in-loop
+    }
     res.json({ success: true });
   } catch (err) { next(err); }
 });
