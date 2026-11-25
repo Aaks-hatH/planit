@@ -381,7 +381,7 @@ function applyTemplateTokens(str, tokens, { escapeHtml = false } = {}) {
   return out;
 }
 
-function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventTimezone, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
+function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventTimezone, eventLocation, response, status, plusOnes, editToken, ticketUrl, customSubject, customBody }) {
   const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
   const editUrl   = editToken && base ? `${base}/rsvp/manage/${editToken}` : null;
 
@@ -432,6 +432,10 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
     ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Need to make a change? You can update your RSVP at any time using the button below.</p>${ctaButton('Manage My RSVP', editUrl)}`
     : '';
 
+  const ticketNote = ticketUrl
+    ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Your ticket is ready. Show the QR code on it at the door.</p>${ctaButton('View My Ticket', ticketUrl)}`
+    : '';
+
   const bodyContent = `
     ${customNote}
     ${sectionCap('Your RSVP Details')}
@@ -439,6 +443,7 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
       ${detailTableRows}
     </table>
     ${pendingNote}
+    ${ticketNote}
     ${editNote}`;
 
   const headerRow = `
