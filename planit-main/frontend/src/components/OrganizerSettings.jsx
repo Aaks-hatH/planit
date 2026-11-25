@@ -670,7 +670,8 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* ── Public page tab ── */}
  {activeTab === 'public-page' && (
- <LandingPageEditor value={landing} onChange={updateLanding} isPublic={isPublic} slug={event?.subdomain || eventId} />
+ <LandingPageEditor value={landing} onChange={updateLanding} isPublic={isPublic} slug={event?.subdomain || eventId}
+ eventType={event?.eventType} rsvpEnabled={event?.rsvpPage?.enabled === true} rsvpAccess={event?.rsvpPage?.accessMode} />
  )}
 
  {/* ── Theme tab ── */}
