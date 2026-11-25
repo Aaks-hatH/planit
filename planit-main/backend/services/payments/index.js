@@ -112,6 +112,7 @@ async function allocateSlot(publicId) {
     try {
       fresh = await chain.addressIsFresh(slot.address);
     } catch (e) {
+      console.error('[payments] addressIsFresh failed for slot', slot.index, '-', e.message);
       await AddressSlot.updateOne({ _id: slot._id }, { $set: { status: 'free' }, $unset: { invoiceId: 1 } });
       throw new PaymentError('chain_unavailable', 503, 'Bitcoin network lookup unavailable — please retry shortly');
     }
