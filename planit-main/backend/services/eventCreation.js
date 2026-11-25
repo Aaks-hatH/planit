@@ -117,7 +117,9 @@ async function createEventWithOrganizer(input, opts = {}) {
     isTableServiceMode: !!isTableServiceMode,
     eventType: resolvedEventType,
     ...(resolvedEventType === 'rsvpOnly' ? { rsvpPage: { enabled: true } } : {}),
-    settings: settings || {},
+    // Events created under a white-label domain are public by default so they show on
+    // that client's branded homepage. An explicit isPublic from the caller still wins.
+    settings: (wlDomain && settings?.isPublic === undefined) ? { ...(settings || {}), isPublic: true } : (settings || {}),
     maxParticipants: maxParticipants || 100,
     participants: [{ username: organizerName, role: 'organizer' }],
     wlDomain,
