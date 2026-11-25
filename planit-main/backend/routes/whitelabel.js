@@ -762,6 +762,27 @@ router.get('/:id/latest-invoice', verifyAdmin, canWL, async (req, res) => {
 // Used by the client view modal to show what's already been created and to
 // enforce limits.maxEvents before opening the create-event wizard.
 
+// Show/hide a client's event on its branded homepage (Event.settings.isPublic).
+router.patch('/:id/events/:eventId/visibility', verifyAdmin, canWL, demoGuard, [
+  body('isPublic').isBoolean().withMessage('isPublic must be a boolean'),
+], async (req, res) => {
+  try {
+    const wl = await WhiteLabel.findById(req.params.id).select('domain').lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+    const Event = require('../models/Event');
+    const ev = await Event.findOneAndUpdate(
+      { _id: req.params.eventId, wlDomain: wl.domain },
+      { $set: { 'settings.isPublic': req.body.isPublic === true || req.body.isPublic === 'true' } },
+      { new: true },
+    ).select('settings.isPublic').lean();
+    if (!ev) return res.status(404).json({ error: 'Event not found for this client.' });
+    return res.json({ ok: true, isPublic: ev.settings?.isPublic === true });
+  } catch (err) {
+    console.error('[whitelabel] visibility error', err.message);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
 router.get('/:id/events', verifyAdmin, canWL, async (req, res) => {
   try {
     const wl = await WhiteLabel.findById(req.params.id).select('domain limits').lean();
@@ -769,7 +790,7 @@ router.get('/:id/events', verifyAdmin, canWL, async (req, res) => {
 
     const Event = require('../models/Event');
     const events = await Event.find({ wlDomain: wl.domain })
-      .select('subdomain title date location status isTableServiceMode isEnterpriseMode createdAt participants')
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode createdAt participants settings.isPublic')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -779,6 +800,7 @@ router.get('/:id/events', verifyAdmin, canWL, async (req, res) => {
         location: e.location, status: e.status,
         isTableServiceMode: e.isTableServiceMode, isEnterpriseMode: e.isEnterpriseMode,
         createdAt: e.createdAt, participantCount: e.participants?.length || 0,
+        isPublic: e.settings?.isPublic === true,
       })),
       count: events.length,
       maxEvents: wl.limits?.maxEvents ?? null,
