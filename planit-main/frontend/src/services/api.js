@@ -319,6 +319,7 @@ export const adminAPI = {
   updateEvent:       (id, data)   => api.patch(`/admin/events/${id}`, data),
   updateEventStatus: (id, status) => api.patch(`/admin/events/${id}/status`, { status }),
   deleteEvent:       (id)         => api.delete(`/admin/events/${id}`),
+  setEventPassword:  (id, data)   => api.patch(`/admin/events/${id}/password`, data),
   saveAdminNotes:    (id, adminNotes) => api.patch(`/admin/events/${id}/admin-notes`, { adminNotes }),
 
   // Per-event analytics (platform-analytics routes)
