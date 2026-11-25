@@ -16,7 +16,7 @@ const axios = require('axios');
 const { networkName } = require('./bitcoin');
 
 const BASES = {
-  mainnet: ['https://mempool.space/api', 'https://blockstream.info/api'],
+  mainnet: ['https://mempool.space/api', 'https://blockstream.info/api', 'https://mempool.emzy.de/api'],
   testnet: ['https://mempool.space/testnet/api', 'https://blockstream.info/testnet/api'],
   signet:  ['https://mempool.space/signet/api',  'https://blockstream.info/signet/api'],
 };
@@ -38,28 +38,46 @@ const http = axios.create({
   validateStatus: (s) => s >= 200 && s < 300,
 });
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function describe(e) {
+  return e?.response ? `HTTP ${e.response.status}` : (e?.code || e?.message || 'unknown');
+}
+
+// Tries every base, twice (with a short backoff), and logs the REAL reason each
+// one failed — so a 503 at checkout can be traced to 429/403/timeout/DNS in Render logs.
 async function getJson(path) {
   let lastErr;
-  for (const base of bases()) {
-    try {
-      const r = await http.get(base + path);
-      return r.data;
-    } catch (e) {
-      lastErr = e;
+  for (let round = 0; round < 2; round++) {
+    for (const base of bases()) {
+      try {
+        const r = await http.get(base + path);
+        return r.data;
+      } catch (e) {
+        lastErr = e;
+        console.error(`[chainApi] ${base}${path.replace(/\/address\/[^/]+/, '/address/…')} failed: ${describe(e)}`);
+      }
     }
+    if (round === 0) await sleep(400);
   }
-  throw new Error(`chain API unavailable: ${lastErr?.message || 'unknown'}`);
+  throw new Error(`chain API unavailable: ${describe(lastErr)}`);
 }
 
 async function getText(path) {
   let lastErr;
-  for (const base of bases()) {
-    try {
-      const r = await http.get(base + path, { responseType: 'text', transformResponse: (d) => d });
-      return String(r.data).trim();
-    } catch (e) { lastErr = e; }
+  for (let round = 0; round < 2; round++) {
+    for (const base of bases()) {
+      try {
+        const r = await http.get(base + path, { responseType: 'text', transformResponse: (d) => d });
+        return String(r.data).trim();
+      } catch (e) {
+        lastErr = e;
+        console.error(`[chainApi] ${base}${path} failed: ${describe(e)}`);
+      }
+    }
+    if (round === 0) await sleep(400);
   }
-  throw new Error(`chain API unavailable: ${lastErr?.message || 'unknown'}`);
+  throw new Error(`chain API unavailable: ${describe(lastErr)}`);
 }
 
 async function tipHeight() {
