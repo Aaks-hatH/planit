@@ -17,6 +17,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
+import { readableOn, textOnLight } from '../utils/color';
 import { Calendar, MapPin, Users, Search, ArrowRight, Clock, Mail, Phone } from 'lucide-react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
@@ -39,6 +40,8 @@ export default function WLHome() {
   const font    = branding.fontFamily   || 'Inter';
   const company = branding.companyName  || wl?.clientName || 'Welcome';
   const logo    = branding.logoUrl      || null;
+  const onP     = readableOn(primary);          // text/icon colour that reads ON the brand colour
+  const textP   = textOnLight(primary) || primary; // brand colour that reads on white
 
   // Linked homepage event → redirect straight to it.
   const linkedEventId       = home.tableServiceEventId?.trim();
@@ -88,7 +91,7 @@ export default function WLHome() {
   const hasContact  = contact.email || contact.phone || contact.address;
 
   return (
-    <div className="wlh" style={{ '--p': primary, '--a': accent, fontFamily: `'${font}', system-ui, -apple-system, sans-serif` }}>
+    <div className="wlh" style={{ '--p': primary, '--a': accent, '--on': onP, '--pt': textP, fontFamily: `'${font}', system-ui, -apple-system, sans-serif` }}>
       <style>{css}</style>
 
       {/* Nav */}
@@ -96,7 +99,7 @@ export default function WLHome() {
         <div className="wlh-wrap wlh-nav-in">
           {logo
             ? <img src={logo} alt={company} className="wlh-logo" />
-            : <span className="wlh-mark"><Calendar size={16} color="#fff" /></span>}
+            : <span className="wlh-mark"><Calendar size={16} color={onP} /></span>}
           <span className="wlh-brand">{company}</span>
           <span style={{ flex: 1 }} />
           <button className="wlh-btn wlh-btn-solid wlh-sm" onClick={() => navigate('/?new=1')}>Create event</button>
@@ -237,9 +240,9 @@ const css = `
 .wlh-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;border:0;cursor:pointer;text-decoration:none;border-radius:11px;transition:transform .15s,box-shadow .15s,background .15s}
 .wlh-sm{font-size:.82rem;padding:9px 15px}
 .wlh-lg{font-size:.98rem;padding:14px 26px;border-radius:13px}
-.wlh-btn-solid{background:var(--p);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--p) 35%,transparent)}
+.wlh-btn-solid{background:var(--p);color:var(--on);box-shadow:0 4px 14px color-mix(in srgb,var(--p) 35%,transparent)}
 .wlh-btn-solid:hover{transform:translateY(-1px);box-shadow:0 8px 22px color-mix(in srgb,var(--p) 40%,transparent)}
-.wlh-btn-ghost{background:transparent;color:var(--p);border:1.5px solid color-mix(in srgb,var(--p) 28%,transparent)}
+.wlh-btn-ghost{background:transparent;color:var(--pt);border:1.5px solid color-mix(in srgb,var(--p) 28%,transparent)}
 .wlh-btn-ghost:hover{background:color-mix(in srgb,var(--p) 8%,transparent)}
 
 .wlh-hero{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid rgba(0,0,0,.06)}
@@ -269,13 +272,13 @@ const css = `
 .wlh-card-img,.wlh-feature-img{position:relative;background:linear-gradient(135deg,color-mix(in srgb,var(--p) 18%,#fff),color-mix(in srgb,var(--a) 10%,#fff)) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--p)}
 .wlh-card-img{height:160px}
 .wlh-card-img svg,.wlh-feature-img svg{opacity:.45}
-.wlh-badge{position:absolute;top:12px;left:12px;background:#fff;color:var(--p);font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.wlh-badge{position:absolute;top:12px;left:12px;background:#fff;color:var(--pt);font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .wlh-card-body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px;flex:1}
 .wlh-card h3{font-size:1.02rem;font-weight:700;letter-spacing:-.015em;line-height:1.3}
 .wlh-meta{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:#6b7280}
 .wlh-meta span{display:flex;align-items:center;gap:7px}
-.wlh-meta svg{color:var(--p);flex-shrink:0}
-.wlh-link{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:.84rem;font-weight:700;color:var(--p)}
+.wlh-meta svg{color:var(--pt);flex-shrink:0}
+.wlh-link{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:.84rem;font-weight:700;color:var(--pt)}
 .wlh-card:hover .wlh-link svg{transform:translateX(3px)}.wlh-link svg{transition:transform .15s}
 
 .wlh-feature{display:grid;grid-template-columns:1.1fr 1fr;background:#fff;border:1px solid #ececf0;border-radius:22px;overflow:hidden;cursor:pointer;margin-bottom:26px;transition:box-shadow .18s,transform .18s}
@@ -284,7 +287,7 @@ const css = `
 .wlh-feature-body{padding:34px 34px 36px;display:flex;flex-direction:column;gap:14px;justify-content:center}
 .wlh-feature h3{font-size:1.65rem;font-weight:800;letter-spacing:-.035em;line-height:1.15}
 .wlh-desc{color:#4b5563;line-height:1.6;font-size:.95rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.wlh-pill{align-self:flex-start;background:color-mix(in srgb,var(--p) 12%,#fff);color:var(--p);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+.wlh-pill{align-self:flex-start;background:color-mix(in srgb,var(--p) 12%,#fff);color:var(--pt);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
 @media(max-width:760px){.wlh-feature{grid-template-columns:1fr}.wlh-feature-img{min-height:190px}.wlh-feature-body{padding:24px}.wlh-hero-in{padding:64px 20px 58px}.wlh-wrap{padding:0 18px}.wlh-search input{width:100%}.wlh-search{width:100%}}
 
 .wlh-empty{text-align:center;padding:72px 20px;color:#6b7280;display:flex;flex-direction:column;align-items:center;gap:14px;background:#fff;border:1px dashed #d9d9e0;border-radius:20px}
@@ -299,7 +302,7 @@ const css = `
 .wlh-contact{background:#fff;border-top:1px solid #ececf0}
 .wlh-contact-in{display:flex;flex-wrap:wrap;gap:12px 30px;justify-content:center;padding-top:26px;padding-bottom:26px;font-size:.88rem;color:#4b5563}
 .wlh-contact-in a,.wlh-contact-in span{display:inline-flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
-.wlh-contact-in a:hover{color:var(--p)}.wlh-contact-in svg{color:var(--p)}
+.wlh-contact-in a:hover{color:var(--pt)}.wlh-contact-in svg{color:var(--p)}
 .wlh-foot{background:#fff;border-top:1px solid #ececf0}
 .wlh-foot-in{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:20px;padding-bottom:20px;font-size:.78rem;color:#9ca3af}
 .wlh-foot-in a{color:#9ca3af;text-decoration:none}.wlh-foot-in a:hover{color:#6b7280}
