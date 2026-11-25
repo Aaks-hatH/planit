@@ -624,8 +624,9 @@ export default function GuestInvite() {
               </div>
             </div>
 
-            {/* Bottom Strip */}
-            <div className="mt-6 px-8 py-6 bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
+{/* Bottom Strip (hidden when the organizer turned off PlanIt branding) */}
+{!event?.hideBranding && (
+<div className="mt-6 px-8 py-6 bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-neutral-500 mb-1">Powered by</p>
@@ -636,12 +637,13 @@ export default function GuestInvite() {
                   <p className="text-xs text-neutral-500 mt-1">Professional Event Management</p>
                 </div>
                 <a href="/" className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all flex items-center gap-2">
-                  Create Your Event <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </motion.main>
+Create Your Event <ExternalLink className="w-4 h-4" />
+</a>
+</div>
+</div>
+)}
+</div>
+</motion.main>
       </div>
 
       {/* Fullscreen QR Modal */}
