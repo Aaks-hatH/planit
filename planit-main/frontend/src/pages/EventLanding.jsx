@@ -13,7 +13,7 @@ import {
   ArrowLeft, ArrowRight, Calendar, CalendarPlus, Check, Clock, FileText, Link2,
   Lock, MapPin, MessageSquare, BarChart3, Navigation, ShieldCheck, Users, Compass, ListChecks,
   Star, Ticket, Gift, Car, Utensils, Heart, Shirt, Accessibility, Wifi, Music, Camera, Sparkles,
-  Mail, ExternalLink, ChevronDown,
+  Mail, ExternalLink, ChevronDown, Info,
 } from 'lucide-react';
 import PublicNav from '../components/ui/PublicNav';
 import PublicFooter from '../components/ui/PublicFooter';
@@ -150,8 +150,11 @@ export default function EventLanding() {
   const slug    = ev?.subdomain || ev?.id;
   const origin  = typeof window !== 'undefined' ? window.location.origin : '';
   const pageUrl = `${origin}/discover/${slug || key}`;
+  // joinTarget is resolved by the server from the organizer's choice (Settings → Public page):
+  //   'rsvp' → RSVP page · 'space' → live event space · 'closed' → nothing to join right now
+  const joinTarget = ev?.joinTarget || (ev?.eventType === 'rsvpOnly' && ev?.rsvpPageOpen ? 'rsvp' : 'space');
   const joinPath = !ev ? `/e/${key}`
-    : ev.eventType === 'rsvpOnly' && ev.rsvpPageOpen ? `/rsvp/${slug}`
+    : joinTarget === 'rsvp' ? `/rsvp/${slug}`
     : ev.subdomain ? `/e/${ev.subdomain}` : `/event/${ev.id}`;
 
   const countdown = useCountdown(ev?.status === 'active' ? ev?.date : null);
@@ -160,16 +163,25 @@ export default function EventLanding() {
   const pct       = ev?.maxParticipants ? Math.min(100, Math.round((ev.participantCount / ev.maxParticipants) * 100)) : 0;
   const spotsLeft = ev ? Math.max(0, ev.maxParticipants - ev.participantCount) : 0;
   const full      = ev ? spotsLeft === 0 : false;
-  const closed    = cancelled || ended;
+  const noJoin    = joinTarget === 'closed';
+  const closed    = cancelled || ended || noJoin;
 
   const lp = ev?.landing || {};
   const ctaLabel = cancelled ? 'Event cancelled'
     : ended ? 'Event has ended'
+    : noJoin ? 'RSVPs closed'
     : lp.ctaLabel && !full ? lp.ctaLabel
-    : ev?.eventType === 'rsvpOnly' && ev?.rsvpPageOpen ? 'RSVP now'
+    : joinTarget === 'rsvp' ? 'RSVP now'
     : full ? 'Open event space'
     : ev?.requireApproval ? 'Request to join'
     : 'Join event';
+  // One plain sentence under the button so guests know what the click does.
+  const ctaHint = closed ? null
+    : joinTarget === 'rsvp'
+      ? 'Takes you to the RSVP page to reserve your spot. No account needed.'
+      : ev?.isPasswordProtected ? 'Opens the live event space. You’ll need the event password on the next screen.'
+      : ev?.requireApproval ? 'Opens the live event space. The host approves new guests.'
+      : 'Opens the live event space, where guests chat, vote and see updates.';
 
   /* tab title, description + search-engine structured data */
   useEffect(() => {
@@ -410,7 +422,7 @@ export default function EventLanding() {
               <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0c0c15]/90 backdrop-blur-xl" style={{ boxShadow: `0 30px 80px -40px ${accent}88` }}>
                 <div className="h-1" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
                 <div className="space-y-5 p-5">
-                  {countdown && !closed && (
+                  {countdown && !cancelled && !ended && (
                     <div>
                       <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Starts in</p>
                       <div className="flex gap-2">
@@ -433,9 +445,9 @@ export default function EventLanding() {
                   </div>
 
                   <div className="hidden lg:block">{cta}</div>
-                  {(ev.isPasswordProtected || ev.requireApproval) && (
-                    <p className="hidden text-center text-[11px] text-neutral-500 lg:block">
-                      {ev.isPasswordProtected ? 'You’ll need the event password on the next screen.' : 'The host approves new guests.'}
+                  {ctaHint && (
+                    <p className="flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-neutral-500">
+                      <Info className="mt-px h-3 w-3 flex-none" />{ctaHint}
                     </p>
                   )}
 
