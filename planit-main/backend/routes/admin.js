@@ -1014,6 +1014,30 @@ router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents')
   }
 });
 
+// Set, change or remove an event's join password (regular events: organizers
+// contact support, support does it here). The password is stored hashed.
+router.patch('/events/:eventId/password', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const remove = req.body.remove === true;
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    if (!remove && (password.length < 6 || password.length > 200)) {
+      return res.status(400).json({ error: 'Event password must be 6 to 200 characters.' });
+    }
+    const update = remove
+      ? { $unset: { password: 1 }, $set: { isPasswordProtected: false } }
+      : { $set: { password: await bcrypt.hash(password, 10), isPasswordProtected: true } };
+    const event = await Event.findByIdAndUpdate(req.params.eventId, update, { new: true }).select('title subdomain isPasswordProtected');
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    audit(remove ? 'admin_event_password_removed' : 'admin_event_password_set', {
+      req, actor: req.admin,
+      targetId: event._id.toString(), targetType: 'event',
+      details: { title: event.title },   // never log the password itself
+    });
+    res.json({ message: remove ? 'Event password removed' : 'Event password updated', isPasswordProtected: event.isPasswordProtected });
+  } catch (error) { next(error); }
+});
+
 // Update event status
 router.patch(
   '/events/:eventId/status',
