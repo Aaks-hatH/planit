@@ -93,7 +93,7 @@ export default function RSVPPage() {
   useEffect(() => {
     if (!pageData?.title) return;
     const prev = document.title;
-    document.title = `${pageData.title} · PlanIt`;
+document.title = pageData.rsvpPage?.hideBranding ? pageData.title : `${pageData.title} · PlanIt`;
     return () => { document.title = prev; };
   }, [pageData?.title]);
 
