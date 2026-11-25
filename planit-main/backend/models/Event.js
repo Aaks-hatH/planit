@@ -616,6 +616,12 @@ const eventSchema = new mongoose.Schema({
     bannerEnabled:    { type: Boolean, default: false },
     hideBranding:     { type: Boolean, default: false },
 
+    // ── Enterprise tickets ───────────────────────────────────────────────────
+    // When true (enterprise events only), every confirmed "Attending" RSVP is
+    // turned into a real ticket: an Invite with a QR code that works at the
+    // enterprise check-in door. See utils/rsvpTicket.js.
+    issueTicket:      { type: Boolean, default: false },
+
     // ── Hero content ─────────────────────────────────────────────────────────
     heroTagline:      { type: String, default: '', maxlength: 200 },
     welcomeTitle:     { type: String, default: '', maxlength: 200 },
