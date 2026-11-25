@@ -1070,7 +1070,7 @@ async function _refreshWLOrigins() {
   let anySuccess = false;
   for (const r of results) {
     if (r.status === 'fulfilled' && Array.isArray(r.value)) {
-      for (const d of r.value) merged.add(d);
+      for (const d of r.value) merged.add(String(d).toLowerCase());
       anySuccess = true;
     }
   }
@@ -1094,6 +1094,19 @@ function _maybeRefreshWL() {
 // Kick off an initial fetch once the event loop is free
 setImmediate(() => _refreshWLOrigins().catch(() => {}));
 
+// On a cache MISS, refresh immediately (instead of waiting for the 5-min TTL) so a
+// just-onboarded WL domain works on its first request. Throttled to one forced
+// refresh per 10 s so random origins can't hammer the backends.
+let _wlForced = null;
+let _wlLastForced = 0;
+function _forceRefreshWL() {
+  if (_wlForced) return _wlForced;
+  if (Date.now() - _wlLastForced < 10_000) return Promise.resolve();
+  _wlLastForced = Date.now();
+  _wlForced = _refreshWLOrigins().catch(() => {}).finally(() => { _wlForced = null; });
+  return _wlForced;
+}
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || origin === 'null') return cb(null, true);
@@ -1101,12 +1114,19 @@ app.use(cors({
     if (STATIC_ORIGINS.length === 0 || STATIC_ORIGINS.includes(origin)) return cb(null, true);
     // Check dynamic WL cache
     _maybeRefreshWL();
-    if (_wlOrigins.has(origin)) return cb(null, true);
-    cb(new Error(`CORS: ${origin} not allowed`));
+    const o = origin.toLowerCase();
+    if (_wlOrigins.has(o)) return cb(null, true);
+    _forceRefreshWL().then(() => {
+      if (_wlOrigins.has(o)) return cb(null, true);
+      console.warn(`[cors] Rejected origin: ${origin}`);
+      cb(new Error(`CORS: ${origin} not allowed`));
+    });
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','x-mesh-token','x-mesh-caller','x-mesh-version','x-event-token'],
+  // x-wl-domain is sent by the frontend on every WL-domain request — without it here
+  // the preflight fails and the browser reports a CORS error.
+  allowedHeaders: ['Content-Type','Authorization','x-mesh-token','x-mesh-caller','x-mesh-version','x-event-token','x-wl-domain','x-planit-vid','x-planit-sid','x-planit-page','X-Poll-Token','X-Test-Secret'],
 }));
 
 // ─── Maintenance mode ─────────────────────────────────────────────────────────
