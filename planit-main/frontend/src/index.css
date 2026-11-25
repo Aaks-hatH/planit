@@ -534,15 +534,20 @@
   --wl-focus:     var(--wl-primary, #111827);
   font-family: var(--wl-font, inherit), system-ui, sans-serif;
 }
-[data-wl] .btn-primary { background-color: var(--wl-primary, #111827) !important; color: #fff !important; }
+[data-wl] .btn-primary { background-color: var(--wl-primary, #111827) !important; color: var(--wl-on-primary, #fff) !important; }
 [data-wl] .btn-primary:hover:not(:disabled) { background-color: color-mix(in srgb, var(--wl-primary, #111827) 85%, black) !important; }
-[data-wl] .btn-accent  { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; }
+[data-wl] .btn-accent  { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; color: var(--wl-on-accent, #fff) !important; }
 [data-wl] *:focus-visible { outline-color: var(--wl-primary, #0a0a0a) !important; }
-[data-wl] a:not(.btn) { color: var(--wl-primary, inherit); }
+[data-wl] a:not(.btn) { color: var(--wl-primary-text, var(--wl-primary, inherit)); }
+/* Dark surfaces keep the full-strength brand colour — it reads fine on black. */
+[data-wl] :is(.text-white, [class*="bg-black"], [class*="bg-neutral-9"], [class*="bg-[#0"], [style*="rgb(6, 6, 12)"]) a:not(.btn) { color: var(--wl-primary, inherit); }
+/* Muted greys on the dark event shells are too dim to read; lift them slightly. */
+[data-wl] [style*="rgb(6, 6, 12)"] .text-neutral-500 { color: #a1a1aa; }
+[data-wl] [style*="rgb(6, 6, 12)"] .text-neutral-600 { color: #8b8b95; }
 [data-wl] [class*="bg-blue-500"],
-[data-wl] [class*="bg-indigo-500"] { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; }
+[data-wl] [class*="bg-indigo-500"] { background-color: var(--wl-accent, var(--wl-primary, #111827)) !important; color: var(--wl-on-accent, #fff); }
 [data-wl] [class*="text-blue-600"],
-[data-wl] [class*="text-indigo-600"] { color: var(--wl-primary, inherit) !important; }
+[data-wl] [class*="text-indigo-600"] { color: var(--wl-primary-text, var(--wl-primary, inherit)) !important; }
 [data-wl] [class*="border-blue-"],
 [data-wl] [class*="border-indigo-"] { border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important; }
 
