@@ -251,9 +251,9 @@ router.get('/events', verifyWLClient, async (req, res) => {
   try {
     const Event = require('../models/Event');
     const events = await Event.find({ wlDomain: req.wlClient.domain, status: 'active' })
-      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType settings.isPublic')
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType isPasswordProtected settings.isPublic')
       .sort({ createdAt: -1 }).lean();
-    res.json({ events: events.map(e => ({ ...e, isPublic: e.settings?.isPublic === true, settings: undefined })) });
+    res.json({ events: events.map(e => ({ ...e, isPublic: e.settings?.isPublic === true, isPasswordProtected: e.isPasswordProtected === true, settings: undefined })) });
   } catch (err) {
     console.error('[wl-portal] event list error', err.message);
     res.status(500).json({ error: 'Could not load events.' });
@@ -277,6 +277,42 @@ router.patch('/events/:subdomain/visibility', verifyWLClient, [
   } catch (err) {
     console.error('[wl-portal] visibility error', err.message);
     res.status(500).json({ error: 'Could not update event.' });
+  }
+});
+
+// Set, change or remove the join password on one of this tenant's events.
+// Body: { password: "min 6 chars" }  or  { remove: true }
+router.patch('/events/:subdomain/password', verifyWLClient, [
+  body('password').optional().isString().isLength({ min: 6, max: 200 })
+    .withMessage('Event password must be 6 to 200 characters.'),
+  body('remove').optional().isBoolean(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  const remove = req.body.remove === true || req.body.remove === 'true';
+  if (!remove && !req.body.password) return res.status(400).json({ error: 'Enter a new event password (6 characters or more).' });
+  try {
+    const Event = require('../models/Event');
+    const update = remove
+      ? { $unset: { password: 1 }, $set: { isPasswordProtected: false } }
+      : { $set: { password: await bcrypt.hash(req.body.password, 10), isPasswordProtected: true } };
+    const ev = await Event.findOneAndUpdate(
+      { subdomain: String(req.params.subdomain).toLowerCase(), wlDomain: req.wlClient.domain },
+      update,
+      { new: true },
+    ).select('title isPasswordProtected').lean();
+    if (!ev) return res.status(404).json({ error: 'Event not found.' });
+    try {
+      const { audit } = require('../models/AuditLog');
+      audit(remove ? 'wl_event_password_removed' : 'wl_event_password_set', {
+        req, actor: { name: req.wlClient.domain, email: req.wlClient.domain, role: 'wl-client' },
+        targetId: String(ev._id), targetType: 'event', details: { title: ev.title, domain: req.wlClient.domain },
+      });
+    } catch { /* audit is best-effort */ }
+    res.json({ ok: true, isPasswordProtected: ev.isPasswordProtected === true });
+  } catch (err) {
+    console.error('[wl-portal] event password error', err.message);
+    res.status(500).json({ error: 'Could not update the event password.' });
   }
 });
 
