@@ -308,6 +308,19 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
     return () => { cancelled = true; };
   }, [token]);
 
+  const toggleVisibility = async (ev) => {
+    const next = !ev.isPublic;
+    try {
+      const r = await fetch(`${API}/wl-portal/events/${encodeURIComponent(ev.subdomain)}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isPublic: next }),
+      });
+      if (!r.ok) throw new Error();
+      setTenantEvents(list => list.map(e => e.subdomain === ev.subdomain ? { ...e, isPublic: next } : e));
+    } catch { alert('Could not update that event. Try again.'); }
+  };
+
   const set = (page, k, v) => {
     setForm(f => ({ ...f, [page]: { ...f[page], [k]: v } }));
     setSaved(false);
@@ -410,6 +423,24 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
           </Field>
           <Field label="Empty state text" hint="Shown when there are no upcoming events">
             <Textarea value={form.events.emptyStateText} onChange={e => set('events', 'emptyStateText', e.target.value)} placeholder="No events scheduled right now. Check back soon." maxLength={300} />
+          </Field>
+          <Field label="Your events" hint="Only Public events appear on your homepage">
+            {eventsLoading ? <p className="text-xs text-neutral-400">Loading...</p>
+              : tenantEvents.length === 0 ? <p className="text-xs text-neutral-400">No events yet.</p>
+              : <div className="space-y-1.5">
+                  {tenantEvents.map(ev => (
+                    <div key={ev.subdomain} className="flex items-center justify-between gap-3 text-xs bg-neutral-50 rounded-lg px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
+                        <div className="text-neutral-400 font-mono truncate">/e/{ev.subdomain}</div>
+                      </div>
+                      <button type="button" onClick={() => toggleVisibility(ev)}
+                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${ev.isPublic ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-neutral-500 border-neutral-200'}`}>
+                        {ev.isPublic ? 'Public' : 'Hidden'}
+                      </button>
+                    </div>
+                  ))}
+                </div>}
           </Field>
         </>}
 
@@ -970,13 +1001,13 @@ export default function ClientPortal() {
         {/* Content */}
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6 max-w-5xl w-full mx-auto">
           {section === 'branding' && (
-            <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <BrandingSection key={client ? 'ready' : 'loading'} data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'pages' && (
-            <PagesSection data={data.pages} branding={data.branding} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <PagesSection key={client ? 'ready' : 'loading'} data={data.pages} branding={data.branding} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'features' && (
-            <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <FeaturesSection key={client ? 'ready' : 'loading'} data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'security' && (
             <SecuritySection token={token} toast={showToast} />
