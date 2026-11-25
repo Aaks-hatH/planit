@@ -288,7 +288,7 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
     }
 
     const ev = await Event.findOne({ ...(isId ? { _id: key } : { subdomain: key }), 'settings.isPublic': true, status: { $ne: 'draft' } })
-      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode agenda landingPage participants.username waitlist.username')  // landingPage incl. joinMode
+      .select('subdomain title description date timezone location organizerName coverImage themeColor tags maxParticipants status isPasswordProtected isEnterpriseMode eventType isTableServiceMode settings.allowChat settings.allowPolls settings.allowFileSharing settings.requireApproval settings.rsvpShowCount rsvpPage.enabled rsvpPage.accessMode rsvpPage.hideBranding rsvpPage.issueTicket agenda landingPage participants.username waitlist.username')  // landingPage incl. joinMode
       .lean();
     if (!ev || ev.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
@@ -307,6 +307,8 @@ router.get('/public/landing/:key', availabilityLimiter, async (req, res, next) =
         isEnterpriseMode: !!ev.isEnterpriseMode,
         eventType: ev.eventType || 'standard',
         rsvpPageOpen: !!(ev.rsvpPage?.enabled && ev.rsvpPage?.accessMode !== 'closed'),
+        hideBranding: ev.rsvpPage?.hideBranding === true,   // organizer chose to hide "Powered by PlanIt"
+        ticketOnRsvp: !!(ev.isEnterpriseMode && ev.rsvpPage?.issueTicket === true),  // RSVP gives guests a ticket
         joinTarget: resolveJoinTarget(ev),   // 'rsvp' | 'space' | 'closed' — where the main button goes
         features: {
           chat:  ev.settings?.allowChat !== false,
@@ -339,6 +341,7 @@ router.get('/public/:eventId', async (req, res, next) => {
         isTableServiceMode: !!event.isTableServiceMode,
         isEnterpriseMode: !!event.isEnterpriseMode,
         eventType: event.eventType || 'standard',
+        hideBranding: event.rsvpPage?.hideBranding === true,
       }
     });
   } catch (error) { next(error); }
@@ -1042,7 +1045,8 @@ router.get('/invite/:inviteCode', inviteLookupLimiter, async (req, res, next) =>
         location: event.location,
         description: event.description,
         organizerName: event.organizerName,
-        timezone: event.timezone || 'UTC'
+        timezone: event.timezone || 'UTC',
+        hideBranding: event.rsvpPage?.hideBranding === true
       }
     });
   } catch (error) { next(error); }
