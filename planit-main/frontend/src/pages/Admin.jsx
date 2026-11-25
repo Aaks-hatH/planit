@@ -453,6 +453,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                 Public Listing
               </label>
             </div>
+            <EventPasswordBox event={event} onChanged={(isProtected) => { setEvent(ev => ({ ...ev, isPasswordProtected: isProtected })); setEditForm(f => ({ ...f, isPasswordProtected: isProtected })); onUpdate?.(); }} />
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Theme Color <span className="text-neutral-400 font-normal">(hex, e.g. #6366f1)</span></label>
               <div className="flex items-center gap-2">
@@ -11739,5 +11740,42 @@ export default function Admin() {
 
 </div>
     </DemoContext.Provider>
+  );
+}
+
+/* Set / change / remove an event's join password. Used when an organizer contacts
+   support because they forgot or need to change it. Stored hashed server-side. */
+function EventPasswordBox({ event, onChanged }) {
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const run = async (body, okMsg) => {
+    setBusy(true);
+    try {
+      const { data } = await adminAPI.setEventPassword(event._id, body);
+      toast.success(okMsg);
+      setPw('');
+      onChanged?.(data.isPasswordProtected === true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Could not update the password');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+      <label className="block text-xs font-medium text-neutral-600 mb-1">
+        Event password <span className="text-neutral-400 font-normal">({event.isPasswordProtected ? 'currently set' : 'none set'}; it cannot be viewed, only replaced)</span>
+      </label>
+      <div className="flex items-center gap-2">
+        <input type="text" autoComplete="off" className="input text-sm flex-1" placeholder="New password (6+ characters)"
+          value={pw} onChange={e => setPw(e.target.value)} />
+        <button type="button" disabled={busy || pw.length < 6} onClick={() => run({ password: pw }, 'Event password updated')}
+          className="btn btn-primary text-sm px-3 disabled:opacity-50">{event.isPasswordProtected ? 'Change' : 'Set'}</button>
+        {event.isPasswordProtected && (
+          <button type="button" disabled={busy} onClick={() => { if (window.confirm('Remove the password? Anyone with the link will be able to join.')) run({ remove: true }, 'Event password removed'); }}
+            className="text-sm px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">Remove</button>
+        )}
+      </div>
+    </div>
   );
 }
