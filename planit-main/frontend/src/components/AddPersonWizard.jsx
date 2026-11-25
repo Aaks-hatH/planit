@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Eye, KeyRound, Loader2, Network, ShieldCheck, UserPlus, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import api, { adminAPI } from '../services/api';
 import { FIELD, SECTION_LABEL, TONE, TONE_BAR, sectionsFrom, roleLabel } from './teamShared';
 import { SkeletonList } from './ui/Feedback';

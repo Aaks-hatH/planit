@@ -5,7 +5,7 @@ import {
  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw,
  Image, Palette, Tag, Upload, Bell, UserCheck, UserX, Sliders
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { eventAPI, fileAPI } from '../services/api';
 import RSVPSettings from './RSVPSettings';
 import LandingPageEditor, { normalizeLanding } from './LandingPageEditor';

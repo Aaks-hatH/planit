@@ -25,7 +25,7 @@ import {
   ArrowLeft, ExternalLink, GripVertical, ChevronDown, Plus, Trash2,
   Check, Loader2, AlertCircle, Monitor, Smartphone,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { rsvpAPI } from '../services/api';
 import RSVPPageRenderer from '../components/RSVPPageRenderer';
 import RSVPSettings from '../components/RSVPSettings';

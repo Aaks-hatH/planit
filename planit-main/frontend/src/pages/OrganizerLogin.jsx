@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Clock, Utensils, Hash, Users, ShieldCheck } from 'lucide-react';
 import { eventAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected }) {
   const navigate  = useNavigate();

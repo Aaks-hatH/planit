@@ -1,5 +1,5 @@
 import { registerSW } from 'virtual:pwa-register';
-import toast from 'react-hot-toast';
+import toast from './toast';
 import { createElement } from 'react';
 
 /**

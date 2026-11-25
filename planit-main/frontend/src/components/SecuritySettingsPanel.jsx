@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Key, History, Eye, EyeOff, UserPlus, Loader2
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { SkeletonSection } from './ui/Feedback';
 
 /**

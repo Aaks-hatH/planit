@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Megaphone, Plus, Trash2, AlertCircle, Bell } from 'lucide-react';
 import { announcementAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 export default function Announcements({ eventId, socket, isOrganizer }) {
   const [announcements, setAnnouncements] = useState([]);

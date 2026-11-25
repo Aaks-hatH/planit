@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Download, Share2, Copy, Check } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { drawShareCard, downloadCanvasAsPng, canvasToBlob } from '../utils/shareCard';
 
 /**

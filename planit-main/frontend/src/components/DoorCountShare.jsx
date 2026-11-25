@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Share2, ClipboardCopy } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { buildShare, shareText } from '../utils/doorCountShare';
 import { Card, btn } from './DoorCountPanels';
 

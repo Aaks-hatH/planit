@@ -18,7 +18,7 @@ import { setEventContext } from '../services/tracker';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatters';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 import Tasks from '../components/Tasks';

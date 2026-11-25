@@ -4,7 +4,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle, Trash2, Download, Upload, Settings2,
   QrCode, Search, ArrowRight, Radar, LogIn, Focus, Printer, LayoutGrid,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { useCameraStream } from '../hooks/useCameraStream';
 import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
 import LivenessPrompt from '../components/LivenessPrompt';

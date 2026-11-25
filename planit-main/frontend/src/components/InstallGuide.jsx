@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import {
   Share, PlusSquare, MoreVertical, Download, Smartphone, Tablet, Laptop, Monitor,
   CheckCircle2, Copy, AlertTriangle, Info, Loader2, WifiOff,

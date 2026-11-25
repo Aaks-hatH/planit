@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { QrCode, Calendar, Download, Share2, Copy, Check, Link as LinkIcon, UserCheck, Users } from 'lucide-react';
 import { utilityAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpriseMode }) {
   const [copied, setCopied] = useState(false);

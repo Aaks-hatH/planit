@@ -6,7 +6,7 @@ import {
   AlertTriangle, Radar, Sparkles, Lock,
   ChevronRight, Ticket, Loader2, ScanLine, Smartphone, Users,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { useCameraStream } from '../hooks/useCameraStream';
 import {
   loadFaceModels, detectFaceWithDescriptor, quantizeEmbedding, dequantizeEmbedding,

@@ -5,7 +5,7 @@ import {
   Eye, LogIn, LogOut, AlertTriangle, ExternalLink, ArrowDownToLine, Activity,
   Smartphone, Monitor, Tablet, Globe, ShieldAlert, Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { platformAnalyticsAPI } from '../services/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

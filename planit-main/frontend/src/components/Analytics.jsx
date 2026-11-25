@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Users, MessageSquare, FileText, Vote, Eye, TrendingUp, CheckCircle2, DollarSign, UserCheck, Clock, AlertCircle } from 'lucide-react';
 import { analyticsAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { SkeletonStats, SkeletonSection } from './ui/Feedback';
 
 export default function Analytics({ eventId }) {

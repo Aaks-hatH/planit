@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Map as MapIcon, Plus, Trash2, Link2, Search, MapPin, Compass, PencilRuler, Navigation } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import {
   LANDMARK_TYPES, uid, planH, shareLink, layoutFromHash, decodeLayout,
   loadDraft, saveDraft, loadGuestLayout, saveGuestLayout, directions,

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { formatRelativeTime } from '../utils/formatters';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { SkeletonPage } from '../components/ui/Feedback';
 
 export default function Waitlist() {

@@ -3,7 +3,7 @@ import {
   AlertTriangle, Calendar, Check, ExternalLink, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft,
   Link2, Loader2, Plus, RefreshCw, Trash2, Unlink, X, Edit2, Github,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { adminAPI } from '../services/api';
 import { FIELD, ago, initials } from './teamShared';
 import { SkeletonList, SkeletonSection } from './ui/Feedback';

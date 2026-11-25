@@ -4,7 +4,7 @@ import {
   Briefcase, Calendar, Check, ExternalLink, GripVertical, Loader2, Mail, MapPin, Maximize2, Plus, RefreshCw,
   Search, Trash2, UserPlus, X, Edit2, ZoomIn, ZoomOut, Globe, Lock, Users, Clock, Download, Crown, Minimize2, Sparkles,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import api from '../services/api';
 import AddPersonWizard from './AddPersonWizard';
 import { ago, when } from './teamShared';

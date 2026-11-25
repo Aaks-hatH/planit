@@ -4,7 +4,7 @@ import {
   ArrowLeft, QrCode, ScanLine, Wallet, CalendarPlus, Copy, Trash2, CheckCircle2, XCircle,
   UserPlus, Link2, Users, ShieldCheck, CameraOff, Eye,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import {
   SLOT_MS, randomId, newEventSecret, deriveGuestKey, makeToken, verifyToken, REASON_TEXT,
   loadEvents, saveEvents, loadWallet, saveWallet, passLink, staffLink, parseHash,

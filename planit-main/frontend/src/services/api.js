@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getIdentity } from './tracker';
+import { recordApiError } from '../utils/friendlyError';
 
 const API_URL      = import.meta.env.VITE_API_URL      || 'http://localhost:5000/api';
 const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
@@ -81,6 +82,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Remember the failure so toast.error() can explain it (what / why / how to fix).
+    try { recordApiError(error); } catch { /* error reporting must never break a request */ }
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
       const method = (error.config?.method || 'get').toLowerCase();

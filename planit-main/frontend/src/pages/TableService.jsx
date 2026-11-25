@@ -18,7 +18,7 @@ import {
   ExternalLink, UtensilsCrossed, CameraOff, Copy, RotateCcw, Sparkles,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import SeatingMap from '../components/SeatingMap';
 import FeatureTour from '../components/tour/FeatureTour';
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FileVideo, Circle, Square, Play, Pause, Undo2, Trash2, ArrowRight, ArrowLeft, Loader2, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { cameraMessage, FEATURE_ID } from '../utils/doorCount';
 import { MODELS } from '../utils/doorCountModel';
 import { buildPresets, runLab, prepareClip, INTERVALS, GATES, TOLERANCE_S } from '../utils/doorCountLab';

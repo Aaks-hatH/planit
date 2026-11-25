@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Download, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════

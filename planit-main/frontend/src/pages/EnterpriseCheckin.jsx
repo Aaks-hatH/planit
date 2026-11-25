@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { saveEventMeta, readEventMeta } from '../utils/offlineEvent';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import ManagerOverrideDialog from '../components/ManagerOverrideDialog';
 import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
 import socketService from '../services/socket';
@@ -28,6 +28,7 @@ import Sheet from '../components/ui/Sheet';
 import { requestPersistentStorage } from '../utils/persistentStorage';
 import { setUpdateBlocker } from '../utils/appUpdate';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
+import { supportMailto, makeRef } from '../utils/friendlyError';
 
 // Guest rows rendered at a time. Thousands of rows at once is what makes the
 // list janky; searching still covers the whole list, only rendering is windowed.
@@ -136,6 +137,7 @@ class CheckinErrorBoundary extends Component {
     const { error } = this.state;
     if (!error) return this.props.children;
     const detail = `${error?.name || 'Error'}: ${error?.message || String(error)}`;
+    const ref = makeRef();
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
@@ -144,7 +146,8 @@ class CheckinErrorBoundary extends Component {
           <p className="text-neutral-400 text-sm mb-5">
             Nothing was lost. Guests you admitted offline are saved on this device and will sync automatically.
           </p>
-          <pre className="text-left text-xs text-red-300 bg-neutral-900 border border-neutral-800 rounded-xl p-3 mb-5 whitespace-pre-wrap break-words max-h-40 overflow-auto">{detail}</pre>
+          <p className="text-neutral-300 text-sm mb-1 text-left"><b className="text-white">Why: </b>The check-in screen crashed unexpectedly and we don't know exactly why. It isn't something you did wrong.</p>
+          <p className="text-neutral-300 text-sm mb-5 text-left"><b className="text-white">What to do: </b>Reload check-in. If it keeps happening, sign out and back in, then contact support.</p>
           <div className="flex flex-col gap-2">
             <button onClick={() => window.location.reload()} className="w-full bg-white text-neutral-900 font-black rounded-xl py-3">Reload check-in</button>
             <button
@@ -153,6 +156,13 @@ class CheckinErrorBoundary extends Component {
             >
               Sign out and log in again
             </button>
+            <a
+              href={supportMailto({ headline: 'Check-in crashed', ref: ref, details: `Reference: ${ref}\n${detail}\nPage: ${window.location.pathname}\nTime: ${new Date().toISOString()}\nBrowser: ${navigator.userAgent}` })}
+              className="w-full text-center text-neutral-300 font-semibold rounded-xl py-3 border border-neutral-700"
+            >
+              Contact support
+            </a>
+            <p className="text-neutral-500 text-xs mt-1">Reference {ref}</p>
           </div>
         </div>
       </div>

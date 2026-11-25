@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { AlertTriangle, ChevronRight, ClipboardCopy } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { isBetaDebugEnabled, dumpFeatureLog } from '../utils/betaDiagnostics';
 
 // ═══════════════════════════════════════════════════════════════════════════

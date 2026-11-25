@@ -17,7 +17,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Copy, Plus, X, ExternalLink, ChevronRight, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { eventAPI } from '../services/api';
 import { getUserTimezone, localDateTimeToUTC } from '../utils/timezoneUtils';
 import { SkeletonSection } from './ui/Feedback';

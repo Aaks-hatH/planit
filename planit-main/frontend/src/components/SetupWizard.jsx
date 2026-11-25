@@ -5,7 +5,7 @@ import {
   ArrowRight, BookOpen, Lock, Shield, Users,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function StepDots({ current, total }) {

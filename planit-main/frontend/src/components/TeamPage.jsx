@@ -3,7 +3,7 @@ import {
   AlertTriangle, Briefcase, Check, Clock, Crown, Edit2, Key, Loader2, Network, Power, RefreshCw, RotateCcw, Search,
   ShieldCheck, Trash2, UserPlus, Users, X, Save, History, ListChecks, Github,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { adminAPI } from '../services/api';
 import AddPersonWizard from './AddPersonWizard';
 import { GithubTab, TasksTab } from './TeamWork';

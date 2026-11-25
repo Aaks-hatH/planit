@@ -6,13 +6,37 @@ import './index.css'
 import { Toaster } from 'react-hot-toast'
 import { initAppUpdate } from './utils/appUpdate'
 import { captureInstallPrompt } from './hooks/useInstallPrompt'
+import ErrorBoundary from './components/ErrorBoundary'
+import { showError } from './utils/toast'
+import { explainError } from './utils/friendlyError'
 
 captureInstallPrompt()   // catch beforeinstallprompt before any component mounts
 initAppUpdate()          // service worker + "New version available" toast
 
+// Failures nobody caught (a forgotten .catch, a stale lazy chunk) used to vanish silently.
+// Show one explained toast for them — throttled so a failing background poll can't spam.
+let lastGlobalToast = 0;
+function reportUncaught(reason) {
+  try {
+    const info = explainError(reason);
+    // Cancelled requests, offline blips and expired sessions are handled elsewhere in the app.
+    if (['canceled', 'offline', 'auth'].includes(info.kind)) return;
+    const now = Date.now();
+    if (now - lastGlobalToast < 15000) return;
+    lastGlobalToast = now;
+    console.error('[uncaught]', reason);
+    showError(reason, '', { id: 'uncaught-error' });
+  } catch { /* reporting must never throw */ }
+}
+window.addEventListener('unhandledrejection', (e) => reportUncaught(e.reason));
+// Vite fires this when a lazy chunk fails to load after a new deploy.
+window.addEventListener('vite:preloadError', (e) => { e.preventDefault?.(); reportUncaught(new Error('Failed to fetch dynamically imported module')); });
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
     <Toaster
       position="top-right"
       containerStyle={{ top: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}

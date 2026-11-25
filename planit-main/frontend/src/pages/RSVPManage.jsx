@@ -4,7 +4,7 @@ import {
   Check, X, HelpCircle, Calendar, MapPin, User,
   ArrowRight, AlertTriangle, Edit2, Clock, Star
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { rsvpAPI } from '../services/api';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import { SkeletonHeroPage } from '../components/ui/Feedback';

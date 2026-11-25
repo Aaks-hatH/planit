@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Heart, Coffee, Sparkles, DollarSign } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import PublicLayout from '../components/ui/PublicLayout';
 
 // Plain axios instance with no auth interceptors for public support routes

@@ -26,7 +26,7 @@ import {
   Check, X, Minus, Plus, ChevronDown, ChevronUp, HelpCircle,
   ArrowRight, AlertTriangle, User,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../../utils/toast';
 import { rsvpAPI } from '../../services/api';
 import { trackGAEvent } from '../../services/analytics';
 import TurnstileWidget from '../TurnstileWidget';

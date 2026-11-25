@@ -44,7 +44,7 @@ import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategorie
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import { getTimezoneOptions, isValidTimezone, localDateTimeToUTC, getUserTimezone } from '../utils/timezoneUtils';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
 import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';

@@ -5,7 +5,7 @@ import {
   Eye, EyeOff, Zap, ListChecks, AlertCircle, UtensilsCrossed, QrCode, Bot, CheckSquare,
   CornerDownRight, Menu, X, Layers, MapPin, Clock, CheckCircle2, Share2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
 import { validateEmail } from '../utils/validators';
 import { eventAPI } from '../services/api';

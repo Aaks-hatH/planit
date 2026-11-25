@@ -3,7 +3,7 @@ import {
   AlertTriangle, Bell, CheckCircle, Clock, Copy, DollarSign, ExternalLink, Eye, Loader2, RefreshCw,
   Search, Send, Server, ShieldAlert, ShieldCheck, X, XCircle, Zap, Wallet, Activity, Inbox,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import api from '../services/api';
 import { Skeleton } from './ui/Feedback';
 

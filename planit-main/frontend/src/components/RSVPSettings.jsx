@@ -6,7 +6,7 @@ import {
   ToggleLeft, ToggleRight, ExternalLink, Copy, Sliders,
   MessageSquare, Star, Tag, Clock, FileText, Layers, CheckCircle2, LogOut
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { rsvpAPI, fileAPI } from '../services/api';
 import { SkeletonSection } from './ui/Feedback';
 

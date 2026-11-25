@@ -18,7 +18,7 @@ import {
   ShoppingCart, Plus, Minus, ClipboardList, Calculator, ChefHat, RotateCcw, AlertTriangle,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 // ── Alert helpers ─────────────────────────────────────────────────────────────
 

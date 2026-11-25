@@ -57,7 +57,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Sparkles, Users, BarChart3 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
 import RSVPAnalytics from '../components/RSVPAnalytics';

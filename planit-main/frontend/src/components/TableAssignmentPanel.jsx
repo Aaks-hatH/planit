@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   X, Search, Wand2, Star, Mic, Shield, Check, Users, MapPin, Loader2, AlertTriangle, Undo2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { eventAPI } from '../services/api';
 
 /**

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Plus, Trash2, TrendingUp, PieChart } from 'lucide-react';
 import { expenseAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 export default function Expenses({ eventId, socket, isOrganizer }) {
   const [expenses, setExpenses] = useState([]);

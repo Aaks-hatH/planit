@@ -4,7 +4,7 @@ import {
   Calendar, MapPin, Shield, QrCode, Share2, Check, ArrowLeft,
   ExternalLink, Sparkles, Ticket, CheckCircle,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import StarBackground from '../components/StarBackground';
 import EventCountdown from '../components/EventCountdown';
 import GuestAvatarStack from '../components/GuestAvatarStack';

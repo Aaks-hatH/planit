@@ -17,7 +17,7 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { useParams } from 'react-router-dom';
 import { AlertTriangle, X, Lock } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { rsvpAPI } from '../services/api';
 import RSVPPageRenderer from '../components/RSVPPageRenderer';
 import { FONTS, getBgStyle } from '../components/rsvpBlocks/theme';

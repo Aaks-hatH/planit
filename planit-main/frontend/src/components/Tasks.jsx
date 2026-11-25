@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Plus, Trash2, Calendar, User, AlertCircle } from 'lucide-react';
 import { taskAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 export default function Tasks({ eventId, socket }) {
   const [tasks, setTasks] = useState([]);

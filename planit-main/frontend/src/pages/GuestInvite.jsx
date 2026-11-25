@@ -9,7 +9,7 @@ import {
   Ticket, Phone, ExternalLink, Download, User, Sparkles,
   Navigation, CalendarPlus, MessageCircle, AlertTriangle
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import { motion } from 'framer-motion';
 import StarBackground from '../components/StarBackground';

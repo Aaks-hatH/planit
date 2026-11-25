@@ -4,7 +4,7 @@ import {
   ChevronDown, Star, Trash2, UserCheck,
   RefreshCw, ThumbsUp, ThumbsDown, Edit2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import { rsvpAPI } from '../services/api';
 import { SkeletonTable } from './ui/Feedback';
 

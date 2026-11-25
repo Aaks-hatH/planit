@@ -5,7 +5,7 @@ import {
   Pencil, CheckCircle2, AlertTriangle, ChevronRight, CameraOff,
   Loader2, Sparkles, Lock, ShieldAlert, Monitor, Radar,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import {
   useVenueCamera, usePositionTracker, motionSensorsSupported,
   bearingTo, distanceBetween, bearingLabel, relativeBearing, formatDistance,

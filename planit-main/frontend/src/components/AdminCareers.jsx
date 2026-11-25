@@ -4,7 +4,7 @@ import {
   Briefcase, Bell, Check, ChevronDown, Copy, Download, Edit2, ExternalLink, Inbox, Link2, Loader2,
   Lock, Mail, Pause, Play, Plus, RefreshCw, Search, Star, Trash2, Unlock, X, Users, Eye, Clock, Network, UserPlus,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 import api from '../services/api';
 import OrgChart from './OrgChart';
 import AddPersonWizard from './AddPersonWizard';

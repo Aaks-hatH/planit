@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StickyNote, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import { noteAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import toast from '../utils/toast';
 
 const NOTE_COLORS = [
   '#fef3c7', // yellow
