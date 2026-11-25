@@ -25,6 +25,7 @@ import OfflineReadiness from '../components/OfflineReadiness';
 import OfflineQueuePanel from '../components/OfflineQueuePanel';
 import CheckinToolsMenu from '../components/CheckinToolsMenu';
 import Sheet from '../components/ui/Sheet';
+import QrScanner from '../components/QrScanner';
 import { requestPersistentStorage } from '../utils/persistentStorage';
 import { setUpdateBlocker } from '../utils/appUpdate';
 import { SkeletonRows, SkeletonPage } from '../components/ui/Feedback';
@@ -851,140 +852,6 @@ function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny
 // QR SCANNER WITH HTML5-QRCODE
 // ═══════════════════════════════════════════════════════════════════════════
 function QRScanner({ onScan, onClose }) {
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState(null);
-  const html5QrCodeRef = useRef(null);
-  const isMountedRef = useRef(true);
-  const isStoppingRef = useRef(false);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    startScanner();
-    return () => {
-      isMountedRef.current = false;
-      stopScanner();
-    };
-  }, []);
-
-  const stopScanner = async () => {
-    const scanner = html5QrCodeRef.current;
-    if (!scanner || isStoppingRef.current) return;
-    isStoppingRef.current = true;
-    html5QrCodeRef.current = null;
-    try {
-      const state = scanner.getState();
-      // Only call stop() if actually running (state 2 = SCANNING)
-      if (state === 2) {
-        await scanner.stop();
-      }
-    } catch (err) {
-      // Swallow — scanner was never running, nothing to stop
-    } finally {
-      isStoppingRef.current = false;
-    }
-  };
-
-  const startScanner = async () => {
-    if (!isMountedRef.current) return;
-    try {
-      setScanning(true);
-      setError(null);
-
-      const { Html5Qrcode } = await import('html5-qrcode');
-
-      if (!isMountedRef.current) return; // Component unmounted during import
-
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCodeRef.current = html5QrCode;
-
-      const config = {
-        fps: 15,
-        // Scale the scan box to 75% of whichever dimension is smaller.
-        // Avoids overflowing small phone screens and keeps the box centred.
-        qrbox: (viewW, viewH) => {
-          const side = Math.floor(Math.min(viewW, viewH) * 0.75);
-          return { width: side, height: side };
-        },
-        // Do NOT set aspectRatio — it causes OverconstrainedError on most
-        // phone cameras that only support 4:3 or 16:9 streams.
-        experimentalFeatures: {
-          // BarcodeDetector is faster but very strict about QR quality.
-          // Disable it so we fall back to the more lenient ZXing decoder,
-          // which handles real-world glare/angle/brightness better.
-          useBarCodeDetectorIfSupported: false,
-        },
-      };
-
-      const onSuccess = (decodedText) => {
-        stopScanner();
-        onScan(decodedText);
-      };
-
-      const onScanError = () => {
-        // Suppress per-frame scan errors — normal while searching for QR
-      };
-
-      // First try back camera (environment)
-      try {
-        await html5QrCode.start(
-          { facingMode: { exact: "environment" } },
-          config,
-          onSuccess,
-          onScanError
-        );
-      } catch (envErr) {
-        // AbortError or OverconstrainedError — back camera unavailable or timed out
-        // Fall back to any available camera
-        if (!isMountedRef.current) return;
-        if (html5QrCodeRef.current) {
-          try {
-            const state = html5QrCode.getState();
-            if (state === 2) await html5QrCode.stop();
-          } catch (_) {}
-        }
-        const fallbackScanner = new Html5Qrcode("qr-reader");
-        html5QrCodeRef.current = fallbackScanner;
-        await fallbackScanner.start(
-          { facingMode: "user" }, // Front camera fallback
-          config,
-          onSuccess,
-          onScanError
-        );
-      }
-
-      if (isMountedRef.current) setScanning(true);
-
-    } catch (err) {
-      if (!isMountedRef.current) return;
-
-      let message;
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
-        message = 'Camera permission denied. Tap the camera icon in your browser address bar and allow access, then try again.';
-      } else if (err.name === 'NotFoundError' || err.message?.includes('Requested device not found')) {
-        message = 'No camera found on this device.';
-      } else if (err.name === 'NotReadableError' || err.message?.includes('in use')) {
-        message = 'Camera is in use by another app. Close any other apps or tabs using the camera and try again.';
-      } else if (err.name === 'AbortError' || err.message?.includes('Timeout') || err.message?.includes('AbortError')) {
-        message = 'Camera took too long to start. Close other apps using the camera, then tap Retry.';
-      } else if (err.name === 'OverconstrainedError') {
-        message = 'Camera settings not supported on this device. Tap Retry to try again.';
-      } else {
-        message = `Could not start camera. ${err.message || 'Please check permissions and try again.'}`;
-      }
-
-      setError(message);
-      setScanning(false);
-    }
-  };
-
-  const handleRetry = async () => {
-    await stopScanner();
-    // Small delay to let the camera hardware fully release
-    setTimeout(() => {
-      if (isMountedRef.current) startScanner();
-    }, 800);
-  };
-
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       <div
@@ -1002,40 +869,11 @@ function QRScanner({ onScan, onClose }) {
         <span className="text-white text-sm font-semibold">SCAN QR CODE</span>
         <div className="w-16" />
       </div>
-      
-      <div className="flex-1 relative flex items-center justify-center bg-black">
-        {error ? (
-          <div className="text-center text-white p-8">
-            <CameraOff className="w-16 h-16 mx-auto mb-4 text-red-400" />
-            <p className="text-lg font-semibold mb-2">Camera Error</p>
-            <p className="text-sm text-neutral-300 mb-8 max-w-xs mx-auto">{error}</p>
-            <div className="flex flex-col gap-3 max-w-xs mx-auto">
-              <button
-                onClick={handleRetry}
-                className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200"
-              >
-                Retry Camera
-              </button>
-              <button
-                onClick={onClose}
-                className="px-6 py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full max-w-md px-4">
-            {/* QR Reader div - DO NOT REMOVE */}
-            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-2xl"></div>
-            <p className="text-white text-center mt-6 text-sm">
-               Position QR code within the frame
-            </p>
-            <p className="text-neutral-400 text-center mt-2 text-xs">
-              Scanning automatically when QR code is detected
-            </p>
-          </div>
-        )}
+
+      <div className="flex-1 overflow-auto flex items-center justify-center bg-black">
+        <div className="w-full max-w-md px-4 py-4">
+          <QrScanner onScan={onScan} />
+        </div>
       </div>
     </div>
   );
