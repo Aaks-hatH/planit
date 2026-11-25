@@ -91,6 +91,12 @@ const rsvpSubmissionSchema = new mongoose.Schema(
     checkedIn:   { type: Boolean, default: false },
     checkedInAt: { type: Date, default: null },
 
+    // ── Ticket (enterprise events with "RSVPs become tickets" turned on) ─────
+    // inviteCode is the ticket's code (same one used at /invite/:code and by the
+    // enterprise check-in door). Empty until the RSVP is confirmed and attending.
+    inviteCode: { type: String, default: '', index: true },
+    inviteId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Invite', default: null },
+
     // ── Unique guest edit/cancel token ────────────────────────────────────────
     editToken: {
       type:   String,
