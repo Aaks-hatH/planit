@@ -3,84 +3,81 @@
  *
  * Branded landing page shown at / on a white-label domain.
  * Reads from wl.pages.home and wl.branding via context.
- * Falls back to sensible defaults if fields aren't set.
  *
  * Structure:
- *   - Nav bar (logo + company name + dashboard link)
- *   - Hero (headline, subheadline, hero image, CTA button)
- *   - Events grid (live from /api/events/public/discover for this domain)
- *   - Contact bar (email / phone / address from pages.contact)
- *   - Minimal footer
+ *   - Glass nav (logo + company, Create event, Client login)
+ *   - Hero (headline, subheadline, optional hero image, CTA)
+ *   - Featured next event + events grid (live from /api/events/public/wl)
+ *   - Contact strip + footer
+ *
+ * If the owner linked a homepage event (pages.home.tableServiceEventId) the
+ * visitor is redirected straight to that event instead.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { Calendar, MapPin, Users, Search, ArrowRight, Clock, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, Users, Search, ArrowRight, Clock, Mail, Phone } from 'lucide-react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
-function fmtDate(d) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function fmtTime(d) {
-  if (!d) return '';
-  return new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
+const fmtDay   = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtTime  = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const eventUrl = (e) => (e.isTableServiceMode ? `/e/${e.subdomain}/reserve` : `/e/${e.subdomain}`);
 
 export default function WLHome() {
   const navigate = useNavigate();
   const { wl, resolved } = useWhiteLabel();
 
-  const branding  = wl?.branding  || {};
-  const pages     = wl?.pages     || {};
-  const features  = wl?.features  || {};
-  const contact   = pages.contact || {};
-  const home      = pages.home    || {};
+  const branding = wl?.branding || {};
+  const pages    = wl?.pages    || {};
+  const contact  = pages.contact || {};
+  const home     = pages.home    || {};
 
-  const primary  = branding.primaryColor || '#2563eb';
-  const accent   = branding.accentColor  || primary;
-  const font     = branding.fontFamily   || 'Inter';
-  const company  = branding.companyName  || wl?.clientName || 'Welcome';
-  const logo     = branding.logoUrl      || null;
+  const primary = branding.primaryColor || '#2563eb';
+  const accent  = branding.accentColor  || primary;
+  const font    = branding.fontFamily   || 'Inter';
+  const company = branding.companyName  || wl?.clientName || 'Welcome';
+  const logo    = branding.logoUrl      || null;
 
-  // If the owner linked a homepage event, redirect straight to it instead of
-  // showing the events grid. The backend resolves the linked event's mode
-  // (table service vs. standard) at /whitelabel/resolve time and hands it
-  // back as wl.linkedEventKind, so we route to the right page for either
-  // a restaurant/venue (reservation floor) or a regular party/RSVP event
-  // (event space) without guessing on the client.
-  const linkedEventId   = home.tableServiceEventId?.trim();
-  const linkedEventKind = wl?.linkedEventKind; // 'table_service' | 'standard' | null (null once resolved = not found)
+  // Linked homepage event → redirect straight to it.
+  const linkedEventId       = home.tableServiceEventId?.trim();
+  const linkedEventKind     = wl?.linkedEventKind; // 'table_service' | 'standard' | null
   const linkedEventNotFound = resolved && !!linkedEventId && !linkedEventKind;
 
   useEffect(() => {
     if (!resolved || !linkedEventId || !linkedEventKind) return;
-    const dest = linkedEventKind === 'table_service'
-      ? `/e/${linkedEventId}/reserve`
-      : `/e/${linkedEventId}`;
-    navigate(dest, { replace: true });
-  }, [resolved, linkedEventId, linkedEventKind]);
+    navigate(linkedEventKind === 'table_service' ? `/e/${linkedEventId}/reserve` : `/e/${linkedEventId}`, { replace: true });
+  }, [resolved, linkedEventId, linkedEventKind, navigate]);
 
-  // (hooks must run before the early return below, so they live up here)
   const [events, setEvents]   = useState([]);
   const [search, setSearch]   = useState('');
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed]   = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    // Fetch public events scoped to this WL domain
-    fetch(`${API_URL}/events/public/wl?domain=${encodeURIComponent(window.location.hostname)}&limit=12`)
-      .then(r => r.ok ? r.json() : { events: [] })
+    setLoading(true); setFailed(false);
+    fetch(`${API_URL}/events/public/wl?domain=${encodeURIComponent(window.location.hostname)}&limit=24`)
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(d => setEvents(d.events || []))
-      .catch(() => setEvents([]))
+      .catch(() => { setEvents([]); setFailed(true); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [attempt]);
 
-  // Don't render the rest while we're still resolving or about to redirect —
-  // but if the linked event turned out not to exist (deleted, typo, etc.),
-  // fall through and show the normal events grid instead of a blank screen.
+  // Upcoming first; drop events that ended more than a day ago.
+  const upcoming = useMemo(() => {
+    const cutoff = Date.now() - 86400000;
+    return events
+      .filter(e => !e.date || new Date(e.date).getTime() >= cutoff)
+      .sort((a, b) => (new Date(a.date || 8.64e15)) - (new Date(b.date || 8.64e15)));
+  }, [events]);
+
+  const q = search.trim().toLowerCase();
+  const filtered = upcoming.filter(e => !q || e.title?.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q));
+  const featured = !q && filtered.length > 2 ? filtered[0] : null;
+  const grid     = featured ? filtered.slice(1) : filtered;
+
   if (linkedEventId && !linkedEventNotFound) return null;
 
   const headline    = home.headline    || `Welcome to ${company}`;
@@ -88,266 +85,222 @@ export default function WLHome() {
   const heroImg     = home.heroImageUrl || null;
   const ctaText     = home.ctaText     || 'Browse events';
   const showSearch  = home.showSearch  !== false;
-
-  const filtered = events.filter(e =>
-    !search || e.title?.toLowerCase().includes(search.toLowerCase()) ||
-    e.location?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const isEmpty = !loading && filtered.length === 0;
+  const hasContact  = contact.email || contact.phone || contact.address;
 
   return (
-    <div style={{ minHeight: '100dvh', fontFamily: `'${font}', system-ui, sans-serif`, background: '#fafafa', color: '#111' }}>
+    <div className="wlh" style={{ '--p': primary, '--a': accent, fontFamily: `'${font}', system-ui, -apple-system, sans-serif` }}>
+      <style>{css}</style>
 
       {/* Nav */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e5e5', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <header className="wlh-nav">
+        <div className="wlh-wrap wlh-nav-in">
           {logo
-            ? <img src={logo} alt={company} style={{ height: 32, objectFit: 'contain' }} />
-            : <div style={{ width: 32, height: 32, borderRadius: 8, background: primary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Calendar size={16} color="#fff" />
-              </div>
-          }
-          <span style={{ fontWeight: 700, fontSize: '1rem', color: '#111', letterSpacing: '-0.02em' }}>{company}</span>
-          <div style={{ flex: 1 }} />
-          <button onClick={() => navigate('/?new=1')}
-            style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', background: primary, border: 0, cursor: 'pointer', padding: '8px 14px', borderRadius: 9 }}>
-            Create event
-          </button>
-          {wl?.portalEnabled && (
-            <a href="/dashboard"
-              style={{ fontSize: '0.8rem', fontWeight: 600, color: primary, textDecoration: 'none', padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${primary}33`, transition: 'background 0.15s' }}
-              onMouseEnter={e => e.target.style.background = `${primary}10`}
-              onMouseLeave={e => e.target.style.background = 'transparent'}>
-              Client login
-            </a>
-          )}
+            ? <img src={logo} alt={company} className="wlh-logo" />
+            : <span className="wlh-mark"><Calendar size={16} color="#fff" /></span>}
+          <span className="wlh-brand">{company}</span>
+          <span style={{ flex: 1 }} />
+          <button className="wlh-btn wlh-btn-solid wlh-sm" onClick={() => navigate('/?new=1')}>Create event</button>
+          {wl?.portalEnabled && <a href="/dashboard" className="wlh-btn wlh-btn-ghost wlh-sm">Client login</a>}
         </div>
       </header>
 
       {/* Hero */}
-      <section style={{
-        position: 'relative',
-        background: heroImg ? 'transparent' : `linear-gradient(135deg, ${primary}15 0%, ${accent}08 100%)`,
-        borderBottom: '1px solid #e5e5e5',
-        overflow: 'hidden',
-      }}>
-        {heroImg && (
-          <>
-            <img src={heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-          </>
-        )}
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', padding: '72px 24px 64px', textAlign: 'center' }}>
-          <h1 style={{
-            fontSize: 'clamp(2rem, 5vw, 3.25rem)',
-            fontWeight: 800,
-            letterSpacing: '-0.04em',
-            lineHeight: 1.1,
-            marginBottom: '1rem',
-            color: heroImg ? '#fff' : '#111',
-          }}>
-            {headline}
-          </h1>
-          <p style={{
-            fontSize: '1.1rem',
-            color: heroImg ? 'rgba(255,255,255,0.85)' : '#555',
-            maxWidth: 540,
-            margin: '0 auto 2rem',
-            lineHeight: 1.6,
-          }}>
-            {subheadline}
-          </p>
-          <a href="#events"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '14px 28px', borderRadius: 12,
-              background: primary, color: '#fff',
-              fontWeight: 700, fontSize: '0.95rem',
-              textDecoration: 'none',
-              boxShadow: `0 4px 20px ${primary}55`,
-              transition: 'opacity 0.15s',
-            }}
-            onMouseEnter={e => e.target.style.opacity = '0.9'}
-            onMouseLeave={e => e.target.style.opacity = '1'}>
-            {ctaText} <ArrowRight size={16} />
-          </a>
+      <section className={`wlh-hero ${heroImg ? 'has-img' : ''}`}>
+        {heroImg && <><img src={heroImg} alt="" className="wlh-hero-img" /><div className="wlh-hero-shade" /></>}
+        {!heroImg && <><div className="wlh-orb wlh-orb-1" /><div className="wlh-orb wlh-orb-2" /></>}
+        <div className="wlh-wrap wlh-hero-in">
+          <h1>{headline}</h1>
+          <p>{subheadline}</p>
+          <div className="wlh-hero-cta">
+            <a href="#events" className="wlh-btn wlh-btn-solid wlh-lg">{ctaText} <ArrowRight size={16} /></a>
+            {upcoming.length > 0 && <span className="wlh-count">{upcoming.length} upcoming {upcoming.length === 1 ? 'event' : 'events'}</span>}
+          </div>
         </div>
       </section>
 
-      {/* Events section */}
-      <main id="events" style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px' }}>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em' }}>
-            {pages.events?.headline || 'Upcoming events'}
-          </h2>
-          {showSearch && (
-            <div style={{ position: 'relative' }}>
-              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search events..."
-                style={{
-                  paddingLeft: 36, paddingRight: 14, paddingTop: 9, paddingBottom: 9,
-                  borderRadius: 10, border: '1.5px solid #e5e5e5', fontSize: '0.875rem',
-                  outline: 'none', background: '#fff', width: 220,
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={e => e.target.style.borderColor = primary}
-                onBlur={e => e.target.style.borderColor = '#e5e5e5'}
-              />
-            </div>
+      {/* Events */}
+      <main id="events" className="wlh-wrap wlh-main">
+        <div className="wlh-bar">
+          <h2>{pages.events?.headline || 'Upcoming events'}</h2>
+          {showSearch && upcoming.length > 0 && (
+            <label className="wlh-search">
+              <Search size={15} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events" />
+            </label>
           )}
         </div>
 
         {loading && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-            {[1,2,3].map(i => (
-              <div key={i} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e5e5', overflow: 'hidden', animation: 'pulse 1.5s ease-in-out infinite' }}>
-                <div style={{ height: 160, background: '#f5f5f5' }} />
-                <div style={{ padding: 20 }}>
-                  <div style={{ height: 18, background: '#f0f0f0', borderRadius: 6, marginBottom: 10, width: '70%' }} />
-                  <div style={{ height: 14, background: '#f0f0f0', borderRadius: 6, width: '50%' }} />
-                </div>
-              </div>
-            ))}
+          <div className="wlh-grid">
+            {[1, 2, 3].map(i => <div key={i} className="wlh-card wlh-skel"><div className="wlh-skel-img" /><div className="wlh-skel-l" /><div className="wlh-skel-l s" /></div>)}
           </div>
         )}
 
-        {isEmpty && (
-          <div style={{ textAlign: 'center', padding: '72px 24px', color: '#999' }}>
-            <Calendar size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-            <p style={{ fontSize: '0.9rem' }}>
-              {pages.events?.emptyStateText || 'No upcoming events right now. Check back soon.'}
-            </p>
+        {!loading && failed && (
+          <div className="wlh-empty">
+            <p>We couldn’t load events right now.</p>
+            <button className="wlh-btn wlh-btn-ghost wlh-sm" onClick={() => setAttempt(n => n + 1)}>Try again</button>
           </div>
         )}
 
-        {!loading && filtered.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-            {filtered.map(event => (
-              <EventCard key={event._id} event={event} primary={primary} accent={accent} navigate={navigate} />
-            ))}
+        {!loading && !failed && filtered.length === 0 && (
+          <div className="wlh-empty">
+            <span className="wlh-empty-ic"><Calendar size={26} /></span>
+            <p>{q ? `No events match “${search}”.` : (pages.events?.emptyStateText || 'No upcoming events right now. Check back soon.')}</p>
+          </div>
+        )}
+
+        {!loading && featured && (
+          <article className="wlh-feature" onClick={() => navigate(eventUrl(featured))}>
+            <div className="wlh-feature-img" style={featured.coverImage ? { backgroundImage: `url(${featured.coverImage})` } : undefined}>
+              {!featured.coverImage && <Calendar size={44} />}
+            </div>
+            <div className="wlh-feature-body">
+              <span className="wlh-pill">Next up</span>
+              <h3>{featured.title}</h3>
+              {featured.description && <p className="wlh-desc">{featured.description}</p>}
+              <Meta e={featured} />
+              <span className="wlh-btn wlh-btn-solid wlh-sm" style={{ alignSelf: 'flex-start' }}>
+                {featured.isTableServiceMode ? 'Reserve a table' : 'View event'} <ArrowRight size={14} />
+              </span>
+            </div>
+          </article>
+        )}
+
+        {!loading && grid.length > 0 && (
+          <div className="wlh-grid">
+            {grid.map(e => <Card key={e._id} e={e} onOpen={() => navigate(eventUrl(e))} />)}
           </div>
         )}
       </main>
 
-      {/* Contact bar */}
-      {(contact.email || contact.phone || contact.address) && (
-        <section style={{ background: '#fff', borderTop: '1px solid #e5e5e5', padding: '28px 24px' }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center', fontSize: '0.875rem', color: '#555' }}>
-            {contact.email && (
-              <a href={`mailto:${contact.email}`} style={{ color: primary, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: primary, flexShrink: 0 }} />
-                {contact.email}
-              </a>
-            )}
-            {contact.phone && (
-              <a href={`tel:${contact.phone}`} style={{ color: primary, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: primary, flexShrink: 0 }} />
-                {contact.phone}
-              </a>
-            )}
-            {contact.address && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin size={13} style={{ color: primary, flexShrink: 0 }} />
-                {contact.address}
-              </span>
-            )}
+      {hasContact && (
+        <section className="wlh-contact">
+          <div className="wlh-wrap wlh-contact-in">
+            {contact.email   && <a href={`mailto:${contact.email}`}><Mail size={14} /> {contact.email}</a>}
+            {contact.phone   && <a href={`tel:${contact.phone}`}><Phone size={14} /> {contact.phone}</a>}
+            {contact.address && <span><MapPin size={14} /> {contact.address}</span>}
           </div>
         </section>
       )}
 
-      {/* Footer */}
-      <footer style={{ background: '#fff', borderTop: '1px solid #e5e5e5', padding: '20px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: '0.8rem', color: '#bbb' }}>{company}</span>
-          {!branding.hidePoweredBy && (
-            <a href="https://planitapp.onrender.com" target="_blank" rel="noreferrer"
-              style={{ fontSize: '0.75rem', color: '#ccc', textDecoration: 'none' }}>
-              Powered by PlanIt
-            </a>
-          )}
+      <footer className="wlh-foot">
+        <div className="wlh-wrap wlh-foot-in">
+          <span>© {new Date().getFullYear()} {company}</span>
+          {!branding.hidePoweredBy && <a href="https://planitapp.onrender.com" target="_blank" rel="noreferrer">Powered by PlanIt</a>}
         </div>
       </footer>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-      `}</style>
     </div>
   );
 }
 
-function EventCard({ event, primary, accent, navigate }) {
-  const daysUntil = event.date ? Math.ceil((new Date(event.date) - Date.now()) / 86400000) : null;
-  const isSoon = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3;
-  const isPast = daysUntil !== null && daysUntil < 0;
-
+function Meta({ e }) {
   return (
-    <div
-      onClick={() => navigate(event.isTableServiceMode ? `/e/${event.subdomain}/reserve` : `/e/${event.subdomain}`)}
-      style={{
-        background: '#fff', borderRadius: 16,
-        border: '1.5px solid #e5e5e5',
-        overflow: 'hidden', cursor: 'pointer',
-        transition: 'transform 0.15s, box-shadow 0.15s',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${primary}20`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
-    >
-      {/* Image or color block */}
-      <div style={{ height: 140, background: `linear-gradient(135deg, ${primary}22, ${accent}15)`, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {event.coverImage
-          ? <img src={event.coverImage} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
-          : <Calendar size={32} style={{ color: primary, opacity: 0.4 }} />
-        }
-        {isSoon && (
-          <span style={{ position: 'absolute', top: 10, right: 10, background: primary, color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>
-            {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil}d away`}
-          </span>
-        )}
-        {isPast && (
-          <span style={{ position: 'absolute', top: 10, right: 10, background: '#6b7280', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>
-            Past
-          </span>
-        )}
-      </div>
-
-      <div style={{ padding: '16px 18px 18px' }}>
-        <h3 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 6, letterSpacing: '-0.01em', color: '#111', lineHeight: 1.3 }}>
-          {event.title}
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, color: '#777', fontSize: '0.8rem' }}>
-          {event.date && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Clock size={12} style={{ color: primary, flexShrink: 0 }} />
-              {fmtDate(event.date)} · {fmtTime(event.date)}
-            </span>
-          )}
-          {event.location && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <MapPin size={12} style={{ color: primary, flexShrink: 0 }} />
-              {event.location}
-            </span>
-          )}
-          {event.maxParticipants > 0 && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Users size={12} style={{ color: primary, flexShrink: 0 }} />
-              {event.participantCount || 0} / {event.maxParticipants} spots
-            </span>
-          )}
-        </div>
-        <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: primary }}>
-            View details
-          </span>
-          <ChevronRight size={14} style={{ color: primary }} />
-        </div>
-      </div>
+    <div className="wlh-meta">
+      {e.date && <span><Clock size={13} /> {fmtDay(e.date)} · {fmtTime(e.date)}</span>}
+      {e.location && <span><MapPin size={13} /> {e.location}</span>}
+      {e.maxParticipants > 0 && !e.isTableServiceMode && <span><Users size={13} /> {e.participantCount || 0} / {e.maxParticipants} spots</span>}
     </div>
   );
 }
+
+function Card({ e, onOpen }) {
+  const days = e.date ? Math.ceil((new Date(e.date) - Date.now()) / 86400000) : null;
+  const badge = days === null ? null : days < 0 ? 'Happening now' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days <= 7 ? `In ${days} days` : null;
+  return (
+    <article className="wlh-card" onClick={onOpen} tabIndex={0} onKeyDown={ev => ev.key === 'Enter' && onOpen()}>
+      <div className="wlh-card-img" style={e.coverImage ? { backgroundImage: `url(${e.coverImage})` } : undefined}>
+        {!e.coverImage && <Calendar size={30} />}
+        {badge && <span className="wlh-badge">{badge}</span>}
+      </div>
+      <div className="wlh-card-body">
+        <h3>{e.title}</h3>
+        <Meta e={e} />
+        <span className="wlh-link">{e.isTableServiceMode ? 'Reserve a table' : 'View details'} <ArrowRight size={14} /></span>
+      </div>
+    </article>
+  );
+}
+
+const css = `
+.wlh{min-height:100dvh;background:#f7f7f9;color:#111827;-webkit-font-smoothing:antialiased}
+.wlh *{box-sizing:border-box}
+.wlh h1,.wlh h2,.wlh h3,.wlh p{margin:0}
+.wlh-wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+.wlh-nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(0,0,0,.06)}
+.wlh-nav-in{height:64px;display:flex;align-items:center;gap:12px}
+.wlh-logo{height:32px;max-width:160px;object-fit:contain}
+.wlh-mark{width:32px;height:32px;border-radius:9px;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wlh-brand{font-weight:700;font-size:1rem;letter-spacing:-.02em}
+
+.wlh-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:600;border:0;cursor:pointer;text-decoration:none;border-radius:11px;transition:transform .15s,box-shadow .15s,background .15s}
+.wlh-sm{font-size:.82rem;padding:9px 15px}
+.wlh-lg{font-size:.98rem;padding:14px 26px;border-radius:13px}
+.wlh-btn-solid{background:var(--p);color:#fff;box-shadow:0 4px 14px color-mix(in srgb,var(--p) 35%,transparent)}
+.wlh-btn-solid:hover{transform:translateY(-1px);box-shadow:0 8px 22px color-mix(in srgb,var(--p) 40%,transparent)}
+.wlh-btn-ghost{background:transparent;color:var(--p);border:1.5px solid color-mix(in srgb,var(--p) 28%,transparent)}
+.wlh-btn-ghost:hover{background:color-mix(in srgb,var(--p) 8%,transparent)}
+
+.wlh-hero{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid rgba(0,0,0,.06)}
+.wlh-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.wlh-hero-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.62))}
+.wlh-orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.28;pointer-events:none}
+.wlh-orb-1{width:420px;height:420px;background:var(--p);top:-160px;left:-80px}
+.wlh-orb-2{width:360px;height:360px;background:var(--a);bottom:-180px;right:-60px}
+.wlh-hero-in{position:relative;padding:92px 24px 84px;text-align:center}
+.wlh-hero h1{font-size:clamp(2.1rem,5.4vw,3.6rem);font-weight:800;letter-spacing:-.045em;line-height:1.05;max-width:820px;margin:0 auto 18px}
+.wlh-hero p{font-size:clamp(1rem,2vw,1.2rem);color:#4b5563;line-height:1.6;max-width:560px;margin:0 auto 32px}
+.wlh-hero.has-img h1{color:#fff}.wlh-hero.has-img p{color:rgba(255,255,255,.88)}
+.wlh-hero-cta{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap}
+.wlh-count{font-size:.85rem;font-weight:600;color:#6b7280;background:rgba(255,255,255,.75);padding:7px 13px;border-radius:999px;border:1px solid rgba(0,0,0,.06)}
+
+.wlh-main{padding-top:52px;padding-bottom:64px;scroll-margin-top:64px}
+.wlh-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:26px}
+.wlh-bar h2{font-size:1.4rem;font-weight:800;letter-spacing:-.03em}
+.wlh-search{position:relative;display:flex;align-items:center}
+.wlh-search svg{position:absolute;left:13px;color:#9ca3af}
+.wlh-search input{font:inherit;font-size:.88rem;width:240px;max-width:100%;padding:10px 14px 10px 37px;border-radius:11px;border:1.5px solid #e5e7eb;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.wlh-search input:focus{border-color:var(--p);box-shadow:0 0 0 4px color-mix(in srgb,var(--p) 14%,transparent)}
+
+.wlh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
+.wlh-card{background:#fff;border-radius:18px;border:1px solid #ececf0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .18s,box-shadow .18s,border-color .18s;outline:none}
+.wlh-card:hover,.wlh-card:focus-visible{transform:translateY(-3px);box-shadow:0 14px 34px rgba(17,24,39,.09);border-color:color-mix(in srgb,var(--p) 35%,#ececf0)}
+.wlh-card-img,.wlh-feature-img{position:relative;background:linear-gradient(135deg,color-mix(in srgb,var(--p) 18%,#fff),color-mix(in srgb,var(--a) 10%,#fff)) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--p)}
+.wlh-card-img{height:160px}
+.wlh-card-img svg,.wlh-feature-img svg{opacity:.45}
+.wlh-badge{position:absolute;top:12px;left:12px;background:#fff;color:var(--p);font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.wlh-card-body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px;flex:1}
+.wlh-card h3{font-size:1.02rem;font-weight:700;letter-spacing:-.015em;line-height:1.3}
+.wlh-meta{display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:#6b7280}
+.wlh-meta span{display:flex;align-items:center;gap:7px}
+.wlh-meta svg{color:var(--p);flex-shrink:0}
+.wlh-link{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-size:.84rem;font-weight:700;color:var(--p)}
+.wlh-card:hover .wlh-link svg{transform:translateX(3px)}.wlh-link svg{transition:transform .15s}
+
+.wlh-feature{display:grid;grid-template-columns:1.1fr 1fr;background:#fff;border:1px solid #ececf0;border-radius:22px;overflow:hidden;cursor:pointer;margin-bottom:26px;transition:box-shadow .18s,transform .18s}
+.wlh-feature:hover{box-shadow:0 18px 44px rgba(17,24,39,.1);transform:translateY(-2px)}
+.wlh-feature-img{min-height:300px}
+.wlh-feature-body{padding:34px 34px 36px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+.wlh-feature h3{font-size:1.65rem;font-weight:800;letter-spacing:-.035em;line-height:1.15}
+.wlh-desc{color:#4b5563;line-height:1.6;font-size:.95rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.wlh-pill{align-self:flex-start;background:color-mix(in srgb,var(--p) 12%,#fff);color:var(--p);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
+@media(max-width:760px){.wlh-feature{grid-template-columns:1fr}.wlh-feature-img{min-height:190px}.wlh-feature-body{padding:24px}.wlh-hero-in{padding:64px 20px 58px}.wlh-wrap{padding:0 18px}.wlh-search input{width:100%}.wlh-search{width:100%}}
+
+.wlh-empty{text-align:center;padding:72px 20px;color:#6b7280;display:flex;flex-direction:column;align-items:center;gap:14px;background:#fff;border:1px dashed #d9d9e0;border-radius:20px}
+.wlh-empty-ic{width:56px;height:56px;border-radius:16px;background:color-mix(in srgb,var(--p) 10%,#fff);color:var(--p);display:flex;align-items:center;justify-content:center}
+
+.wlh-skel{pointer-events:none;padding-bottom:20px}
+.wlh-skel-img{height:160px;background:#f0f0f3;margin-bottom:18px}
+.wlh-skel-l{height:14px;background:#f0f0f3;border-radius:6px;margin:0 20px 10px;width:70%}.wlh-skel-l.s{width:45%}
+.wlh-skel>*{animation:wlhp 1.4s ease-in-out infinite}
+@keyframes wlhp{0%,100%{opacity:1}50%{opacity:.5}}
+
+.wlh-contact{background:#fff;border-top:1px solid #ececf0}
+.wlh-contact-in{display:flex;flex-wrap:wrap;gap:12px 30px;justify-content:center;padding-top:26px;padding-bottom:26px;font-size:.88rem;color:#4b5563}
+.wlh-contact-in a,.wlh-contact-in span{display:inline-flex;align-items:center;gap:7px;color:inherit;text-decoration:none}
+.wlh-contact-in a:hover{color:var(--p)}.wlh-contact-in svg{color:var(--p)}
+.wlh-foot{background:#fff;border-top:1px solid #ececf0}
+.wlh-foot-in{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:20px;padding-bottom:20px;font-size:.78rem;color:#9ca3af}
+.wlh-foot-in a{color:#9ca3af;text-decoration:none}.wlh-foot-in a:hover{color:#6b7280}
+`;
