@@ -321,6 +321,28 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
     } catch { alert('Could not update that event. Try again.'); }
   };
 
+  // Event password (set / change / remove) for one of this tenant's events
+  const [pwSub, setPwSub] = useState(null);
+  const [pwValue, setPwValue] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState('');
+
+  const submitEventPassword = async (ev, remove = false) => {
+    setPwBusy(true); setPwMsg('');
+    try {
+      const r = await fetch(`${API}/wl-portal/events/${encodeURIComponent(ev.subdomain)}/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(remove ? { remove: true } : { password: pwValue }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Could not update the password.');
+      setTenantEvents(list => list.map(e => e.subdomain === ev.subdomain ? { ...e, isPasswordProtected: j.isPasswordProtected === true } : e));
+      setPwSub(null); setPwValue('');
+    } catch (err) { setPwMsg(err.message || 'Could not update the password.'); }
+    finally { setPwBusy(false); }
+  };
+
   const set = (page, k, v) => {
     setForm(f => ({ ...f, [page]: { ...f[page], [k]: v } }));
     setSaved(false);
@@ -429,15 +451,42 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
               : tenantEvents.length === 0 ? <p className="text-xs text-neutral-400">No events yet.</p>
               : <div className="space-y-1.5">
                   {tenantEvents.map(ev => (
-                    <div key={ev.subdomain} className="flex items-center justify-between gap-3 text-xs bg-neutral-50 rounded-lg px-3 py-2">
-                      <div className="min-w-0">
-                        <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
-                        <div className="text-neutral-400 font-mono truncate">/e/{ev.subdomain}</div>
+                    <div key={ev.subdomain} className="text-xs bg-neutral-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
+                          <div className="text-neutral-400 font-mono truncate">/e/{ev.subdomain}</div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <button type="button" onClick={() => { setPwSub(pwSub === ev.subdomain ? null : ev.subdomain); setPwValue(''); setPwMsg(''); }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300">
+                            {ev.isPasswordProtected ? 'Password set' : 'No password'}
+                          </button>
+                          <button type="button" onClick={() => toggleVisibility(ev)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${ev.isPublic ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-neutral-500 border-neutral-200'}`}>
+                            {ev.isPublic ? 'Public' : 'Hidden'}
+                          </button>
+                        </div>
                       </div>
-                      <button type="button" onClick={() => toggleVisibility(ev)}
-                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${ev.isPublic ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-neutral-500 border-neutral-200'}`}>
-                        {ev.isPublic ? 'Public' : 'Hidden'}
-                      </button>
+                      {pwSub === ev.subdomain && (
+                        <div className="mt-2 pt-2 border-t border-neutral-200 space-y-2">
+                          <p className="text-neutral-500">Guests need this password to join the event. Existing passwords can't be shown, only replaced.</p>
+                          <div className="flex items-center gap-2">
+                            <Input type="text" autoComplete="off" value={pwValue} onChange={e => setPwValue(e.target.value)}
+                              placeholder="New password (6+ characters)" maxLength={200} />
+                            <button type="button" disabled={pwBusy || pwValue.length < 6} onClick={() => submitEventPassword(ev)}
+                              className="shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-neutral-900 text-white disabled:opacity-40">
+                              {ev.isPasswordProtected ? 'Change' : 'Set'}
+                            </button>
+                            {ev.isPasswordProtected && (
+                              <button type="button" disabled={pwBusy}
+                                onClick={() => { if (window.confirm('Remove the password? Anyone with the link will be able to join.')) submitEventPassword(ev, true); }}
+                                className="shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-red-200 text-red-600 disabled:opacity-40">Remove</button>
+                            )}
+                          </div>
+                          {pwMsg && <p className="text-red-600">{pwMsg}</p>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>}
