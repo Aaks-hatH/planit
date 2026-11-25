@@ -17,6 +17,7 @@ import StepIndicator from '../components/StepIndicator';
 import DemoFeedback from '../components/DemoFeedback';
 import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
 import LivenessPrompt from '../components/LivenessPrompt';
+import QrScanner from '../components/QrScanner';
 import FaceTicketEvent from './FaceTicketEvent';
 
 // Match decision band — the spec suggests tuning around 0.6-0.7 depending on
@@ -586,96 +587,14 @@ function Field({ label, children }) {
 // SCAN / VERIFY FLOW
 // ═══════════════════════════════════════════════════════════════════════════
 function QRScanStage({ onDecoded, onCancel }) {
-  const containerId = 'face-ticket-qr-reader';
-  const scannerRef = useRef(null);
-  const mountedRef = useRef(true);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0); // bump to remount <QrScanner>
 
-  useEffect(() => {
-    mountedRef.current = true;
-    startScanner();
-    return () => {
-      mountedRef.current = false;
-      stopScanner();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const stopScanner = async () => {
-    const scanner = scannerRef.current;
-    if (!scanner) return;
-    scannerRef.current = null;
+  const handleScan = (text) => {
     try {
-      if (scanner.getState() === 2) await scanner.stop();
-    } catch { /* not running, ignore */ }
-  };
-
-  const startScanner = async () => {
-    try {
-      setError(null);
-      const { Html5Qrcode } = await import('html5-qrcode');
-      if (!mountedRef.current) return;
-      const scanner = new Html5Qrcode(containerId);
-      scannerRef.current = scanner;
-
-      const config = {
-        fps: 12,
-        qrbox: (w, h) => {
-          const side = Math.floor(Math.min(w, h) * 0.75);
-          return { width: side, height: side };
-        },
-        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
-      };
-
-      const onSuccess = (decodedText) => {
-        stopScanner();
-        try {
-          const parsed = unpackTicketPayload(decodedText);
-          onDecoded(parsed);
-        } catch (err) {
-          setError(err.message || 'Could not read this QR code as a Face Ticket.');
-        }
-      };
-
-      // Camera fallback chain. `exact: 'environment'` fails outright on a
-      // lot of Android devices (multiple rear lenses, or a device that only
-      // exposes a generic device list rather than facingMode metadata) —
-      // that's the intermittent "sometimes doesn't load" behavior. Try the
-      // rear camera as a soft preference first, then fall back to whatever
-      // camera is available via getCameras(), then finally the front camera
-      // as a last resort so the scanner never just dead-ends.
-      const attempts = [
-        () => scanner.start({ facingMode: 'environment' }, config, onSuccess, () => {}),
-        async () => {
-          const cameras = await Html5Qrcode.getCameras();
-          if (!cameras?.length) throw new Error('NO_CAMERAS');
-          const rear = cameras.find((c) => /back|rear|environment/i.test(c.label)) || cameras[0];
-          await scanner.start({ deviceId: { exact: rear.id } }, config, onSuccess, () => {});
-        },
-        () => scanner.start({ facingMode: 'user' }, config, onSuccess, () => {}),
-      ];
-
-      let started = false;
-      let lastErr = null;
-      for (const attempt of attempts) {
-        if (!mountedRef.current) return;
-        try {
-          await attempt();
-          started = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-          if (err?.name === 'NotAllowedError') break; // permission denied — retrying won't help
-        }
-      }
-      if (!started) throw lastErr || new Error('Could not start the camera.');
+      onDecoded(unpackTicketPayload(text));
     } catch (err) {
-      if (!mountedRef.current) return;
-      let message = 'Could not start the camera.';
-      if (err.name === 'NotAllowedError') message = 'Camera permission denied. Allow access in your browser settings and retry.';
-      else if (err.name === 'NotFoundError' || err.message === 'NO_CAMERAS') message = 'No camera found on this device.';
-      else if (!window.isSecureContext) message = 'Camera access needs a secure connection (https://).';
-      setError(message);
+      setError(err.message || 'Could not read this QR code as a Face Ticket.');
     }
   };
 
@@ -688,21 +607,10 @@ function QRScanStage({ onDecoded, onCancel }) {
         <div className="text-center py-10">
           <XCircle className="w-10 h-10 text-rose-400 mx-auto mb-3" />
           <p className="text-sm text-neutral-300 mb-5">{error}</p>
-          <button onClick={startScanner} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Retry</button>
+          <button onClick={() => { setError(null); setAttempt((n) => n + 1); }} className="px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold">Scan again</button>
         </div>
       ) : (
-        <>
-          {/* Fixed aspect box: html5-qrcode injects its own <video>/<canvas>
-              with inline sizing, which on some mobile browsers renders taller
-              than the viewport or overflows the rounded corners. Constraining
-              the container and forcing the injected video to fill it keeps
-              the scanner boxed no matter what size the library picks. */}
-          <div
-            id={containerId}
-            className="qr-reader-box rounded-2xl overflow-hidden border border-white/10 bg-black relative aspect-square w-full [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover [&_canvas]:!w-full"
-          />
-          <p className="text-center text-neutral-500 text-xs mt-4">Scanning automatically&hellip;</p>
-        </>
+        <QrScanner key={attempt} onScan={handleScan} />
       )}
 
       <button onClick={onCancel} className="w-full mt-6 py-3 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
