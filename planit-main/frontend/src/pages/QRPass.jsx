@@ -11,6 +11,7 @@ import {
 } from '../utils/qrPass';
 import LabLanding from '../components/LabLanding';
 import QRPassPreview from '../components/QRPassPreview';
+import QrScanner from '../components/QrScanner';
 
 const ACCENT = '#5EEAD4';
 
@@ -221,12 +222,10 @@ function HostTab({ events, setEvents, addToWallet, goWallet }) {
 function ScanTab({ events, setEvents }) {
   const [eventId, setEventId] = useState(events[0]?.id || '');
   const [result, setResult] = useState(null);
-  const [camError, setCamError] = useState(null);
   const [manual, setManual] = useState('');
   const eventsRef = useRef(events);
   const idRef = useRef(eventId);
   const busyRef = useRef(false);
-  const scannerRef = useRef(null);
   eventsRef.current = events;
   idRef.current = eventId;
 
@@ -254,29 +253,6 @@ function ScanTab({ events, setEvents }) {
     }
   }, [setEvents]);
 
-  useEffect(() => {
-    let dead = false;
-    (async () => {
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (dead) return;
-        const sc = new Html5Qrcode('qrpass-reader');
-        scannerRef.current = sc;
-        const cfg = { fps: 10, qrbox: (w, h) => { const s = Math.floor(Math.min(w, h) * 0.75); return { width: s, height: s }; } };
-        try { await sc.start({ facingMode: 'environment' }, cfg, handle, () => {}); }
-        catch { await sc.start({ facingMode: 'user' }, cfg, handle, () => {}); }
-      } catch (err) {
-        if (!dead) setCamError(err?.name === 'NotAllowedError' ? 'Camera permission denied.' : 'Camera unavailable \u2014 paste a code below to test.');
-      }
-    })();
-    return () => {
-      dead = true;
-      const sc = scannerRef.current;
-      scannerRef.current = null;
-      if (sc) { try { sc.stop().catch(() => {}); } catch { /* not running */ } }
-    };
-  }, [handle]);
-
   return (
     <div className="max-w-md mx-auto">
       <h3 className="font-display font-bold text-xl mb-3">Scan guests in</h3>
@@ -286,12 +262,10 @@ function ScanTab({ events, setEvents }) {
         {events.map((e) => <option key={e.id} value={e.id} className="text-black">{e.name}</option>)}
       </select>
 
-      <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10 aspect-square mb-4">
-        {camError
-          ? <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-sm text-neutral-300"><CameraOff className="w-9 h-9 text-rose-400 mb-3" />{camError}</div>
-          : <div id="qrpass-reader" className="w-full h-full" />}
+      <div className="relative mb-4">
+        <QrScanner continuous onScan={handle} hint={null} />
         {result && (
-          <div className={`absolute inset-x-3 bottom-3 rounded-xl p-3.5 flex items-start gap-3 backdrop-blur ${result.ok ? 'bg-teal-500/90 text-[#05050f]' : 'bg-rose-500/90 text-white'}`}>
+          <div className={`absolute inset-x-3 top-3 rounded-xl p-3.5 flex items-start gap-3 backdrop-blur ${result.ok ? 'bg-teal-500/90 text-[#05050f]' : 'bg-rose-500/90 text-white'}`}>
             {result.ok ? <CheckCircle2 className="w-6 h-6 shrink-0" /> : <XCircle className="w-6 h-6 shrink-0" />}
             <div className="text-left">
               <div className="font-bold leading-tight">{result.text}</div>
