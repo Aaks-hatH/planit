@@ -227,7 +227,7 @@ router.get('/public/wl', async (req, res, next) => {
       'settings.isPublic': true,
       status: 'active',
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode eventType')
     .sort({ date: 1 })
     .limit(limit)
     .lean();
