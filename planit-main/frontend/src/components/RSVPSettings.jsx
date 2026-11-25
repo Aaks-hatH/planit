@@ -9,6 +9,7 @@ import {
 import toast from '../utils/toast';
 import { rsvpAPI, fileAPI } from '../services/api';
 import { SkeletonSection } from './ui/Feedback';
+import { TicketOption, BrandingOption } from './RsvpOptions';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
@@ -322,15 +323,24 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
     return <SkeletonSection cards={2} className="py-4" />;
   }
 
-  const TABS = [
-    { id: 'general',      label: 'General',       icon: Settings },
-    { id: 'appearance',   label: 'Appearance',     icon: Palette },
-    { id: 'form',         label: 'Form Fields',    icon: FileText },
-    { id: 'questions',    label: 'Questions',      icon: MessageSquare },
-    { id: 'confirmation', label: 'Confirmation',   icon: Check },
-    { id: 'notifications',label: 'Notifications',  icon: Mail },
-    { id: 'security',     label: 'Security',       icon: Shield },
-  ];
+const TABS = [
+{ id: 'general',      label: 'Basics',          icon: Settings },
+{ id: 'appearance',   label: 'Look',            icon: Palette },
+{ id: 'form',         label: 'Form',            icon: FileText },
+{ id: 'questions',    label: 'Questions',       icon: MessageSquare },
+{ id: 'confirmation', label: 'After RSVP',      icon: Check },
+{ id: 'notifications',label: 'Emails',          icon: Mail },
+{ id: 'security',     label: 'Spam & safety',   icon: Shield },
+];
+const TAB_HELP = {
+  general:       'Who can RSVP, whether you approve them, limits, and whether RSVPs become tickets.',
+  appearance:    'Colors, logo, background and the words at the top of your page.',
+  form:          'Which details guests fill in: name, contact info, plus-ones, dietary needs.',
+  questions:     'Add your own questions to the form.',
+  confirmation:  'What guests see and get right after they RSVP.',
+  notifications: 'Emails to you and to your guests when someone RSVPs.',
+  security:      'Protection against spam and duplicate RSVPs. The defaults work for most events.',
+};
 
   return (
     <div className="space-y-4">
@@ -375,7 +385,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
         </div>
       )}
 
-      {/* Tabs */}
+{/* Tabs */}
       <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
         {TABS.map(tab => (
           <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
@@ -386,11 +396,14 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
         ))}
       </div>
 
-      {/* ── GENERAL ── */}
-      {activeTab === 'general' && (
-        <div className="space-y-4">
-          <Section title="Access & Mode" icon={Lock} defaultOpen>
-            <Field label="Access Mode">
+<p className="text-xs text-neutral-500 -mt-1">{TAB_HELP[activeTab]}</p>
+
+{/* ── GENERAL ── */}
+{activeTab === 'general' && (
+<div className="space-y-4">
+<TicketOption isEnterprise={event?.isEnterpriseMode === true} checked={settings.issueTicket === true} onChange={v => set('issueTicket', v)} />
+<Section title="Who can RSVP" icon={Lock} defaultOpen>
+<Field label="Who can open the page">
               <div className="grid grid-cols-3 gap-2">
                 {[['open', 'Open', 'Anyone with the link'], ['password', 'Password', 'Requires a password'], ['closed', 'Closed', 'Not accepting RSVPs']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('accessMode', val)}
@@ -409,7 +422,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
               </Field>
             )}
 
-            <Field label="Confirmation Mode" description="How to handle incoming RSVPs.">
+<Field label="Approve RSVPs?" description="Choose whether RSVPs are confirmed right away or wait for you to approve them.">
               <div className="grid grid-cols-2 gap-2">
                 {[['auto_confirm', 'Auto-Confirm', 'RSVPs are confirmed instantly'], ['approval', 'Require Approval', 'You review each RSVP manually']].map(([val, label, sub]) => (
                   <button key={val} type="button" onClick={() => set('confirmationMode', val)}
@@ -422,7 +435,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             </Field>
           </Section>
 
-          <Section title="Capacity & Deadline" icon={Users} defaultOpen>
+<Section title="Capacity & Deadline" icon={Users}>
             <Field label="RSVP Deadline" description="After this date, the form closes automatically.">
               <input type="datetime-local" value={settings.deadline ? new Date(settings.deadline).toISOString().slice(0, 16) : ''} onChange={e => set('deadline', e.target.value || null)} className={inputCls} />
             </Field>
@@ -477,7 +490,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       {/* ── APPEARANCE ── */}
       {activeTab === 'appearance' && (
         <div className="space-y-4">
-          <Section title="Branding" icon={Palette} defaultOpen>
+<Section title="Colors & logo" icon={Palette} defaultOpen>
             <Field label="Accent Color" description="Primary button and highlight color.">
               <div className="flex gap-2 items-center">
                 <input type="color" value={settings.accentColor || '#6366f1'} onChange={e => set('accentColor', e.target.value)}
@@ -499,8 +512,9 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             <Field label="Logo" description="Your logo, shown centered above the RSVP page content.">
               <AppearanceImageField eventId={eventId} purpose="logo" value={settings.logoUrl || ''} onChange={v => set('logoUrl', v)} />
             </Field>
-            <Toggle label="Hide PlanIt branding" description="Remove 'Powered by PlanIt' from the footer."
-              checked={settings.hideBranding === true} onChange={v => set('hideBranding', v)} />
+<div className="pt-3">
+  <BrandingOption checked={settings.hideBranding === true} onChange={v => set('hideBranding', v)} />
+</div>
           </Section>
 
           <Section title="Background & Font" icon={Type}>
@@ -694,7 +708,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             </div>
           </Section>
 
-          <Section title="Organizer Notifications" icon={Mail} defaultOpen>
+<Section title="Emails to you" icon={Mail} defaultOpen>
             <Toggle label="Notify me on each RSVP" description="Receive an email each time someone RSVPs."
               checked={settings.notifyOrganizerOnRsvp !== false} onChange={v => set('notifyOrganizerOnRsvp', v)} />
             <Field label="Notification email address" description="Defaults to your account email if left blank.">
@@ -702,7 +716,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             </Field>
           </Section>
 
-          <Section title="Guest Confirmation Email" icon={Mail}>
+<Section title="Emails to your guests" icon={Mail}>
             <Toggle label="Send confirmation email to guests" description="Guests receive an email after submitting their RSVP. Requires email collection to be enabled."
               checked={settings.sendGuestConfirmation === true} onChange={v => set('sendGuestConfirmation', v)}
               disabled={!settings.collectEmail} />
@@ -782,6 +796,7 @@ const DEFAULT_SETTINGS = {
   bannerColor: '#f59e0b',
   bannerEnabled: false,
   hideBranding: false,
+  issueTicket: false,
   heroTagline: '',
   welcomeTitle: '',
   welcomeMessage: '',
